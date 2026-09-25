@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import type { Role } from '../../types/auth';
 import {
@@ -26,13 +27,15 @@ import {
 } from 'lucide-react';
 
 interface SidebarItem {
-  label: string;
+  labelKey: string;
+  defaultLabel: string;
   path: string;
   icon: React.ComponentType<{ size?: number }>;
 }
 
 interface SidebarSection {
-  heading?: string;
+  headingKey?: string;
+  defaultHeading?: string;
   items: SidebarItem[];
 }
 
@@ -40,77 +43,85 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
   customer: [], // Customer uses CustomerNavbar
   receptionist: [
     {
-      heading: 'Front Desk Operations',
+      headingKey: 'operations.sidebar.frontDeskOperations',
+      defaultHeading: 'Front Desk Operations',
       items: [
-        { label: 'Front Desk Dashboard', path: '/receptionist/dashboard', icon: LayoutDashboard },
-        { label: 'Daily Arrivals', path: '/receptionist/arrivals', icon: CalendarCheck },
-        { label: 'Villa Management', path: '/receptionist/villas', icon: Home }
+        { labelKey: 'operations.sidebar.frontDeskDashboard', defaultLabel: 'Front Desk Dashboard', path: '/receptionist/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.dailyArrivals', defaultLabel: 'Daily Arrivals', path: '/receptionist/arrivals', icon: CalendarCheck },
+        { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Villa Management', path: '/receptionist/villas', icon: Home }
       ]
     },
     {
-      heading: 'Customer Services & Folio',
+      headingKey: 'operations.sidebar.customerServicesFolio',
+      defaultHeading: 'Customer Services & Folio',
       items: [
-        { label: 'Manual Extra Spa', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
-        { label: 'Customer Folio & Invoice', path: '/receptionist/folio/bk-1001', icon: Receipt },
-        { label: 'Final Payment & Checkout', path: '/receptionist/checkout/bk-1001/payment', icon: UserCheck }
+        { labelKey: 'operations.sidebar.manualExtraSpa', defaultLabel: 'Manual Extra Spa', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
+        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Customer Folio & Invoice', path: '/receptionist/folio/bk-1001', icon: Receipt },
+        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Final Payment & Checkout', path: '/receptionist/checkout/bk-1001/payment', icon: UserCheck }
       ]
     }
   ],
   therapist: [
     {
-      heading: 'Therapist Schedule',
+      headingKey: 'operations.sidebar.therapistSchedule',
+      defaultHeading: 'Therapist Schedule',
       items: [
-        { label: 'Therapist Dashboard', path: '/therapist/dashboard', icon: LayoutDashboard },
-        { label: 'Daily Work Schedule', path: '/therapist/schedule', icon: CalendarCheck },
-        { label: 'Session Details & Notes', path: '/therapist/sessions/ses-301', icon: HeartHandshake }
+        { labelKey: 'operations.sidebar.therapistDashboard', defaultLabel: 'Therapist Dashboard', path: '/therapist/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.dailyWorkSchedule', defaultLabel: 'Daily Work Schedule', path: '/therapist/schedule', icon: CalendarCheck },
+        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Session Details & Notes', path: '/therapist/sessions/ses-301', icon: HeartHandshake }
       ]
     }
   ],
   fb_staff: [
     {
-      heading: 'Kitchen Operations',
+      headingKey: 'operations.sidebar.kitchenOperations',
+      defaultHeading: 'Kitchen Operations',
       items: [
-        { label: 'F&B Dashboard', path: '/fb/dashboard', icon: LayoutDashboard },
-        { label: 'Daily Meal Prep Queue', path: '/fb/meal-prep', icon: ChefHat },
-        { label: 'Meal Order & Allergies', path: '/fb/orders/ord-401', icon: UtensilsCrossed }
+        { labelKey: 'operations.sidebar.fbDashboard', defaultLabel: 'F&B Dashboard', path: '/fb/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Daily Meal Prep Queue', path: '/fb/meal-prep', icon: ChefHat },
+        { labelKey: 'operations.sidebar.mealOrderAllergies', defaultLabel: 'Meal Order & Allergies', path: '/fb/orders/ord-401', icon: UtensilsCrossed }
       ]
     }
   ],
   manager: [
     {
-      heading: 'Management Cockpit',
+      headingKey: 'operations.sidebar.managementCockpit',
+      defaultHeading: 'Management Cockpit',
       items: [
-        { label: 'Manager Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
-        { label: 'Revenue Analytics', path: '/manager/revenue', icon: BarChart3 },
-        { label: 'Occupancy Reports', path: '/manager/occupancy', icon: TrendingUp },
-        { label: 'Therapist Utilization', path: '/manager/therapist-utilization', icon: Users2 }
+        { labelKey: 'operations.sidebar.managerDashboard', defaultLabel: 'Manager Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.revenueAnalytics', defaultLabel: 'Revenue Analytics', path: '/manager/revenue', icon: BarChart3 },
+        { labelKey: 'operations.sidebar.occupancyReports', defaultLabel: 'Occupancy Reports', path: '/manager/occupancy', icon: TrendingUp },
+        { labelKey: 'operations.sidebar.therapistUtilization', defaultLabel: 'Therapist Utilization', path: '/manager/therapist-utilization', icon: Users2 }
       ]
     },
     {
-      heading: 'Governance & Compliance',
+      headingKey: 'operations.sidebar.governanceCompliance',
+      defaultHeading: 'Governance & Compliance',
       items: [
-        { label: 'System Overview & Police Export', path: '/manager/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.systemOverviewPoliceExport', defaultLabel: 'System Overview & Police Export', path: '/manager/system-overview', icon: Activity }
       ]
     }
   ],
   admin: [
     {
-      heading: 'Administration',
+      headingKey: 'operations.sidebar.administration',
+      defaultHeading: 'Administration',
       items: [
-        { label: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { label: 'Staff Accounts', path: '/admin/staff', icon: UserPlus },
-        { label: 'Master Data Management', path: '/admin/master-data', icon: Database }
+        { labelKey: 'operations.sidebar.adminDashboard', defaultLabel: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.staffAccounts', defaultLabel: 'Staff Accounts', path: '/admin/staff', icon: UserPlus },
+        { labelKey: 'operations.sidebar.masterDataManagement', defaultLabel: 'Master Data Management', path: '/admin/master-data', icon: Database }
       ]
     },
     {
-      heading: 'Security & Governance',
+      headingKey: 'operations.sidebar.securityGovernance',
+      defaultHeading: 'Security & Governance',
       items: [
-        { label: 'Business Parameters', path: '/admin/business-params', icon: Settings2 },
-        { label: 'Feature Flags', path: '/admin/feature-flags', icon: ToggleLeft },
-        { label: 'Permission Matrix', path: '/admin/permissions', icon: Shield },
-        { label: 'Manager Delegation', path: '/admin/delegation', icon: Users2 },
-        { label: 'Sensitive Data Audit Log', path: '/admin/audit-log', icon: History },
-        { label: 'System Overview Dashboard', path: '/admin/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.businessParameters', defaultLabel: 'Business Parameters', path: '/admin/business-params', icon: Settings2 },
+        { labelKey: 'operations.sidebar.featureFlags', defaultLabel: 'Feature Flags', path: '/admin/feature-flags', icon: ToggleLeft },
+        { labelKey: 'operations.sidebar.permissionMatrix', defaultLabel: 'Permission Matrix', path: '/admin/permissions', icon: Shield },
+        { labelKey: 'operations.sidebar.managerDelegation', defaultLabel: 'Manager Delegation', path: '/admin/delegation', icon: Users2 },
+        { labelKey: 'operations.sidebar.sensitiveDataAuditLog', defaultLabel: 'Sensitive Data Audit Log', path: '/admin/audit-log', icon: History },
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'System Overview Dashboard', path: '/admin/system-overview', icon: Activity }
       ]
     }
   ]
@@ -119,6 +130,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
 export const OperationalSidebar: React.FC = () => {
   const { currentUser, role, logout } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
 
   if (!role || role === 'customer') return null;
 
@@ -128,10 +140,10 @@ export const OperationalSidebar: React.FC = () => {
     <aside className="hsw-sidebar" aria-label="Staff navigation sidebar">
       <div className="hsw-sidebar-header">
         <Link to={`/${role}/dashboard`} className="hsw-brand-logo">
-          <Sparkles size={20} style={{ color: 'var(--accent-sand)' }} />
+          <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
           <div>
             HEAVENSTAY
-            <span>OPERATIONAL SUITE</span>
+            <span>{t('operations.sidebar.operationalSuite', 'OPERATIONAL SUITE')}</span>
           </div>
         </Link>
       </div>
@@ -145,7 +157,7 @@ export const OperationalSidebar: React.FC = () => {
             {currentUser?.name}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--accent-forest)', textTransform: 'capitalize' }}>
-            {role.replace('_', ' ')} · {currentUser?.department || 'Operations'}
+            {t(`navigation:roles.${role}`, role.replace('_', ' '))} · {currentUser?.department || t('operations.sidebar.operationsDept', 'Operations')}
           </div>
         </div>
       </div>
@@ -153,8 +165,10 @@ export const OperationalSidebar: React.FC = () => {
       <nav className="hsw-sidebar-nav">
         {sections.map((section, idx) => (
           <div key={idx} style={{ marginBottom: 'var(--space-3)' }}>
-            {section.heading && (
-              <div className="hsw-sidebar-nav-heading">{section.heading}</div>
+            {section.headingKey && (
+              <div className="hsw-sidebar-nav-heading">
+                {t(section.headingKey, section.defaultHeading || '')}
+              </div>
             )}
             {section.items.map((item) => {
               const Icon = item.icon;
@@ -166,7 +180,7 @@ export const OperationalSidebar: React.FC = () => {
                   className={`hsw-sidebar-link ${isActive ? 'active' : ''}`}
                 >
                   <Icon size={16} />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey, item.defaultLabel)}</span>
                 </Link>
               );
             })}
@@ -181,7 +195,7 @@ export const OperationalSidebar: React.FC = () => {
           style={{ width: '100%', color: 'var(--danger)', justifyContent: 'flex-start' }}
         >
           <LogOut size={16} />
-          <span>Sign Out</span>
+          <span>{t('operations.sidebar.signOut', 'Sign Out')}</span>
         </button>
       </div>
     </aside>

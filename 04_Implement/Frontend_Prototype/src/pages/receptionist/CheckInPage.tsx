@@ -70,14 +70,14 @@ export const CheckInPage: React.FC = () => {
       <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
         <AlertCircle size={40} style={{ color: '#C62828', margin: '0 auto 12px' }} />
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
-          Arrival Record Not Found
+          {t('operations.checkIn.arrivalNotFound', 'Arrival Record Not Found')}
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-          No arrival matching booking reference "{bookingId}" was found in the daily queue.
+          {t('operations.checkIn.noArrivalMatchingRef', { bookingId, defaultValue: `No arrival matching booking reference "${bookingId}" was found in the daily queue.` })}
         </p>
         <Link to="/receptionist/arrivals" className="hsw-btn hsw-btn-secondary">
           <ArrowLeft size={14} />
-          <span>Return to Daily Arrivals</span>
+          <span>{t('operations.checkIn.returnToArrivals', 'Return to Daily Arrivals')}</span>
         </Link>
       </div>
     );
@@ -224,7 +224,7 @@ export const CheckInPage: React.FC = () => {
                   {retreatTitle}
                 </strong>
                 <div style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {arrival.nights} Nights ({arrival.startDate} → {arrival.endDate})
+                  {arrival.nights} {t('operations.common.nights', 'Nights')} ({arrival.startDate} → {arrival.endDate})
                 </div>
               </div>
 
@@ -233,17 +233,19 @@ export const CheckInPage: React.FC = () => {
                   {t('operations.common.partySize', 'Party Size')}:
                 </span>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {arrival.partySize} {arrival.partySize === 1 ? 'Customer (Solo)' : 'Customers'}
+                  {arrival.partySize === 1
+                    ? t('operations.common.customerSolo', '1 Customer (Solo)')
+                    : t('operations.common.customerCount', { count: arrival.partySize, defaultValue: `${arrival.partySize} Customers` })}
                 </span>
               </div>
 
               <div>
                 <span style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>
-                  Required Deposit:
+                  {t('operations.payment.requiredDeposit', 'Required Deposit')}:
                 </span>
                 <OperationalStatusChip type="deposit" status={arrival.depositStatus} size="sm" />
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {formatVND(arrival.depositAmount)} ({Math.round((arrival.depositAmount / (arrival.totalPrice || 1)) * 100)}% of total)
+                  {formatVND(arrival.depositAmount)} ({t('operations.payment.percentOfTotal', { percent: Math.round((arrival.depositAmount / (arrival.totalPrice || 1)) * 100), defaultValue: `${Math.round((arrival.depositAmount / (arrival.totalPrice || 1)) * 100)}% of total` })})
                 </div>
               </div>
             </div>
@@ -264,13 +266,13 @@ export const CheckInPage: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
                 <CheckCircle2 size={14} style={{ color: '#1B5E20' }} />
-                <span>Wellness Intake Status:</span>
+                <span>{t('operations.checkIn.wellnessIntakeStatus', 'Wellness Intake Status:')}</span>
                 <strong style={{ color: 'var(--accent-forest)' }}>
                   {t('operations.common.wellnessProfileCompleted', 'Wellness Profile Completed')}
                 </strong>
               </div>
               <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                (Health details restricted to Therapist)
+                ({t('operations.checkIn.healthDetailsRestricted', 'Health details restricted to Therapist')})
               </span>
             </div>
           </div>
@@ -482,7 +484,7 @@ export const CheckInPage: React.FC = () => {
                   type="text"
                   value={formData.receptionistNotes}
                   onChange={(e) => handleInputChange('receptionistNotes', e.target.value)}
-                  placeholder="Optional operational remarks..."
+                  placeholder={t('operations.checkIn.remarksPlaceholder', 'Optional operational remarks...')}
                   style={{
                     width: '100%',
                     height: '36px',
@@ -537,7 +539,7 @@ export const CheckInPage: React.FC = () => {
                       Villa #{assignedVilla.code} — {assignedVilla.name[currentLang] || assignedVilla.name.en}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {assignedVilla.category} • Capacity: {assignedVilla.capacity} Persons • {assignedVilla.bedType}
+                      {assignedVilla.category} • {t('operations.checkIn.capacityLabel', { capacity: assignedVilla.capacity, defaultValue: `Capacity: ${assignedVilla.capacity} Persons` })} • {assignedVilla.bedType}
                     </div>
                   </div>
                   <VillaStatusChip status={assignedVilla.status} housekeeping={assignedVilla.housekeeping} />
@@ -554,7 +556,7 @@ export const CheckInPage: React.FC = () => {
                       color: '#8C5400',
                     }}
                   >
-                    ⚠️ Housekeeping is currently cleaning this villa. Check-in cannot be finalized until room is marked Ready.
+                    ⚠️ {t('operations.checkIn.cleaningNoticeWarning', 'Housekeeping is currently cleaning this villa. Check-in cannot be finalized until room is marked Ready.')}
                   </div>
                 )}
 
@@ -569,7 +571,7 @@ export const CheckInPage: React.FC = () => {
                       color: '#C62828',
                     }}
                   >
-                    ❌ Villa is undergoing maintenance. Please reassign to an available ready villa.
+                    ❌ {t('operations.checkIn.maintenanceAlertWarning', 'Villa is undergoing maintenance. Please reassign to an available ready villa.')}
                   </div>
                 )}
               </div>
@@ -612,11 +614,16 @@ export const CheckInPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
                   {isDepositPaid ? <CheckCircle2 size={16} color="#1B5E20" /> : <Clock size={16} color="#8C5400" />}
                   <span style={{ fontWeight: 600, color: isDepositPaid ? '#1B5E20' : '#8C5400' }}>
-                    1. Required Deposit Satisfied ({arrival.depositStatus === 'paid' ? 'Confirmed' : 'Pending'})
+                    {t('operations.checkIn.depositSatisfiedChecklist', {
+                      status: arrival.depositStatus === 'paid'
+                        ? t('operations.checkIn.confirmed', 'Confirmed')
+                        : t('operations.checkIn.pending', 'Pending'),
+                      defaultValue: `1. Required Deposit Satisfied (${arrival.depositStatus === 'paid' ? 'Confirmed' : 'Pending'})`
+                    })}
                   </span>
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', color: isDepositPaid ? '#1B5E20' : '#8C5400' }}>
-                  {isDepositPaid ? 'Verified' : 'Pending'}
+                  {isDepositPaid ? t('operations.checkIn.verified', 'Verified') : t('operations.checkIn.pending', 'Pending')}
                 </span>
               </div>
 
@@ -625,11 +632,11 @@ export const CheckInPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
                   {isIdentityComplete ? <CheckCircle2 size={16} color="#1B5E20" /> : <Clock size={16} color="#8C5400" />}
                   <span style={{ fontWeight: 600, color: isIdentityComplete ? '#1B5E20' : '#8C5400' }}>
-                    2. Residence Information & ID Complete
+                    {t('operations.checkIn.residenceInfoChecklist', '2. Residence Information & ID Complete')}
                   </span>
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', color: isIdentityComplete ? '#1B5E20' : '#8C5400' }}>
-                  {isIdentityComplete ? 'Ready' : 'Incomplete'}
+                  {isIdentityComplete ? t('operations.checkIn.ready', 'Ready') : t('operations.checkIn.incomplete', 'Incomplete')}
                 </span>
               </div>
 
@@ -642,11 +649,11 @@ export const CheckInPage: React.FC = () => {
                     <AlertCircle size={16} color="#C62828" />
                   )}
                   <span style={{ fontWeight: 600, color: isVillaAssigned && isVillaReady && !isVillaBlocked ? '#1B5E20' : '#C62828' }}>
-                    3. Villa Assigned & Clean / Ready
+                    {t('operations.checkIn.villaAssignedChecklist', '3. Villa Assigned & Clean / Ready')}
                   </span>
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', color: isVillaAssigned && isVillaReady && !isVillaBlocked ? '#1B5E20' : '#C62828' }}>
-                  {isVillaAssigned && isVillaReady && !isVillaBlocked ? 'Ready' : 'Not Ready'}
+                  {isVillaAssigned && isVillaReady && !isVillaBlocked ? t('operations.checkIn.ready', 'Ready') : t('operations.checkIn.notReady', 'Not Ready')}
                 </span>
               </div>
             </div>
@@ -664,8 +671,8 @@ export const CheckInPage: React.FC = () => {
                   <Key size={16} />
                   <span>
                     {arrival.arrivalStatus === 'checked_in'
-                      ? 'Stay Already Checked In'
-                      : t('operations.common.complete', 'Complete Check-In & Issue Key')}
+                      ? t('operations.checkIn.stayAlreadyCheckedIn', 'Stay Already Checked In')
+                      : t('operations.checkIn.completeCheckInAndKey', 'Complete Check-In & Issue Key')}
                   </span>
                 </button>
               ) : (

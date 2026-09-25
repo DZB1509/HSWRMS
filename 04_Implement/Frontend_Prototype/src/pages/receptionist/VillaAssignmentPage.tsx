@@ -36,14 +36,14 @@ export const VillaAssignmentPage: React.FC = () => {
       <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
         <AlertCircle size={40} style={{ color: '#C62828', margin: '0 auto 12px' }} />
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
-          Arrival Record Not Found
+          {t('operations.checkIn.arrivalNotFound', 'Arrival Record Not Found')}
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-          Cannot load villa assignment context without a valid booking reference.
+          {t('operations.villaAssignment.cannotLoadContext', 'Cannot load villa assignment context without a valid booking reference.')}
         </p>
         <Link to="/receptionist/arrivals" className="hsw-btn hsw-btn-secondary">
           <ArrowLeft size={14} />
-          <span>Return to Daily Arrivals</span>
+          <span>{t('operations.checkIn.returnToArrivals', 'Return to Daily Arrivals')}</span>
         </Link>
       </div>
     );
@@ -149,26 +149,30 @@ export const VillaAssignmentPage: React.FC = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
             <div>
-              <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>Package:</span>
+              <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>{t('operations.common.package', 'Package')}:</span>
               <strong style={{ color: 'var(--text-primary)' }}>{retreatTitle}</strong>
             </div>
 
             <div>
-              <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>Stay Dates:</span>
+              <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>{t('operations.common.stayDates', 'Stay Dates')}:</span>
               <strong style={{ color: 'var(--text-primary)' }}>{arrival.startDate} → {arrival.endDate}</strong>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>({arrival.nights} Nights)</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>({arrival.nights} {t('operations.common.nights', 'Nights')})</div>
             </div>
 
             <div>
               <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>{t('operations.villaAssignment.requiredCapacity', 'Required Capacity')}:</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 <Users size={14} />
-                <span>{arrival.partySize} {arrival.partySize === 1 ? 'Customer' : 'Customers'}</span>
+                <span>
+                  {arrival.partySize === 1
+                    ? t('operations.common.customerSolo', '1 Customer (Solo)')
+                    : t('operations.common.customerCount', { count: arrival.partySize, defaultValue: `${arrival.partySize} Customers` })}
+                </span>
               </span>
             </div>
 
             <div>
-              <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>Package Category:</span>
+              <span style={{ color: 'var(--text-tertiary)', display: 'block' }}>{t('operations.common.packageCategory', 'Package Category')}:</span>
               <strong style={{ color: 'var(--accent-forest)' }}>{arrival.villaCategory}</strong>
             </div>
 
@@ -182,12 +186,12 @@ export const VillaAssignmentPage: React.FC = () => {
                     {arrival.assignedVillaNumber}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    Status: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{arrival.villaReadiness}</span>
+                    {t('operations.common.status', 'Status')}: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{t(`operations.statuses.${arrival.villaReadiness}`, arrival.villaReadiness)}</span>
                   </div>
                 </div>
               ) : (
                 <div style={{ color: '#C62828', fontWeight: 600 }}>
-                  Not Assigned Yet
+                  {t('operations.common.notAssigned', 'Not Assigned')}
                 </div>
               )}
             </div>
@@ -229,7 +233,7 @@ export const VillaAssignmentPage: React.FC = () => {
                     outline: 'none',
                   }}
                 >
-                  <option value="all">{t('operations.common.all', 'All Categories')}</option>
+                  <option value="all">{t('operations.common.allCategories', 'All Categories')}</option>
                   {uniqueCategories.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
@@ -253,7 +257,7 @@ export const VillaAssignmentPage: React.FC = () => {
                     outline: 'none',
                   }}
                 >
-                  <option value="all">{t('operations.common.all', 'All States')}</option>
+                  <option value="all">{t('operations.common.allStates', 'All States')}</option>
                   <option value="ready">{t('operations.statuses.ready', 'Ready')}</option>
                   <option value="cleaning">{t('operations.statuses.cleaning', 'Cleaning')}</option>
                   <option value="reserved">{t('operations.statuses.reserved', 'Reserved')}</option>
@@ -264,7 +268,7 @@ export const VillaAssignmentPage: React.FC = () => {
             </div>
 
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-              Showing <strong>{filteredVillas.length}</strong> villas
+              {t('operations.common.showingVillas', { count: filteredVillas.length, defaultValue: `Showing ${filteredVillas.length} villas` })}
             </div>
           </div>
 
@@ -304,7 +308,7 @@ export const VillaAssignmentPage: React.FC = () => {
                         </span>
                         {isAssignedToThis && (
                           <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', backgroundColor: '#E8F5E9', color: '#1B5E20', padding: '1px 6px', borderRadius: 'var(--radius-pill)', border: '1px solid #C8E6C9' }}>
-                            Current
+                            {t('operations.common.currentAssigned', 'Current')}
                           </span>
                         )}
                       </div>
@@ -322,7 +326,9 @@ export const VillaAssignmentPage: React.FC = () => {
                     {/* Details: Capacity & Bed */}
                     <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px', padding: '6px 8px', backgroundColor: 'var(--bg-canvas)', borderRadius: 'var(--radius-xs)' }}>
                       <div>
-                        Capacity: <strong style={{ color: isCapacityOk ? 'var(--text-primary)' : '#C62828' }}>{villa.capacity} Persons</strong>
+                        <strong style={{ color: isCapacityOk ? 'var(--text-primary)' : '#C62828' }}>
+                          {t('operations.checkIn.capacityLabel', { capacity: villa.capacity, defaultValue: `Capacity: ${villa.capacity} Persons` })}
+                        </strong>
                       </div>
                       <div>•</div>
                       <div>{villa.bedType}</div>
@@ -345,7 +351,7 @@ export const VillaAssignmentPage: React.FC = () => {
                     )}
                     {isOccupiedByOther && (
                       <div style={{ fontSize: '10px', color: '#C62828', marginBottom: '8px', fontWeight: 600 }}>
-                        Occupied by {villa.currentCustomerName} ({villa.currentBookingRef})
+                        {t('operations.common.occupiedByCustomer', { name: villa.currentCustomerName, ref: villa.currentBookingRef, defaultValue: `Occupied by ${villa.currentCustomerName} (${villa.currentBookingRef})` })}
                       </div>
                     )}
                     {!isCapacityOk && (
@@ -370,7 +376,7 @@ export const VillaAssignmentPage: React.FC = () => {
                         style={{ width: '100%', minHeight: '34px', fontSize: '11px', color: '#1B5E20' }}
                       >
                         <Check size={14} />
-                        <span>Already Assigned</span>
+                        <span>{t('operations.common.alreadyAssigned', 'Already Assigned')}</span>
                       </button>
                     ) : (
                       <button

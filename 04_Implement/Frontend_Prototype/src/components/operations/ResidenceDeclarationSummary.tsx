@@ -25,7 +25,7 @@ export const ResidenceDeclarationSummary: React.FC<ResidenceDeclarationSummaryPr
 
   const handleSubmitBatch = () => {
     if (readyCount === 0) {
-      showToast('No declarations are currently marked ready for submission.', 'info');
+      showToast(t('operations.residenceSummary.noDeclarationsReady', 'No declarations are currently marked ready for submission.'), 'info');
       return;
     }
 
@@ -81,11 +81,11 @@ export const ResidenceDeclarationSummary: React.FC<ResidenceDeclarationSummaryPr
                 letterSpacing: '0.04em',
               }}
             >
-              Prototype Operational Mock
+              {t('operations.residenceSummary.prototypeMock', 'Prototype Operational Mock')}
             </span>
           </div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            Daily customer accommodation reporting required for immigration compliance (Law on Foreigners 2014 & Decree 13).
+            {t('operations.residenceSummary.complianceNotice', 'Daily customer accommodation reporting required for immigration compliance (Law on Foreigners 2014 & Decree 13).')}
           </div>
         </div>
       </div>
@@ -102,7 +102,7 @@ export const ResidenceDeclarationSummary: React.FC<ResidenceDeclarationSummaryPr
               border: '1px solid #C8E6C9',
             }}
           >
-            {readyCount} {t('operations.arrivals.readyToSubmit', 'Ready')}
+            {t('operations.residenceSummary.readyPill', { count: readyCount, defaultValue: `${readyCount} Ready` })}
           </span>
           <span
             style={{
@@ -114,7 +114,7 @@ export const ResidenceDeclarationSummary: React.FC<ResidenceDeclarationSummaryPr
               border: '1px solid #FFE082',
             }}
           >
-            {pendingCount} {t('operations.arrivals.pendingReview', 'Pending Info')}
+            {t('operations.residenceSummary.pendingInfoPill', { count: pendingCount, defaultValue: `${pendingCount} Pending Info` })}
           </span>
           <span
             style={{
@@ -126,7 +126,7 @@ export const ResidenceDeclarationSummary: React.FC<ResidenceDeclarationSummaryPr
               border: '1px solid #E1BEE7',
             }}
           >
-            {submittedCount} {t('operations.arrivals.submittedToPolice', 'Submitted')}
+            {t('operations.residenceSummary.submittedPill', { count: submittedCount, defaultValue: `${submittedCount} Submitted` })}
           </span>
         </div>
 

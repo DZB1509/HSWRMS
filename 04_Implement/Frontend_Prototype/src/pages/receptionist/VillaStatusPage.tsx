@@ -65,7 +65,10 @@ export const VillaStatusPage: React.FC = () => {
   ) => {
     // Validate illegal transitions immediately
     if (villa.status === 'occupied' && targetStatus === 'ready') {
-      showToast('An occupied villa cannot transition directly to Ready. Please initiate Cleaning & Housekeeping inspection first.', 'error');
+      showToast(
+        t('operations.villaStatus.occupiedToReadyWarning', 'An occupied villa cannot transition directly to Ready. Please initiate Cleaning & Housekeeping inspection first.'),
+        'error'
+      );
       return;
     }
 
@@ -115,32 +118,32 @@ export const VillaStatusPage: React.FC = () => {
         }}
       >
         <div style={{ padding: '12px 14px', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Villas</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>{t('operations.villaStatus.totalVillas', 'Total Villas')}</div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>{total}</div>
         </div>
 
         <div style={{ padding: '12px 14px', backgroundColor: '#E8F5E9', borderRadius: 'var(--radius-xs)', border: '1px solid #C8E6C9' }}>
-          <div style={{ fontSize: '11px', color: '#1B5E20', fontWeight: 600 }}>Ready / Inspected</div>
+          <div style={{ fontSize: '11px', color: '#1B5E20', fontWeight: 600 }}>{t('operations.villaStatus.readyInspected', 'Ready / Inspected')}</div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: '#1B5E20', marginTop: '2px' }}>{readyCount}</div>
         </div>
 
         <div style={{ padding: '12px 14px', backgroundColor: '#ECEFF1', borderRadius: 'var(--radius-xs)', border: '1px solid #CFD8DC' }}>
-          <div style={{ fontSize: '11px', color: '#263238', fontWeight: 600 }}>Occupied</div>
+          <div style={{ fontSize: '11px', color: '#263238', fontWeight: 600 }}>{t('operations.villaStatus.occupied', 'Occupied')}</div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: '#263238', marginTop: '2px' }}>{occupiedCount}</div>
         </div>
 
         <div style={{ padding: '12px 14px', backgroundColor: '#FFF8E1', borderRadius: 'var(--radius-xs)', border: '1px solid #FFE082' }}>
-          <div style={{ fontSize: '11px', color: '#8C5400', fontWeight: 600 }}>Cleaning</div>
+          <div style={{ fontSize: '11px', color: '#8C5400', fontWeight: 600 }}>{t('operations.villaStatus.cleaning', 'Cleaning')}</div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: '#8C5400', marginTop: '2px' }}>{cleaningCount}</div>
         </div>
 
         <div style={{ padding: '12px 14px', backgroundColor: '#E3F2FD', borderRadius: 'var(--radius-xs)', border: '1px solid #BBDEFB' }}>
-          <div style={{ fontSize: '11px', color: '#0D47A1', fontWeight: 600 }}>Reserved</div>
+          <div style={{ fontSize: '11px', color: '#0D47A1', fontWeight: 600 }}>{t('operations.villaStatus.reserved', 'Reserved')}</div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: '#0D47A1', marginTop: '2px' }}>{reservedCount}</div>
         </div>
 
         <div style={{ padding: '12px 14px', backgroundColor: '#FFEBEE', borderRadius: 'var(--radius-xs)', border: '1px solid #FFCDD2' }}>
-          <div style={{ fontSize: '11px', color: '#C62828', fontWeight: 600 }}>Maintenance</div>
+          <div style={{ fontSize: '11px', color: '#C62828', fontWeight: 600 }}>{t('operations.villaStatus.maintenance', 'Maintenance')}</div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: '#C62828', marginTop: '2px' }}>{maintenanceCount}</div>
         </div>
       </div>
@@ -175,7 +178,7 @@ export const VillaStatusPage: React.FC = () => {
                 textTransform: 'capitalize',
               }}
             >
-              {st === 'all' ? t('operations.common.all', 'All Statuses') : st}
+              {st === 'all' ? t('operations.common.all', 'All Statuses') : t(`operations.statuses.${st}`, st)}
             </button>
           ))}
         </div>
@@ -183,7 +186,7 @@ export const VillaStatusPage: React.FC = () => {
         {/* Category Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Category:
+            {t('operations.villaStatus.category', 'Category')}:
           </span>
           <select
             value={selectedCategory}
@@ -198,7 +201,7 @@ export const VillaStatusPage: React.FC = () => {
               outline: 'none',
             }}
           >
-            <option value="all">All Categories</option>
+            <option value="all">{t('operations.common.allCategories', 'All Categories')}</option>
             {categories.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -230,7 +233,7 @@ export const VillaStatusPage: React.FC = () => {
                       Villa #{villa.code}
                     </span>
                     <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                      ({villa.capacity} Persons)
+                      ({villa.capacity} {t('operations.common.persons', 'Persons')})
                     </span>
                   </div>
                   <VillaStatusChip status={villa.status} housekeeping={villa.housekeeping} />
@@ -248,7 +251,7 @@ export const VillaStatusPage: React.FC = () => {
                 <div style={{ padding: '8px 10px', borderRadius: 'var(--radius-xs)', backgroundColor: 'var(--bg-canvas)', fontSize: '11px', marginBottom: '12px' }}>
                   {villa.status === 'occupied' && (
                     <div>
-                      <div style={{ color: 'var(--text-tertiary)', marginBottom: '2px' }}>Current Stay:</div>
+                      <div style={{ color: 'var(--text-tertiary)', marginBottom: '2px' }}>{t('operations.villaStatus.currentStay', 'Current Stay:')}</div>
                       <strong style={{ color: 'var(--text-primary)' }}>{villa.currentCustomerName}</strong>
                       <div style={{ color: 'var(--accent-forest)', fontFamily: 'monospace' }}>
                         Ref: {villa.currentBookingRef}
@@ -258,8 +261,8 @@ export const VillaStatusPage: React.FC = () => {
 
                   {villa.status === 'reserved' && (
                     <div>
-                      <div style={{ color: 'var(--text-tertiary)', marginBottom: '2px' }}>Reserved For:</div>
-                      <strong style={{ color: 'var(--text-primary)' }}>{villa.currentCustomerName || 'Scheduled Arrival'}</strong>
+                      <div style={{ color: 'var(--text-tertiary)', marginBottom: '2px' }}>{t('operations.villaStatus.reservedFor', 'Reserved For:')}</div>
+                      <strong style={{ color: 'var(--text-primary)' }}>{villa.currentCustomerName || t('operations.villaStatus.scheduledArrival', 'Scheduled Arrival')}</strong>
                       {villa.currentBookingRef && (
                         <div style={{ color: 'var(--accent-forest)', fontFamily: 'monospace' }}>
                           Ref: {villa.currentBookingRef}
@@ -271,21 +274,21 @@ export const VillaStatusPage: React.FC = () => {
                   {villa.status === 'ready' && (
                     <div style={{ color: '#1B5E20', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <CheckCircle2 size={13} />
-                      <span>Ready for check-in inspection.</span>
+                      <span>{t('operations.villaStatus.readyForCheckInNotice', 'Ready for check-in inspection.')}</span>
                     </div>
                   )}
 
                   {villa.status === 'cleaning' && (
                     <div style={{ color: '#8C5400', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Brush size={13} />
-                      <span>Housekeeping service underway.</span>
+                      <span>{t('operations.villaStatus.housekeepingUnderway', 'Housekeeping service underway.')}</span>
                     </div>
                   )}
 
                   {villa.status === 'maintenance' && (
                     <div style={{ color: '#C62828', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Wrench size={13} />
-                      <span>{villa.maintenanceReason || 'Under technical repair'}</span>
+                      <span>{villa.maintenanceReason || t('operations.villaStatus.underTechnicalRepair', 'Under technical repair')}</span>
                     </div>
                   )}
                 </div>
@@ -293,7 +296,7 @@ export const VillaStatusPage: React.FC = () => {
                 {/* Features & Next Arrival */}
                 {villa.nextArrival && villa.status !== 'occupied' && (
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                    Next ETA: <strong>{villa.nextArrival.time}</strong> ({villa.nextArrival.customerName})
+                    {t('operations.villaStatus.nextEta', { time: villa.nextArrival.time, name: villa.nextArrival.customerName, defaultValue: `Next ETA: ${villa.nextArrival.time} (${villa.nextArrival.customerName})` })}
                   </div>
                 )}
               </div>
@@ -350,7 +353,7 @@ export const VillaStatusPage: React.FC = () => {
                     style={{ flex: 1, minHeight: '32px', fontSize: '11px' }}
                   >
                     <CheckCircle2 size={12} />
-                    <span>Repairs Complete → Set Ready</span>
+                    <span>{t('operations.villaStatus.repairsCompleteSetReady', 'Repairs Complete → Set Ready')}</span>
                   </button>
                 )}
 
@@ -363,7 +366,7 @@ export const VillaStatusPage: React.FC = () => {
                     style={{ flex: 1, minHeight: '32px', fontSize: '11px' }}
                   >
                     <RotateCcw size={12} />
-                    <span>Release Reservation</span>
+                    <span>{t('operations.villaStatus.releaseReservation', 'Release Reservation')}</span>
                   </button>
                 )}
               </div>
@@ -418,10 +421,10 @@ export const VillaStatusPage: React.FC = () => {
 
             <div style={{ padding: '12px', backgroundColor: 'var(--bg-soft)', borderRadius: 'var(--radius-xs)', fontSize: 'var(--text-xs)', marginBottom: 'var(--space-5)' }}>
               <div>
-                Villa: <strong>Villa #{transitionModal.villa.code} ({transitionModal.villa.name[currentLang] || transitionModal.villa.name.en})</strong>
+                {t('operations.villaStatus.villaLabel', 'Villa:')} <strong>Villa #{transitionModal.villa.code} ({transitionModal.villa.name[currentLang] || transitionModal.villa.name.en})</strong>
               </div>
               <div style={{ marginTop: '4px' }}>
-                Current Status: <strong style={{ textTransform: 'capitalize' }}>{transitionModal.villa.status}</strong> → New Status: <strong style={{ textTransform: 'capitalize', color: 'var(--accent-forest)' }}>{transitionModal.targetStatus}</strong>
+                {t('operations.villaStatus.currentStatusLabel', 'Current Status:')} <strong style={{ textTransform: 'capitalize' }}>{t(`operations.statuses.${transitionModal.villa.status}`, transitionModal.villa.status)}</strong> → {t('operations.villaStatus.newStatusLabel', 'New Status:')} <strong style={{ textTransform: 'capitalize', color: 'var(--accent-forest)' }}>{t(`operations.statuses.${transitionModal.targetStatus}`, transitionModal.targetStatus)}</strong>
               </div>
             </div>
 
@@ -432,7 +435,7 @@ export const VillaStatusPage: React.FC = () => {
                 className="hsw-btn hsw-btn-secondary"
                 style={{ minHeight: '36px', fontSize: 'var(--text-xs)' }}
               >
-                Cancel
+                {t('operations.villaStatus.cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -440,7 +443,7 @@ export const VillaStatusPage: React.FC = () => {
                 className="hsw-btn hsw-btn-primary"
                 style={{ minHeight: '36px', fontSize: 'var(--text-xs)' }}
               >
-                Confirm Update
+                {t('operations.villaStatus.confirmUpdate', 'Confirm Update')}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info, AlertCircle, ArrowRight } from 'lucide-react';
 import type { OperationalAlert } from '../../types/operations';
 
@@ -8,6 +9,7 @@ interface OperationalAlertBannerProps {
 }
 
 export const OperationalAlertBanner: React.FC<OperationalAlertBannerProps> = ({ alerts }) => {
+  const { t } = useTranslation();
   if (!alerts || alerts.length === 0) return null;
 
   return (
@@ -67,7 +69,7 @@ export const OperationalAlertBanner: React.FC<OperationalAlertBannerProps> = ({ 
                   flexShrink: 0,
                 }}
               >
-                <span>Resolve</span>
+                <span>{t('operations.common.resolve', 'Resolve')}</span>
                 <ArrowRight size={12} />
               </Link>
             )}

@@ -249,8 +249,36 @@
 }
 
 .hsw-sidebar-header {
-  padding: var(--space-6);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.hsw-sidebar-header .hsw-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.hsw-sidebar-header .hsw-brand-logo > div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.hsw-sidebar-header .hsw-brand-logo span {
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent-sand);
+  margin-top: 2px;
+  text-transform: uppercase;
 }
 
 .hsw-sidebar-user {

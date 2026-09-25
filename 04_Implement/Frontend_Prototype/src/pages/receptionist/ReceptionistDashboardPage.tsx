@@ -118,7 +118,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
             {checkedInCount}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-            {Math.round((checkedInCount / (totalArrivals || 1)) * 100)}% completed
+            {t('operations.dashboard.completedPercent', { percent: Math.round((checkedInCount / (totalArrivals || 1)) * 100), defaultValue: `${Math.round((checkedInCount / (totalArrivals || 1)) * 100)}% completed` })}
           </div>
         </div>
 
@@ -141,7 +141,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
             {pendingCheckIns}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-            Awaiting arrival or room check
+            {t('operations.dashboard.awaitingArrivalOrRoom', 'Awaiting arrival or room check')}
           </div>
         </div>
 
@@ -164,7 +164,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
             {occupiedVillas} <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 400 }}>/ {villas.length}</span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-            {Math.round((occupiedVillas / villas.length) * 100)}% resort occupancy
+            {t('operations.dashboard.resortOccupancyPercent', { percent: Math.round((occupiedVillas / villas.length) * 100), defaultValue: `${Math.round((occupiedVillas / villas.length) * 100)}% resort occupancy` })}
           </div>
         </div>
 
@@ -187,7 +187,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
             {cleaningVillas}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-            Housekeeping in progress
+            {t('operations.dashboard.housekeepingInProgress', 'Housekeeping in progress')}
           </div>
         </div>
       </div>
@@ -221,7 +221,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                 {t('operations.dashboard.todayArrivalsPreview', "Today's Arrivals Preview")}
               </h2>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                Sorted by expected arrival schedule
+                {t('operations.dashboard.sortedByExpectedArrival', 'Sorted by expected arrival schedule')}
               </span>
             </div>
             <Link
@@ -254,7 +254,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                     {t('operations.common.retreat', 'Retreat')}
                   </th>
                   <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    ETA
+                    {t('operations.common.eta', 'ETA')}
                   </th>
                   <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                     {t('operations.common.villa', 'Villa')}
@@ -292,7 +292,9 @@ export const ReceptionistDashboardPage: React.FC = () => {
                           {arrival.customerName}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                          {arrival.partySize} {arrival.partySize === 1 ? 'Customer' : 'Customers'} • {arrival.customerPhone}
+                          {arrival.partySize === 1
+                            ? t('operations.common.customerSolo', '1 Customer (Solo)')
+                            : t('operations.common.customerCount', { count: arrival.partySize, defaultValue: `${arrival.partySize} Customers` })} • {arrival.customerPhone}
                         </div>
                       </td>
                       <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', maxWidth: '160px' }}>
@@ -321,12 +323,12 @@ export const ReceptionistDashboardPage: React.FC = () => {
                                     : '#C62828',
                               }}
                             >
-                              {arrival.villaReadiness}
+                              {t(`operations.statuses.${arrival.villaReadiness}`, arrival.villaReadiness)}
                             </span>
                           </div>
                         ) : (
                           <span style={{ color: '#C62828', fontWeight: 600, fontSize: '11px' }}>
-                            Not Assigned
+                            {t('operations.common.notAssigned', 'Not Assigned')}
                           </span>
                         )}
                       </td>
@@ -340,7 +342,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                             className="hsw-btn hsw-btn-secondary"
                             style={{ minHeight: '30px', padding: '0 8px', fontSize: '11px' }}
                           >
-                            View
+                            {t('operations.common.view', 'View')}
                           </Link>
                         ) : (
                           <Link
@@ -348,7 +350,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                             className="hsw-btn hsw-btn-primary"
                             style={{ minHeight: '30px', padding: '0 10px', fontSize: '11px' }}
                           >
-                            Check-In
+                            {t('operations.arrivals.startCheckIn', 'Check-In')}
                           </Link>
                         )}
                       </td>
@@ -393,7 +395,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                 gap: '4px',
               }}
             >
-              <span>Manage</span>
+              <span>{t('operations.common.manage', 'Manage')}</span>
               <ArrowRight size={13} />
             </Link>
           </div>
@@ -528,7 +530,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                 style={{ justifyContent: 'flex-start', minHeight: '34px', fontSize: 'var(--text-xs)' }}
               >
                 <Users size={14} />
-                <span>Process Today's Check-Ins</span>
+                <span>{t('operations.dashboard.processTodayCheckIns', "Process Today's Check-Ins")}</span>
               </button>
               <button
                 type="button"
@@ -537,7 +539,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
                 style={{ justifyContent: 'flex-start', minHeight: '34px', fontSize: 'var(--text-xs)' }}
               >
                 <Brush size={14} />
-                <span>Update Housekeeping Status</span>
+                <span>{t('operations.dashboard.updateHousekeepingStatus', 'Update Housekeeping Status')}</span>
               </button>
             </div>
           </div>

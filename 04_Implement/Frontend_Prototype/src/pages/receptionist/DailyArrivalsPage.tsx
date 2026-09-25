@@ -167,7 +167,7 @@ export const DailyArrivalsPage: React.FC = () => {
               <option value="all">{t('operations.common.all', 'All Villa States')}</option>
               <option value="ready">{t('operations.statuses.ready', 'Ready')}</option>
               <option value="cleaning">{t('operations.statuses.cleaning', 'Cleaning')}</option>
-              <option value="unassigned">Not Assigned</option>
+              <option value="unassigned">{t('operations.common.notAssigned', 'Not Assigned')}</option>
             </select>
           </div>
         </div>
@@ -189,7 +189,7 @@ export const DailyArrivalsPage: React.FC = () => {
               {t('operations.arrivals.noArrivalsFound', 'No arrivals match the selected filter criteria.')}
             </div>
             <div style={{ fontSize: 'var(--text-xs)', marginTop: '4px' }}>
-              Try adjusting your search terms or clearing the status filters.
+              {t('operations.arrivals.emptySearchHelper', 'Try adjusting your search terms or clearing the status filters.')}
             </div>
           </div>
         ) : (
@@ -198,7 +198,7 @@ export const DailyArrivalsPage: React.FC = () => {
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg-soft)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
                   <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    ETA
+                    {t('operations.common.eta', 'ETA')}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                     {t('operations.common.customer', 'Customer')}
@@ -213,7 +213,7 @@ export const DailyArrivalsPage: React.FC = () => {
                     {t('operations.common.dates', 'Stay Dates')}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    Deposit
+                    {t('operations.common.deposit', 'Deposit')}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                     {t('operations.common.villa', 'Villa Assignment')}
@@ -222,7 +222,7 @@ export const DailyArrivalsPage: React.FC = () => {
                     {t('operations.common.status', 'Arrival Status')}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    Residence Decl.
+                    {t('operations.common.residenceDecl', 'Residence Decl.')}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right' }}>
                     {t('operations.common.action', 'Action')}
@@ -251,7 +251,7 @@ export const DailyArrivalsPage: React.FC = () => {
                         {arrival.expectedArrivalTime}
                         {arrival.actualArrivalTime && (
                           <div style={{ fontSize: '10px', color: '#1B5E20', fontWeight: 500 }}>
-                            Arrived {arrival.actualArrivalTime}
+                            {t('operations.common.arrivedAt', { time: arrival.actualArrivalTime, defaultValue: `Arrived ${arrival.actualArrivalTime}` })}
                           </div>
                         )}
                       </td>
@@ -262,7 +262,9 @@ export const DailyArrivalsPage: React.FC = () => {
                           {arrival.customerName}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                          {arrival.partySize} {arrival.partySize === 1 ? 'Customer' : 'Customers'} • {arrival.customerPhone}
+                          {arrival.partySize === 1
+                            ? t('operations.common.customerSolo', '1 Customer (Solo)')
+                            : t('operations.common.customerCount', { count: arrival.partySize, defaultValue: `${arrival.partySize} Customers` })} • {arrival.customerPhone}
                         </div>
                       </td>
 
@@ -277,14 +279,16 @@ export const DailyArrivalsPage: React.FC = () => {
                           {retreatTitle}
                         </div>
                         <div style={{ fontSize: '10px', color: 'var(--accent-olive)' }}>
-                          {arrival.nights} Nights Retreat
+                          {t('operations.common.nightsRetreat', { count: arrival.nights, defaultValue: `${arrival.nights} Nights Retreat` })}
                         </div>
                       </td>
 
                       {/* Dates */}
                       <td style={{ padding: '14px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                         <div>{arrival.startDate}</div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>to {arrival.endDate}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                          {t('operations.common.toDate', { date: arrival.endDate, defaultValue: `to ${arrival.endDate}` })}
+                        </div>
                       </td>
 
                       {/* Deposit Status */}
@@ -313,20 +317,20 @@ export const DailyArrivalsPage: React.FC = () => {
                                       : '#C62828',
                                 }}
                               >
-                                {arrival.villaReadiness}
+                                {t(`operations.statuses.${arrival.villaReadiness}`, arrival.villaReadiness)}
                               </span>
                               <Link
                                 to={`/receptionist/check-in/${arrival.bookingReference}/villa`}
                                 style={{ fontSize: '10px', textDecoration: 'underline', color: 'var(--text-tertiary)' }}
                               >
-                                Change
+                                {t('operations.common.change', 'Change')}
                               </Link>
                             </div>
                           </div>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                             <span style={{ color: '#C62828', fontWeight: 600, fontSize: '11px' }}>
-                              Not Assigned
+                              {t('operations.common.notAssigned', 'Not Assigned')}
                             </span>
                             <Link
                               to={`/receptionist/check-in/${arrival.bookingReference}/villa`}
@@ -337,7 +341,7 @@ export const DailyArrivalsPage: React.FC = () => {
                                 textDecoration: 'underline',
                               }}
                             >
-                              Assign Now
+                              {t('operations.common.assignNow', 'Assign Now')}
                             </Link>
                           </div>
                         )}
@@ -362,7 +366,7 @@ export const DailyArrivalsPage: React.FC = () => {
                             className="hsw-btn hsw-btn-secondary"
                             style={{ minHeight: '32px', padding: '0 10px', fontSize: '11px' }}
                           >
-                            <span>View Details</span>
+                            <span>{t('operations.common.viewDetails', 'View Details')}</span>
                           </button>
                         ) : !arrival.assignedVillaId ? (
                           <button
@@ -371,7 +375,7 @@ export const DailyArrivalsPage: React.FC = () => {
                             className="hsw-btn hsw-btn-secondary"
                             style={{ minHeight: '32px', padding: '0 10px', fontSize: '11px', color: 'var(--accent-forest)' }}
                           >
-                            <span>Assign Villa</span>
+                            <span>{t('operations.arrivals.assignVilla', 'Assign Villa')}</span>
                           </button>
                         ) : (
                           <button

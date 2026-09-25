@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { OperationalSidebar } from '../../components/navigation/OperationalSidebar';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,6 +9,7 @@ import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
 
 export const OperationalLayout: React.FC = () => {
   const { role } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <div className="hsw-operational-layout">
@@ -18,7 +20,9 @@ export const OperationalLayout: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calendar size={14} style={{ color: 'var(--accent-olive)' }} />
-              <span>Resort Date: <strong>Thursday, 24 Sep 2026</strong></span>
+              <span>
+                {t('operations.common.resortDate', 'Resort Date')}: <strong>{t('operations.common.dateValue', 'Thursday, 24 Sep 2026')}</strong>
+              </span>
             </div>
             <div style={{
               padding: '2px 8px',
@@ -28,10 +32,10 @@ export const OperationalLayout: React.FC = () => {
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
             }}>
-              Role: {role?.replace('_', ' ')}
+              {t('operations.common.role', 'Role')}: {role ? t(`navigation:roles.${role}`, role.replace('_', ' ')) : ''}
             </div>
             <LanguageSwitcher />
-            <div style={{ position: 'relative', cursor: 'pointer' }} title="Operational Notifications">
+            <div style={{ position: 'relative', cursor: 'pointer' }} title={t('operations.common.operationalNotifications', 'Operational Notifications')}>
               <Bell size={16} />
               <span style={{
                 position: 'absolute',
