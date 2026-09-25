@@ -1,0 +1,62 @@
+{
+  "brandName": "HeavenStay",
+  "brandSub": "WELLNESS RESORT",
+  "currency": "VND",
+  "loading": "Chargement...",
+  "actions": {
+    "explore": "Explorer",
+    "exploreRetreats": "Découvrir les Séjours",
+    "viewDetails": "Voir les Détails",
+    "bookRetreat": "Réserver le Séjour",
+    "bookNow": "Réserver",
+    "signIn": "Se Connecter",
+    "signOut": "Se Déconnecter",
+    "register": "S'inscrire",
+    "back": "Retour",
+    "backToHome": "Retour à l'accueil",
+    "returnToSanctuary": "Retour au Sanctuaire",
+    "submit": "Soumettre",
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "continue": "Continuer",
+    "resend": "Renvoyer le code",
+    "filter": "Filtrer",
+    "all": "Tous",
+    "viewAll": "Tout afficher",
+    "learnMore": "En savoir plus"
+  },
+  "labels": {
+    "duration": "Durée",
+    "startingFrom": "À partir de",
+    "perGuest": "personne",
+    "perNight": "nuit",
+    "days": "jours",
+    "nights": "nuits",
+    "inclusions": "Prestations Incluses",
+    "itinerary": "Itinéraire du Séjour",
+    "accommodation": "Hébergement en Villa",
+    "suitableFor": "Idéal Pour",
+    "wellnessGoals": "Objectifs Bien-être",
+    "featured": "Sélection",
+    "popular": "Prisé"
+  },
+  "footer": {
+    "tagline": "Un sanctuaire côtier confidentiel dédié à la régénération profonde et à la pleine conscience.",
+    "quickLinks": "Découvrir",
+    "wellness": "Soins & Bien-être",
+    "contact": "Contact & Réservations",
+    "rights": "HeavenStay Wellness Resort. Tous droits réservés.",
+    "privacy": "Politique de Confidentialité",
+    "terms": "Conditions Générales",
+    "dataProtection": "Confidentialité & Protection des Données",
+    "wellnessCare": "Bien-Être & Soins Holistiques",
+    "address": "Zone d'Éducation & Formation – Parc Hi-Tech de Hoa Lac – Km29 Boulevard Thang Long, Hoa Lac, Hanoï, Vietnam",
+    "phone": "+84 (0) 987 464 904",
+    "email": "sanctuary@heavenstay.com"
+  },
+  "motion": {
+    "view": "VOIR",
+    "explore": "DÉCOUVRIR",
+    "drag": "GLISSER"
+  }
+}

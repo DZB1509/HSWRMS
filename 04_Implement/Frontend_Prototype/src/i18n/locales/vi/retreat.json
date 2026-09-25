@@ -1,0 +1,27 @@
+{
+  "list": {
+    "badge": "DANH MỤC KỲ NGHỈ",
+    "title": "Các Gói Trải Nghiệm & Trị Liệu",
+    "subtitle": "Chọn hành trình dưỡng sinh phù hợp với nhịp sống và mục tiêu phục hồi sức khỏe của bạn.",
+    "filterAll": "Tất Cả Kỳ Nghỉ",
+    "filterShort": "Kỳ Nghỉ Ngắn (3 Ngày)",
+    "filterMedium": "Kỳ Nghỉ Tiêu Chuẩn (5 Ngày)",
+    "filterLong": "Kỳ Nghỉ Chuyên Sâu (7 Ngày)"
+  },
+  "detail": {
+    "backToList": "Quay lại danh sách kỳ nghỉ",
+    "overview": "Tổng Quan Kỳ Nghỉ",
+    "whatIncluded": "Dịch Vụ & Trải Nghiệm Bao Gồm",
+    "comprehensiveCare": "Chăm Sóc Toàn Diện",
+    "itineraryTitle": "Hành Trình Chi Tiết Từng Ngày",
+    "daysOfRest": "{{days}} Ngày Tĩnh Dưỡng & Phục Hồi Thân Tâm",
+    "accommodationTitle": "Không Gian Biệt Thự Đi Kèm",
+    "suitableForTitle": "Đối Tượng & Mục Tiêu Phù Hợp",
+    "wellnessHighlights": "Điểm Nhấn Trị Liệu & Spa",
+    "diningHighlights": "Đặc Trưng Ẩm Thực Thực Dưỡng",
+    "priceDisclaimer": "* Giá đã bao gồm toàn bộ dịch vụ lưu trú, các buổi spa trong gói, thực đơn 3 bữa dưỡng sinh và thuế phí dịch vụ.",
+    "readyToBook": "Sẵn Sàng Bắt Đầu Kỳ Nghỉ?",
+    "ctaBook": "Đặt Kỳ Nghỉ Này",
+    "depositNote": "Đặt cọc trước để giữ phòng và khung giờ trị liệu tốt nhất cùng chuyên viên."
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "badge": "UN SANCTUAIRE NATUREL PRÉSERVÉ",
+    "headline": "Retrouver l'Harmonie au Cœur d'une Nature Pure",
+    "subheadline": "Une immersion régénératrice nichée au creux d'une baie sauvage, alliant thérapies ancestrales aux herbes vietnamiennes, yoga en pleine conscience et cuisine biologique sur mesure.",
+    "ctaPrimary": "Explorer les Séjours",
+    "ctaSecondary": "Philosophie du Séjour",
+    "scrollHint": "Défiler pour explorer"
+  },
+  "philosophy": {
+    "badge": "PHILOSOPHIE HEAVENSTAY",
+    "title": "L'Art du Silence & de la Restauration Profonde",
+    "paragraph1": "Niché dans une réserve de biosphère nationale protégée bordant une crique marine intime, HeavenStay a été imaginé comme un refuge paisible où le rythme moderne s'efface devant le souffle de l'océan.",
+    "paragraph2": "Nous croyons que la vitalité authentique renaît lorsque le corps repose en plénitude, que l'esprit s'allège et que l'énergie intérieure est ravivée par des soins personnalisés et bienveillants."
+  },
+  "pillars": {
+    "badge": "TROIS PILIERS BIEN-ÊTRE",
+    "title": "Une Trinité de Régénération Intégrale",
+    "restore": {
+      "title": "Régénérer (Restore)",
+      "desc": "Purifier et libérer les tensions profondes par l'hydrothérapie minérale, l'acupression aux pochons d'herbes et les soins traditionnels orientaux."
+    },
+    "reconnect": {
+      "title": "Reconnecter (Reconnect)",
+      "desc": "Apaiser les pensées dans le silence avec nos maîtres yogis, la méditation par le souffle et la vibration des bols tibétains."
+    },
+    "nourish": {
+      "title": "Nourrir (Nourish)",
+      "desc": "Créations culinaires saines issues de micro-fermes biologiques locales, adaptées à votre profil métabolique et à vos intolérances."
+    }
+  },
+  "showcase": {
+    "badge": "SÉJOURS EMBLÉMATIQUES",
+    "title": "Immersions Holistiques Conçues sur Mesure",
+    "subtitle": "Chaque programme s'ajuste à vos aspirations de santé, de la courte escapade revitalisante à la transformation globale.",
+    "viewAll": "Voir Tous les Séjours"
+  },
+  "experiences": {
+    "badge": "PRESTATIONS EXCLUSIVES",
+    "title": "L'Art de Vivre à HeavenStay",
+    "spa": {
+      "title": "Spa & Soins aux Plantes Médicinales",
+      "desc": "Pavillons de soins privés suspendus face à la baie, menés par des thérapeutes experts utilisant nos élixirs botaniques exclusifs."
+    },
+    "yoga": {
+      "title": "Yoga à l'Aube & Méditation",
+      "desc": "Accueillez l'aurore sur nos terrasses en bois face à la canopée, en pratiquant le vinyasa et le pranayama purificateur."
+    },
+    "dining": {
+      "title": "Gastronomie Saine du Terroir",
+      "desc": "Chaque mets est soigneusement composé selon vos préférences alimentaires et vos besoins nutritionnels précis."
+    }
+  },
+  "villas": {
+    "badge": "RÉSIDENCES PRIVÉES",
+    "title": "Villas Confidentielles Érigées en Pleine Nature",
+    "desc": "Architecture minimaliste alliant essences de bois locales, pierre de granit et brise marine. Chaque villa dispose d'une piscine d'eau minérale chauffée et d'un patio de méditation.",
+    "features": [
+      "Panorama exclusif sur la baie et la réserve nationale",
+      "Piscine minérale privée à débordement chauffée",
+      "Terrasse extérieure en teck pour yoga et repos",
+      "Service dédié d'un ambassadeur de bien-être"
+    ]
+  },
+  "resonance": {
+    "badge": "TÉMOIGNAGES RÉSIDENTS",
+    "title": "Échos de Transformation",
+    "quote1": "« Trois jours à HeavenStay ont restauré le sommeil profond que j'avais perdu depuis des années. Chaque rituel et chaque repas étaient d'une délicatesse absolue. »",
+    "author1": "Eleanor Vance — Résidente du séjour Mindful Renewal",
+    "quote2": "« Intimité totale, praticiens dotés d'un savoir intuitif remarquable et cuisine réparatrice. Un lieu véritablement hors du temps. »",
+    "author2": "Jonathan Vance — Résident du séjour Complete Reset"
+  },
+  "cta": {
+    "badge": "SANCTUAIRE HEAVENSTAY",
+    "title": "Commencez Votre Régénération Personnelle",
+    "desc": "Laissez HeavenStay vous guider vers la sérénité intérieure et la vitalité durable.",
+    "button": "Découvrir les Séjours"
+  }
+}

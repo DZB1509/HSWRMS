@@ -1,0 +1,62 @@
+{
+  "brandName": "HeavenStay",
+  "brandSub": "WELLNESS RESORT",
+  "currency": "VND",
+  "loading": "Loading...",
+  "actions": {
+    "explore": "Explore",
+    "exploreRetreats": "Explore Retreats",
+    "viewDetails": "View Details",
+    "bookRetreat": "Book Retreat",
+    "bookNow": "Book Now",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "register": "Register",
+    "back": "Back",
+    "backToHome": "Return Home",
+    "returnToSanctuary": "Return to HeavenStay Sanctuary",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "resend": "Resend Code",
+    "filter": "Filter",
+    "all": "All",
+    "viewAll": "View All",
+    "learnMore": "Learn More"
+  },
+  "labels": {
+    "duration": "Duration",
+    "startingFrom": "Starting From",
+    "perGuest": "customer",
+    "perNight": "night",
+    "days": "days",
+    "nights": "nights",
+    "inclusions": "Inclusions",
+    "itinerary": "Journey Itinerary",
+    "accommodation": "Villa Accommodation",
+    "suitableFor": "Ideal For",
+    "wellnessGoals": "Wellness Focus",
+    "featured": "Featured",
+    "popular": "Popular"
+  },
+  "footer": {
+    "tagline": "A secluded coastal sanctuary for comprehensive bodily restoration and mindfulness.",
+    "quickLinks": "Explore",
+    "wellness": "Therapy & Wellness",
+    "contact": "Contact & Reservations",
+    "rights": "HeavenStay Wellness Resort. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "dataProtection": "Privacy & Data Protection",
+    "wellnessCare": "Wellness & Holistic Care",
+    "address": "Education & Training Zone – Hoa Lac Hi-Tech Park – Km29 Thang Long Boulevard, Hoa Lac, Hanoi, Vietnam",
+    "phone": "+84 (0) 987 464 904",
+    "email": "sanctuary@heavenstay.com"
+  },
+  "motion": {
+    "view": "VIEW",
+    "explore": "EXPLORE",
+    "drag": "DRAG"
+  }
+}

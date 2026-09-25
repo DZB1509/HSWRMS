@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "retreats": "Séjours & Retraites",
+    "villas": "Villas & Espaces",
+    "spa": "Spa & Soins Holistiques",
+    "dining": "Gastronomie Saine",
+    "experiences": "Expériences",
+    "about": "À Propos de HeavenStay",
+    "dashboard": "Tableau de Bord",
+    "myBookings": "Mes Réservations",
+    "healthProfile": "Profil de Santé",
+    "folio": "Facturation du Séjour",
+    "accountSettings": "Paramètres du Compte"
+  },
+  "roles": {
+    "public": "Visiteur",
+    "customer": "Client Résident (Customer)",
+    "receptionist": "Réceptionniste (Receptionist)",
+    "therapist": "Thérapeute & Maître de Yoga",
+    "fb_staff": "Équipe Cuisine & F&B",
+    "manager": "Directeur des Opérations",
+    "admin": "Administrateur Système"
+  },
+  "languages": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "fr": "Français"
+  }
+}

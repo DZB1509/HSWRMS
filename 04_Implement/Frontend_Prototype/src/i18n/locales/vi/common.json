@@ -1,0 +1,62 @@
+{
+  "brandName": "HeavenStay",
+  "brandSub": "WELLNESS RESORT",
+  "currency": "VND",
+  "loading": "Đang tải...",
+  "actions": {
+    "explore": "Khám Phá",
+    "exploreRetreats": "Khám Phá Kỳ Nghỉ",
+    "viewDetails": "Xem Chi Tiết",
+    "bookRetreat": "Đặt Kỳ Nghỉ",
+    "bookNow": "Đặt Ngay",
+    "signIn": "Đăng Nhập",
+    "signOut": "Đăng Xuất",
+    "register": "Đăng Ký",
+    "back": "Quay Lại",
+    "backToHome": "Về Trang Chủ",
+    "returnToSanctuary": "Trở Về HeavenStay",
+    "submit": "Gửi Xác Nhận",
+    "confirm": "Xác Nhận",
+    "cancel": "Hủy",
+    "continue": "Tiếp Tục",
+    "resend": "Gửi Lại Mã",
+    "filter": "Bộ Lọc",
+    "all": "Tất Cả",
+    "viewAll": "Xem Tất Cả",
+    "learnMore": "Tìm Hiểu Thêm"
+  },
+  "labels": {
+    "duration": "Thời Lượng",
+    "startingFrom": "Giá Khởi Điểm",
+    "perGuest": "khách",
+    "perNight": "đêm",
+    "days": "ngày",
+    "nights": "đêm",
+    "inclusions": "Dịch Vụ Bao Gồm",
+    "itinerary": "Hành Trình Trải Nghiệm",
+    "accommodation": "Biệt Thự Lưu Trú",
+    "suitableFor": "Phù Hợp Cho",
+    "wellnessGoals": "Mục Tiêu Trị Liệu",
+    "featured": "Nổi Bật",
+    "popular": "Được Yêu Thích"
+  },
+  "footer": {
+    "tagline": "Khu nghỉ dưỡng chăm sóc sức khỏe và phục hồi năng lượng tâm trí giữa thiên nhiên nguyên sơ.",
+    "quickLinks": "Khám Phá",
+    "wellness": "Trị Liệu & Dưỡng Sinh",
+    "contact": "Liên Hệ & Đặt Chỗ",
+    "rights": "Bản quyền thuộc về HeavenStay Wellness Resort. Bảo lưu mọi quyền.",
+    "privacy": "Chính Sách Quyền Riêng Tư",
+    "terms": "Điều Khoản Dịch Vụ",
+    "dataProtection": "Bảo Mật & Quyền Riêng Tư Dữ Liệu",
+    "wellnessCare": "Trị Liệu & Chăm Sóc Toàn Diện",
+    "address": "Khu Giáo dục và Đào tạo – Khu Công nghệ cao Hòa Lạc – Km29 Đại lộ Thăng Long, Xã Hòa Lạc, TP. Hà Nội",
+    "phone": "+84 (0) 987 464 904",
+    "email": "sanctuary@heavenstay.com"
+  },
+  "motion": {
+    "view": "XEM",
+    "explore": "KHÁM PHÁ",
+    "drag": "KÉO"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "list": {
+    "badge": "厳選プラン",
+    "title": "リトリート＆養生プログラム",
+    "subtitle": "お客様の心身の状態や滞在日数に合わせ、最適な癒しの旅をお選びください。",
+    "filterAll": "すべてのプラン",
+    "filterShort": "ショートリトリート (3日間)",
+    "filterMedium": "スタンダード (5日間)",
+    "filterLong": "集中トランスフォーメーション (7日間)"
+  },
+  "detail": {
+    "backToList": "プラン一覧に戻る",
+    "overview": "プログラム概要",
+    "whatIncluded": "含まれる滞在内容・特典",
+    "comprehensiveCare": "総合的なケアとサポート",
+    "itineraryTitle": "日別の滞在スケジュール",
+    "daysOfRest": "{{days}}日間の深層静寂と心身再生の旅",
+    "accommodationTitle": "ご滞在ヴィラ",
+    "suitableForTitle": "このような方におすすめ",
+    "wellnessHighlights": "スパ・トリートメントの魅力",
+    "diningHighlights": "養生料理・お食事のこだわり",
+    "priceDisclaimer": "* 料金には独立型ヴィラでのご宿泊、毎日のスパ施術、3食の養生オーガニック料理、税金・サービス料が含まれています。",
+    "readyToBook": "癒しの旅を始めませんか？",
+    "ctaBook": "このプランを予約する",
+    "depositNote": "事前のお内金にて、プライベートヴィラと専任セラピストの施術枠を優先確保いたします。"
+  }
+}

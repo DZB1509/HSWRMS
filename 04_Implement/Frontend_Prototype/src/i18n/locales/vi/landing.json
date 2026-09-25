@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "badge": "KHÔNG GIAN NGHỈ DƯỠNG NGUYÊN BẢN",
+    "headline": "Tìm Lại Cân Bằng Giữa Thiên Nhiên Thuần Khiết",
+    "subheadline": "Hành trình chăm sóc thân tâm toàn diện tại vịnh biển biệt lập, kết hợp liệu pháp thảo dược cổ truyền, yoga chánh niệm và ẩm thực hữu cơ cá nhân hóa.",
+    "ctaPrimary": "Khám Phá Các Gói Kỳ Nghỉ",
+    "ctaSecondary": "Hành Trình Chữa Lành",
+    "scrollHint": "Cuộn xuống để khám phá"
+  },
+  "philosophy": {
+    "badge": "TRIẾT LÝ HEAVENSTAY",
+    "title": "Nghệ Thuật Tĩnh Lặng & Sự Phục Hồi Thâm Sâu",
+    "paragraph1": "Tọa lạc giữa rừng nguyên sinh ôm trọn vịnh biển thanh bình, HeavenStay được kiến tạo như một chốn ẩn náu an yên, nơi nhịp sống hối hả nhường chỗ cho hơi thở tự nhiên và sự thức tỉnh của các giác quan.",
+    "paragraph2": "Chúng tôi tin rằng sức khỏe đích thực bắt đầu khi cơ thể được nghỉ ngơi trọn vẹn, tâm trí buông bỏ âu lo và nguồn năng lượng nội tại được tái sinh qua từng liệu trình chăm sóc chu đáo, tỉ mỉ."
+  },
+  "pillars": {
+    "badge": "BA TRỤ CỘT CHĂM SÓC",
+    "title": "Hành Trình Tái Thiết Thân - Tâm - Trí",
+    "restore": {
+      "title": "Phục Hồi (Restore)",
+      "desc": "Thanh lọc cơ thể và giải tỏa áp lực sâu với liệu pháp thủy trị liệu, ấn huyệt thảo dược và massage truyền thống phương Đông."
+    },
+    "reconnect": {
+      "title": "Kết Nối (Reconnect)",
+      "desc": "Lắng nghe tâm trí giữa không gian tĩnh lặng cùng các bậc thầy yoga, thiền định hơi thở và chuông xoay Tây Tạng."
+    },
+    "nourish": {
+      "title": "Nuôi Dưỡng (Nourish)",
+      "desc": "Thực đơn dinh dưỡng cá nhân hóa từ nguồn nông sản hữu cơ bản địa, tôn trọng đặc tính cơ thể và dị ứng cá nhân."
+    }
+  },
+  "showcase": {
+    "badge": "KỲ NGHỈ TIÊU BIỂU",
+    "title": "Các Gói Trải Nghiệm Chữa Lành Chuyên Sâu",
+    "subtitle": "Mỗi kỳ nghỉ được thiết kế riêng biệt để đáp ứng mục tiêu sức khỏe của bạn, từ tái tạo năng lượng ngắn ngày đến chuyển hóa toàn diện.",
+    "viewAll": "Xem Tất Cả Gói Nghỉ Dưỡng"
+  },
+  "experiences": {
+    "badge": "TRẢI NGHIỆM ĐẶC QUYỀN",
+    "title": "Tinh Hoa Dưỡng Sinh Tại HeavenStay",
+    "spa": {
+      "title": "Spa & Trị Liệu Thảo Dược",
+      "desc": "Phòng trị liệu hướng biển riêng tư với đội ngũ chuyên viên chứng chỉ quốc tế và các bài thuốc thảo mộc độc quyền."
+    },
+    "yoga": {
+      "title": "Yoga & Thiền Định Buổi Sớm",
+      "desc": "Đón ánh bình minh trên sàn gỗ ngoài trời giữa rừng, thực hành vinyasa và bài tập thở pranayama thanh lọc tâm trí."
+    },
+    "dining": {
+      "title": "Ẩm Thực Thuận Tự Nhiên",
+      "desc": "Mỗi bữa ăn là một tác phẩm được bếp trưởng sáng tạo dựa trên hồ sơ dị ứng và mục tiêu calo của từng khách hàng."
+    }
+  },
+  "villas": {
+    "badge": "KHÔNG GIAN LƯU TRÚ",
+    "title": "Biệt Thự Riêng Tư Ẩn Mình Giữa Thiên Nhiên",
+    "desc": "Kiến trúc tối giản lấy cảm hứng từ vật liệu gỗ, đá bản địa và làn gió biển mát lành. Mỗi biệt thự sở hữu hồ bơi vô cực riêng và góc thiền định tĩnh mịch.",
+    "features": [
+      "Tầm nhìn toàn cảnh vịnh biển và vườn quốc gia",
+      "Hồ bơi nước khoáng ấm riêng biệt",
+      "Khu vực yoga & tắm nắng ngoài trời",
+      "Quản gia chăm sóc sức khỏe riêng"
+    ]
+  },
+  "resonance": {
+    "badge": "CẢM NHẬN KHÁCH HÀNG",
+    "title": "Những Khoảnh Khắc Lắng Đọng",
+    "quote1": "“Ba ngày tại HeavenStay đã giúp tôi tìm lại giấc ngủ sâu sau nhiều tháng căng thẳng công việc. Từng chi tiết nhỏ từ bữa ăn đến buổi trị liệu đều tinh tế vô cùng.”",
+    "author1": "Minh Thư — Khách lưu trú kỳ nghỉ Mindful Renewal",
+    "quote2": "“Không gian biệt lập tuyệt đối, chuyên viên am hiểu thể trạng và tận tâm. Đây thực sự là nơi lý tưởng để cơ thể và tâm hồn được chữa lành.”",
+    "author2": "Jonathan Vance — Khách lưu trú kỳ nghỉ Complete Reset"
+  },
+  "cta": {
+    "badge": "THIÊN ĐƯỜNG AN YÊN",
+    "title": "Bắt Đầu Hành Trình Phục Hồi Ngay Hôm Nay",
+    "desc": "Hãy để HeavenStay đồng hành cùng bạn trên con đường tìm lại bình yên nội tại và sức sống dồi dào.",
+    "button": "Khám Phá Kỳ Nghỉ Ngay"
+  }
+}

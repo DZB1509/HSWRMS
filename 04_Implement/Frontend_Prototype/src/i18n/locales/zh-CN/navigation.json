@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "retreats": "疗愈假期",
+    "villas": "下榻居所",
+    "spa": "水疗与理疗",
+    "dining": "养生美馔",
+    "experiences": "沉浸体验",
+    "about": "关于度假村",
+    "dashboard": "主页总览",
+    "myBookings": "我的预订",
+    "healthProfile": "健康档案",
+    "folio": "账单明细",
+    "accountSettings": "账户设置"
+  },
+  "roles": {
+    "public": "访客",
+    "customer": "住客 (Customer)",
+    "receptionist": "前台接待 (Receptionist)",
+    "therapist": "理疗师 / 瑜伽导师",
+    "fb_staff": "餐饮与主厨团队",
+    "manager": "度假村运营经理",
+    "admin": "系统管理员"
+  },
+  "languages": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "fr": "Français"
+  }
+}

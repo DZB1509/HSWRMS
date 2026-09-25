@@ -1,0 +1,27 @@
+{
+  "list": {
+    "badge": "精选疗愈方案",
+    "title": "养生套餐与深度疗愈之旅",
+    "subtitle": "根据您的身心需求，探寻专属定制的多日身心重塑计划。",
+    "filterAll": "全部套餐",
+    "filterShort": "短途焕活 (3天)",
+    "filterMedium": "经典疗愈 (5天)",
+    "filterLong": "全维蜕变 (7天)"
+  },
+  "detail": {
+    "backToList": "返回疗愈套餐列表",
+    "overview": "项目概览",
+    "whatIncluded": "套餐包含尊享礼遇",
+    "comprehensiveCare": "全方位悉心呵护",
+    "itineraryTitle": "每日日程与疗愈动线",
+    "daysOfRest": "{{days}} 天深层静愈与身心焕新之旅",
+    "accommodationTitle": "下榻居所环境",
+    "suitableForTitle": "适宜人群与目标",
+    "wellnessHighlights": "水疗与草本理疗亮点",
+    "diningHighlights": "有机食疗与营养特色",
+    "priceDisclaimer": "* 价格已包含指定独立别墅入住、全部每日水疗疗程、一日三餐定制养生膳食及税费。",
+    "readyToBook": "准备好开始您的蜕变之旅了吗？",
+    "ctaBook": "立即预订该套餐",
+    "depositNote": "支付定金可锁定私属别墅与理疗师黄金专属时段。"
+  }
+}

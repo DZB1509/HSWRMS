@@ -1,0 +1,62 @@
+{
+  "brandName": "HeavenStay",
+  "brandSub": "WELLNESS RESORT",
+  "currency": "VND",
+  "loading": "加载中...",
+  "actions": {
+    "explore": "探索",
+    "exploreRetreats": "探索疗愈假期",
+    "viewDetails": "查看详情",
+    "bookRetreat": "预订疗愈套餐",
+    "bookNow": "立即预订",
+    "signIn": "登录",
+    "signOut": "登出",
+    "register": "注册",
+    "back": "返回",
+    "backToHome": "返回首页",
+    "returnToSanctuary": "返回 HeavenStay 胜境",
+    "submit": "提交",
+    "confirm": "确认",
+    "cancel": "取消",
+    "continue": "继续",
+    "resend": "重发验证码",
+    "filter": "筛选",
+    "all": "全部",
+    "viewAll": "查看全部",
+    "learnMore": "了解更多"
+  },
+  "labels": {
+    "duration": "时长",
+    "startingFrom": "起价",
+    "perGuest": "人",
+    "perNight": "晚",
+    "days": "天",
+    "nights": "晚",
+    "inclusions": "包含项目",
+    "itinerary": "疗愈行程",
+    "accommodation": "下榻别墅",
+    "suitableFor": "适宜人群",
+    "wellnessGoals": "康养目标",
+    "featured": "精选",
+    "popular": "最受欢迎"
+  },
+  "footer": {
+    "tagline": "隐匿于原生态自然中的身心疗愈胜境，重拾内在平静。",
+    "quickLinks": "探索",
+    "wellness": "康养与水疗",
+    "contact": "联系与预订",
+    "rights": "HeavenStay 养生度假村 版权所有。",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "dataProtection": "隐私与数据安全保护",
+    "wellnessCare": "身心养护与全维关怀",
+    "address": "越南河内市和乐社昇龙大道29公里处和乐高新技术园区教育培训区",
+    "phone": "+84 (0) 987 464 904",
+    "email": "sanctuary@heavenstay.com"
+  },
+  "motion": {
+    "view": "查看",
+    "explore": "探索",
+    "drag": "拖拽"
+  }
+}

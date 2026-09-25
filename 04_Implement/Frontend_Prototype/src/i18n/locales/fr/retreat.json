@@ -1,0 +1,27 @@
+{
+  "list": {
+    "badge": "COLLECTION BIEN-ÊTRE",
+    "title": "Séjours & Immersions Holistiques",
+    "subtitle": "Choisissez le programme qui résonne avec votre quête de ressourcement et de paix intérieure.",
+    "filterAll": "Tous les Séjours",
+    "filterShort": "Escapade Courte (3 Jours)",
+    "filterMedium": "Immersion Signature (5 Jours)",
+    "filterLong": "Transformation Profonde (7 Jours)"
+  },
+  "detail": {
+    "backToList": "Retour à la collection des séjours",
+    "overview": "Aperçu du Séjour",
+    "whatIncluded": "Prestations & Privilèges Inclus",
+    "comprehensiveCare": "Prise en Charge Complète",
+    "itineraryTitle": "Itinéraire & Rythme Quotidien",
+    "daysOfRest": "{{days}} Jours de Repos Profond et de Renouveau",
+    "accommodationTitle": "Villa de Résidence Incluse",
+    "suitableForTitle": "Profils & Intentions Visés",
+    "wellnessHighlights": "Temps Forts Spa & Soins",
+    "diningHighlights": "Philosophie Culinaire & Diététique",
+    "priceDisclaimer": "* Tarifs comprenant l'hébergement en villa privée, l'ensemble des soins spa mentionnés, la pension complète biologique et toutes taxes et services afférents.",
+    "readyToBook": "Prêt à Entamer Votre Parenthèse Bien-être ?",
+    "ctaBook": "Réserver ce Séjour",
+    "depositNote": "Le versement d'un acompte garantit votre villa privée et l'accès prioritaire au calendrier des thérapeutes."
+  }
+}
