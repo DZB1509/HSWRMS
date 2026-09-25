@@ -7,6 +7,7 @@ import { RoleSwitcher } from './components/navigation/RoleSwitcher';
 import { SmoothScrollProvider } from './components/motion/SmoothScrollProvider';
 import { CursorProvider } from './components/motion/CursorProvider';
 import { CustomerProvider } from './context/CustomerContext';
+import { OperationsProvider } from './context/OperationsContext';
 import { PageTransition } from './components/motion/PageTransition';
 import './styles/globals.css';
 import './styles/layouts.css';
@@ -17,15 +18,17 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <AuthProvider>
         <CustomerProvider>
-          <ToastProvider>
-            <SmoothScrollProvider>
-              <CursorProvider>
-                <PageTransition />
-                <AppRouter />
-                <RoleSwitcher />
-              </CursorProvider>
-            </SmoothScrollProvider>
-          </ToastProvider>
+          <OperationsProvider>
+            <ToastProvider>
+              <SmoothScrollProvider>
+                <CursorProvider>
+                  <PageTransition />
+                  <AppRouter />
+                  <RoleSwitcher />
+                </CursorProvider>
+              </SmoothScrollProvider>
+            </ToastProvider>
+          </OperationsProvider>
         </CustomerProvider>
       </AuthProvider>
     </BrowserRouter>

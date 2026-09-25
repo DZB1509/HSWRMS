@@ -30,6 +30,13 @@ import { DepositPaymentResultPage } from '../../pages/customer/DepositPaymentRes
 import { MyBookingsPage } from '../../pages/customer/MyBookingsPage';
 import { BookingDetailPage } from '../../pages/customer/BookingDetailPage';
 
+// Phase 2.3 Receptionist / Front Desk Screens
+import { ReceptionistDashboardPage } from '../../pages/receptionist/ReceptionistDashboardPage';
+import { DailyArrivalsPage } from '../../pages/receptionist/DailyArrivalsPage';
+import { CheckInPage } from '../../pages/receptionist/CheckInPage';
+import { VillaAssignmentPage } from '../../pages/receptionist/VillaAssignmentPage';
+import { VillaStatusPage } from '../../pages/receptionist/VillaStatusPage';
+
 // Helper to look up screen metadata by screen number
 const getScreen = (num: number): ScreenMetadata => {
   const found = SCREEN_INVENTORY.find((s) => s.number === num);
@@ -136,11 +143,11 @@ export const AppRouter: React.FC = () => {
           </RoleGuard>
         }
       >
-        <Route path="dashboard" element={<PlaceholderScreen screen={getScreen(20)} />} />
-        <Route path="arrivals" element={<PlaceholderScreen screen={getScreen(21)} />} />
-        <Route path="check-in/:bookingId" element={<PlaceholderScreen screen={getScreen(22)} />} />
-        <Route path="check-in/:bookingId/villa" element={<PlaceholderScreen screen={getScreen(23)} />} />
-        <Route path="villas" element={<PlaceholderScreen screen={getScreen(24)} />} />
+        <Route path="dashboard" element={<ReceptionistDashboardPage />} />
+        <Route path="arrivals" element={<DailyArrivalsPage />} />
+        <Route path="check-in/:bookingId" element={<CheckInPage />} />
+        <Route path="check-in/:bookingId/villa" element={<VillaAssignmentPage />} />
+        <Route path="villas" element={<VillaStatusPage />} />
         
         {/* Module 3 Manual Extra Spa */}
         <Route path="spa/extra-booking" element={<PlaceholderScreen screen={getScreen(30)} />} />

@@ -4,6 +4,7 @@ import { OperationalSidebar } from '../../components/navigation/OperationalSideb
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { useAuth } from '../../hooks/useAuth';
 import { Calendar, Bell } from 'lucide-react';
+import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
 
 export const OperationalLayout: React.FC = () => {
   const { role } = useAuth();
@@ -29,6 +30,7 @@ export const OperationalLayout: React.FC = () => {
             }}>
               Role: {role?.replace('_', ' ')}
             </div>
+            <LanguageSwitcher />
             <div style={{ position: 'relative', cursor: 'pointer' }} title="Operational Notifications">
               <Bell size={16} />
               <span style={{
