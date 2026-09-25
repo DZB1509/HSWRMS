@@ -37,6 +37,21 @@ import { CheckInPage } from '../../pages/receptionist/CheckInPage';
 import { VillaAssignmentPage } from '../../pages/receptionist/VillaAssignmentPage';
 import { VillaStatusPage } from '../../pages/receptionist/VillaStatusPage';
 
+// Phase 2.4 Spa & Therapy Screens (Customer)
+import { SpaTreatmentListPage } from '../../pages/customer/SpaTreatmentListPage';
+import { SpaBookingPage } from '../../pages/customer/SpaBookingPage';
+import { SpaAlternativeSlotsPage } from '../../pages/customer/SpaAlternativeSlotsPage';
+import { SpaConfirmationPage } from '../../pages/customer/SpaConfirmationPage';
+import { MySpaSessions } from '../../pages/customer/MySpaSessions';
+
+// Phase 2.4 Receptionist Extra Spa
+import { ManualExtraSpaPage } from '../../pages/receptionist/ManualExtraSpaPage';
+
+// Phase 2.4 Therapist Screens
+import { TherapistDashboardPage } from '../../pages/therapist/TherapistDashboardPage';
+import { TherapistSchedulePage } from '../../pages/therapist/TherapistSchedulePage';
+import { TherapistSessionDetailPage } from '../../pages/therapist/TherapistSessionDetailPage';
+
 // Helper to look up screen metadata by screen number
 const getScreen = (num: number): ScreenMetadata => {
   const found = SCREEN_INVENTORY.find((s) => s.number === num);
@@ -101,12 +116,12 @@ export const AppRouter: React.FC = () => {
         <Route path="bookings" element={<MyBookingsPage />} />
         <Route path="bookings/:id" element={<BookingDetailPage />} />
 
-        {/* Module 3: Spa & Therapy */}
-        <Route path="spa" element={<PlaceholderScreen screen={getScreen(25)} />} />
-        <Route path="spa/book" element={<PlaceholderScreen screen={getScreen(26)} />} />
-        <Route path="spa/alternatives" element={<PlaceholderScreen screen={getScreen(27)} />} />
-        <Route path="spa/confirmation" element={<PlaceholderScreen screen={getScreen(28)} />} />
-        <Route path="spa/sessions" element={<PlaceholderScreen screen={getScreen(29)} />} />
+        {/* Module 3: Spa & Therapy (Phase 2.4 — Implemented) */}
+        <Route path="spa" element={<SpaTreatmentListPage />} />
+        <Route path="spa/book" element={<SpaBookingPage />} />
+        <Route path="spa/alternatives" element={<SpaAlternativeSlotsPage />} />
+        <Route path="spa/confirmation" element={<SpaConfirmationPage />} />
+        <Route path="spa/sessions" element={<MySpaSessions />} />
 
         {/* Module 4: Dining F&B */}
         <Route path="dining/menu" element={<PlaceholderScreen screen={getScreen(34)} />} />
@@ -149,8 +164,8 @@ export const AppRouter: React.FC = () => {
         <Route path="check-in/:bookingId/villa" element={<VillaAssignmentPage />} />
         <Route path="villas" element={<VillaStatusPage />} />
         
-        {/* Module 3 Manual Extra Spa */}
-        <Route path="spa/extra-booking" element={<PlaceholderScreen screen={getScreen(30)} />} />
+        {/* Module 3 Manual Extra Spa (Phase 2.4 — Implemented) */}
+        <Route path="spa/extra-booking" element={<ManualExtraSpaPage />} />
         
         {/* Module 5 Checkout Consolidation */}
         <Route path="folio/:bookingId" element={<PlaceholderScreen screen={getScreen(41)} />} />
@@ -172,9 +187,9 @@ export const AppRouter: React.FC = () => {
           </RoleGuard>
         }
       >
-        <Route path="dashboard" element={<PlaceholderScreen screen={getScreen(31)} />} />
-        <Route path="schedule" element={<PlaceholderScreen screen={getScreen(32)} />} />
-        <Route path="sessions/:id" element={<PlaceholderScreen screen={getScreen(33)} />} />
+        <Route path="dashboard" element={<TherapistDashboardPage />} />
+        <Route path="schedule" element={<TherapistSchedulePage />} />
+        <Route path="sessions/:id" element={<TherapistSessionDetailPage />} />
         <Route index element={<Navigate to="/therapist/dashboard" replace />} />
       </Route>
 

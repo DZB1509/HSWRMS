@@ -360,13 +360,13 @@ export const CustomerDashboardPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
                 <HeartPulse size={18} style={{ color: 'var(--accent-olive)' }} />
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {t('customer.dashboard.wellnessJourney.spaPreview', 'Complimentary Daily Treatments')}
+                  {t('customer.dashboard.wellnessJourney.spaPreview', 'Included Retreat Treatments')}
                 </span>
               </div>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 var(--space-4)' }}>
                 {t(
                   'customer.dashboard.wellnessJourney.spaDesc',
-                  '1x Himalayan Salt Stone Therapy & 1x Aromatherapy Herbal Compress reserved.'
+                  'Retreat package treatments reserved for your stay.'
                 )}
               </p>
             </div>

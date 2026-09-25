@@ -28,7 +28,7 @@
   "labels": {
     "duration": "滞在期間",
     "startingFrom": "料金（目安）",
-    "perGuest": "名様",
+    "perCustomer": "名様",
     "perNight": "泊",
     "days": "日間",
     "nights": "泊",

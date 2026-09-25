@@ -28,7 +28,7 @@
   "labels": {
     "duration": "Thời Lượng",
     "startingFrom": "Giá Khởi Điểm",
-    "perGuest": "khách",
+    "perCustomer": "khách",
     "perNight": "đêm",
     "days": "ngày",
     "nights": "đêm",

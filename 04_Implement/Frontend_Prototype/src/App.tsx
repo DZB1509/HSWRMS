@@ -8,10 +8,12 @@ import { SmoothScrollProvider } from './components/motion/SmoothScrollProvider';
 import { CursorProvider } from './components/motion/CursorProvider';
 import { CustomerProvider } from './context/CustomerContext';
 import { OperationsProvider } from './context/OperationsContext';
+import { SpaProvider } from './context/SpaContext';
 import { PageTransition } from './components/motion/PageTransition';
 import './styles/globals.css';
 import './styles/layouts.css';
 import './styles/components.css';
+import './styles/spa.css';
 
 export const App: React.FC = () => {
   return (
@@ -19,15 +21,17 @@ export const App: React.FC = () => {
       <AuthProvider>
         <CustomerProvider>
           <OperationsProvider>
-            <ToastProvider>
-              <SmoothScrollProvider>
-                <CursorProvider>
-                  <PageTransition />
-                  <AppRouter />
-                  <RoleSwitcher />
-                </CursorProvider>
-              </SmoothScrollProvider>
-            </ToastProvider>
+            <SpaProvider>
+              <ToastProvider>
+                <SmoothScrollProvider>
+                  <CursorProvider>
+                    <PageTransition />
+                    <AppRouter />
+                    <RoleSwitcher />
+                  </CursorProvider>
+                </SmoothScrollProvider>
+              </ToastProvider>
+            </SpaProvider>
           </OperationsProvider>
         </CustomerProvider>
       </AuthProvider>

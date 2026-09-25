@@ -266,7 +266,7 @@ export const BookingDetailPage: React.FC = () => {
                     {t('customer.bookingDetail.crossSpaTitle', 'Spa & Holistic Therapies')}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>
-                    {t('customer.bookingDetail.crossSpaDesc', 'Explore complimentary daily treatments or reserve additional restorative sessions.')}
+                    {t('customer.bookingDetail.crossSpaDesc', 'Explore retreat-included treatments or reserve additional restorative sessions.')}
                   </div>
                   <Link
                     to="/customer/spa"

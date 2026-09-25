@@ -28,7 +28,7 @@
   "labels": {
     "duration": "Durée",
     "startingFrom": "À partir de",
-    "perGuest": "personne",
+    "perCustomer": "personne",
     "perNight": "nuit",
     "days": "jours",
     "nights": "nuits",

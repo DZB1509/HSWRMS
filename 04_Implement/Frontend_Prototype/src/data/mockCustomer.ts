@@ -49,7 +49,7 @@ export const INITIAL_WELLNESS_PROFILE: WellnessProfile = {
       'Warm Herbal Compress',
       'Shoulder & Neck Deep Relaxation',
     ],
-    therapistNotes: 'Guest is cleared for gentle restorative yoga and herbal steam therapy. Ensure lower back support cushion during massage.',
+    therapistNotes: 'Customer is cleared for gentle restorative yoga and herbal steam therapy. Ensure lower back support cushion during massage.',
   },
   dietaryProfile: {
     allergies: ['Crustaceans & Shellfish', 'Peanuts'],
