@@ -106,7 +106,7 @@ export const ExperiencesStickyStory: React.FC = () => {
             className="hsw-experience-card"
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: 'var(--radius-sm)',
+              borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-card)',
@@ -192,7 +192,7 @@ export const ExperiencesStickyStory: React.FC = () => {
                 alignItems: 'flex-start',
                 gap: 'var(--space-5)',
                 padding: 'var(--space-5) var(--space-6)',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: 'var(--radius-md)',
                 backgroundColor: isActive ? '#ffffff' : 'transparent',
                 border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
                 boxShadow: isActive ? 'var(--shadow-card)' : 'none',
@@ -205,17 +205,20 @@ export const ExperiencesStickyStory: React.FC = () => {
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: 'var(--text-2xl)',
-                  fontWeight: 600,
+                  fontWeight: isActive ? 600 : 400,
                   color: isActive ? 'var(--accent-forest)' : 'var(--text-tertiary)',
+                  opacity: isActive ? 1 : 0.4,
+                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                  textShadow: isActive ? 'var(--shadow-text-rest)' : 'none',
                   width: '32px',
                   flexShrink: 0,
-                  transition: 'color 0.3s',
+                  transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               >
                 {exp.index}
               </div>
 
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <span style={{ color: isActive ? 'var(--accent-forest)' : 'var(--text-tertiary)' }}>
                     {exp.icon}
@@ -226,7 +229,9 @@ export const ExperiencesStickyStory: React.FC = () => {
                       fontSize: 'var(--text-xl)',
                       fontWeight: 500,
                       color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      textShadow: isActive ? 'var(--shadow-text-rest)' : 'none',
                       margin: 0,
+                      transition: 'color 0.3s, text-shadow 0.3s',
                     }}
                   >
                     {exp.title}
@@ -236,10 +241,12 @@ export const ExperiencesStickyStory: React.FC = () => {
                 <p
                   style={{
                     fontSize: 'var(--text-sm)',
-                    color: 'var(--text-secondary)',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    textShadow: isActive ? 'var(--shadow-text-desc-rest)' : 'none',
                     lineHeight: 1.7,
                     margin: 0,
                     maxWidth: '440px',
+                    transition: 'color 0.3s, text-shadow 0.3s',
                   }}
                 >
                   {exp.desc}
@@ -256,7 +263,7 @@ export const ExperiencesStickyStory: React.FC = () => {
         style={{
           position: 'relative',
           aspectRatio: '16 / 11',
-          borderRadius: 'var(--radius-md)',
+          borderRadius: 'var(--radius-xl)',
           overflow: 'hidden',
           boxShadow: 'var(--shadow-modal)',
           backgroundColor: '#1b2319',

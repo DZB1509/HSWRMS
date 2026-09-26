@@ -76,7 +76,7 @@ export const CustomerNavbar: React.FC = () => {
     <header className="hsw-customer-navbar" ref={navRef}>
       <div className="hsw-customer-navbar-inner">
         {/* Brand Area */}
-        <Link to="/customer/dashboard" className="hsw-brand-logo" aria-label="HeavenStay Customer Dashboard">
+        <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Home">
           <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
           <div className="hsw-brand-text">
             <span className="hsw-brand-name">HEAVENSTAY</span>

@@ -101,12 +101,12 @@ export const ImageReveal: React.FC<ImageRevealProps> = ({
       const relX = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
       const relY = (e.clientY - rect.top) / rect.height - 0.5; // -0.5 to 0.5
 
-      // Subtle parallax: ±3.5px offset, 1.03 scale (quiet luxury threshold)
+      // Subtle parallax: ±3px offset, restrained 1.022 scale (quiet luxury editorial threshold)
       gsap.to(img, {
-        x: relX * 7,
-        y: relY * 7,
-        scale: 1.03,
-        duration: 0.45,
+        x: relX * 6,
+        y: relY * 6,
+        scale: 1.022,
+        duration: 0.6,
         ease: 'power2.out',
         overwrite: 'auto',
       });
@@ -141,6 +141,7 @@ export const ImageReveal: React.FC<ImageRevealProps> = ({
       className={`hsw-image-reveal-wrap ${containerClassName}`}
       data-cursor={dataCursor}
       style={{
+        borderRadius: 'var(--radius-xl)',
         overflow: 'hidden',
         position: 'relative',
         aspectRatio,

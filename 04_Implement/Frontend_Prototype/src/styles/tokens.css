@@ -4,6 +4,13 @@
  * Aesthetic: Quiet Luxury & Minimalist Hospitality (Amanoi-inspired)
  */
 
+/* Luminous Angle Property Registration (Must precede rules per CSS Houdini spec) */
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 :root {
   /* Brand & Core Palette (DESIGN.md §3.1) */
   --bg-canvas: #faf9f6;
@@ -65,11 +72,12 @@
   --text-4xl: 44px;
   --text-display: 56px;
 
-  /* Shape Language (DESIGN.md §6) */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Shape Language (Quiet Luxury Soft-Surface Architecture) */
+  --radius-xs: 6px;
+  --radius-sm: 10px;    /* Inputs, compact controls, tags */
+  --radius-md: 14px;    /* Buttons, chips, selectors, small option tiles */
+  --radius-lg: 18px;    /* Cards, option tiles, standard modals */
+  --radius-xl: 22px;    /* Large hero/media blocks, featured panels */
   --radius-pill: 9999px;
 
   /* Spacing Scale (8px system - DESIGN.md §5.1) */
@@ -92,14 +100,25 @@
   --container-standard: 1280px;
   --container-wide: 1440px;
 
-  /* Shadows (DESIGN.md §6 - restrained, soft) */
+  /* Shadows (Restrained, tactile, quiet luxury) */
   --shadow-subtle: 0 1px 3px rgba(30, 30, 30, 0.04);
   --shadow-card: 0 4px 20px rgba(30, 30, 30, 0.06);
+  --shadow-card-hover: 0 8px 28px rgba(30, 30, 30, 0.09);
+  --shadow-lift: 0 8px 24px rgba(43, 43, 43, 0.08);
+  --shadow-lift-subtle: 0 4px 16px rgba(43, 43, 43, 0.05);
+  --shadow-text-rest: 0 2px 3px rgba(43, 43, 43, 0.08);
+  --shadow-text-hover: 0 4px 7px rgba(43, 43, 43, 0.20);
+  --shadow-text-hover-rich: 0 4px 8px rgba(43, 43, 43, 0.22);
+  --shadow-text-subtle: 0 2px 4px rgba(43, 43, 43, 0.10);
+  --shadow-text-desc-rest: 0 1px 2px rgba(43, 43, 43, 0.04);
+  --shadow-text-desc-hover: 0 3px 6px rgba(43, 43, 43, 0.16);
+  --shadow-text-desc-hover-rich: 0 4px 7px rgba(43, 43, 43, 0.17);
   --shadow-modal: 0 12px 40px rgba(30, 30, 30, 0.12);
   --shadow-drawer: -4px 0 24px rgba(30, 30, 30, 0.08);
 
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
+  --transition-lift: 260ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }

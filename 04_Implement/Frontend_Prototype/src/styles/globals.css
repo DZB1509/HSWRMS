@@ -1,5 +1,12 @@
 @import './tokens.css';
 
+/* Luminous Angle Property Registration (Must precede rules per CSS Houdini spec) */
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 /* CSS Reset & Foundation */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -115,7 +122,7 @@ input, select, textarea {
 .surface-card {
   background: var(--surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
@@ -156,9 +163,406 @@ input, select, textarea {
   animation: hsw-hero-zoom 25s ease-out forwards;
 }
 
+/* ==========================================================================
+   Quiet Luxury Soft-Surface & Interaction System
+   Shared Tokens: --radius-sm (10px), --radius-md (14px), --radius-lg (18px), --radius-xl (22px)
+   ========================================================================== */
+
+@keyframes hsw-luminous-spin {
+  0% {
+    --border-angle: 0deg;
+  }
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+/* 1. Global Soft Surface Utilities */
+.soft-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+
+.soft-control {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background-color: #ffffff;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.soft-control:focus {
+  outline: none;
+  border-color: var(--accent-forest);
+  box-shadow: 0 0 0 3px rgba(79, 90, 80, 0.12);
+}
+
+.hover-lift {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift-subtle);
+  }
+  .hover-lift:active {
+    transform: translateY(0);
+  }
+}
+
+/* 2. Soft Media Containment */
+.soft-media {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+
+.soft-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .soft-media:hover img {
+    transform: scale(1.032);
+  }
+}
+
+/* 3. Soft Luminous Border (CSS Mask Technique)
+   HeavenStay Palette: #D8C7AE, #E7D9C4, #9FA99D, #4F5A50, #ffffff
+   A radiant champagne highlight sweeps clockwise around the rounded perimeter */
+.luminous-border,
+.interactive-card,
+.soft-option,
+.spa-treatment-option,
+.spa-treatment-card,
+.hsw-culinary-card,
+.hsw-retreat-card,
+.customer-booking-card,
+.hsw-editorial-media,
+.hsw-image-reveal-wrap {
+  position: relative;
+  isolation: isolate;
+}
+
+.luminous-border::before,
+.interactive-card::before,
+.soft-option::before,
+.spa-treatment-option::before,
+.spa-treatment-card::before,
+.hsw-culinary-card::before,
+.hsw-retreat-card::before,
+.customer-booking-card::before,
+.hsw-editorial-media::before,
+.hsw-image-reveal-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    transparent 0%,
+    transparent 50%,
+    rgba(79, 90, 80, 0.4) 62%,
+    rgba(159, 169, 157, 0.6) 72%,
+    rgba(216, 199, 174, 0.85) 82%,
+    rgba(231, 217, 196, 0.95) 88%,
+    #ffffff 92%,
+    rgba(231, 217, 196, 0.95) 94%,
+    rgba(216, 199, 174, 0.7) 97%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 5;
+  animation: hsw-luminous-spin 3.2s linear infinite;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .luminous-border:hover::before,
+  .interactive-card:hover::before,
+  .soft-option:hover:not(.is-selected):not(.selected):not(.--active):not(.active):not([aria-selected="true"]):not(:disabled)::before,
+  .spa-treatment-option:hover:not(.spa-treatment-option--active)::before,
+  .spa-treatment-card:hover:not(.is-selected):not(.selected):not(.spa-treatment-option--active)::before,
+  .hsw-culinary-card:hover::before,
+  .hsw-retreat-card:hover::before,
+  .customer-booking-card:hover::before,
+  .hsw-editorial-media:hover::before,
+  .hsw-image-reveal-wrap:hover::before {
+    opacity: 1;
+  }
+}
+
+.luminous-border:focus-visible::before,
+.interactive-card:focus-visible::before,
+.soft-option:focus-visible:not(.is-selected):not(.selected):not(.--active):not(.active):not([aria-selected="true"]):not(:disabled)::before,
+.spa-treatment-option:focus-visible:not(.spa-treatment-option--active)::before,
+.spa-treatment-card:focus-visible:not(.is-selected):not(.selected):not(.spa-treatment-option--active)::before,
+.hsw-culinary-card:focus-visible::before,
+.hsw-retreat-card:focus-visible::before,
+.customer-booking-card:focus-visible::before {
+  opacity: 1;
+}
+
+/* 4. Interactive Card Motion & Text Depth */
+.interactive-card {
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+
+.interactive-card h1,
+.interactive-card h2,
+.interactive-card h3,
+.interactive-card h4,
+.interactive-card .card-title {
+  text-shadow: var(--shadow-text-rest);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              text-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.interactive-card p,
+.interactive-card .card-desc,
+.interactive-card .card-subtitle {
+  text-shadow: var(--shadow-text-desc-rest);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              text-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .interactive-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card-hover), 0 0 10px rgba(216, 199, 174, 0.18), 0 0 18px rgba(79, 90, 80, 0.08);
+    border-color: var(--accent-sand);
+  }
+
+  .interactive-card:active {
+    transform: translateY(-1px) scale(0.996);
+    box-shadow: var(--shadow-lift-subtle);
+  }
+
+  /* Text lift and physical depth beneath lettering */
+  .interactive-card:hover h1,
+  .interactive-card:hover h2,
+  .interactive-card:hover h3,
+  .interactive-card:hover h4,
+  .interactive-card:hover .card-title {
+    transform: translateY(-2px);
+    color: var(--text-primary);
+    text-shadow: var(--shadow-text-hover-rich);
+  }
+
+  .interactive-card:hover p,
+  .interactive-card:hover .card-desc,
+  .interactive-card:hover .card-subtitle {
+    transform: translateY(-1px);
+    color: var(--text-primary);
+    text-shadow: var(--shadow-text-desc-hover);
+  }
+}
+
+/* 5. Option / Selection Tiles Hierarchy (rest < hover < selected < warning/error) */
+.soft-option {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .soft-option:hover:not(.is-selected):not(.selected):not(.--active):not(.active):not([aria-selected="true"]):not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--accent-sand);
+    box-shadow: var(--shadow-lift-subtle);
+  }
+
+  .soft-option:active:not(:disabled) {
+    transform: translateY(0) scale(0.99);
+  }
+}
+
+/* Selected state strictly takes precedence and suppresses glowing border */
+.soft-option.is-selected,
+.soft-option.selected,
+.soft-option.--active,
+.soft-option.active,
+.soft-option[aria-selected="true"],
+.spa-treatment-card.is-selected,
+.spa-treatment-card.selected,
+.spa-treatment-option--active {
+  border-color: var(--accent-forest) !important;
+  background-color: #f4f7f4 !important;
+  box-shadow: 0 3px 12px rgba(43, 68, 48, 0.12) !important;
+  transform: none !important;
+}
+
+.soft-option.is-selected::before,
+.soft-option.selected::before,
+.soft-option.--active::before,
+.soft-option.active::before,
+.soft-option[aria-selected="true"]::before,
+.spa-treatment-card.is-selected::before,
+.spa-treatment-card.selected::before,
+.spa-treatment-option--active::before {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+/* 6. Internal Staff / Operational Intensity Scoping (Restrained & Calm) */
+.hsw-operational-layout .luminous-border::before,
+.hsw-operational-layout .interactive-card::before,
+.hsw-operational-layout .soft-option::before {
+  animation-duration: 5.2s;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    transparent 0%,
+    rgba(216, 199, 174, 0.25) 30%,
+    rgba(159, 169, 157, 0.4) 60%,
+    transparent 100%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hsw-operational-layout .interactive-card:hover {
+    transform: translateY(-1.5px);
+    box-shadow: var(--shadow-lift-subtle);
+  }
+
+  .hsw-operational-layout .interactive-card:hover h1,
+  .hsw-operational-layout .interactive-card:hover h2,
+  .hsw-operational-layout .interactive-card:hover h3,
+  .hsw-operational-layout .interactive-card:hover h4 {
+    transform: translateY(-0.75px);
+  }
+}
+
+/* 7. Safety Rule: Sensitive / Warning Content strictly excluded from glow */
+.hsw-allergy-alert-box,
+.hsw-alert-allergy,
+.hsw-alert-dietary,
+.hsw-alert-warning,
+.hsw-alert-danger,
+.hsw-card-sensitive,
+.therapist-privacy-notice,
+.hsw-privacy-notice,
+.hsw-health-warning,
+.therapist-intake-banner,
+.hsw-payment-warning,
+.hsw-danger-zone,
+.hsw-input-error,
+.has-error {
+  animation: none !important;
+}
+
+.hsw-allergy-alert-box::before,
+.hsw-alert-allergy::before,
+.hsw-alert-dietary::before,
+.hsw-alert-warning::before,
+.hsw-alert-danger::before,
+.hsw-card-sensitive::before,
+.therapist-privacy-notice::before,
+.hsw-privacy-notice::before,
+.hsw-health-warning::before,
+.therapist-intake-banner::before,
+.hsw-payment-warning::before,
+.hsw-danger-zone::before,
+.hsw-input-error::before,
+.has-error::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* 8. Reduced Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
   .hsw-hero-bg-image {
     animation: none;
+  }
+
+  .luminous-border::before,
+  .interactive-card::before,
+  .soft-option::before,
+  .spa-treatment-option::before,
+  .spa-treatment-card::before,
+  .hsw-culinary-card::before,
+  .hsw-retreat-card::before,
+  .customer-booking-card::before,
+  .hsw-editorial-media::before,
+  .hsw-image-reveal-wrap::before {
+    animation: none !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .luminous-border:hover::before,
+    .interactive-card:hover::before,
+    .soft-option:hover:not(.is-selected):not(.selected):not(.--active):not(.active):not([aria-selected="true"]):not(:disabled)::before,
+    .spa-treatment-option:hover:not(.spa-treatment-option--active)::before,
+    .spa-treatment-card:hover:not(.is-selected):not(.selected):not(.spa-treatment-option--active)::before,
+    .hsw-culinary-card:hover::before,
+    .hsw-retreat-card:hover::before,
+    .customer-booking-card:hover::before,
+    .hsw-editorial-media:hover::before,
+    .hsw-image-reveal-wrap:hover::before {
+      opacity: 0.75 !important;
+      background: rgba(216, 199, 174, 0.45) !important;
+    }
+  }
+
+  .soft-card,
+  .interactive-card,
+  .soft-option,
+  .spa-treatment-option,
+  .spa-treatment-card,
+  .hsw-culinary-card,
+  .hsw-retreat-card,
+  .customer-booking-card,
+  .hsw-editorial-media,
+  .hsw-image-reveal-wrap,
+  .hover-lift,
+  .hsw-btn {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .soft-media img,
+  .interactive-card img,
+  .spa-treatment-card img,
+  .hsw-culinary-card img,
+  .hsw-retreat-card img,
+  .customer-booking-card img,
+  .hsw-editorial-media img,
+  .hsw-image-reveal-wrap img {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .interactive-card h1,
+  .interactive-card h2,
+  .interactive-card h3,
+  .interactive-card h4,
+  .interactive-card .card-title,
+  .interactive-card p,
+  .interactive-card .card-desc,
+  .interactive-card .card-subtitle {
+    transform: none !important;
+    transition: none !important;
   }
 }
 

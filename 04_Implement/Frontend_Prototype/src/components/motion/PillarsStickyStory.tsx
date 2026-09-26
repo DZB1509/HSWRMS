@@ -176,39 +176,35 @@ export const PillarsStickyStory: React.FC = () => {
     >
       {/* Left: Interactive Navigation & Story steps */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', position: 'relative' }}>
-        {/* Subtle decorative botanical journey SVG motif connecting 01 -> 02 -> 03 */}
-        <svg
+        {/* Refined Continuous Gradient Vertical Timeline Guide */}
+        <div
           aria-hidden="true"
           style={{
             position: 'absolute',
             left: '26px',
-            top: '30px',
-            bottom: '30px',
-            width: '2px',
-            height: 'calc(100% - 60px)',
-            overflow: 'visible',
+            top: '32px',
+            bottom: '32px',
+            width: '1px',
+            background: 'linear-gradient(to bottom, transparent, rgba(216, 199, 174, 0.6) 12%, rgba(79, 90, 80, 0.3) 50%, rgba(216, 199, 174, 0.6) 88%, transparent)',
             pointerEvents: 'none',
+            zIndex: 0,
           }}
         >
-          <line
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="100%"
-            stroke="var(--border-subtle)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
+          {/* Active progress segment connecting stages */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '2px',
+              marginLeft: '-0.5px',
+              height: `${(activeIndex / 2) * 100}%`,
+              background: 'linear-gradient(to bottom, var(--accent-sand), var(--accent-forest))',
+              transition: 'height 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+              borderRadius: '2px',
+            }}
           />
-          <line
-            x1="0"
-            y1="0"
-            x2="0"
-            y2={`${(activeIndex / 2) * 100}%`}
-            stroke="var(--accent-sand)"
-            strokeWidth="2"
-            style={{ transition: 'y2 0.5s ease' }}
-          />
-        </svg>
+        </div>
 
         {pillars.map((item, idx) => {
           const isActive = idx === activeIndex;
@@ -220,32 +216,64 @@ export const PillarsStickyStory: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: 'var(--space-5)',
+                gap: 'var(--space-4)',
                 padding: 'var(--space-4) var(--space-5)',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: 'var(--radius-md)',
                 backgroundColor: isActive ? '#ffffff' : 'transparent',
                 border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
                 boxShadow: isActive ? 'var(--shadow-card)' : 'none',
                 opacity: isActive ? 1 : 0.45,
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 cursor: 'pointer',
+                position: 'relative',
+                zIndex: 1,
               }}
             >
+              {/* Refined Timeline Node Indicator */}
+              <div
+                aria-hidden="true"
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  marginTop: '8px',
+                  zIndex: 2,
+                }}
+              >
+                <div
+                  style={{
+                    width: isActive ? '8px' : '5px',
+                    height: isActive ? '8px' : '5px',
+                    borderRadius: '50%',
+                    backgroundColor: isActive ? 'var(--accent-forest)' : 'rgba(159, 169, 157, 0.5)',
+                    boxShadow: isActive ? '0 0 0 2px var(--accent-sand), 0 2px 5px rgba(43, 68, 48, 0.25)' : 'none',
+                    transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                />
+              </div>
+
+              {/* Editorial Number */}
               <div
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: 'var(--text-2xl)',
-                  fontWeight: 600,
+                  fontWeight: isActive ? 600 : 400,
                   color: isActive ? 'var(--accent-forest)' : 'var(--text-tertiary)',
-                  width: '36px',
+                  opacity: isActive ? 1 : 0.4,
+                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                  textShadow: isActive ? 'var(--shadow-text-rest)' : 'none',
+                  width: '32px',
                   flexShrink: 0,
-                  transition: 'color 0.3s',
+                  transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               >
                 {item.num}
               </div>
 
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <span style={{ color: isActive ? 'var(--accent-forest)' : 'var(--text-tertiary)' }}>
                     {item.icon}
@@ -256,7 +284,9 @@ export const PillarsStickyStory: React.FC = () => {
                       fontSize: 'var(--text-xl)',
                       fontWeight: 500,
                       color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      textShadow: isActive ? 'var(--shadow-text-rest)' : 'none',
                       margin: 0,
+                      transition: 'color 0.3s, text-shadow 0.3s',
                     }}
                   >
                     {item.title}
@@ -266,10 +296,12 @@ export const PillarsStickyStory: React.FC = () => {
                 <p
                   style={{
                     fontSize: 'var(--text-sm)',
-                    color: 'var(--text-secondary)',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    textShadow: isActive ? 'var(--shadow-text-desc-rest)' : 'none',
                     lineHeight: 1.7,
                     margin: 0,
                     maxWidth: '420px',
+                    transition: 'color 0.3s, text-shadow 0.3s',
                   }}
                 >
                   {item.desc}
@@ -286,7 +318,7 @@ export const PillarsStickyStory: React.FC = () => {
         style={{
           position: 'relative',
           aspectRatio: '4 / 3',
-          borderRadius: 'var(--radius-md)',
+          borderRadius: 'var(--radius-xl)',
           overflow: 'hidden',
           boxShadow: 'var(--shadow-modal)',
           backgroundColor: '#1b2319',
