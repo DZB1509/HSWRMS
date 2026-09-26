@@ -10,7 +10,6 @@ import {
   UserCheck,
   Home,
   HeartHandshake,
-  UtensilsCrossed,
   ChefHat,
   BarChart3,
   TrendingUp,
@@ -78,8 +77,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       defaultHeading: 'Kitchen Operations',
       items: [
         { labelKey: 'operations.sidebar.fbDashboard', defaultLabel: 'F&B Dashboard', path: '/fb/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Daily Meal Prep Queue', path: '/fb/meal-prep', icon: ChefHat },
-        { labelKey: 'operations.sidebar.mealOrderAllergies', defaultLabel: 'Meal Order & Allergies', path: '/fb/orders/ord-401', icon: UtensilsCrossed }
+        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Daily Meal Prep Queue', path: '/fb/meal-prep', icon: ChefHat }
       ]
     }
   ],

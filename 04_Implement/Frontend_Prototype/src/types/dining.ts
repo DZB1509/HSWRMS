@@ -1,0 +1,109 @@
+export type MealPeriod = 'breakfast' | 'lunch' | 'dinner' | 'all_day';
+export type FnbFulfillmentStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+export type AlaCarteChargeType = 'fnb_extra';
+export type FolioPostingStatus = 'pending_checkout_folio' | 'settled';
+
+export interface LocalizedString {
+  vi: string;
+  en: string;
+  'zh-CN': string;
+  ja: string;
+  fr: string;
+}
+
+export interface DietaryMenuItem {
+  id: string;
+  name: LocalizedString;
+  description: LocalizedString;
+  image: string;
+  category: 'starter' | 'main' | 'dessert' | 'beverage' | 'wellness_drink';
+  mealPeriods: MealPeriod[];
+  dietaryTags: ('vegetarian' | 'vegan' | 'gluten_free' | 'dairy_free' | 'keto' | 'halal')[];
+  allergenTags: ('nuts' | 'shellfish' | 'soy' | 'eggs' | 'fish' | 'dairy')[];
+  price?: number; // Only for a-la-carte
+  isExtra: boolean;
+  calories?: number;
+}
+
+export interface DailyMealSelection {
+  id: string;
+  bookingId: string;
+  customerId: string;
+  date: string; // YYYY-MM-DD format
+  mealPeriod: MealPeriod;
+  menuItemIds: string[]; // Support multiple choices per meal period if allowed
+  notes: string;
+  status: FnbFulfillmentStatus; // Fulfillment status of the included retreat meal
+}
+
+export interface AlaCarteOrderLine {
+  id: string;
+  menuItemId: string;
+  quantity: number;
+  unitPrice: number;
+  notes: string;
+}
+
+export interface AlaCarteOrder {
+  id: string;
+  bookingId: string;
+  customerId: string;
+  createdAt: string; // ISO timestamp
+  targetTime?: string; // e.g., "19:00"
+  location?: string; // Villa number or dining area
+  status: FnbFulfillmentStatus;
+  lines: AlaCarteOrderLine[];
+  totalAmount: number;
+  chargeType: AlaCarteChargeType;
+  folioPostingStatus: FolioPostingStatus;
+}
+
+// Minimal projection for F&B staff - strictly limits health data exposure
+export interface FnbDietaryProjection {
+  customerId: string;
+  customerName: string;
+  bookingReference: string;
+  villaNumber?: string;
+  allergies: string[];
+  dietaryRestrictions: string[];
+}
+
+export interface MealPrepEntry {
+  id: string; // Could be DailyMealSelection ID or AlaCarteOrder ID
+  type: 'retreat_meal' | 'a_la_carte';
+  date: string;
+  targetTime?: string; // Specific time for extra orders, or generic meal period
+  mealPeriod?: MealPeriod; // For retreat meals
+  customerName: string;
+  villaNumber?: string;
+  items: {
+    menuItemId: string;
+    quantity: number;
+    notes?: string;
+  }[];
+  customerNotes?: string;
+  dietaryNotes: string[]; // Combined relevant dietary tags from the minimal projection
+  status: FnbFulfillmentStatus;
+}
+
+export interface DiningContextType {
+  // Menu
+  menuItems: DietaryMenuItem[];
+  getMenuItemsByPeriod: (period: MealPeriod) => DietaryMenuItem[];
+  
+  // Retreat Meals
+  mealSelections: DailyMealSelection[];
+  saveMealSelection: (selection: Omit<DailyMealSelection, 'id' | 'status'>) => void;
+  getMealSelection: (bookingId: string, date: string, period: MealPeriod) => DailyMealSelection | undefined;
+  
+  // A-la-carte
+  alaCarteOrders: AlaCarteOrder[];
+  createAlaCarteOrder: (order: Omit<AlaCarteOrder, 'id' | 'createdAt' | 'status' | 'chargeType' | 'folioPostingStatus'>) => AlaCarteOrder;
+  
+  // Operational Methods
+  getDietaryProjection: (customerId: string) => FnbDietaryProjection;
+  updateMealSelectionStatus: (id: string, status: FnbFulfillmentStatus) => void;
+  updateAlaCarteOrderStatus: (id: string, status: FnbFulfillmentStatus) => void;
+  updateFulfillmentStatus: (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => void;
+  getDailyPrepList: (date: string) => MealPrepEntry[];
+}

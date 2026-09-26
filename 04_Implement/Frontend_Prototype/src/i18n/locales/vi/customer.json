@@ -369,5 +369,82 @@
     "activeBookingRequired": "Cần có đặt phòng nghỉ dưỡng đang hiệu lực và hồ sơ khách hàng đã đăng nhập để đặt buổi spa.",
     "noActiveBooking": "Chưa có đặt phòng nghỉ dưỡng hiệu lực",
     "activeBookingRef": "Mã đặt phòng nghỉ dưỡng"
+  },
+  "dining": {
+    "navMenu": "Dietary Menu",
+    "navSelect": "Daily Meal Selection",
+    "navExtra": "A-la-carte",
+    "navOrders": "My Meal Plan / Orders",
+    "menu": {
+      "title": "Nourishing Dietary Menu",
+      "subtitle": "Explore our holistic culinary offerings, curated for your wellness journey.",
+      "planMeals": "Plan Retreat Meals",
+      "orderAlaCarte": "Order A-la-carte",
+      "searchPlaceholder": "Search menu...",
+      "extraCharge": "A-LA-CARTE",
+      "allergyWarning": "Contains an allergen listed in your dietary profile.",
+      "noItems": "No Menu Items Found",
+      "noItemsDesc": "Try adjusting your filters or search query.",
+      "clearFilters": "Clear Filters"
+    },
+    "select": {
+      "title": "Daily Meal Selection",
+      "subtitle": "Plan your included retreat meals. Chef selections adapt to your wellness profile.",
+      "noBooking": "No Active Retreat",
+      "noBookingDesc": "You need an active retreat booking to select daily meals.",
+      "viewBookings": "Return to My Bookings",
+      "selectDate": "Select Date",
+      "selectPeriod": "Meal Period",
+      "viewPlan": "View My Plan",
+      "noOptions": "No Options Available",
+      "noOptionsDesc": "There are no included meal options for this period. Please check A-la-carte for extra options.",
+      "specialRequests": "Preparation Notes (Optional)",
+      "requestsPlaceholder": "e.g., dressing on the side",
+      "saveSelection": "Save Meal Selection",
+      "saveSuccess": "Selection saved successfully."
+    },
+    "extra": {
+      "title": "A-la-carte Orders",
+      "subtitle": "Order additional culinary delights outside your included retreat plan.",
+      "orderRecorded": "Order Recorded",
+      "pendingFolio": "Your extra A-la-carte order has been sent to the culinary team. The total will be pending folio posting upon checkout.",
+      "viewOrders": "View My Orders",
+      "orderMore": "Order More",
+      "add": "Add to Order",
+      "summary": "Order Summary",
+      "emptyCart": "Your order is empty.",
+      "notePlaceholder": "Notes...",
+      "total": "Total",
+      "folioDisclaimer": "Will be posted to your folio at checkout.",
+      "submit": "Submit Order"
+    },
+    "orders": {
+      "title": "My Meal Plan & Orders",
+      "subtitle": "Review your retreat dining itinerary and a-la-carte requests.",
+      "mealPlanTab": "Retreat Meal Plan",
+      "extraOrdersTab": "Extra A-la-carte Orders",
+      "changeSelection": "Change Meal Selection",
+      "noSelections": "No Meals Selected",
+      "noSelectionsDesc": "You have not planned any meals yet.",
+      "orderMore": "Order A-la-carte",
+      "noOrders": "No Extra Orders",
+      "noOrdersDesc": "You have not placed any a-la-carte orders.",
+      "folioStatus": "Pending Folio"
+    },
+    "categories": {
+      "all": "ALL",
+      "starter": "STARTER",
+      "main": "MAIN",
+      "dessert": "DESSERT",
+      "beverage": "BEVERAGE",
+      "wellness_drink": "WELLNESS DRINK"
+    },
+    "periods": {
+      "all": "All",
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "all_day": "All Day"
+    }
   }
 }

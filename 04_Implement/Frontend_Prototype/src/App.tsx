@@ -9,6 +9,7 @@ import { CursorProvider } from './components/motion/CursorProvider';
 import { CustomerProvider } from './context/CustomerContext';
 import { OperationsProvider } from './context/OperationsContext';
 import { SpaProvider } from './context/SpaContext';
+import { DiningProvider } from './context/DiningContext';
 import { PageTransition } from './components/motion/PageTransition';
 import './styles/globals.css';
 import './styles/layouts.css';
@@ -22,15 +23,17 @@ export const App: React.FC = () => {
         <CustomerProvider>
           <OperationsProvider>
             <SpaProvider>
-              <ToastProvider>
-                <SmoothScrollProvider>
-                  <CursorProvider>
-                    <PageTransition />
-                    <AppRouter />
-                    <RoleSwitcher />
-                  </CursorProvider>
-                </SmoothScrollProvider>
-              </ToastProvider>
+              <DiningProvider>
+                <ToastProvider>
+                  <SmoothScrollProvider>
+                    <CursorProvider>
+                      <PageTransition />
+                      <AppRouter />
+                      <RoleSwitcher />
+                    </CursorProvider>
+                  </SmoothScrollProvider>
+                </ToastProvider>
+              </DiningProvider>
             </SpaProvider>
           </OperationsProvider>
         </CustomerProvider>

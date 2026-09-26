@@ -52,6 +52,17 @@ import { TherapistDashboardPage } from '../../pages/therapist/TherapistDashboard
 import { TherapistSchedulePage } from '../../pages/therapist/TherapistSchedulePage';
 import { TherapistSessionDetailPage } from '../../pages/therapist/TherapistSessionDetailPage';
 
+// Phase 2.5 Dining & F&B Screens (Customer)
+import { DietaryMenuPage } from '../../pages/customer/DietaryMenuPage';
+import { DailyMealSelectionPage } from '../../pages/customer/DailyMealSelectionPage';
+import { AlaCarteOrderPage } from '../../pages/customer/AlaCarteOrderPage';
+import { MyMealPlanPage } from '../../pages/customer/MyMealPlanPage';
+
+// Phase 2.5 Dining & F&B Screens (Staff)
+import { FnbDashboardPage } from '../../pages/fb/FnbDashboardPage';
+import { MealPrepListPage } from '../../pages/fb/MealPrepListPage';
+import { MealOrderDetailPage } from '../../pages/fb/MealOrderDetailPage';
+
 // Helper to look up screen metadata by screen number
 const getScreen = (num: number): ScreenMetadata => {
   const found = SCREEN_INVENTORY.find((s) => s.number === num);
@@ -124,10 +135,10 @@ export const AppRouter: React.FC = () => {
         <Route path="spa/sessions" element={<MySpaSessions />} />
 
         {/* Module 4: Dining F&B */}
-        <Route path="dining/menu" element={<PlaceholderScreen screen={getScreen(34)} />} />
-        <Route path="dining/select" element={<PlaceholderScreen screen={getScreen(35)} />} />
-        <Route path="dining/extra" element={<PlaceholderScreen screen={getScreen(36)} />} />
-        <Route path="dining/orders" element={<PlaceholderScreen screen={getScreen(37)} />} />
+        <Route path="dining/menu" element={<DietaryMenuPage />} />
+        <Route path="dining/select" element={<DailyMealSelectionPage />} />
+        <Route path="dining/extra" element={<AlaCarteOrderPage />} />
+        <Route path="dining/orders" element={<MyMealPlanPage />} />
 
         {/* Module 5: Customer Read-only Folio & Review */}
         <Route
@@ -204,9 +215,9 @@ export const AppRouter: React.FC = () => {
           </RoleGuard>
         }
       >
-        <Route path="dashboard" element={<PlaceholderScreen screen={getScreen(38)} />} />
-        <Route path="meal-prep" element={<PlaceholderScreen screen={getScreen(39)} />} />
-        <Route path="orders/:id" element={<PlaceholderScreen screen={getScreen(40)} />} />
+        <Route path="dashboard" element={<FnbDashboardPage />} />
+        <Route path="meal-prep" element={<MealPrepListPage />} />
+        <Route path="orders/:id" element={<MealOrderDetailPage />} />
         <Route index element={<Navigate to="/fb/dashboard" replace />} />
       </Route>
 

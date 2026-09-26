@@ -389,5 +389,68 @@
     "colRoom": "SUITE / ROOM",
     "colStatus": "STATUS",
     "colAction": "ACTION"
+  },
+  "fnb": {
+    "dashboard": {
+      "title": "F&B Dashboard",
+      "subtitle": "Culinary operations overview for today.",
+      "viewPrepList": "View Full Prep List",
+      "retreatMeals": "Retreat Meals (Today)",
+      "extraOrders": "Extra A-la-carte",
+      "dietaryAlerts": "Dietary/Allergy Alerts",
+      "pendingPreparing": "Pending / Preparing",
+      "urgentQueue": "Urgent Prep Queue (Preview)",
+      "noQueue": "No items in the prep queue."
+    },
+    "prepList": {
+      "title": "Daily Meal Prep Queue",
+      "subtitle": "Manage kitchen fulfillment for all customer orders.",
+      "date": "Target Date",
+      "search": "Search Customer / Villa",
+      "searchPlaceholder": "e.g., Jane Doe, 102",
+      "type": "Order Type",
+      "allTypes": "All Types",
+      "typeRetreat": "Retreat Meals",
+      "typeExtra": "A-la-carte",
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "statusPending": "Pending",
+      "statusPreparing": "Preparing",
+      "statusReady": "Ready",
+      "statusDelivered": "Delivered",
+      "colTime": "Time / Period",
+      "colCustomer": "Customer (Villa)",
+      "colItems": "Items",
+      "colAlerts": "Dietary Alerts",
+      "colStatus": "Status",
+      "colAction": "Action",
+      "badgeRetreat": "RETREAT",
+      "badgeExtra": "EXTRA",
+      "noAlerts": "None",
+      "viewDetails": "Details",
+      "noResults": "No preparation items match the current filters."
+    },
+    "orderDetail": {
+      "notFound": "Order Not Found",
+      "backToList": "Back to Prep Queue",
+      "subtitle": "Fulfillment details and dietary requirements.",
+      "orderItems": "Order Items",
+      "customerNotes": "Customer Preparation Notes",
+      "deliveryInfo": "Delivery Information",
+      "customerName": "Customer Name",
+      "location": "Location",
+      "targetTime": "Target Time",
+      "dietaryProfile": "Dietary & Allergies",
+      "noAllergies": "No specific allergies or dietary restrictions recorded for this customer.",
+      "privacyNote": "Privacy Notice: Only culinary-relevant restrictions are shown. Medical details are restricted."
+    },
+    "prep": {
+      "time": "Time",
+      "customer": "Customer",
+      "type": "Type",
+      "status": "Status",
+      "typeRetreat": "Retreat Meal",
+      "typeExtra": "A-la-carte"
+    }
   }
 }

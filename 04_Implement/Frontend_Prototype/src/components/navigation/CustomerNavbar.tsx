@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCustomer } from '../../context/CustomerContext';
 import { LanguageSwitcher } from '../common/LanguageSwitcher';
-import { Sparkles, Calendar, HeartPulse, Utensils, Receipt, Settings, UserCheck, CalendarCheck } from 'lucide-react';
+import { Sparkles, Calendar, HeartPulse, Utensils, Receipt, Settings, UserCheck, CalendarCheck, Coffee, ListOrdered } from 'lucide-react';
 
 export const CustomerNavbar: React.FC = () => {
   const { t } = useTranslation();
@@ -65,6 +65,39 @@ export const CustomerNavbar: React.FC = () => {
                     <Link to="/customer/spa/sessions" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/spa/sessions' ? 'active' : ''}`} id="nav-dropdown-my-sessions">
                       <CalendarCheck size={14} />
                       <span>{t('spa.mySessions', 'My Spa Sessions')}</span>
+                    </Link>
+                  </div>
+                </div>
+              );
+            }
+
+            if (link.path === '/customer/dining/menu') {
+              return (
+                <div key={link.path} className="hsw-nav-dropdown-wrapper">
+                  <Link
+                    to={link.path}
+                    className={`hsw-customer-nav-link ${isActive ? 'active' : ''}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                  >
+                    <Icon size={15} />
+                    <span>{link.label}</span>
+                  </Link>
+                  <div className="hsw-nav-dropdown">
+                    <Link to="/customer/dining/menu" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/dining/menu' ? 'active' : ''}`}>
+                      <Utensils size={14} />
+                      <span>{t('dining.navMenu', 'Dietary Menu')}</span>
+                    </Link>
+                    <Link to="/customer/dining/select" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/dining/select' ? 'active' : ''}`}>
+                      <CalendarCheck size={14} />
+                      <span>{t('dining.navSelect', 'Daily Meal Selection')}</span>
+                    </Link>
+                    <Link to="/customer/dining/extra" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/dining/extra' ? 'active' : ''}`}>
+                      <Coffee size={14} />
+                      <span>{t('dining.navExtra', 'A-la-carte')}</span>
+                    </Link>
+                    <Link to="/customer/dining/orders" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/dining/orders' ? 'active' : ''}`}>
+                      <ListOrdered size={14} />
+                      <span>{t('dining.navOrders', 'My Meal Plan / Orders')}</span>
                     </Link>
                   </div>
                 </div>
