@@ -335,6 +335,17 @@
     "processing": "処理中...",
     "markCompleted": "完了として記録",
     "markNoShow": "不来店（ノーショー）を記録",
-    "sessionCompleted": "セッション完了済"
+    "sessionCompleted": "セッション完了済",
+    "healthConsiderationFlag": "トリートメント関連の健康注意事項あり",
+    "customerRequestLabel": "ご要望",
+    "viewSession": "セッション詳細を見る",
+    "allClear": "現在のところ予定なし",
+    "noUpcomingToday": "本日のシフトにこれ以降の予定はありません。",
+    "sessionsScheduled": "件のセッション予定",
+    "availableSlot": "空き枠",
+    "sessionSummary": "セッション情報",
+    "notesHint": "経過観察、お客様の反応、施術後の推奨事項を記録してください。",
+    "statusLabel": "現在のステータス",
+    "noShow": "ノーショー"
   }
 }

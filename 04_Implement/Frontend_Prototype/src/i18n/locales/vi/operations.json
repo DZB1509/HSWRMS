@@ -335,6 +335,17 @@
     "processing": "Đang xử lý...",
     "markCompleted": "Đánh Dấu Hoàn Thành",
     "markNoShow": "Đánh Dấu Vắng Mặt (No-Show)",
-    "sessionCompleted": "Buổi Trị Liệu Đã Hoàn Thành"
+    "sessionCompleted": "Buổi Trị Liệu Đã Hoàn Thành",
+    "healthConsiderationFlag": "Có lưu ý sức khỏe liên quan đến trị liệu",
+    "customerRequestLabel": "Yêu cầu",
+    "viewSession": "Xem chi tiết buổi trị liệu",
+    "allClear": "Hiện chưa có ca mới",
+    "noUpcomingToday": "Không còn buổi trị liệu nào sắp tới trong ca hôm nay.",
+    "sessionsScheduled": "buổi trị liệu theo lịch",
+    "availableSlot": "Khung giờ trống",
+    "sessionSummary": "Thông tin buổi trị liệu",
+    "notesHint": "Ghi lại quan sát, phản hồi của khách và khuyến nghị sau trị liệu.",
+    "statusLabel": "Trạng thái hiện tại",
+    "noShow": "Vắng mặt"
   }
 }

@@ -335,6 +335,17 @@
     "processing": "Processing...",
     "markCompleted": "Mark Completed",
     "markNoShow": "Mark No-Show",
-    "sessionCompleted": "Session Completed"
+    "sessionCompleted": "Session Completed",
+    "healthConsiderationFlag": "Treatment Health Considerations On File",
+    "customerRequestLabel": "Request",
+    "viewSession": "View Session Details",
+    "allClear": "All Clear for Now",
+    "noUpcomingToday": "No upcoming sessions remaining on your shift today.",
+    "sessionsScheduled": "sessions scheduled",
+    "availableSlot": "Available slot",
+    "sessionSummary": "Session Information",
+    "notesHint": "Record observations, customer response, and post-session recommendations.",
+    "statusLabel": "Current Status",
+    "noShow": "No-Show"
   }
 }

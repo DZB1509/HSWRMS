@@ -335,6 +335,17 @@
     "processing": "Traitement...",
     "markCompleted": "Marquer comme terminé",
     "markNoShow": "Signaler non-présentation (No-Show)",
-    "sessionCompleted": "Séance terminée"
+    "sessionCompleted": "Séance terminée",
+    "healthConsiderationFlag": "Considérations de santé relatives aux soins enregistrées",
+    "customerRequestLabel": "Demande",
+    "viewSession": "Voir les détails de la séance",
+    "allClear": "Rien à signaler pour le moment",
+    "noUpcomingToday": "Aucune séance à venir pour votre service aujourd’hui.",
+    "sessionsScheduled": "séances programmées",
+    "availableSlot": "Créneau disponible",
+    "sessionSummary": "Informations sur la séance",
+    "notesHint": "Enregistrez vos observations, le ressenti du client et les recommandations.",
+    "statusLabel": "Statut actuel",
+    "noShow": "Non-présentation"
   }
 }

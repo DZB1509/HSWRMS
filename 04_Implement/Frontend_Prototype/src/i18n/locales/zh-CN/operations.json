@@ -335,6 +335,17 @@
     "processing": "正在处理...",
     "markCompleted": "标记为已完成",
     "markNoShow": "标记为未到场 (No-Show)",
-    "sessionCompleted": "疗程已结束"
+    "sessionCompleted": "疗程已结束",
+    "healthConsiderationFlag": "已有疗程相关健康注意事项",
+    "customerRequestLabel": "特别要求",
+    "viewSession": "查看疗程详情",
+    "allClear": "目前无待办",
+    "noUpcomingToday": "今天当班没有更多待进行的疗程。",
+    "sessionsScheduled": "个已排班疗程",
+    "availableSlot": "可用时段",
+    "sessionSummary": "疗程信息",
+    "notesHint": "记录理疗观察、宾客反馈及疗后建议。",
+    "statusLabel": "当前状态",
+    "noShow": "未按预约出席"
   }
 }
