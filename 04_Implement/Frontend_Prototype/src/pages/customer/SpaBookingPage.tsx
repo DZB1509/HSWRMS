@@ -37,6 +37,8 @@ export const SpaBookingPage: React.FC = () => {
   const { treatments, therapists, getAvailableSlots } = useSpa();
   const { activeBooking, profile } = useCustomer();
 
+  const localize = (ls: LocalizedString) => useLocalized(ls);
+
   const [selectedTreatmentId, setSelectedTreatmentId] = useState(treatmentIdFromQuery || '');
   const [selectedDate, setSelectedDate] = useState('2026-09-26');
   const [preferredTherapistId, setPreferredTherapistId] = useState('');
@@ -132,7 +134,16 @@ export const SpaBookingPage: React.FC = () => {
     );
   };
 
-  const localize = (ls: LocalizedString) => useLocalized(ls);
+  const [isChangingTreatment, setIsChangingTreatment] = useState(!selectedTreatmentId);
+
+  // 5-step clear progression definitions
+  const steps = [
+    { num: 1, label: t('spa.stepTreatment', 'Treatment'), isDone: Boolean(selectedTreatment), isActive: !selectedTreatment || isChangingTreatment },
+    { num: 2, label: t('spa.stepDate', 'Date'), isDone: Boolean(selectedDate), isActive: Boolean(selectedTreatment && !selectedSlot && !isChangingTreatment) },
+    { num: 3, label: t('spa.stepTherapist', 'Therapist'), isDone: true, isActive: false },
+    { num: 4, label: t('spa.stepSlot', 'Available Time'), isDone: Boolean(selectedSlot), isActive: Boolean(selectedTreatment && selectedDate && !selectedSlot) },
+    { num: 5, label: t('spa.stepReview', 'Review'), isDone: Boolean(selectedSlot), isActive: Boolean(selectedSlot) },
+  ];
 
   return (
     <div className="spa-booking-page" id="screen-26-spa-session-booking">
@@ -141,6 +152,21 @@ export const SpaBookingPage: React.FC = () => {
         <ChevronLeft size={20} />
         <span>{t('spa.backToTreatments', 'Back to Treatments')}</span>
       </button>
+
+      {/* Top 5-Step Progression Stepper */}
+      <div className="spa-booking-stepper" role="navigation" aria-label="Booking steps">
+        {steps.map((st) => (
+          <div
+            key={st.num}
+            className={`spa-stepper-item ${st.isDone ? 'spa-stepper-item--done' : ''} ${st.isActive ? 'spa-stepper-item--active' : ''}`}
+          >
+            <div className="spa-stepper-indicator">
+              {st.isDone && !st.isActive ? <Check size={14} /> : <span>{st.num}</span>}
+            </div>
+            <span className="spa-stepper-label">{st.label}</span>
+          </div>
+        ))}
+      </div>
 
       <div className="spa-booking-layout">
         {/* Left: Booking Form */}
@@ -151,47 +177,101 @@ export const SpaBookingPage: React.FC = () => {
           </h1>
 
           {/* Step 1: Treatment Selection */}
-          <div className="spa-booking-step">
+          <div className="spa-booking-step" id="spa-step-1">
             <div className="spa-step-header">
-              <span className="spa-step-number">1</span>
-              <h2>{t('spa.selectTreatment', 'Select Treatment')}</h2>
+              <span className={`spa-step-number ${selectedTreatment ? 'spa-step-number--done' : ''}`}>
+                {selectedTreatment && !isChangingTreatment ? <Check size={14} /> : '1'}
+              </span>
+              <div className="spa-step-header-text">
+                <h2>{t('spa.selectTreatment', 'Select Treatment')}</h2>
+                {selectedTreatment && (
+                  <span className="spa-step-completed-badge">
+                    {t('spa.selected', 'Selected')}: {localize(selectedTreatment.name)}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="spa-treatment-select-grid">
-              {treatments.map((tr) => (
-                <button
-                  key={tr.id}
-                  className={`spa-treatment-option ${selectedTreatmentId === tr.id ? 'spa-treatment-option--active' : ''}`}
-                  onClick={() => {
-                    setSelectedTreatmentId(tr.id);
-                    setSelectedSlot(null);
-                    setPreferredTherapistId('');
-                  }}
-                  id={`spa-select-treatment-${tr.id}`}
-                >
-                  <img src={tr.imageUrl} alt={localize(tr.name)} className="spa-option-thumb" />
-                  <div className="spa-option-info">
-                    <span className="spa-option-name">{localize(tr.name)}</span>
-                    <span className="spa-option-meta">
-                      <Clock size={12} /> {tr.durationMinutes} {t('spa.minutes', 'min')}
-                      {tr.isIncludedInRetreat ? (
-                        <span className="spa-option-included">{t('spa.included', 'Included')}</span>
-                      ) : (
-                        <span className="spa-option-price">{formatPrice(tr.price)}</span>
-                      )}
-                    </span>
+
+            {selectedTreatment && !isChangingTreatment ? (
+              /* Pinned Selected Treatment Card (Remains visible throughout) */
+              <div className="spa-pinned-treatment-card">
+                <img src={selectedTreatment.imageUrl} alt={localize(selectedTreatment.name)} className="spa-pinned-thumb" />
+                <div className="spa-pinned-info">
+                  <div className="spa-pinned-title-row">
+                    <h3 className="spa-pinned-name">{localize(selectedTreatment.name)}</h3>
+                    {selectedTreatment.isIncludedInRetreat ? (
+                      <span className="spa-pinned-tag spa-pinned-tag--included">{t('spa.included', 'Included')}</span>
+                    ) : (
+                      <span className="spa-pinned-tag spa-pinned-tag--price">{formatPrice(selectedTreatment.price)}</span>
+                    )}
                   </div>
-                  {selectedTreatmentId === tr.id && <Check size={18} className="spa-option-check" />}
+                  <p className="spa-pinned-desc">{localize(selectedTreatment.description)}</p>
+                  <div className="spa-pinned-meta">
+                    <span><Clock size={13} /> {selectedTreatment.durationMinutes} {t('spa.minutes', 'min')}</span>
+                    <span>·</span>
+                    <span className="spa-pinned-cat">{selectedTreatment.category}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="spa-change-selection-btn"
+                  onClick={() => setIsChangingTreatment(true)}
+                  id="spa-change-treatment-btn"
+                >
+                  {t('spa.changeTreatment', 'Change Treatment')}
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              /* Treatment Selection Grid */
+              <div className="spa-treatment-select-grid">
+                {treatments.map((tr) => (
+                  <button
+                    key={tr.id}
+                    className={`spa-treatment-option ${selectedTreatmentId === tr.id ? 'spa-treatment-option--active' : ''}`}
+                    onClick={() => {
+                      setSelectedTreatmentId(tr.id);
+                      setSelectedSlot(null);
+                      setPreferredTherapistId('');
+                      setIsChangingTreatment(false);
+                    }}
+                    id={`spa-select-treatment-${tr.id}`}
+                  >
+                    <img src={tr.imageUrl} alt={localize(tr.name)} className="spa-option-thumb" />
+                    <div className="spa-option-info">
+                      <span className="spa-option-name">{localize(tr.name)}</span>
+                      <span className="spa-option-meta">
+                        <Clock size={12} /> {tr.durationMinutes} {t('spa.minutes', 'min')}
+                        {tr.isIncludedInRetreat ? (
+                          <span className="spa-option-included">{t('spa.included', 'Included')}</span>
+                        ) : (
+                          <span className="spa-option-price">{formatPrice(tr.price)}</span>
+                        )}
+                      </span>
+                    </div>
+                    {selectedTreatmentId === tr.id && <Check size={18} className="spa-option-check" />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Step 2: Select Date */}
           {selectedTreatment && (
-            <div className="spa-booking-step">
+            <div className="spa-booking-step" id="spa-step-2">
               <div className="spa-step-header">
-                <span className="spa-step-number">2</span>
-                <h2>{t('spa.selectDate', 'Select Date')}</h2>
+                <span className={`spa-step-number ${selectedDate ? 'spa-step-number--done' : ''}`}>
+                  {selectedDate ? <Check size={14} /> : '2'}
+                </span>
+                <div className="spa-step-header-text">
+                  <h2>{t('spa.selectDate', 'Select Date')}</h2>
+                  <span className="spa-step-completed-badge">
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
+                </div>
               </div>
               <div className="spa-date-picker">
                 {availableDates.map((date) => {
@@ -221,10 +301,19 @@ export const SpaBookingPage: React.FC = () => {
 
           {/* Step 3: Therapist Preference */}
           {selectedTreatment && selectedDate && (
-            <div className="spa-booking-step">
+            <div className="spa-booking-step" id="spa-step-3">
               <div className="spa-step-header">
-                <span className="spa-step-number">3</span>
-                <h2>{t('spa.therapistPreference', 'Therapist Preference')}</h2>
+                <span className="spa-step-number spa-step-number--done">
+                  <Check size={14} />
+                </span>
+                <div className="spa-step-header-text">
+                  <h2>{t('spa.therapistPreference', 'Therapist Preference')}</h2>
+                  <span className="spa-step-completed-badge">
+                    {preferredTherapistId
+                      ? eligibleTherapists.find((th) => th.id === preferredTherapistId)?.name || preferredTherapistId
+                      : t('spa.anyTherapist', 'Any Available (Best Match)')}
+                  </span>
+                </div>
               </div>
               <div className="spa-therapist-grid">
                 <button
@@ -239,6 +328,7 @@ export const SpaBookingPage: React.FC = () => {
                   </div>
                   <span className="spa-therapist-name">{t('spa.anyTherapist', 'Any Available')}</span>
                   <span className="spa-therapist-title">{t('spa.bestMatch', 'Best Available Match')}</span>
+                  {preferredTherapistId === '' && <Check size={16} className="spa-option-check" />}
                 </button>
                 {eligibleTherapists.map((th) => (
                   <button
@@ -254,8 +344,9 @@ export const SpaBookingPage: React.FC = () => {
                     <span className="spa-therapist-name">{th.name}</span>
                     <span className="spa-therapist-title">{localize(th.title)}</span>
                     <span className="spa-therapist-exp">
-                      {th.yearsExperience} {t('spa.yearsExp', 'yrs')}
+                      {th.yearsExperience} {t('spa.yearsExp', 'yrs exp')}
                     </span>
+                    {preferredTherapistId === th.id && <Check size={16} className="spa-option-check" />}
                   </button>
                 ))}
               </div>
@@ -264,10 +355,19 @@ export const SpaBookingPage: React.FC = () => {
 
           {/* Step 4: Time Slot Selection */}
           {selectedTreatment && selectedDate && (
-            <div className="spa-booking-step">
+            <div className="spa-booking-step" id="spa-step-4">
               <div className="spa-step-header">
-                <span className="spa-step-number">4</span>
-                <h2>{t('spa.selectTimeSlot', 'Select Time Slot')}</h2>
+                <span className={`spa-step-number ${selectedSlot ? 'spa-step-number--done' : ''}`}>
+                  {selectedSlot ? <Check size={14} /> : '4'}
+                </span>
+                <div className="spa-step-header-text">
+                  <h2>{t('spa.selectTimeSlot', 'Select Time Slot')}</h2>
+                  {selectedSlot && (
+                    <span className="spa-step-completed-badge">
+                      {selectedSlot.startTime} — {selectedSlot.endTime} · {selectedSlot.therapistName} ({localize(selectedSlot.roomName)})
+                    </span>
+                  )}
+                </div>
               </div>
 
               {availableSlots.length === 0 ? (
@@ -277,6 +377,7 @@ export const SpaBookingPage: React.FC = () => {
                   <button
                     className="spa-alt-btn"
                     onClick={() => navigate(`/customer/spa/alternatives?treatment=${selectedTreatmentId}&date=${selectedDate}`)}
+                    id="btn-view-alternatives-screen27"
                   >
                     {t('spa.viewAlternatives', 'View Alternative Slots')}
                     <ChevronRight size={16} />
@@ -318,21 +419,59 @@ export const SpaBookingPage: React.FC = () => {
             </div>
           )}
 
-          {/* Special Request */}
-          {selectedSlot && (
-            <div className="spa-booking-step">
+          {/* Step 5: Review & Special Requests */}
+          {selectedTreatment && selectedDate && (
+            <div className="spa-booking-step" id="spa-step-5">
               <div className="spa-step-header">
-                <span className="spa-step-number">5</span>
-                <h2>{t('spa.specialRequest', 'Special Requests')}</h2>
+                <span className={`spa-step-number ${selectedSlot ? 'spa-step-number--done' : ''}`}>
+                  {selectedSlot ? <Check size={14} /> : '5'}
+                </span>
+                <div className="spa-step-header-text">
+                  <h2>{t('spa.stepReviewTitle', '5. Review & Preferences')}</h2>
+                  <span className="spa-step-subtext">
+                    {selectedSlot
+                      ? t('spa.readyToConfirmSub', 'All selections complete. Review and proceed to confirmation.')
+                      : t('spa.selectSlotFirstSub', 'Please select a time slot above to complete your booking.')}
+                  </span>
+                </div>
               </div>
-              <textarea
-                className="spa-special-request"
-                value={specialRequest}
-                onChange={(e) => setSpecialRequest(e.target.value)}
-                placeholder={t('spa.specialRequestPlaceholder', 'Any preferences or notes for your therapist...')}
-                rows={3}
-                id="spa-special-request"
-              />
+
+              {/* Progress & Verification Checklist */}
+              <div className="spa-progression-checklist">
+                <div className={`spa-checklist-item ${selectedTreatment ? 'spa-checklist-item--complete' : ''}`}>
+                  <Check size={14} />
+                  <span><strong>{t('spa.treatment', 'Treatment')}:</strong> {selectedTreatment ? localize(selectedTreatment.name) : t('spa.pending', 'Pending')}</span>
+                </div>
+                <div className={`spa-checklist-item ${selectedDate ? 'spa-checklist-item--complete' : ''}`}>
+                  <Check size={14} />
+                  <span><strong>{t('spa.date', 'Date')}:</strong> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className={`spa-checklist-item ${preferredTherapistId !== undefined ? 'spa-checklist-item--complete' : ''}`}>
+                  <Check size={14} />
+                  <span><strong>{t('spa.therapist', 'Therapist')}:</strong> {preferredTherapistId ? eligibleTherapists.find((t) => t.id === preferredTherapistId)?.name : t('spa.anyTherapist', 'Any Available (Best Match)')}</span>
+                </div>
+                <div className={`spa-checklist-item ${selectedSlot ? 'spa-checklist-item--complete' : 'spa-checklist-item--incomplete'}`}>
+                  {selectedSlot ? <Check size={14} /> : <Clock size={14} />}
+                  <span>
+                    <strong>{t('spa.slotAndSuite', 'Slot & Suite')}:</strong>{' '}
+                    {selectedSlot ? `${selectedSlot.startTime}–${selectedSlot.endTime} · ${localize(selectedSlot.roomName)}` : t('spa.slotPendingMsg', 'Required — select time slot in Step 4')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="spa-request-container">
+                <label htmlFor="spa-special-request" className="spa-request-label">
+                  {t('spa.specialRequest', 'Special Requests (Optional)')}
+                </label>
+                <textarea
+                  className="spa-special-request"
+                  value={specialRequest}
+                  onChange={(e) => setSpecialRequest(e.target.value)}
+                  placeholder={t('spa.specialRequestPlaceholder', 'Any preferences or notes for your therapist...')}
+                  rows={3}
+                  id="spa-special-request"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -396,7 +535,6 @@ export const SpaBookingPage: React.FC = () => {
                     )}
                   </span>
                 </div>
-
 
                 <button
                   className="spa-confirm-btn"

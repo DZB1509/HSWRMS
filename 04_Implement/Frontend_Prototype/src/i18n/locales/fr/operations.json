@@ -289,7 +289,19 @@
     "room": "Salle",
     "processing": "Traitement...",
     "booked": "Réservé ✓",
-    "confirmAndCharge": "Confirmer & Imputer au Folio"
+    "confirmAndCharge": "Confirmer & Imputer au Folio",
+    "step1Title": "1. Client / Séjour Actif",
+    "step2Title": "2. Sélection du Soin Spa",
+    "step3Title": "3. Sélection Date & Heure",
+    "step4Title": "4. Assignation Thérapeute & Salle",
+    "step5Title": "5. Vérification Disponibilité & Folio",
+    "completePrevSteps": "Veuillez compléter les étapes précédentes.",
+    "liveSummaryTitle": "Récapitulatif en Direct",
+    "liveSummarySubtitle": "Statut de réservation atomique en temps réel",
+    "statusReady": "Validé & Prêt à Réserver",
+    "statusIncomplete": "Sélection en attente",
+    "confirmBtn": "Confirmer la Séance Spa Supplémentaire",
+    "confirmNote": "Validation atomique confirmée. Les frais seront imputés au folio du client."
   },
   "therapist": {
     "dashboard": "Tableau de Bord Thérapeute",
@@ -346,6 +358,14 @@
     "sessionSummary": "Informations sur la séance",
     "notesHint": "Enregistrez vos observations, le ressenti du client et les recommandations.",
     "statusLabel": "Statut actuel",
-    "noShow": "Non-présentation"
+    "noShow": "Non-présentation",
+    "viewAgenda": "Ordre du jour",
+    "viewTimeline": "Chronologie",
+    "colTime": "HORAIRE",
+    "colCustomer": "CLIENT",
+    "colTreatment": "SOIN",
+    "colRoom": "SUITE / SALLE",
+    "colStatus": "STATUT",
+    "colAction": "ACTION"
   }
 }

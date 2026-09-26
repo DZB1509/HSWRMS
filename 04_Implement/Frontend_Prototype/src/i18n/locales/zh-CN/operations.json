@@ -289,7 +289,19 @@
     "room": "理疗室",
     "processing": "正在处理...",
     "booked": "预约成功 ✓",
-    "confirmAndCharge": "确认并记入房账"
+    "confirmAndCharge": "确认并记入房账",
+    "step1Title": "1. 顾客 / 当前在住静修",
+    "step2Title": "2. 水疗疗程选择",
+    "step3Title": "3. 日期与时间选择",
+    "step4Title": "4. 理疗师与疗愈室分配",
+    "step5Title": "5. 资源可用性与账单验证",
+    "completePrevSteps": "请先完成前置步骤以解锁。",
+    "liveSummaryTitle": "实时预订摘要",
+    "liveSummarySubtitle": "原子资源实时验证状态",
+    "statusReady": "验证通过 · 可预订",
+    "statusIncomplete": "等待选择",
+    "confirmBtn": "确认手工增订水疗",
+    "confirmNote": "原子验证成功。确认后费用将直接计入顾客账单。"
   },
   "therapist": {
     "dashboard": "理疗师工作台",
@@ -346,6 +358,14 @@
     "sessionSummary": "疗程信息",
     "notesHint": "记录理疗观察、宾客反馈及疗后建议。",
     "statusLabel": "当前状态",
-    "noShow": "未按预约出席"
+    "noShow": "未按预约出席",
+    "viewAgenda": "日程表",
+    "viewTimeline": "时间线",
+    "colTime": "时间",
+    "colCustomer": "顾客",
+    "colTreatment": "疗程项目",
+    "colRoom": "疗愈室",
+    "colStatus": "状态",
+    "colAction": "操作"
   }
 }

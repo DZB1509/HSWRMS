@@ -132,27 +132,51 @@ export const SpaTreatmentListPage: React.FC = () => {
                 onClick={() => navigate(`/customer/spa/book?treatment=${treatment.id}`)}
                 id={`spa-treatment-${treatment.id}`}
               >
+                {/* 1. Image */}
                 <div className="spa-card-image">
                   <img src={treatment.imageUrl} alt={localize(treatment.name)} loading="lazy" />
                   <div className="spa-card-badge-overlay">
                     <span className="spa-card-included-tag">
-                      <Leaf size={12} />
+                      <Leaf size={13} />
                       {t('spa.included', 'Included')}
                     </span>
                   </div>
                 </div>
+
                 <div className="spa-card-body">
-                  <h3>{localize(treatment.name)}</h3>
+                  {/* 2. Treatment Name */}
+                  <h3 className="spa-card-title">{localize(treatment.name)}</h3>
+
+                  {/* 3. Category */}
+                  <div className="spa-card-category-row">
+                    <span className="spa-card-category-badge">{treatment.category}</span>
+                  </div>
+
+                  {/* 4. Short Description */}
                   <p className="spa-card-desc">{localize(treatment.description)}</p>
-                  <div className="spa-card-meta">
+
+                  {/* 5. Duration + Price / Included Status */}
+                  <div className="spa-card-meta-row">
                     <span className="spa-card-duration">
                       <Clock size={14} />
-                      {treatment.durationMinutes} {t('spa.minutes', 'min')}
+                      <span>{treatment.durationMinutes} {t('spa.minutes', 'min')}</span>
                     </span>
-                    <span className="spa-card-category">{treatment.category}</span>
+                    <span className="spa-card-status-pill spa-card-status-pill--included">
+                      <Leaf size={12} />
+                      <span>{t('spa.includedInPackage', 'Package Inclusive')}</span>
+                    </span>
                   </div>
-                  <button className="spa-card-cta" id={`spa-book-${treatment.id}`}>
-                    {t('spa.bookSession', 'Book Session')}
+
+                  {/* 6. Clear High-Emphasis CTA */}
+                  <button
+                    className="spa-card-cta spa-card-cta--primary"
+                    id={`spa-book-${treatment.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/customer/spa/book?treatment=${treatment.id}`);
+                    }}
+                  >
+                    <span>{t('spa.bookSession', 'Book Session')}</span>
                     <ChevronRight size={16} />
                   </button>
                 </div>
@@ -182,6 +206,7 @@ export const SpaTreatmentListPage: React.FC = () => {
                 onClick={() => navigate(`/customer/spa/book?treatment=${treatment.id}`)}
                 id={`spa-treatment-${treatment.id}`}
               >
+                {/* 1. Image */}
                 <div className="spa-card-image">
                   <img src={treatment.imageUrl} alt={localize(treatment.name)} loading="lazy" />
                   <div className="spa-card-badge-overlay">
@@ -190,18 +215,40 @@ export const SpaTreatmentListPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
                 <div className="spa-card-body">
-                  <h3>{localize(treatment.name)}</h3>
+                  {/* 2. Treatment Name */}
+                  <h3 className="spa-card-title">{localize(treatment.name)}</h3>
+
+                  {/* 3. Category */}
+                  <div className="spa-card-category-row">
+                    <span className="spa-card-category-badge">{treatment.category}</span>
+                  </div>
+
+                  {/* 4. Short Description */}
                   <p className="spa-card-desc">{localize(treatment.description)}</p>
-                  <div className="spa-card-meta">
+
+                  {/* 5. Duration + Price / Included Status */}
+                  <div className="spa-card-meta-row">
                     <span className="spa-card-duration">
                       <Clock size={14} />
-                      {treatment.durationMinutes} {t('spa.minutes', 'min')}
+                      <span>{treatment.durationMinutes} {t('spa.minutes', 'min')}</span>
                     </span>
-                    <span className="spa-card-category">{treatment.category}</span>
+                    <span className="spa-card-price-highlight">
+                      {formatPrice(treatment.price)}
+                    </span>
                   </div>
-                  <button className="spa-card-cta spa-card-cta--extra" id={`spa-book-${treatment.id}`}>
-                    {t('spa.bookSession', 'Book Session')}
+
+                  {/* 6. Clear High-Emphasis CTA */}
+                  <button
+                    className="spa-card-cta spa-card-cta--extra"
+                    id={`spa-book-${treatment.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/customer/spa/book?treatment=${treatment.id}`);
+                    }}
+                  >
+                    <span>{t('spa.bookSession', 'Book Session')}</span>
                     <ChevronRight size={16} />
                   </button>
                 </div>

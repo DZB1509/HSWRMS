@@ -514,18 +514,25 @@ export const SpaConfirmationPage: React.FC = () => {
     );
   }
 
-  // ── CASE 3: Empty State ────────────────────────────────
+  // ── CASE 3: Compact Empty State (Requirement 4) ────────
   return (
     <div className="spa-confirmation-page" id="screen-28-spa-booking-confirmation">
-      <div className="spa-confirmation-empty">
-        <Sparkles size={48} />
-        <h2>{t('spa.noSession', 'No session found')}</h2>
-        <p style={{ color: 'rgba(255,255,255,0.6)', margin: '0.5rem 0 1.5rem' }}>
-          {t('spa.noSessionDesc', 'Please select a treatment and time slot from the spa catalog.')}
+      <div className="spa-empty-card">
+        <div className="spa-empty-icon-box">
+          <Sparkles size={32} />
+        </div>
+        <h3>{t('spa.noSession', 'No Active Reservation Selected')}</h3>
+        <p>
+          {t('spa.noSessionDesc', 'Please select a treatment and time slot from the spa catalogue to review and confirm.')}
         </p>
-        <button className="spa-confirm-btn" onClick={() => navigate('/customer/spa')}>
-          {t('spa.browseTreatments', 'Browse Treatments')}
-        </button>
+        <div className="spa-empty-actions">
+          <button className="spa-confirm-btn" onClick={() => navigate('/customer/spa')} id="spa-conf-browse">
+            {t('spa.browseTreatments', 'Explore Treatments')}
+          </button>
+          <button className="spa-secondary-btn" onClick={() => navigate('/customer/dashboard')} id="spa-conf-dashboard">
+            {t('spa.returnToDashboard', 'Dashboard')}
+          </button>
+        </div>
       </div>
     </div>
   );

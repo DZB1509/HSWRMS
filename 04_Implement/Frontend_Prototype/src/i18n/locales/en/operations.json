@@ -289,7 +289,19 @@
     "room": "Room",
     "processing": "Processing...",
     "booked": "Booked ✓",
-    "confirmAndCharge": "Confirm & Charge to Folio"
+    "confirmAndCharge": "Confirm & Charge to Folio",
+    "step1Title": "1. Customer / Active Retreat Stay",
+    "step2Title": "2. Spa Treatment Selection",
+    "step3Title": "3. Date & Time Selection",
+    "step4Title": "4. Therapist & Treatment Suite Assignment",
+    "step5Title": "5. Availability & Folio Verification",
+    "completePrevSteps": "Please complete previous steps to enable.",
+    "liveSummaryTitle": "Live Booking Summary",
+    "liveSummarySubtitle": "Real-time atomic reservation status",
+    "statusReady": "Validated & Ready to Book",
+    "statusIncomplete": "Pending Selection",
+    "confirmBtn": "Confirm Extra Spa Session",
+    "confirmNote": "Atomic validation confirmed. Charge will be posted directly to customer folio upon confirmation."
   },
   "therapist": {
     "dashboard": "Therapist Dashboard",
@@ -346,6 +358,14 @@
     "sessionSummary": "Session Information",
     "notesHint": "Record observations, customer response, and post-session recommendations.",
     "statusLabel": "Current Status",
-    "noShow": "No-Show"
+    "noShow": "No-Show",
+    "viewAgenda": "Agenda",
+    "viewTimeline": "Timeline",
+    "colTime": "TIME",
+    "colCustomer": "CUSTOMER",
+    "colTreatment": "TREATMENT",
+    "colRoom": "SUITE / ROOM",
+    "colStatus": "STATUS",
+    "colAction": "ACTION"
   }
 }

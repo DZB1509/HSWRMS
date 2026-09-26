@@ -1,3 +1,10 @@
+/**
+ * Screen #32 — Therapist Daily Schedule
+ * Operational view for assigned Therapist shifts.
+ * Default view: COMPACT AGENDA-FIRST (chronological sessions with subtle gap indicators).
+ * Secondary view: Hourly Timeline.
+ */
+
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +19,9 @@ import {
   Activity,
   Sparkles,
   ChevronRight,
-  Calendar,
+  List,
+  Columns,
+  Coffee,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
 
@@ -24,6 +33,13 @@ const useLocalized = (ls: LocalizedString): string => {
   return ls[lang] || ls.en;
 };
 
+// Helper: minutes between "HH:MM" strings
+const timeDiffMinutes = (startStr: string, endStr: string): number => {
+  const [h1, m1] = startStr.split(':').map(Number);
+  const [h2, m2] = endStr.split(':').map(Number);
+  return (h2 * 60 + m2) - (h1 * 60 + m1);
+};
+
 export const TherapistSchedulePage: React.FC = () => {
   const { t } = useTranslation('operations');
   const navigate = useNavigate();
@@ -33,6 +49,8 @@ export const TherapistSchedulePage: React.FC = () => {
   const therapist = getTherapistById(CURRENT_THERAPIST_ID);
 
   const [selectedDate, setSelectedDate] = useState('2026-09-26');
+  // Default to COMPACT AGENDA-FIRST view per Requirement 8
+  const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
@@ -45,14 +63,15 @@ export const TherapistSchedulePage: React.FC = () => {
     return dates;
   }, []);
 
-  const daySessions = useMemo(
-    () => getSessionsByTherapist(CURRENT_THERAPIST_ID, selectedDate),
-    [getSessionsByTherapist, selectedDate]
-  );
+  // Sorted chronologically by start time
+  const daySessions = useMemo(() => {
+    const s = getSessionsByTherapist(CURRENT_THERAPIST_ID, selectedDate);
+    return [...s].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [getSessionsByTherapist, selectedDate]);
 
-  // Time grid: 7am to 7pm
-  const timeSlots = Array.from({ length: 13 }, (_, i) => {
-    const hour = 7 + i;
+  // Hourly timeline slots: 08:00 to 18:00
+  const timeSlots = Array.from({ length: 11 }, (_, i) => {
+    const hour = 8 + i;
     return `${String(hour).padStart(2, '0')}:00`;
   });
 
@@ -60,8 +79,16 @@ export const TherapistSchedulePage: React.FC = () => {
     startSession(sessionId);
   };
 
+  const formattedDateTitle = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   return (
     <div className="therapist-schedule" id="screen-32-therapist-daily-schedule">
+      {/* Page Header */}
       <div className="ops-page-header">
         <div className="ops-header-icon-box">
           <CalendarCheck size={22} />
@@ -76,7 +103,7 @@ export const TherapistSchedulePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Date Navigation Carousel */}
+      {/* Date Navigation Bar */}
       <div className="therapist-date-nav" role="tablist" aria-label="Select Date">
         {availableDates.map((d) => {
           const dt = new Date(d + 'T00:00:00');
@@ -104,50 +131,80 @@ export const TherapistSchedulePage: React.FC = () => {
         })}
       </div>
 
-      {/* Summary Bar */}
+      {/* Operational Summary Bar with Agenda | Timeline View Toggle */}
       <div className="therapist-summary-bar">
         <div className="therapist-summary-left">
           <Sparkles size={15} />
-          <strong>{daySessions.length}</strong> {t('therapist.sessionsScheduled', 'sessions scheduled')}
+          <strong>{daySessions.length}</strong> {t('therapist.sessionsScheduled', 'sessions scheduled')} ·{' '}
+          <span>{formattedDateTitle}</span>
         </div>
-        <div className="therapist-summary-date">
-          <Calendar size={14} />
-          <span>
-            {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </span>
+
+        {/* View Toggle: Agenda (Default) | Timeline */}
+        <div className="therapist-view-toggle">
+          <button
+            type="button"
+            className={`therapist-toggle-btn ${viewMode === 'agenda' ? 'therapist-toggle-btn--active' : ''}`}
+            onClick={() => setViewMode('agenda')}
+            id="btn-schedule-agenda-view"
+          >
+            <List size={14} />
+            <span>{t('therapist.viewAgenda', 'Agenda')}</span>
+          </button>
+          <button
+            type="button"
+            className={`therapist-toggle-btn ${viewMode === 'timeline' ? 'therapist-toggle-btn--active' : ''}`}
+            onClick={() => setViewMode('timeline')}
+            id="btn-schedule-timeline-view"
+          >
+            <Columns size={14} />
+            <span>{t('therapist.viewTimeline', 'Timeline')}</span>
+          </button>
         </div>
       </div>
 
-      {/* Timeline / Table-Hybrid View */}
-      <div className="therapist-timeline">
-        {timeSlots.map((time) => {
-          const hourSessions = daySessions.filter((s) => {
-            const sStart = s.startTime;
-            const slotH = parseInt(time.split(':')[0]);
-            const startH = parseInt(sStart.split(':')[0]);
-            const startM = parseInt(sStart.split(':')[1]);
-            // Show session at its start hour
-            return startH === slotH || (startH === slotH - 1 && startM >= 30);
-          });
-
-          return (
-            <div key={time} className="therapist-timeline-row">
-              <div className="therapist-timeline-time">
-                <span className="therapist-hour-marker">{time}</span>
+      {/* MAIN VIEW: Agenda or Timeline */}
+      {viewMode === 'agenda' ? (
+        /* COMPACT AGENDA-FIRST VIEW (Requirement 8) */
+        <div className="therapist-agenda-view" id="therapist-agenda-container">
+          {daySessions.length > 0 ? (
+            <div className="therapist-agenda-table">
+              {/* Agenda Header Row */}
+              <div className="therapist-agenda-header-row">
+                <span className="th-col-time">{t('therapist.colTime', 'TIME')}</span>
+                <span className="th-col-customer">{t('therapist.colCustomer', 'CUSTOMER')}</span>
+                <span className="th-col-treatment">{t('therapist.colTreatment', 'TREATMENT')}</span>
+                <span className="th-col-room">{t('therapist.colRoom', 'SUITE / ROOM')}</span>
+                <span className="th-col-status">{t('therapist.colStatus', 'STATUS')}</span>
+                <span className="th-col-action">{t('therapist.colAction', 'ACTION')}</span>
               </div>
-              <div className="therapist-timeline-content">
-                {hourSessions.length > 0 ? (
-                  hourSessions.map((session) => (
+
+              {/* Agenda Session Rows with Subtle Gap Indicators */}
+              {daySessions.map((session, index) => {
+                const prevSession = index > 0 ? daySessions[index - 1] : null;
+                const gapMins = prevSession ? timeDiffMinutes(prevSession.endTime, session.startTime) : 0;
+                const hasSubtleGap = gapMins >= 15;
+
+                return (
+                  <React.Fragment key={session.id}>
+                    {/* Subtle Free Gap Indicator (Requirement 8) */}
+                    {hasSubtleGap && (
+                      <div className="therapist-agenda-gap-row">
+                        <span className="therapist-agenda-gap-line" />
+                        <span className="therapist-agenda-gap-pill">
+                          <Coffee size={12} />
+                          <span>
+                            {prevSession?.endTime} — {session.startTime} ({gapMins} min preparation & rest window)
+                          </span>
+                        </span>
+                        <span className="therapist-agenda-gap-line" />
+                      </div>
+                    )}
+
+                    {/* Operational Session Row */}
                     <div
-                      key={session.id}
-                      className={`therapist-session-card therapist-session-card--${session.status}`}
+                      className={`therapist-agenda-row therapist-agenda-row--${session.status}`}
                       onClick={() => navigate(`/therapist/sessions/${session.id}`)}
-                      id={`therapist-session-${session.id}`}
+                      id={`therapist-agenda-row-${session.id}`}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -156,38 +213,42 @@ export const TherapistSchedulePage: React.FC = () => {
                         }
                       }}
                     >
-                      {/* Priority order: TIME -> CUSTOMER -> TREATMENT -> ROOM -> STATUS -> ACTION */}
-                      <div className="therapist-session-col therapist-session-col--time">
-                        <span className="therapist-time-range">
+                      {/* TIME */}
+                      <div className="th-col-time">
+                        <span className="therapist-agenda-time">
                           <Clock size={13} />
-                          {session.startTime} — {session.endTime}
+                          <span>{session.startTime} — {session.endTime}</span>
                         </span>
-                        <span className="therapist-duration-label">
+                        <span className="therapist-agenda-duration">
                           {session.durationMinutes} min
                         </span>
                       </div>
 
-                      <div className="therapist-session-col therapist-session-col--customer">
-                        <span className="therapist-customer-name">
+                      {/* CUSTOMER */}
+                      <div className="th-col-customer">
+                        <span className="therapist-agenda-customer">
                           <User size={13} />
-                          {session.customerName}
+                          <span>{session.customerName}</span>
                         </span>
                       </div>
 
-                      <div className="therapist-session-col therapist-session-col--treatment">
-                        <span className="therapist-treatment-title">
+                      {/* TREATMENT */}
+                      <div className="th-col-treatment">
+                        <span className="therapist-agenda-treatment">
                           {localize(session.treatmentName)}
                         </span>
                       </div>
 
-                      <div className="therapist-session-col therapist-session-col--room">
-                        <span className="therapist-room-label">
+                      {/* ROOM */}
+                      <div className="th-col-room">
+                        <span className="therapist-agenda-room">
                           <MapPin size={13} />
-                          {localize(session.roomName)}
+                          <span>{localize(session.roomName)}</span>
                         </span>
                       </div>
 
-                      <div className="therapist-session-col therapist-session-col--status">
+                      {/* STATUS */}
+                      <div className="th-col-status">
                         <span className={`spa-status-badge spa-status--${session.status}`}>
                           {session.status === 'confirmed' ? (
                             <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
@@ -201,7 +262,8 @@ export const TherapistSchedulePage: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="therapist-session-col therapist-session-col--action">
+                      {/* ACTION */}
+                      <div className="th-col-action">
                         {session.status === 'confirmed' ? (
                           <button
                             className="therapist-start-action-btn"
@@ -222,26 +284,127 @@ export const TherapistSchedulePage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="therapist-timeline-empty-slot">
-                    <span className="therapist-empty-slot-text">{t('therapist.availableSlot', 'Available slot')}</span>
-                  </div>
-                )}
-              </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          ) : (
+            <div className="therapist-no-sessions">
+              <CheckCircle size={32} />
+              <h3>{t('therapist.noSessionsDay', 'No sessions scheduled for this day')}</h3>
+              <p>{t('therapist.freeDay', 'You have no assigned therapy appointments on this date.')}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* SECONDARY VIEW: Hourly Timeline */
+        <div className="therapist-timeline">
+          {timeSlots.map((time) => {
+            const hourSessions = daySessions.filter((s) => {
+              const slotH = parseInt(time.split(':')[0]);
+              const startH = parseInt(s.startTime.split(':')[0]);
+              const startM = parseInt(s.startTime.split(':')[1]);
+              return startH === slotH || (startH === slotH - 1 && startM >= 30);
+            });
 
-      {daySessions.length === 0 && (
-        <div className="therapist-no-sessions">
-          <CheckCircle size={36} />
-          <h3>{t('therapist.noSessionsDay', 'No sessions scheduled for this day')}</h3>
-          <p>{t('therapist.freeDay', 'You have no assigned sessions on this date.')}</p>
+            return (
+              <div key={time} className="therapist-timeline-row">
+                <div className="therapist-timeline-time">
+                  <span className="therapist-hour-marker">{time}</span>
+                </div>
+                <div className="therapist-timeline-content">
+                  {hourSessions.length > 0 ? (
+                    hourSessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`therapist-session-card therapist-session-card--${session.status}`}
+                        onClick={() => navigate(`/therapist/sessions/${session.id}`)}
+                        id={`therapist-timeline-${session.id}`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            navigate(`/therapist/sessions/${session.id}`);
+                          }
+                        }}
+                      >
+                        <div className="therapist-session-col therapist-session-col--time">
+                          <span className="therapist-time-range">
+                            <Clock size={13} />
+                            {session.startTime} — {session.endTime}
+                          </span>
+                          <span className="therapist-duration-label">
+                            {session.durationMinutes} min
+                          </span>
+                        </div>
+
+                        <div className="therapist-session-col therapist-session-col--customer">
+                          <span className="therapist-customer-name">
+                            <User size={13} />
+                            {session.customerName}
+                          </span>
+                        </div>
+
+                        <div className="therapist-session-col therapist-session-col--treatment">
+                          <span className="therapist-treatment-title">
+                            {localize(session.treatmentName)}
+                          </span>
+                        </div>
+
+                        <div className="therapist-session-col therapist-session-col--room">
+                          <span className="therapist-room-label">
+                            <MapPin size={13} />
+                            {localize(session.roomName)}
+                          </span>
+                        </div>
+
+                        <div className="therapist-session-col therapist-session-col--status">
+                          <span className={`spa-status-badge spa-status--${session.status}`}>
+                            {session.status === 'confirmed' ? (
+                              <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
+                            ) : session.status === 'in_progress' ? (
+                              <><Activity size={12} /> {t('therapist.inProgress', 'In Progress')}</>
+                            ) : session.status === 'completed' ? (
+                              <><CheckCircle size={12} /> {t('therapist.done', 'Done')}</>
+                            ) : (
+                              session.status
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="therapist-session-col therapist-session-col--action">
+                          {session.status === 'confirmed' ? (
+                            <button
+                              className="therapist-start-action-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartSession(session.id);
+                              }}
+                              id={`therapist-timeline-start-${session.id}`}
+                            >
+                              <Play size={13} />
+                              <span>{t('therapist.startSession', 'Start Session')}</span>
+                            </button>
+                          ) : (
+                            <span className="therapist-details-link">
+                              <span>{t('therapist.viewDetails', 'Details')}</span>
+                              <ChevronRight size={14} />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="therapist-timeline-empty-slot">
+                      <span className="therapist-empty-slot-text">{t('therapist.availableSlot', 'Available window')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
-

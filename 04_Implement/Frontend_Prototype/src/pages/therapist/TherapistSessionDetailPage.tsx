@@ -142,57 +142,62 @@ export const TherapistSessionDetailPage: React.FC = () => {
       <div className="therapist-detail-layout">
         {/* Left Column: Information (~70%) */}
         <div className="therapist-detail-main">
-          {/* 1. Session Summary Card */}
-          <section className="therapist-card therapist-card--summary" aria-labelledby="session-summary-title">
-            <h2 id="session-summary-title" className="therapist-card-title">
-              <Calendar size={18} />
-              <span>{t('therapist.sessionSummary', 'Session Information')}</span>
-            </h2>
-            <div className="therapist-info-grid">
-              <div className="therapist-info-card">
-                <Calendar size={16} />
-                <div>
-                  <span className="therapist-info-label">{t('therapist.date', 'Date')}</span>
-                  <span className="therapist-info-value">
-                    {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </div>
+          {/* 1. Session Essentials (Clean section with dividers, label/value rows — no nested cards) */}
+          <section className="therapist-clean-section" aria-labelledby="session-summary-title">
+            <div className="therapist-clean-section-header">
+              <h2 id="session-summary-title" className="therapist-clean-title">
+                <Calendar size={18} />
+                <span>{t('therapist.sessionSummary', 'Session Information')}</span>
+              </h2>
+            </div>
+            <div className="therapist-kv-list">
+              <div className="therapist-kv-row">
+                <span className="therapist-kv-label">
+                  <Calendar size={15} />
+                  <span>{t('therapist.date', 'Date')}</span>
+                </span>
+                <span className="therapist-kv-value">
+                  {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </span>
               </div>
-              <div className="therapist-info-card">
-                <Clock size={16} />
-                <div>
-                  <span className="therapist-info-label">{t('therapist.time', 'Time & Duration')}</span>
-                  <span className="therapist-info-value">
-                    {session.startTime} — {session.endTime} ({session.durationMinutes} min)
-                  </span>
-                </div>
+              <div className="therapist-kv-divider" />
+              <div className="therapist-kv-row">
+                <span className="therapist-kv-label">
+                  <Clock size={15} />
+                  <span>{t('therapist.time', 'Time & Duration')}</span>
+                </span>
+                <span className="therapist-kv-value">
+                  {session.startTime} — {session.endTime} ({session.durationMinutes} min)
+                </span>
               </div>
-              <div className="therapist-info-card">
-                <User size={16} />
-                <div>
-                  <span className="therapist-info-label">{t('therapist.customer', 'Customer')}</span>
-                  <span className="therapist-info-value">{session.customerName}</span>
-                </div>
+              <div className="therapist-kv-divider" />
+              <div className="therapist-kv-row">
+                <span className="therapist-kv-label">
+                  <User size={15} />
+                  <span>{t('therapist.customer', 'Customer')}</span>
+                </span>
+                <span className="therapist-kv-value">{session.customerName}</span>
               </div>
-              <div className="therapist-info-card">
-                <MapPin size={16} />
-                <div>
-                  <span className="therapist-info-label">{t('therapist.room', 'Treatment Room')}</span>
-                  <span className="therapist-info-value">
-                    {localize(session.roomName)}
-                    {room && <span className="therapist-info-sub"> · {room.type}</span>}
-                  </span>
-                </div>
+              <div className="therapist-kv-divider" />
+              <div className="therapist-kv-row">
+                <span className="therapist-kv-label">
+                  <MapPin size={15} />
+                  <span>{t('therapist.room', 'Treatment Suite')}</span>
+                </span>
+                <span className="therapist-kv-value">
+                  {localize(session.roomName)}
+                  {room && <span className="therapist-info-sub"> · {room.type}</span>}
+                </span>
               </div>
             </div>
           </section>
 
-          {/* 2. Customer Treatment Request */}
+          {/* 2. Customer Treatment Request (Emphasized Container) */}
           {session.customerSpecialRequest && (
             <section className="therapist-card therapist-card--attention" aria-labelledby="customer-request-title">
               <div className="therapist-alert-header">
@@ -207,97 +212,101 @@ export const TherapistSessionDetailPage: React.FC = () => {
             </section>
           )}
 
-          {/* 3. Treatment-Relevant Wellness Considerations (Privacy-Filtered) */}
+          {/* 3. Relevant Treatment Considerations (Privacy-Filtered) */}
           {wellnessView && (
-            <section className="therapist-card therapist-card--wellness" aria-labelledby="wellness-title">
-              <div className="therapist-card-header-row">
-                <h2 id="wellness-title" className="therapist-card-title">
-                  <Shield size={18} />
-                  <span>{t('therapist.treatmentHealthNotes', 'Treatment-Relevant Wellness Considerations')}</span>
-                </h2>
-                <span className="therapist-privacy-chip">
-                  <Shield size={12} />
-                  {t('therapist.privacyFiltered', 'Privacy-Filtered View')}
-                </span>
-              </div>
-
-              <div className="therapist-wellness-body">
-                {/* Attention: Relevant Medical Conditions */}
-                {wellnessView.relevantMedicalConditions.length > 0 && (
-                  <div className="therapist-wellness-item therapist-wellness-item--attention">
-                    <div className="therapist-wellness-item-header">
-                      <ShieldAlert size={16} />
-                      <span className="therapist-wellness-label">
-                        {t('therapist.medicalConditions', 'Relevant Medical Conditions')}
-                      </span>
-                    </div>
-                    <ul className="therapist-wellness-list">
+            <div className="therapist-wellness-container">
+              {/* 3a. Important Health Consideration / Medical Flag (Emphasized Container) */}
+              {wellnessView.relevantMedicalConditions.length > 0 && (
+                <section className="therapist-card therapist-card--attention" aria-labelledby="medical-conditions-title">
+                  <div className="therapist-alert-header">
+                    <ShieldAlert size={18} />
+                    <h2 id="medical-conditions-title" className="therapist-alert-title">
+                      {t('therapist.medicalConditions', 'Relevant Medical Considerations')}
+                    </h2>
+                  </div>
+                  <div className="therapist-alert-body">
+                    <ul className="therapist-attention-list">
                       {wellnessView.relevantMedicalConditions.map((condition, i) => (
                         <li key={i}>{condition}</li>
                       ))}
                     </ul>
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* Mobility Considerations */}
-                {wellnessView.mobilityConsiderations && (
-                  <div className="therapist-wellness-item therapist-wellness-item--normal">
-                    <div className="therapist-wellness-item-header">
-                      <Activity size={16} />
-                      <span className="therapist-wellness-label">
-                        {t('therapist.mobility', 'Mobility Considerations')}
-                      </span>
-                    </div>
-                    <p className="therapist-wellness-text">{wellnessView.mobilityConsiderations}</p>
-                  </div>
-                )}
-
-                {/* Treatment Preferences */}
-                {wellnessView.treatmentPreferences.length > 0 && (
-                  <div className="therapist-wellness-item therapist-wellness-item--normal">
-                    <div className="therapist-wellness-item-header">
-                      <Sparkles size={16} />
-                      <span className="therapist-wellness-label">
-                        {t('therapist.preferences', 'Treatment Preferences')}
-                      </span>
-                    </div>
-                    <ul className="therapist-wellness-list">
-                      {wellnessView.treatmentPreferences.map((pref, i) => (
-                        <li key={i}>{pref}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Stress Level */}
-                <div className="therapist-wellness-item therapist-wellness-item--normal">
-                  <div className="therapist-wellness-item-header">
-                    <Heart size={16} />
-                    <span className="therapist-wellness-label">
-                      {t('therapist.stressLevel', 'Stress Level')}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: '0.25rem' }}>
-                    <span className={`therapist-stress-badge therapist-stress--${wellnessView.stressLevel}`}>
-                      {wellnessView.stressLevel}
-                    </span>
-                  </div>
+              {/* 3b. Normal Considerations (Clean section, dividers, label/value rows — no nested cards) */}
+              <section className="therapist-clean-section" aria-labelledby="wellness-profile-title">
+                <div className="therapist-clean-section-header">
+                  <h2 id="wellness-profile-title" className="therapist-clean-title">
+                    <Shield size={18} />
+                    <span>{t('therapist.treatmentHealthNotes', 'Treatment-Relevant Wellness Notes')}</span>
+                  </h2>
+                  <span className="therapist-privacy-chip">
+                    <Shield size={12} />
+                    {t('therapist.privacyFiltered', 'Privacy-Filtered View')}
+                  </span>
                 </div>
 
-                {/* Prior Therapist Notes */}
-                {wellnessView.therapistNotes && (
-                  <div className="therapist-wellness-item therapist-wellness-item--normal">
-                    <div className="therapist-wellness-item-header">
-                      <FileText size={16} />
-                      <span className="therapist-wellness-label">
-                        {t('therapist.priorNotes', 'Prior Therapist Notes')}
+                <div className="therapist-kv-list">
+                  {/* Mobility Considerations */}
+                  {wellnessView.mobilityConsiderations && (
+                    <>
+                      <div className="therapist-kv-row">
+                        <span className="therapist-kv-label">
+                          <Activity size={15} />
+                          <span>{t('therapist.mobility', 'Mobility Considerations')}</span>
+                        </span>
+                        <span className="therapist-kv-value">{wellnessView.mobilityConsiderations}</span>
+                      </div>
+                      <div className="therapist-kv-divider" />
+                    </>
+                  )}
+
+                  {/* Treatment Preferences */}
+                  {wellnessView.treatmentPreferences.length > 0 && (
+                    <>
+                      <div className="therapist-kv-row">
+                        <span className="therapist-kv-label">
+                          <Sparkles size={15} />
+                          <span>{t('therapist.preferences', 'Preferences')}</span>
+                        </span>
+                        <span className="therapist-kv-value">
+                          {wellnessView.treatmentPreferences.join(', ')}
+                        </span>
+                      </div>
+                      <div className="therapist-kv-divider" />
+                    </>
+                  )}
+
+                  {/* Stress Level */}
+                  <div className="therapist-kv-row">
+                    <span className="therapist-kv-label">
+                      <Heart size={15} />
+                      <span>{t('therapist.stressLevel', 'Stress Level')}</span>
+                    </span>
+                    <span className="therapist-kv-value">
+                      <span className={`therapist-stress-badge therapist-stress--${wellnessView.stressLevel}`}>
+                        {wellnessView.stressLevel}
                       </span>
-                    </div>
-                    <p className="therapist-wellness-text therapist-wellness-text--italic">
-                      "{wellnessView.therapistNotes}"
-                    </p>
+                    </span>
                   </div>
-                )}
+
+                  {/* Prior Therapist Notes */}
+                  {wellnessView.therapistNotes && (
+                    <>
+                      <div className="therapist-kv-divider" />
+                      <div className="therapist-kv-row therapist-kv-row--vertical">
+                        <span className="therapist-kv-label">
+                          <FileText size={15} />
+                          <span>{t('therapist.priorNotes', 'Prior Therapist Notes')}</span>
+                        </span>
+                        <p className="therapist-prior-notes-text">
+                          "{wellnessView.therapistNotes}"
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* Privacy Safeguard Notice */}
                 <div className="therapist-privacy-notice">
@@ -309,11 +318,11 @@ export const TherapistSessionDetailPage: React.FC = () => {
                     )}
                   </span>
                 </div>
-              </div>
-            </section>
+              </section>
+            </div>
           )}
 
-          {/* 4. Contraindications / Safety Notes */}
+          {/* 4. Contraindications / Safety Notes (Emphasized Container) */}
           {treatment && treatment.contraindications.length > 0 && (
             <section className="therapist-card therapist-card--warning" aria-labelledby="contraindications-title">
               <div className="therapist-alert-header">
@@ -334,8 +343,8 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
           {/* 5. Therapist Session Notes */}
           {['confirmed', 'in_progress'].includes(session.status) && (
-            <section className="therapist-card therapist-card--notes" aria-labelledby="session-notes-title">
-              <h2 id="session-notes-title" className="therapist-card-title">
+            <section className="therapist-clean-section therapist-notes-section" aria-labelledby="session-notes-title">
+              <h2 id="session-notes-title" className="therapist-clean-title">
                 <FileText size={18} />
                 <span>{t('therapist.sessionNotes', 'Therapist Session Notes')}</span>
               </h2>
@@ -355,8 +364,8 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
           {/* Existing Read-only Notes (for completed sessions) */}
           {session.status === 'completed' && session.therapistNotes && (
-            <section className="therapist-card therapist-card--notes-readonly" aria-labelledby="readonly-notes-title">
-              <h2 id="readonly-notes-title" className="therapist-card-title">
+            <section className="therapist-clean-section therapist-notes-section" aria-labelledby="readonly-notes-title">
+              <h2 id="readonly-notes-title" className="therapist-clean-title">
                 <FileText size={18} />
                 <span>{t('therapist.sessionNotes', 'Recorded Session Notes')}</span>
               </h2>

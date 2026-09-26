@@ -289,7 +289,19 @@
     "room": "ルーム",
     "processing": "処理中...",
     "booked": "予約済 ✓",
-    "confirmAndCharge": "予約確定・お部屋付記録"
+    "confirmAndCharge": "予約確定・お部屋付記録",
+    "step1Title": "1. お客様 / ご滞在リトリート",
+    "step2Title": "2. スパトリートメント選択",
+    "step3Title": "3. 日時選択",
+    "step4Title": "4. セラピスト・施術室割当",
+    "step5Title": "5. 空き状況・請求確認",
+    "completePrevSteps": "前のステップを完了してください。",
+    "liveSummaryTitle": "リアルタイム予約サマリー",
+    "liveSummarySubtitle": "同時予約リソースのリアルタイム検証",
+    "statusReady": "検証完了・予約可能",
+    "statusIncomplete": "選択保留中",
+    "confirmBtn": "追加スパセッションを確定",
+    "confirmNote": "リソース検証完了。確定時にお客様の請求フォリオへ加算されます。"
   },
   "therapist": {
     "dashboard": "セラピストダッシュボード",
@@ -346,6 +358,14 @@
     "sessionSummary": "セッション情報",
     "notesHint": "経過観察、お客様の反応、施術後の推奨事項を記録してください。",
     "statusLabel": "現在のステータス",
-    "noShow": "ノーショー"
+    "noShow": "ノーショー",
+    "viewAgenda": "アジェンダ",
+    "viewTimeline": "タイムライン",
+    "colTime": "時間",
+    "colCustomer": "お客様",
+    "colTreatment": "施術内容",
+    "colRoom": "施術室",
+    "colStatus": "状態",
+    "colAction": "操作"
   }
 }

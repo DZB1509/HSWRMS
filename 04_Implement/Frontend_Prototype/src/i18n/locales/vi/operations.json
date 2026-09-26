@@ -289,7 +289,19 @@
     "room": "Phòng Trị Liệu",
     "processing": "Đang xử lý...",
     "booked": "Đã Đặt Thành Công ✓",
-    "confirmAndCharge": "Xác Nhận & Ghi Vào Hóa Đơn"
+    "confirmAndCharge": "Xác Nhận & Ghi Vào Hóa Đơn",
+    "step1Title": "1. Khách Hàng / Kỳ Nghỉ Đang Hoạt Động",
+    "step2Title": "2. Chọn Trị Liệu Spa",
+    "step3Title": "3. Chọn Ngày & Khung Giờ",
+    "step4Title": "4. Chỉ Định Chuyên Viên & Phòng Trị Liệu",
+    "step5Title": "5. Xác Thực Khả Dụng & Chi Phí Folio",
+    "completePrevSteps": "Vui lòng hoàn thành các bước trước để mở.",
+    "liveSummaryTitle": "Tóm Tắt Đặt Chỗ Trực Tiếp",
+    "liveSummarySubtitle": "Trạng thái xác thực tài nguyên đồng thời thời gian thực",
+    "statusReady": "Đã Xác Thực & Sẵn Sàng Đặt",
+    "statusIncomplete": "Đang Chờ Lựa Chọn",
+    "confirmBtn": "Xác Nhận Đặt Spa Bổ Sung",
+    "confirmNote": "Đã xác thực tài nguyên thành công. Chi phí sẽ được ghi trực tiếp vào folio khách hàng khi xác nhận."
   },
   "therapist": {
     "dashboard": "Bảng Điều Khiển Chuyên Viên",
@@ -346,6 +358,14 @@
     "sessionSummary": "Thông tin buổi trị liệu",
     "notesHint": "Ghi lại quan sát, phản hồi của khách và khuyến nghị sau trị liệu.",
     "statusLabel": "Trạng thái hiện tại",
-    "noShow": "Vắng mặt"
+    "noShow": "Vắng mặt",
+    "viewAgenda": "Lịch Trình",
+    "viewTimeline": "Dòng Thời Gian",
+    "colTime": "THỜI GIAN",
+    "colCustomer": "KHÁCH HÀNG",
+    "colTreatment": "TRỊ LIỆU",
+    "colRoom": "PHÒNG TRỊ LIỆU",
+    "colStatus": "TRẠNG THÁI",
+    "colAction": "THAO TÁC"
   }
 }
