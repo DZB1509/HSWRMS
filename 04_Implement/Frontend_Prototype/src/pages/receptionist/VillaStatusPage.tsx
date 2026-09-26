@@ -13,6 +13,7 @@ import { useOperations } from '../../context/OperationsContext';
 import { useToast } from '../../components/common/Toast';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { VillaStatusChip } from '../../components/operations/VillaStatusChip';
+import { OperationalPagination } from '../../components/operations/OperationalPagination';
 import type { Villa, VillaStatus, HousekeepingStatus } from '../../types/operations';
 
 export const VillaStatusPage: React.FC = () => {
@@ -22,6 +23,8 @@ export const VillaStatusPage: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   // Modal confirmation state for transitions
   const [transitionModal, setTransitionModal] = useState<{
@@ -57,6 +60,23 @@ export const VillaStatusPage: React.FC = () => {
       return matchStatus && matchCat;
     });
   }, [villas, statusFilter, selectedCategory]);
+
+  // Paginated villas
+  const paginatedVillas = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVillas.slice(start, start + pageSize);
+  }, [filteredVillas, currentPage, pageSize]);
+
+  // Reset page on filter change
+  const handleStatusFilter = (st: string) => {
+    setStatusFilter(st);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryFilter = (cat: string) => {
+    setSelectedCategory(cat);
+    setCurrentPage(1);
+  };
 
   const openTransitionConfirm = (
     villa: Villa,
@@ -169,7 +189,7 @@ export const VillaStatusPage: React.FC = () => {
             <button
               key={st}
               type="button"
-              onClick={() => setStatusFilter(st)}
+              onClick={() => handleStatusFilter(st)}
               className={statusFilter === st ? 'hsw-btn hsw-btn-primary' : 'hsw-btn hsw-btn-secondary'}
               style={{
                 minHeight: '30px',
@@ -190,7 +210,7 @@ export const VillaStatusPage: React.FC = () => {
           </span>
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => handleCategoryFilter(e.target.value)}
             style={{
               height: '30px',
               padding: '0 8px',
@@ -211,19 +231,11 @@ export const VillaStatusPage: React.FC = () => {
 
       {/* Villa Board Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
-        {filteredVillas.map((villa) => {
+        {paginatedVillas.map((villa) => {
           return (
             <div
               key={villa.id}
-              style={{
-                backgroundColor: 'var(--surface)',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-subtle)',
-                padding: 'var(--space-5)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
+              className="ops-card"
             >
               <div>
                 {/* Header: Code & Chip */}
@@ -373,6 +385,18 @@ export const VillaStatusPage: React.FC = () => {
             </div>
           );
         })}
+      </div>
+
+      {/* Pagination */}
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <OperationalPagination
+          currentPage={currentPage}
+          totalItems={filteredVillas.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          pageSizeOptions={[12, 24, 36, 48]}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+        />
       </div>
 
       {/* Confirmation Modal */}

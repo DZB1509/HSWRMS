@@ -31,6 +31,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
+import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
 export const TherapistSessionDetailPage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
@@ -101,27 +102,21 @@ export const TherapistSessionDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="therapist-session-detail" id="screen-33-therapist-session-detail">
-      {/* Back Link */}
-      <button className="spa-back-btn" onClick={() => navigate(-1)} aria-label="Go back">
-        <ChevronLeft size={18} />
-        <span>{t('therapist.back', 'Back')}</span>
-      </button>
-
-      {/* Top Header Section */}
-      <header className="therapist-detail-top-header">
-        <div className="therapist-detail-title-row">
-          <div className="therapist-detail-title-left">
-            <h1>{localize(session.treatmentName)}</h1>
-            <div className="therapist-detail-subtitle">
-              <span><Clock size={14} /> {session.startTime} — {session.endTime} ({session.durationMinutes} min)</span>
-              <span>·</span>
-              <span><MapPin size={14} /> {localize(session.roomName)}{room ? ` (${room.type})` : ''}</span>
-              <span>·</span>
-              <span><User size={14} /> {session.customerName}</span>
-            </div>
+    <div className="therapist-session-detail" id="screen-33-therapist-session-detail" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <OperationalPageHeader
+        title={localize(session.treatmentName)}
+        subtitle={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {session.startTime} — {session.endTime} ({session.durationMinutes} min)</span>
+            <span>·</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {localize(session.roomName)}{room ? ` (${room.type})` : ''}</span>
+            <span>·</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={14} /> {session.customerName}</span>
           </div>
-          <div className="therapist-detail-title-right">
+        }
+        badge="Screen #33"
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
             <span className={`spa-status-badge spa-status--${session.status}`}>
               {session.status === 'confirmed' && <CheckCircle size={14} />}
               {session.status === 'in_progress' && <Activity size={14} />}
@@ -133,16 +128,20 @@ export const TherapistSessionDetailPage: React.FC = () => {
                session.status === 'no_show' ? t('therapist.noShow', 'No-Show') :
                session.status}
             </span>
+            <button className="hsw-btn hsw-btn-secondary" onClick={() => navigate(-1)} style={{ fontSize: 'var(--text-xs)', minHeight: '36px' }}>
+              <ChevronLeft size={14} />
+              <span>{t('therapist.back', 'Back')}</span>
+            </button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Grid: 70% Left / 30% Right */}
       <div className="therapist-detail-layout">
         {/* Left Column: Information (~70%) */}
         <div className="therapist-detail-main">
-          {/* 1. Session Essentials (Clean section with dividers, label/value rows — no nested cards) */}
-          <section className="therapist-clean-section" aria-labelledby="session-summary-title">
+          {/* 1. Session Essentials */}
+          <section className="therapist-clean-section ops-card" aria-labelledby="session-summary-title" style={{ padding: 'var(--space-5)' }}>
             <div className="therapist-clean-section-header">
               <h2 id="session-summary-title" className="therapist-clean-title">
                 <Calendar size={18} />
@@ -196,9 +195,8 @@ export const TherapistSessionDetailPage: React.FC = () => {
             </div>
           </section>
 
-          {/* 2. Customer Treatment Request (Emphasized Container) */}
           {session.customerSpecialRequest && (
-            <section className="therapist-card therapist-card--attention" aria-labelledby="customer-request-title">
+            <section className="therapist-card therapist-card--attention ops-card" aria-labelledby="customer-request-title" style={{ padding: 'var(--space-4)' }}>
               <div className="therapist-alert-header">
                 <Heart size={18} />
                 <h2 id="customer-request-title" className="therapist-alert-title">
@@ -216,7 +214,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
             <div className="therapist-wellness-container">
               {/* 3a. Important Health Consideration / Medical Flag (Emphasized Container) */}
               {wellnessView.relevantMedicalConditions.length > 0 && (
-                <section className="therapist-card therapist-card--attention" aria-labelledby="medical-conditions-title">
+                <section className="therapist-card therapist-card--attention ops-card" aria-labelledby="medical-conditions-title" style={{ padding: 'var(--space-4)' }}>
                   <div className="therapist-alert-header">
                     <ShieldAlert size={18} />
                     <h2 id="medical-conditions-title" className="therapist-alert-title">
@@ -233,8 +231,8 @@ export const TherapistSessionDetailPage: React.FC = () => {
                 </section>
               )}
 
-              {/* 3b. Normal Considerations (Clean section, dividers, label/value rows — no nested cards) */}
-              <section className="therapist-clean-section" aria-labelledby="wellness-profile-title">
+              {/* 3b. Normal Considerations */}
+              <section className="therapist-clean-section ops-card" aria-labelledby="wellness-profile-title" style={{ padding: 'var(--space-5)' }}>
                 <div className="therapist-clean-section-header">
                   <h2 id="wellness-profile-title" className="therapist-clean-title">
                     <Shield size={18} />
@@ -323,7 +321,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
           {/* 4. Contraindications / Safety Notes (Emphasized Container) */}
           {treatment && treatment.contraindications.length > 0 && (
-            <section className="therapist-card therapist-card--warning" aria-labelledby="contraindications-title">
+            <section className="therapist-card therapist-card--warning ops-card" aria-labelledby="contraindications-title" style={{ padding: 'var(--space-4)' }}>
               <div className="therapist-alert-header">
                 <AlertTriangle size={18} />
                 <h2 id="contraindications-title" className="therapist-alert-title">
@@ -342,7 +340,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
           {/* 5. Therapist Session Notes */}
           {['confirmed', 'in_progress'].includes(session.status) && (
-            <section className="therapist-clean-section therapist-notes-section" aria-labelledby="session-notes-title">
+            <section className="therapist-clean-section therapist-notes-section ops-card" aria-labelledby="session-notes-title" style={{ padding: 'var(--space-5)' }}>
               <h2 id="session-notes-title" className="therapist-clean-title">
                 <FileText size={18} />
                 <span>{t('therapist.sessionNotes', 'Therapist Session Notes')}</span>
@@ -363,7 +361,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
           {/* Existing Read-only Notes (for completed sessions) */}
           {session.status === 'completed' && session.therapistNotes && (
-            <section className="therapist-clean-section therapist-notes-section" aria-labelledby="readonly-notes-title">
+            <section className="therapist-clean-section therapist-notes-section ops-card" aria-labelledby="readonly-notes-title" style={{ padding: 'var(--space-5)' }}>
               <h2 id="readonly-notes-title" className="therapist-clean-title">
                 <FileText size={18} />
                 <span>{t('therapist.sessionNotes', 'Recorded Session Notes')}</span>
@@ -389,7 +387,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
         {/* Right Column: Sticky Operational Action Panel (~30%) */}
         <aside className="therapist-detail-sidebar" aria-labelledby="action-panel-title">
-          <div className="therapist-action-panel">
+          <div className="therapist-action-panel ops-card" style={{ padding: 'var(--space-5)', position: 'sticky', top: 'calc(var(--space-6) + 60px)' }}>
             <h2 id="action-panel-title" className="therapist-action-panel-title">
               {t('therapist.actions', 'Session Controls')}
             </h2>

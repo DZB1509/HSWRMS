@@ -19,7 +19,6 @@ import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
 import { useOperations } from '../../context/OperationsContext';
 import {
-  HeartHandshake,
   User,
   Clock,
   Calendar,
@@ -32,6 +31,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { LocalizedString, AvailableSlot } from '../../types/spa';
+import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
 export const ManualExtraSpaPage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
@@ -113,29 +113,20 @@ export const ManualExtraSpaPage: React.FC = () => {
   };
 
   return (
-    <div className="ops-extra-spa-page" id="screen-30-manual-extra-spa">
-      {/* Page Header */}
-      <div className="ops-page-header">
-        <div className="ops-header-icon-box">
-          <HeartHandshake size={24} />
-        </div>
-        <div className="ops-header-text">
-          <h1>{t('extraSpa.title', 'Manual Extra Spa Booking')}</h1>
-          <p className="ops-page-subtitle">
-            {t(
-              'extraSpa.subtitle',
-              'Book an additional spa service for a checked-in customer. Charges will be recorded for pending folio posting at checkout.'
-            )}
-          </p>
-        </div>
-      </div>
+    <div className="ops-extra-spa-page" id="screen-30-manual-extra-spa" style={{ maxWidth: '1440px', margin: '0 auto' }}>
+      {/* Header */}
+      <OperationalPageHeader
+        title={t('extraSpa.title', 'Manual Extra Spa Booking')}
+        subtitle={t('extraSpa.subtitle', 'Book an additional spa service for a checked-in customer. Charges will be recorded for pending folio posting at checkout.')}
+        badge="Screen #30"
+      />
 
       {/* 2-Column Desktop Operational Layout */}
       <div className="ops-extra-spa-layout">
         {/* LEFT COLUMN: 5 Visible Workflow Steps (~68%) */}
         <div className="ops-extra-spa-form">
           {/* STEP 1: Customer / Active Stay */}
-          <section className="ops-form-section" id="ops-extra-step-1">
+          <section className="ops-form-section ops-card" id="ops-extra-step-1" style={{ padding: 'var(--space-5)' }}>
             <div className="ops-section-heading">
               <span className={`ops-step-num ${selectedArrival ? 'ops-step-num--done' : ''}`}>
                 {selectedArrival ? <Check size={14} /> : '1'}
@@ -187,8 +178,9 @@ export const ManualExtraSpaPage: React.FC = () => {
 
           {/* STEP 2: Extra Treatment Selection */}
           <section
-            className="ops-form-section"
+            className="ops-form-section ops-card"
             id="ops-extra-step-2"
+            style={{ padding: 'var(--space-5)' }}
           >
             <div className="ops-section-heading">
               <span className={`ops-step-num ${selectedTreatment ? 'ops-step-num--done' : ''}`}>
@@ -237,8 +229,9 @@ export const ManualExtraSpaPage: React.FC = () => {
 
           {/* STEP 3: Date & Time Slot Selection */}
           <section
-            className={`ops-form-section ${!selectedTreatmentId ? 'ops-form-section--disabled' : ''}`}
+            className={`ops-form-section ops-card ${!selectedTreatmentId ? 'ops-form-section--disabled' : ''}`}
             id="ops-extra-step-3"
+            style={{ padding: 'var(--space-5)' }}
           >
             <div className="ops-section-heading">
               <span className={`ops-step-num ${selectedSlot ? 'ops-step-num--done' : ''}`}>
@@ -311,8 +304,9 @@ export const ManualExtraSpaPage: React.FC = () => {
 
           {/* STEP 4: Therapist + Treatment Room Assignment */}
           <section
-            className={`ops-form-section ${!selectedSlot ? 'ops-form-section--disabled' : ''}`}
+            className={`ops-form-section ops-card ${!selectedSlot ? 'ops-form-section--disabled' : ''}`}
             id="ops-extra-step-4"
+            style={{ padding: 'var(--space-5)' }}
           >
             <div className="ops-section-heading">
               <span className={`ops-step-num ${selectedSlot ? 'ops-step-num--done' : ''}`}>
@@ -361,7 +355,7 @@ export const ManualExtraSpaPage: React.FC = () => {
           </section>
 
           {/* STEP 5: Atomic Availability & Folio Result */}
-          <section className="ops-form-section" id="ops-extra-step-5">
+          <section className="ops-form-section ops-card" id="ops-extra-step-5" style={{ padding: 'var(--space-5)' }}>
             <div className="ops-section-heading">
               <span className={`ops-step-num ${isFormValid ? 'ops-step-num--done' : ''}`}>
                 {isFormValid ? <Check size={14} /> : '5'}
@@ -421,8 +415,8 @@ export const ManualExtraSpaPage: React.FC = () => {
 
         {/* RIGHT COLUMN: Live Booking Summary & Folio Posting (~32%) */}
         <aside className="ops-extra-spa-summary">
-          <div className="ops-summary-card">
-            <h3>{t('extraSpa.bookingSummary', 'Live Booking Summary')}</h3>
+          <div className="ops-summary-card ops-card" style={{ padding: 'var(--space-5)', position: 'sticky', top: 'calc(var(--space-6) + 60px)' }}>
+            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--space-4)' }}>{t('extraSpa.bookingSummary', 'Live Booking Summary')}</h3>
 
             <div className="ops-summary-row">
               <span>{t('extraSpa.customer', 'Customer')}</span>
@@ -499,10 +493,11 @@ export const ManualExtraSpaPage: React.FC = () => {
             {/* Primary Action Button */}
             <button
               type="button"
-              className="ops-confirm-btn"
+              className={!isFormValid || isSubmitting || result?.success ? 'hsw-btn hsw-btn-secondary' : 'hsw-btn hsw-btn-primary'}
               disabled={!isFormValid || isSubmitting || result?.success}
               onClick={handleBook}
               id="ops-confirm-extra-spa"
+              style={{ width: '100%', minHeight: '44px', marginTop: 'var(--space-4)' }}
             >
               <DollarSign size={16} />
               <span>

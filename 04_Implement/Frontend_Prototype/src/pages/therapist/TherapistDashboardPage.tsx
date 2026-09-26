@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
 import {
-  LayoutDashboard,
   CalendarCheck,
   Clock,
   User,
@@ -18,6 +17,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
+import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
 const CURRENT_THERAPIST_ID = 'THER-01'; // Demo: logged-in therapist
 const TODAY = '2026-09-26';
@@ -79,27 +79,19 @@ export const TherapistDashboardPage: React.FC = () => {
   });
 
   return (
-    <div className="therapist-dashboard" id="screen-31-therapist-dashboard">
+    <div className="therapist-dashboard" id="screen-31-therapist-dashboard" style={{ maxWidth: '1440px', margin: '0 auto' }}>
       {/* A. Compact Page Header */}
-      <div className="ops-page-header">
-        <div className="ops-header-icon-box">
-          <LayoutDashboard size={22} />
-        </div>
-        <div className="ops-header-text">
-          <div className="ops-header-top-row">
-            <h1>{t('therapist.dashboard', 'Therapist Dashboard')}</h1>
-            <span className="ops-date-badge">
-              <Calendar size={13} />
-              {formattedTodayDate}
-            </span>
+      <OperationalPageHeader
+        title={t('therapist.dashboard', 'Therapist Dashboard')}
+        subtitle={therapist ? `${t('therapist.welcome', 'Welcome')}, ${therapist.name} · ${localize(therapist.title)}` : ''}
+        badge="Screen #31"
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '6px 12px', backgroundColor: 'var(--bg-canvas)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+            <Calendar size={14} />
+            <span>{formattedTodayDate}</span>
           </div>
-          {therapist && (
-            <p className="ops-page-subtitle">
-              {t('therapist.welcome', 'Welcome')}, <strong>{therapist.name}</strong> · {localize(therapist.title)}
-            </p>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* B. Shift Summary (4 Compact Operational Cards) */}
       <div className="therapist-stats-row">
@@ -155,7 +147,7 @@ export const TherapistDashboardPage: React.FC = () => {
               </span>
             )}
           </div>
-          <div className="therapist-next-card">
+          <div className="therapist-next-card ops-card">
             <div className="therapist-next-main">
               <div className="therapist-next-title-row">
                 <h3>{localize(nextSession.treatmentName)}</h3>
@@ -229,7 +221,7 @@ export const TherapistDashboardPage: React.FC = () => {
           </button>
         </div>
         {todaySessions.length > 0 ? (
-          <div className="therapist-preview-list">
+          <div className="therapist-preview-list ops-card">
             {todaySessions.map((session) => (
               <div
                 key={session.id}
@@ -284,7 +276,7 @@ export const TherapistDashboardPage: React.FC = () => {
         <h2 id="quick-actions-title">{t('therapist.quickActions', 'Operational Shortlinks')}</h2>
         <div className="therapist-actions-grid">
           <button
-            className="therapist-action-card"
+            className="therapist-action-card ops-card"
             onClick={() => navigate('/therapist/schedule')}
             id="therapist-go-schedule"
           >
@@ -296,7 +288,7 @@ export const TherapistDashboardPage: React.FC = () => {
           </button>
           {todaySessions.length > 0 && (
             <button
-              className="therapist-action-card"
+              className="therapist-action-card ops-card"
               onClick={() => navigate(`/therapist/sessions/${todaySessions[0].id}`)}
               id="therapist-go-session"
             >

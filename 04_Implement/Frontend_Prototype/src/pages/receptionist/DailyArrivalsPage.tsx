@@ -10,6 +10,7 @@ import { useOperations } from '../../context/OperationsContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalStatusChip } from '../../components/operations/OperationalStatusChip';
 import { ResidenceDeclarationSummary } from '../../components/operations/ResidenceDeclarationSummary';
+import { OperationalPagination } from '../../components/operations/OperationalPagination';
 
 export const DailyArrivalsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -19,6 +20,8 @@ export const DailyArrivalsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [readinessFilter, setReadinessFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const currentLang = (i18n.language || 'en') as 'en' | 'vi' | 'zh-CN' | 'ja' | 'fr';
 
@@ -47,6 +50,18 @@ export const DailyArrivalsPage: React.FC = () => {
       return matchesSearch && matchesStatus && matchesReadiness;
     }).sort((a, b) => a.expectedArrivalTime.localeCompare(b.expectedArrivalTime));
   }, [arrivals, searchTerm, statusFilter, readinessFilter]);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (value: string) => {
+    setter(value);
+    setCurrentPage(1);
+  };
+
+  // Paginated slice
+  const paginatedArrivals = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredArrivals.slice(start, start + pageSize);
+  }, [filteredArrivals, currentPage, pageSize]);
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
@@ -97,7 +112,7 @@ export const DailyArrivalsPage: React.FC = () => {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             placeholder={t('operations.arrivals.searchPlaceholder', 'Search customer name, booking reference (e.g. HSW-84920)...')}
             style={{
               width: '100%',
@@ -123,7 +138,7 @@ export const DailyArrivalsPage: React.FC = () => {
             </span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => handleFilterChange(setStatusFilter)(e.target.value)}
               style={{
                 height: '34px',
                 padding: '0 var(--space-3)',
@@ -151,7 +166,7 @@ export const DailyArrivalsPage: React.FC = () => {
             </span>
             <select
               value={readinessFilter}
-              onChange={(e) => setReadinessFilter(e.target.value)}
+              onChange={(e) => handleFilterChange(setReadinessFilter)(e.target.value)}
               style={{
                 height: '34px',
                 padding: '0 var(--space-3)',
@@ -193,44 +208,45 @@ export const DailyArrivalsPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+          <>
+          <div className="ops-table-wrap">
+            <table className="ops-table ops-table-striped" style={{ fontSize: 'var(--text-xs)' }}>
               <thead>
-                <tr style={{ backgroundColor: 'var(--bg-soft)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <tr>
+                  <th>
                     {t('operations.common.eta', 'ETA')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.customer', 'Customer')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.bookingRef', 'Booking Ref')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.retreat', 'Retreat')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.dates', 'Stay Dates')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.deposit', 'Deposit')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.villa', 'Villa Assignment')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.status', 'Arrival Status')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.residenceDecl', 'Residence Decl.')}
                   </th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right' }}>
+                  <th style={{ textAlign: 'right' }}>
                     {t('operations.common.action', 'Action')}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredArrivals.map((arrival) => {
+                {paginatedArrivals.map((arrival) => {
                   const retreatTitle =
                     typeof arrival.retreatName === 'object'
                       ? arrival.retreatName[currentLang] || arrival.retreatName.en
@@ -395,6 +411,16 @@ export const DailyArrivalsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          <OperationalPagination
+            currentPage={currentPage}
+            totalItems={filteredArrivals.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            pageSizeOptions={[10, 25, 50]}
+            onPageSizeChange={setPageSize}
+          />
+          </>
         )}
       </div>
     </div>

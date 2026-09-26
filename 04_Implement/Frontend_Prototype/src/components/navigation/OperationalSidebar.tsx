@@ -127,7 +127,10 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
   ]
 };
 
-export const OperationalSidebar: React.FC = () => {
+export const OperationalSidebar: React.FC<{
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}> = ({ mobileOpen = false, onCloseMobile: _onCloseMobile }) => {
   const { currentUser, role, logout } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
@@ -137,7 +140,10 @@ export const OperationalSidebar: React.FC = () => {
   const sections = ROLE_NAV[role] || [];
 
   return (
-    <aside className="hsw-sidebar" aria-label="Staff navigation sidebar">
+    <aside
+      className={`hsw-sidebar ${mobileOpen ? 'is-mobile-open' : ''}`}
+      aria-label="Staff navigation sidebar"
+    >
       <div className="hsw-sidebar-header">
         <Link to={`/${role}/dashboard`} className="hsw-brand-logo">
           <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />

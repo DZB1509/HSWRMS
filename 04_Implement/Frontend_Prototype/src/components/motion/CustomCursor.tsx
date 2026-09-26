@@ -5,14 +5,14 @@ import { useCursor, type CursorState } from './CursorProvider';
 
 export const CustomCursor: React.FC = () => {
   const { t } = useTranslation();
-  const { cursorState, setCursorState, customText } = useCursor();
+  const { cursorState, setCursorState, customText, cursorMode } = useCursor();
 
   const bead1Ref = useRef<HTMLDivElement>(null);
   const bead2Ref = useRef<HTMLDivElement>(null);
   const bead3Ref = useRef<HTMLDivElement>(null);
   const isVisibleRef = useRef<boolean>(false);
 
-  // GSAP quickTo setters for 3 trailing beads (varied duration creates organic wellness flow)
+  // GSAP quickTo setters for 3 trailing beads
   const x1To = useRef<gsap.QuickToFunc | null>(null);
   const y1To = useRef<gsap.QuickToFunc | null>(null);
   const x2To = useRef<gsap.QuickToFunc | null>(null);
@@ -20,27 +20,34 @@ export const CustomCursor: React.FC = () => {
   const x3To = useRef<gsap.QuickToFunc | null>(null);
   const y3To = useRef<gsap.QuickToFunc | null>(null);
 
+  const isOperational = cursorMode === 'operational';
+
   useEffect(() => {
     if (!bead1Ref.current || !bead2Ref.current || !bead3Ref.current) return;
 
-    // Bead 1: Leading bead (fastest, duration 0.08s)
-    x1To.current = gsap.quickTo(bead1Ref.current, 'x', { duration: 0.08, ease: 'power2.out' });
-    y1To.current = gsap.quickTo(bead1Ref.current, 'y', { duration: 0.08, ease: 'power2.out' });
+    // Operational mode has faster, crisper trailing physics; Public has gentle wellness flow
+    const d1 = isOperational ? 0.05 : 0.08;
+    const d2 = isOperational ? 0.14 : 0.22;
+    const d3 = isOperational ? 0.24 : 0.38;
 
-    // Bead 2: Middle bead (soft lag, duration 0.22s)
-    x2To.current = gsap.quickTo(bead2Ref.current, 'x', { duration: 0.22, ease: 'power2.out' });
-    y2To.current = gsap.quickTo(bead2Ref.current, 'y', { duration: 0.22, ease: 'power2.out' });
+    // Bead 1: Leading bead
+    x1To.current = gsap.quickTo(bead1Ref.current, 'x', { duration: d1, ease: 'power2.out' });
+    y1To.current = gsap.quickTo(bead1Ref.current, 'y', { duration: d1, ease: 'power2.out' });
 
-    // Bead 3: Trailing bead (gentle trail, duration 0.38s)
-    x3To.current = gsap.quickTo(bead3Ref.current, 'x', { duration: 0.38, ease: 'power3.out' });
-    y3To.current = gsap.quickTo(bead3Ref.current, 'y', { duration: 0.38, ease: 'power3.out' });
+    // Bead 2: Middle bead
+    x2To.current = gsap.quickTo(bead2Ref.current, 'x', { duration: d2, ease: 'power2.out' });
+    y2To.current = gsap.quickTo(bead2Ref.current, 'y', { duration: d2, ease: 'power2.out' });
+
+    // Bead 3: Trailing bead
+    x3To.current = gsap.quickTo(bead3Ref.current, 'x', { duration: d3, ease: 'power3.out' });
+    y3To.current = gsap.quickTo(bead3Ref.current, 'y', { duration: d3, ease: 'power3.out' });
 
     const handlePointerMove = (e: PointerEvent) => {
       const { clientX, clientY } = e;
 
       if (!isVisibleRef.current) {
         isVisibleRef.current = true;
-        gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 1, duration: 0.25 });
+        gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 1, duration: 0.2 });
       }
 
       x1To.current?.(clientX);
@@ -60,18 +67,24 @@ export const CustomCursor: React.FC = () => {
         return;
       }
 
-      // Check explicit data-cursor attribute
-      const cursorTarget = target.closest('[data-cursor]') as HTMLElement | null;
-      if (cursorTarget) {
-        const state = cursorTarget.getAttribute('data-cursor') as CursorState;
-        if (state) {
-          setCursorState(state);
-          return;
+      // Check explicit data-cursor attribute (only in public mode)
+      if (!isOperational) {
+        const cursorTarget = target.closest('[data-cursor]') as HTMLElement | null;
+        if (cursorTarget) {
+          const state = cursorTarget.getAttribute('data-cursor') as CursorState;
+          if (state) {
+            setCursorState(state);
+            return;
+          }
         }
       }
 
-      // Check clickable interactive elements
-      if (target.closest('a, button, [role="button"], .hsw-clickable')) {
+      // Check clickable interactive elements (includes operational buttons, cards, table rows, pagination)
+      if (
+        target.closest(
+          'a, button, [role="button"], .hsw-clickable, .ops-interactive-card, .ops-card, .ops-table tr, .ops-clickable, .ops-table-tr, .ops-pagination-btn, .ops-filter-pill, .ops-tab-btn, [data-cursor]'
+        )
+      ) {
         setCursorState('link');
         return;
       }
@@ -82,12 +95,12 @@ export const CustomCursor: React.FC = () => {
 
     const handleMouseLeave = () => {
       isVisibleRef.current = false;
-      gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 0, duration: 0.25 });
+      gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 0, duration: 0.2 });
     };
 
     const handleMouseEnter = () => {
       isVisibleRef.current = true;
-      gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 1, duration: 0.25 });
+      gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 1, duration: 0.2 });
     };
 
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
@@ -99,25 +112,27 @@ export const CustomCursor: React.FC = () => {
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [setCursorState]);
+  }, [setCursorState, isOperational]);
 
-  // Determine badge text
+  // Determine badge text (no large text badges in operational mode)
   let labelText: string | null = null;
-  if (customText) {
-    labelText = customText;
-  } else if (cursorState === 'view') {
-    labelText = t('motion.view');
-  } else if (cursorState === 'explore') {
-    labelText = t('motion.explore');
-  } else if (cursorState === 'drag') {
-    labelText = t('motion.drag');
+  if (!isOperational) {
+    if (customText) {
+      labelText = customText;
+    } else if (cursorState === 'view') {
+      labelText = t('motion.view');
+    } else if (cursorState === 'explore') {
+      labelText = t('motion.explore');
+    } else if (cursorState === 'drag') {
+      labelText = t('motion.drag');
+    }
   }
 
   const isHidden = cursorState === 'hidden';
 
   return (
     <div
-      className={`hsw-cursor-wrap state-${cursorState} ${isHidden ? 'is-hidden' : ''}`}
+      className={`hsw-cursor-wrap state-${cursorState} ${isOperational ? 'is-operational' : ''} ${isHidden ? 'is-hidden' : ''}`}
       aria-hidden="true"
     >
       {/* Bead 3: Trailing bead (Soft Gold / Bronze #BFA07A) */}

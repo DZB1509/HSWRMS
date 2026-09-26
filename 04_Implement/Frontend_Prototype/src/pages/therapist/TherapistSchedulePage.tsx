@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
 import {
-  CalendarCheck,
   Clock,
   User,
   MapPin,
@@ -24,6 +23,7 @@ import {
   Coffee,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
+import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
 const CURRENT_THERAPIST_ID = 'THER-01';
 
@@ -86,21 +86,13 @@ export const TherapistSchedulePage: React.FC = () => {
   });
 
   return (
-    <div className="therapist-schedule" id="screen-32-therapist-daily-schedule">
+    <div className="therapist-schedule" id="screen-32-therapist-daily-schedule" style={{ maxWidth: '1440px', margin: '0 auto' }}>
       {/* Page Header */}
-      <div className="ops-page-header">
-        <div className="ops-header-icon-box">
-          <CalendarCheck size={22} />
-        </div>
-        <div className="ops-header-text">
-          <h1>{t('therapist.dailySchedule', 'Daily Work Schedule')}</h1>
-          {therapist && (
-            <p className="ops-page-subtitle">
-              {therapist.name} · {localize(therapist.title)}
-            </p>
-          )}
-        </div>
-      </div>
+      <OperationalPageHeader
+        title={t('therapist.dailySchedule', 'Daily Work Schedule')}
+        subtitle={therapist ? `${therapist.name} · ${localize(therapist.title)}` : ''}
+        badge="Screen #32"
+      />
 
       {/* Date Navigation Bar */}
       <div className="therapist-date-nav" role="tablist" aria-label="Select Date">
@@ -168,7 +160,7 @@ export const TherapistSchedulePage: React.FC = () => {
         /* COMPACT AGENDA-FIRST VIEW (Requirement 8) */
         <div className="therapist-agenda-view" id="therapist-agenda-container">
           {daySessions.length > 0 ? (
-            <div className="therapist-agenda-table">
+            <div className="therapist-agenda-table ops-card" style={{ padding: '0', overflow: 'hidden' }}>
               {/* Agenda Header Row */}
               <div className="therapist-agenda-header-row">
                 <span className="th-col-time">{t('therapist.colTime', 'TIME')}</span>
@@ -308,7 +300,7 @@ export const TherapistSchedulePage: React.FC = () => {
         </div>
       ) : (
         /* SECONDARY VIEW: Hourly Timeline */
-        <div className="therapist-timeline">
+        <div className="therapist-timeline ops-card" style={{ padding: '0', overflow: 'hidden' }}>
           {timeSlots.map((time) => {
             const hourSessions = daySessions.filter((s) => {
               const slotH = parseInt(time.split(':')[0]);

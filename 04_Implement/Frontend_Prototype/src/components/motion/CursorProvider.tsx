@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { CustomCursor } from './CustomCursor';
 
 export type CursorState = 'default' | 'link' | 'view' | 'explore' | 'drag' | 'cta' | 'hidden';
+export type CursorMode = 'public' | 'operational';
 
 interface CursorContextType {
   cursorState: CursorState;
@@ -10,6 +11,7 @@ interface CursorContextType {
   customText: string | null;
   setCustomText: (text: string | null) => void;
   isEnabled: boolean;
+  cursorMode: CursorMode;
 }
 
 const CursorContext = createContext<CursorContextType>({
@@ -18,6 +20,7 @@ const CursorContext = createContext<CursorContextType>({
   customText: null,
   setCustomText: () => {},
   isEnabled: false,
+  cursorMode: 'public',
 });
 
 export const useCursor = () => useContext(CursorContext);
@@ -32,13 +35,15 @@ export const CursorProvider: React.FC<CursorProviderProps> = ({ children }) => {
   const [isEnabled, setIsEnabled] = useState(false);
   const location = useLocation();
 
-  // Operational screens must NOT have custom cursor (Requirement 18)
+  // Internal operational routes receive restrained operational cursor mode
   const isOperationalRoute =
     location.pathname.startsWith('/receptionist') ||
     location.pathname.startsWith('/therapist') ||
     location.pathname.startsWith('/fb') ||
     location.pathname.startsWith('/manager') ||
     location.pathname.startsWith('/admin');
+
+  const cursorMode: CursorMode = isOperationalRoute ? 'operational' : 'public';
 
   useEffect(() => {
     const fineQuery = window.matchMedia('(pointer: fine) and (hover: hover)');
@@ -48,12 +53,19 @@ export const CursorProvider: React.FC<CursorProviderProps> = ({ children }) => {
       const finePointer = fineQuery.matches;
       const reducedMotion = motionQuery.matches;
 
-      if (finePointer && !reducedMotion && !isOperationalRoute) {
+      // Enable cursor on desktop fine pointer devices without reduced motion
+      if (finePointer && !reducedMotion) {
         setIsEnabled(true);
         document.body.classList.add('hsw-custom-cursor-active');
+        if (isOperationalRoute) {
+          document.body.classList.add('hsw-cursor-operational');
+        } else {
+          document.body.classList.remove('hsw-cursor-operational');
+        }
       } else {
         setIsEnabled(false);
         document.body.classList.remove('hsw-custom-cursor-active');
+        document.body.classList.remove('hsw-cursor-operational');
       }
     };
 
@@ -70,6 +82,7 @@ export const CursorProvider: React.FC<CursorProviderProps> = ({ children }) => {
         motionQuery.removeEventListener('change', evaluateCursor);
       }
       document.body.classList.remove('hsw-custom-cursor-active');
+      document.body.classList.remove('hsw-cursor-operational');
     };
   }, [isOperationalRoute]);
 
@@ -87,6 +100,7 @@ export const CursorProvider: React.FC<CursorProviderProps> = ({ children }) => {
         customText,
         setCustomText,
         isEnabled,
+        cursorMode,
       }}
     >
       {isEnabled && <CustomCursor />}

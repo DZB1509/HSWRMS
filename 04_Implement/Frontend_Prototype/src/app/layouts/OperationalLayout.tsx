@@ -1,23 +1,68 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { OperationalSidebar } from '../../components/navigation/OperationalSidebar';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { useAuth } from '../../hooks/useAuth';
-import { Calendar, Bell } from 'lucide-react';
+import { Calendar, Bell, Menu, X } from 'lucide-react';
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
 
 export const OperationalLayout: React.FC = () => {
   const { role } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && sidebarOpen) setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [sidebarOpen]);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => !prev);
+  }, []);
+
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
 
   return (
     <div className="hsw-operational-layout">
-      <OperationalSidebar />
+      {/* Mobile backdrop overlay */}
+      <div
+        className={`hsw-sidebar-backdrop ${sidebarOpen ? 'is-visible' : ''}`}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+
+      {/* Sidebar — mobile gets is-mobile-open class */}
+      <OperationalSidebar mobileOpen={sidebarOpen} onCloseMobile={closeSidebar} />
+
       <div className="hsw-operational-main">
         <header className="hsw-operational-topbar">
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            className="hsw-ops-mobile-toggle"
+            onClick={toggleSidebar}
+            aria-label={sidebarOpen ? t('operations.common.closeMenu', 'Close menu') : t('operations.common.openMenu', 'Open menu')}
+          >
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+
           <Breadcrumb />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+
+          <div className="hsw-topbar-extras" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calendar size={14} style={{ color: 'var(--accent-olive)' }} />
               <span>

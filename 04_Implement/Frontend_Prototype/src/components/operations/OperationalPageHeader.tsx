@@ -2,7 +2,7 @@ import React from 'react';
 
 interface OperationalPageHeaderProps {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   badge?: string;
   actions?: React.ReactNode;
 }
@@ -59,7 +59,7 @@ export const OperationalPageHeader: React.FC<OperationalPageHeaderProps> = ({
           )}
         </div>
         {subtitle && (
-          <p
+          <div
             style={{
               margin: 0,
               fontSize: 'var(--text-sm)',
@@ -68,7 +68,7 @@ export const OperationalPageHeader: React.FC<OperationalPageHeaderProps> = ({
             }}
           >
             {subtitle}
-          </p>
+          </div>
         )}
       </div>
 

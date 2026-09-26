@@ -183,14 +183,7 @@ export const CheckInPage: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           
           {/* Section A: Booking Verification */}
-          <div
-            style={{
-              backgroundColor: 'var(--surface)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              padding: 'var(--space-5)',
-            }}
-          >
+          <div className="ops-card" style={{ padding: 'var(--space-5)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileText size={18} style={{ color: 'var(--accent-forest)' }} />
@@ -278,14 +271,7 @@ export const CheckInPage: React.FC = () => {
           </div>
 
           {/* Section B & C: Identity Verification & Residence Information */}
-          <div
-            style={{
-              backgroundColor: 'var(--surface)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              padding: 'var(--space-5)',
-            }}
-          >
+          <div className="ops-card" style={{ padding: 'var(--space-5)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <User size={18} style={{ color: 'var(--accent-forest)' }} />
@@ -502,17 +488,10 @@ export const CheckInPage: React.FC = () => {
         </div>
 
         {/* Right Column: Villa Assignment Status & Readiness Checklist */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', position: 'sticky', top: 'calc(var(--space-6) + 60px)' }}>
           
           {/* Section E: Villa Assignment Status */}
-          <div
-            style={{
-              backgroundColor: 'var(--surface)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              padding: 'var(--space-5)',
-            }}
-          >
+          <div className="ops-card" style={{ padding: 'var(--space-5)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Home size={18} style={{ color: 'var(--accent-forest)' }} />
@@ -593,14 +572,7 @@ export const CheckInPage: React.FC = () => {
           </div>
 
           {/* Section F: Check-In Readiness Verification Checklist */}
-          <div
-            style={{
-              backgroundColor: 'var(--surface)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              padding: 'var(--space-5)',
-            }}
-          >
+          <div className="ops-card" style={{ padding: 'var(--space-5)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
               <CheckCircle2 size={18} style={{ color: 'var(--accent-forest)' }} />
               <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>

@@ -1105,9 +1105,50 @@
 }
 
 .hsw-cursor-wrap.state-cta .hsw-cursor-bead.bead-2,
-.hsw-cursor-wrap.state-cta .hsw-cursor-bead.bead-3 {
-  opacity: 0.2;
-  transform: scale(0.5);
+/* Operational Cursor Mode: restrained, compact, fast, data-first */
+.hsw-cursor-wrap.is-operational .hsw-cursor-bead.bead-1 {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background-color: var(--accent-sand);
+  box-shadow: 0 0 6px rgba(216, 199, 174, 0.4);
+}
+
+.hsw-cursor-wrap.is-operational .hsw-cursor-bead.bead-2 {
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  background-color: var(--accent-forest);
+  opacity: 0.85;
+}
+
+.hsw-cursor-wrap.is-operational .hsw-cursor-bead.bead-3 {
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background-color: rgba(191, 160, 122, 0.3);
+  border: 1px solid rgba(191, 160, 122, 0.5);
+}
+
+/* Operational State: Interactive Hover (~28-34px subtle expand, fast) */
+.hsw-cursor-wrap.is-operational.state-link .hsw-cursor-bead.bead-1 {
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  background-color: rgba(79, 90, 80, 0.1);
+  border: 1.5px solid rgba(79, 90, 80, 0.45);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: none;
+}
+
+.hsw-cursor-wrap.is-operational.state-link .hsw-cursor-bead.bead-2 {
+  opacity: 0.3;
+  transform: scale(0.6);
+}
+
+.hsw-cursor-wrap.is-operational.state-link .hsw-cursor-bead.bead-3 {
+  opacity: 0.15;
+  transform: scale(0.4);
 }
 
 .hsw-cursor-wrap.is-hidden {
@@ -1187,3 +1228,260 @@
 }
 
 
+/* ==========================================================================
+   Operational Pagination Component (Phase 2.4.4)
+   Compact, data-first pagination for staff tables
+   ========================================================================== */
+.ops-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--bg-soft);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ops-pagination-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-weight: 500;
+}
+
+.ops-pagination-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ops-pagination-size label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.ops-pagination-size select {
+  height: 28px;
+  padding: 0 6px;
+  font-size: 11px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-strong);
+  background-color: var(--surface);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+}
+
+.ops-pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ops-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ops-pagination-btn:hover:not(:disabled) {
+  background-color: var(--bg-soft);
+  border-color: var(--accent-olive);
+  color: var(--text-primary);
+}
+
+.ops-pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ops-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ops-pagination-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ops-pagination-page:hover:not(.is-active) {
+  background-color: var(--bg-soft);
+  color: var(--text-primary);
+}
+
+.ops-pagination-page.is-active {
+  background-color: var(--accent-forest);
+  color: #ffffff;
+  font-weight: 600;
+  border-color: var(--accent-forest);
+}
+
+.ops-pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 30px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  user-select: none;
+}
+
+/* Responsive pagination */
+@media (max-width: 640px) {
+  .ops-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .ops-pagination-info {
+    justify-content: space-between;
+    font-size: 11px;
+  }
+
+  .ops-pagination-nav {
+    justify-content: center;
+  }
+
+  .ops-pagination-btn,
+  .ops-pagination-page {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: 11px;
+  }
+}
+
+/* ==========================================================================
+   Operational Table Polish (Phase 2.4.4)
+   Refined styles for staff data tables
+   ========================================================================== */
+.ops-table-wrap {
+  background-color: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.ops-table thead {
+  background-color: var(--bg-soft);
+}
+
+.ops-table thead th {
+  padding: 12px 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.ops-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 120ms ease;
+}
+
+.ops-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ops-table tbody tr:hover {
+  background-color: var(--bg-canvas);
+}
+
+.ops-table tbody td {
+  padding: 14px;
+  vertical-align: middle;
+}
+
+/* Alternating row stripes (optional class) */
+.ops-table.ops-table-striped tbody tr:nth-child(even) {
+  background-color: var(--bg-soft);
+}
+
+.ops-table.ops-table-striped tbody tr:nth-child(even):hover {
+  background-color: var(--bg-canvas);
+}
+
+/* Compact variant */
+.ops-table.ops-table-compact thead th {
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+.ops-table.ops-table-compact tbody td {
+  padding: 10px 12px;
+}
+
+/* Focus visible for keyboard navigation */
+.ops-table tbody tr:focus-visible {
+  outline: 2px solid var(--accent-forest);
+  outline-offset: -2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ==========================================================================
+   Operational Card Polish (Phase 2.4.4)
+   Subtle hover elevation for internal grid cards
+   ========================================================================== */
+.ops-card {
+  background-color: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ops-card:hover {
+  border-color: var(--accent-sand);
+  box-shadow: 0 4px 16px rgba(30, 30, 30, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-card,
+  .ops-table tbody tr,
+  .ops-pagination-btn,
+  .ops-pagination-page {
+    transition: none !important;
+  }
+}

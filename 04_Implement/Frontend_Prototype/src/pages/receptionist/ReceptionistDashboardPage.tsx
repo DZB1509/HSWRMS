@@ -77,14 +77,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         }}
       >
         {/* Arrivals Today */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
+        <div className="ops-card" style={{ padding: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {t('operations.dashboard.arrivalsToday', 'Arrivals Today')}
@@ -100,14 +93,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         </div>
 
         {/* Checked In */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
+        <div className="ops-card" style={{ padding: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {t('operations.dashboard.checkedIn', 'Checked In')}
@@ -123,14 +109,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         </div>
 
         {/* Pending Check-Ins */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
+        <div className="ops-card" style={{ padding: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {t('operations.dashboard.pendingCheckIns', 'Pending Check-Ins')}
@@ -146,14 +125,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         </div>
 
         {/* Occupied Villas */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
+        <div className="ops-card" style={{ padding: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {t('operations.dashboard.occupiedVillas', 'Occupied Villas')}
@@ -169,14 +141,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         </div>
 
         {/* Cleaning / Attention */}
-        <div
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
+        <div className="ops-card" style={{ padding: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {t('operations.dashboard.villasNeedingAttention', 'Villas Needing Housekeeping')}
@@ -240,54 +205,48 @@ export const ReceptionistDashboardPage: React.FC = () => {
             </Link>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+          <div className="ops-table-wrap">
+            <table className="ops-table ops-table-striped">
               <thead>
-                <tr style={{ backgroundColor: 'var(--bg-soft)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <tr>
+                  <th>
                     {t('operations.common.bookingRef', 'Booking Ref')}
                   </th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.customer', 'Customer')}
                   </th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.retreat', 'Retreat')}
                   </th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.eta', 'ETA')}
                   </th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.villa', 'Villa')}
                   </th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <th>
                     {t('operations.common.status', 'Status')}
                   </th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right' }}>
+                  <th style={{ textAlign: 'right' }}>
                     {t('operations.common.action', 'Action')}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {arrivals.map((arrival) => {
+                {arrivals.slice(0, 5).map((arrival) => {
                   const retreatTitle =
                     typeof arrival.retreatName === 'object'
                       ? arrival.retreatName[currentLang] || arrival.retreatName.en
                       : arrival.retreatName;
 
                   return (
-                    <tr
-                      key={arrival.id}
-                      style={{
-                        borderBottom: '1px solid var(--border-subtle)',
-                        transition: 'background-color 150ms ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-canvas)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {arrival.bookingReference}
+                    <tr key={arrival.id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {arrival.bookingReference}
+                        </div>
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                           {arrival.customerName}
                         </div>
@@ -297,15 +256,15 @@ export const ReceptionistDashboardPage: React.FC = () => {
                             : t('operations.common.customerCount', { count: arrival.partySize, defaultValue: `${arrival.partySize} Customers` })} • {arrival.customerPhone}
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', maxWidth: '160px' }}>
+                      <td style={{ color: 'var(--text-secondary)', maxWidth: '160px' }}>
                         <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={retreatTitle}>
                           {retreatTitle}
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                         {arrival.expectedArrivalTime}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td>
                         {arrival.assignedVillaNumber ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -332,10 +291,10 @@ export const ReceptionistDashboardPage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td>
                         <OperationalStatusChip type="arrival" status={arrival.arrivalStatus} size="sm" />
                       </td>
-                      <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         {arrival.arrivalStatus === 'checked_in' ? (
                           <Link
                             to={`/receptionist/check-in/${arrival.bookingReference}`}
@@ -363,14 +322,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         </div>
 
         {/* Right Column: Villa Readiness Overview */}
-        <div
-          style={{
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
-            padding: 'var(--space-5)',
-          }}
-        >
+        <div className="ops-card" style={{ padding: 'var(--space-5)' }}>
           <div
             style={{
               display: 'flex',

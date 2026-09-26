@@ -126,13 +126,11 @@ export const VillaAssignmentPage: React.FC = () => {
         
         {/* Left Column: Customer Booking Context */}
         <div
+          className="ops-card"
           style={{
-            backgroundColor: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-subtle)',
             padding: 'var(--space-5)',
             position: 'sticky',
-            top: '80px',
+            top: 'calc(var(--space-6) + 60px)',
           }}
         >
           <div style={{ paddingBottom: 'var(--space-3)', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -286,17 +284,12 @@ export const VillaAssignmentPage: React.FC = () => {
               return (
                 <div
                   key={villa.id}
+                  className="ops-card"
                   style={{
-                    backgroundColor: 'var(--surface)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: isAssignedToThis ? '2px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
+                    border: isAssignedToThis ? '2px solid var(--accent-forest)' : undefined,
                     padding: 'var(--space-4)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    boxShadow: isAssignedToThis ? 'var(--shadow-sm)' : 'none',
+                    boxShadow: isAssignedToThis ? 'var(--shadow-sm)' : undefined,
                     opacity: canAssign ? 1 : 0.65,
-                    transition: 'border-color 150ms ease, box-shadow 150ms ease',
                   }}
                 >
                   <div>
