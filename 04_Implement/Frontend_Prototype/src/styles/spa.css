@@ -250,6 +250,78 @@
   color: #FFFFFF;
 }
 
+/* Spa Area Section Navigation (Discoverability between Catalogue & My Sessions) */
+.spa-section-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  width: fit-content;
+  margin: 0 0 1.5rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.spa-section-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1.15rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.spa-section-nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-soft);
+}
+
+.spa-section-nav-tab--active {
+  background: var(--accent-forest) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(32, 75, 35, 0.2);
+}
+
+.spa-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.spa-hero-my-sessions-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-pill);
+  color: #FFFFFF;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.spa-hero-my-sessions-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
 /* Treatment Sections & Cards */
 .spa-section {
   margin-bottom: 2.5rem;
@@ -1091,53 +1163,110 @@
 /* Slots Grid */
 .spa-slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.75rem;
 }
 
 .spa-slot-btn {
-  padding: 0.75rem;
+  position: relative;
+  padding: 0.85rem 1rem;
   background: var(--surface);
-  border: 1px solid var(--border-subtle);
+  border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.spa-slot-btn * {
+  pointer-events: none;
 }
 
 .spa-slot-btn:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-soft);
+  border-color: var(--accent-forest);
+  background: rgba(32, 75, 35, 0.04);
+  transform: translateY(-1px);
 }
 
 .spa-slot-btn--active {
-  border-color: var(--accent-forest);
-  background: var(--accent-sand-soft);
+  border: 2px solid var(--accent-forest) !important;
+  background: #EBF3ED !important;
+  box-shadow: 0 0 0 1px var(--accent-forest), 0 4px 12px rgba(32, 75, 35, 0.14) !important;
+}
+
+.spa-slot-check {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  color: var(--accent-forest);
 }
 
 .spa-slot-time {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.92rem;
+  gap: 0.45rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+
+.spa-slot-btn--active .spa-slot-time span {
+  color: var(--accent-forest);
+  font-weight: 800;
 }
 
 .spa-slot-details {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .spa-slot-therapist,
 .spa-slot-room {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
+  gap: 0.35rem;
+  font-size: 0.76rem;
   color: var(--text-secondary);
+}
+
+.spa-slot-btn--active .spa-slot-therapist,
+.spa-slot-btn--active .spa-slot-room {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.spa-slots-footer-alt {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.spa-view-other-times-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 1.15rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent-forest);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spa-view-other-times-btn:hover {
+  background: rgba(32, 75, 35, 0.06);
+  border-color: var(--accent-forest);
+  transform: translateX(2px);
 }
 
 /* Notes Input */
@@ -1195,6 +1324,23 @@
   margin: 0 0 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.spa-summary-image {
+  width: 100%;
+  height: 140px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  background: var(--bg-soft);
+  position: relative;
+}
+
+.spa-summary-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .spa-summary-row {

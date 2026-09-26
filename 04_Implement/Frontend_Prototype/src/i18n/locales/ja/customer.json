@@ -286,6 +286,8 @@
     "selectTimeSlot": "時間帯を選択",
     "noSlotsAvailable": "この組み合わせの空き枠がありません。別の日時またはセラピストをお選びください。",
     "viewAlternatives": "代替の空き枠を表示",
+    "viewOtherTimes": "他の日程や時間帯をお探しですか？代替スロットを見る",
+    "navCatalogue": "トリートメント一覧",
     "specialRequest": "特別なご要望・備考",
     "specialRequestPlaceholder": "セラピストへのご要望や伝達事項...",
     "bookingSummary": "ご予約内容確認",
@@ -363,6 +365,9 @@
     "bookComplimentary": "パッケージ枠で予約",
     "bookAdditional": "追加セッション予約",
     "bookTreatment": "トリートメントを予約",
-    "additionalCharge": "追加サービス"
+    "additionalCharge": "追加サービス",
+    "activeBookingRequired": "スパセッションを予約するには、有効なリトリート宿泊予約とログインしたお客様プロフィールが必要です。",
+    "noActiveBooking": "有効なリトリート予約がありません",
+    "activeBookingRef": "リトリート予約番号"
   }
 }

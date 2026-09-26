@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCustomer } from '../../context/CustomerContext';
 import { LanguageSwitcher } from '../common/LanguageSwitcher';
-import { Sparkles, Calendar, HeartPulse, Utensils, Receipt, Settings, UserCheck } from 'lucide-react';
+import { Sparkles, Calendar, HeartPulse, Utensils, Receipt, Settings, UserCheck, CalendarCheck } from 'lucide-react';
 
 export const CustomerNavbar: React.FC = () => {
   const { t } = useTranslation();
@@ -44,6 +44,33 @@ export const CustomerNavbar: React.FC = () => {
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = location.pathname.startsWith(link.path);
+
+            if (link.path === '/customer/spa') {
+              return (
+                <div key={link.path} className="hsw-nav-dropdown-wrapper">
+                  <Link
+                    to={link.path}
+                    className={`hsw-customer-nav-link ${isActive ? 'active' : ''}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                    id="nav-link-customer-spa"
+                  >
+                    <Icon size={15} />
+                    <span>{link.label}</span>
+                  </Link>
+                  <div className="hsw-nav-dropdown">
+                    <Link to="/customer/spa" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/spa' ? 'active' : ''}`}>
+                      <Sparkles size={14} />
+                      <span>{t('spa.navCatalogue', 'Treatment Catalogue')}</span>
+                    </Link>
+                    <Link to="/customer/spa/sessions" className={`hsw-nav-dropdown-item ${location.pathname === '/customer/spa/sessions' ? 'active' : ''}`} id="nav-dropdown-my-sessions">
+                      <CalendarCheck size={14} />
+                      <span>{t('spa.mySessions', 'My Spa Sessions')}</span>
+                    </Link>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={link.path}

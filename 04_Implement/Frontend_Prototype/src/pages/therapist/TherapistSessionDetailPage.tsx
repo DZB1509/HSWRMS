@@ -32,16 +32,17 @@ import {
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const TherapistSessionDetailPage: React.FC = () => {
-  const { t } = useTranslation('operations');
+  const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   const {
     getSessionById,
@@ -59,8 +60,6 @@ export const TherapistSessionDetailPage: React.FC = () => {
   const wellnessView = session
     ? getTherapistRelevantWellnessInfo(session.customerId, session.treatmentId)
     : null;
-
-  const localize = (ls: LocalizedString) => useLocalized(ls);
 
   const [therapistNotes, setTherapistNotes] = useState(session?.therapistNotes || '');
   const [actionResult, setActionResult] = useState<{ success: boolean; message: string } | null>(null);

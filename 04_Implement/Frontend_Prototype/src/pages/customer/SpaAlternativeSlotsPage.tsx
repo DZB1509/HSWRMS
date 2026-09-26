@@ -30,14 +30,8 @@ interface SlotGroup {
   slots: AvailableSlot[];
 }
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const SpaAlternativeSlotsPage: React.FC = () => {
-  const { t } = useTranslation('customer');
+  const { t, i18n } = useTranslation('customer');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -46,6 +40,13 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
 
   const { treatments, getAvailableSlots } = useSpa();
   const { activeBooking, profile } = useCustomer();
+
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   const [dateFilter, setDateFilter] = useState<'all' | string>('all');
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
@@ -124,8 +125,6 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
     return allRetreatSlots.filter((s) => s.date === dateFilter);
   }, [allRetreatSlots, dateFilter]);
 
-  const localize = (ls: LocalizedString) => useLocalized(ls);
-
   const formatDateHeader = (dStr: string) => {
     const dt = new Date(dStr + 'T00:00:00');
     return dt.toLocaleDateString('en-US', {
@@ -135,8 +134,10 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
     });
   };
 
+  const hasActiveStay = Boolean(activeBooking && profile);
+
   const handleProceed = () => {
-    if (!selectedSlot || !treatment || !activeBooking) return;
+    if (!selectedSlot || !treatment || !activeBooking || !profile) return;
 
     const pendingState = {
       bookingReference: activeBooking.bookingReference,
@@ -166,6 +167,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
 
     return (
       <button
+        type="button"
         key={`${slot.date}-${slot.startTime}-${slot.therapistId}-${slot.roomId}-${idx}`}
         className={`spa-alt-slot-card ${isSelected ? 'spa-alt-slot-card--active' : ''}`}
         onClick={() => setSelectedSlot(slot)}
@@ -401,9 +403,24 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
                 {selectedSlot.therapistName} · {localize(selectedSlot.roomName)}
               </span>
             </div>
+            {!hasActiveStay && (
+              <span
+                style={{
+                  color: '#f87171',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <AlertCircle size={16} />
+                {t('spa.activeBookingRequired', 'An active retreat booking and signed-in customer profile are required to reserve spa sessions.')}
+              </span>
+            )}
             <button
               className="spa-confirm-btn"
               onClick={handleProceed}
+              disabled={!hasActiveStay}
               id="spa-alt-confirm-btn"
             >
               <span>{t('spa.proceedToConfirmation', 'Review & Confirm')}</span>

@@ -286,6 +286,8 @@
     "selectTimeSlot": "选择时间段",
     "noSlotsAvailable": "所选组合暂无可用时段，请尝试其他日期或理疗师。",
     "viewAlternatives": "查看可替代时段",
+    "viewOtherTimes": "寻找其他日期或时间？查看可替代时段",
+    "navCatalogue": "疗程目录",
     "specialRequest": "特别要求与嘱咐",
     "specialRequestPlaceholder": "填写给理疗师的偏好或注意事项...",
     "bookingSummary": "预约概要",
@@ -363,6 +365,9 @@
     "bookComplimentary": "预订套餐包含项目",
     "bookAdditional": "增订额外疗程",
     "bookTreatment": "预订疗程",
-    "additionalCharge": "额外自费项目"
+    "additionalCharge": "额外自费项目",
+    "activeBookingRequired": "预订水疗项目需要有效的疗愈住宿预订和已登录的住客档案。",
+    "noActiveBooking": "无有效疗愈住宿预订",
+    "activeBookingRef": "疗愈住宿预订"
   }
 }

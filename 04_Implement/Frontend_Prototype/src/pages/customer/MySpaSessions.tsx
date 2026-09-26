@@ -29,12 +29,6 @@ import {
 } from 'lucide-react';
 import type { LocalizedString, SpaSession, SpaSessionStatus } from '../../types/spa';
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 const STATUS_CONFIG: Record<SpaSessionStatus, { icon: React.ReactNode; className: string; labelKey: string; defaultLabel: string }> = {
   booked: { icon: <Calendar size={14} />, className: 'spa-status--booked', labelKey: 'spa.status.booked', defaultLabel: 'Booked' },
   confirmed: { icon: <CheckCircle size={14} />, className: 'spa-status--confirmed', labelKey: 'spa.status.confirmed', defaultLabel: 'Confirmed' },
@@ -47,15 +41,20 @@ const STATUS_CONFIG: Record<SpaSessionStatus, { icon: React.ReactNode; className
 type TabFilter = 'upcoming' | 'completed' | 'all';
 
 export const MySpaSessions: React.FC = () => {
-  const { t } = useTranslation('customer');
+  const { t, i18n } = useTranslation('customer');
   const navigate = useNavigate();
   const { sessions, cancelSession } = useSpa();
   const { activeBooking } = useCustomer();
 
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
+
   const [activeTab, setActiveTab] = useState<TabFilter>('upcoming');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-
-  const localize = (ls: LocalizedString) => useLocalized(ls);
 
   // Filter sessions for current retreat booking, sorted chronologically
   const bookingSessions = useMemo(() => {
@@ -224,6 +223,31 @@ export const MySpaSessions: React.FC = () => {
             <span>{t('spa.bookNewSession', 'Book Treatment')}</span>
           </button>
         </div>
+      </div>
+
+      {/* Section Navigation Tabs: Treatment Catalogue | My Spa Sessions */}
+      <div className="spa-section-nav" role="tablist" aria-label="Spa Navigation">
+        <button
+          type="button"
+          className="spa-section-nav-tab"
+          onClick={() => navigate('/customer/spa')}
+          id="btn-nav-catalogue-tab"
+          role="tab"
+          aria-selected="false"
+        >
+          <Sparkles size={16} />
+          <span>{t('spa.navCatalogue', 'Treatment Catalogue')}</span>
+        </button>
+        <button
+          type="button"
+          className="spa-section-nav-tab spa-section-nav-tab--active"
+          onClick={() => navigate('/customer/spa/sessions')}
+          role="tab"
+          aria-selected="true"
+        >
+          <CalendarCheck size={16} />
+          <span>{t('spa.mySessions', 'My Spa Sessions')}</span>
+        </button>
       </div>
 
       {bookingSessions.length > 0 ? (

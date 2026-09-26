@@ -286,6 +286,8 @@
     "selectTimeSlot": "Choisir le créneau",
     "noSlotsAvailable": "Aucun créneau disponible pour cette sélection. Choisissez une autre date ou thérapeute.",
     "viewAlternatives": "Voir les créneaux alternatifs",
+    "viewOtherTimes": "Vous cherchez d'autres jours ou horaires ? Voir les créneaux alternatifs",
+    "navCatalogue": "Catalogue des Soins",
     "specialRequest": "Demande particulière",
     "specialRequestPlaceholder": "Préférences ou remarques pour votre thérapeute...",
     "bookingSummary": "Récapitulatif de réservation",
@@ -363,6 +365,9 @@
     "bookComplimentary": "Réserver Soin Inclus",
     "bookAdditional": "Réserver Soin Additionnel",
     "bookTreatment": "Réserver le Soin",
-    "additionalCharge": "Service Additionnel"
+    "additionalCharge": "Service Additionnel",
+    "activeBookingRequired": "Une réservation de séjour active et un profil client connecté sont requis pour réserver des séances de spa.",
+    "noActiveBooking": "Aucune réservation de séjour active",
+    "activeBookingRef": "Réservation de séjour"
   }
 }

@@ -22,14 +22,8 @@ import {
 } from 'lucide-react';
 import type { LocalizedString, AvailableSlot } from '../../types/spa';
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const SpaBookingPage: React.FC = () => {
-  const { t } = useTranslation('customer');
+  const { t, i18n } = useTranslation('customer');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const treatmentIdFromQuery = searchParams.get('treatment');
@@ -37,7 +31,12 @@ export const SpaBookingPage: React.FC = () => {
   const { treatments, therapists, getAvailableSlots } = useSpa();
   const { activeBooking, profile } = useCustomer();
 
-  const localize = (ls: LocalizedString) => useLocalized(ls);
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   const [selectedTreatmentId, setSelectedTreatmentId] = useState(treatmentIdFromQuery || '');
   const [selectedDate, setSelectedDate] = useState('2026-09-26');
@@ -56,17 +55,6 @@ export const SpaBookingPage: React.FC = () => {
       preferredTherapistId || undefined
     );
   }, [selectedTreatmentId, selectedDate, preferredTherapistId, getAvailableSlots]);
-
-  // Group slots by time for display
-  const slotsByTime = useMemo(() => {
-    const map = new Map<string, AvailableSlot[]>();
-    for (const slot of availableSlots) {
-      const key = `${slot.startTime}-${slot.endTime}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(slot);
-    }
-    return map;
-  }, [availableSlots]);
 
   // Available dates (next 7 days for demo)
   const availableDates = useMemo(() => {
@@ -95,8 +83,10 @@ export const SpaBookingPage: React.FC = () => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
+  const hasActiveStay = Boolean(activeBooking && profile);
+
   const handleProceed = () => {
-    if (!selectedSlot || !selectedTreatment || !activeBooking) return;
+    if (!selectedSlot || !selectedTreatment || !activeBooking || !profile) return;
 
     // Check if slot is currently available (both therapist and room)
     const currentSlots = getAvailableSlots(selectedTreatmentId, selectedDate, preferredTherapistId || undefined);
@@ -113,7 +103,7 @@ export const SpaBookingPage: React.FC = () => {
       return;
     }
 
-    // Available -> proceed to confirmation (Screen 28) with pending booking parameters
+    // Available -> proceed to confirmation (Screen 28) with canonical booking parameters only
     const pendingState = {
       bookingReference: activeBooking.bookingReference,
       customerId: profile.id,
@@ -375,6 +365,7 @@ export const SpaBookingPage: React.FC = () => {
                   <AlertCircle size={32} />
                   <p>{t('spa.noSlotsAvailable', 'No available slots for this combination. Try a different date or therapist.')}</p>
                   <button
+                    type="button"
                     className="spa-alt-btn"
                     onClick={() => navigate(`/customer/spa/alternatives?treatment=${selectedTreatmentId}&date=${selectedDate}`)}
                     id="btn-view-alternatives-screen27"
@@ -384,36 +375,55 @@ export const SpaBookingPage: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="spa-slots-grid">
-                  {Array.from(slotsByTime.entries()).map(([timeKey, slots]) => {
-                    const firstSlot = slots[0];
-                    const isSelected = selectedSlot?.startTime === firstSlot.startTime &&
-                      selectedSlot?.therapistId === firstSlot.therapistId &&
-                      selectedSlot?.roomId === firstSlot.roomId;
+                <div>
+                  <div className="spa-slots-grid">
+                    {availableSlots.map((slot) => {
+                      const isSelected = Boolean(
+                        selectedSlot &&
+                        selectedSlot.startTime === slot.startTime &&
+                        selectedSlot.therapistId === slot.therapistId &&
+                        selectedSlot.roomId === slot.roomId
+                      );
 
-                    return (
-                      <button
-                        key={`${timeKey}-${firstSlot.therapistId}-${firstSlot.roomId}`}
-                        className={`spa-slot-btn ${isSelected ? 'spa-slot-btn--active' : ''}`}
-                        onClick={() => setSelectedSlot(firstSlot)}
-                        id={`spa-slot-${firstSlot.startTime.replace(':', '')}`}
-                      >
-                        <div className="spa-slot-time">
-                          <Clock size={14} />
-                          <span>{firstSlot.startTime} — {firstSlot.endTime}</span>
-                        </div>
-                        <div className="spa-slot-details">
-                          <span className="spa-slot-therapist">
-                            <User size={12} /> {firstSlot.therapistName}
-                          </span>
-                          <span className="spa-slot-room">
-                            <MapPin size={12} /> {localize(firstSlot.roomName)}
-                          </span>
-                        </div>
-                        {isSelected && <Check size={16} className="spa-slot-check" />}
-                      </button>
-                    );
-                  })}
+                      return (
+                        <button
+                          key={`${slot.date}-${slot.startTime}-${slot.therapistId}-${slot.roomId}`}
+                          type="button"
+                          className={`spa-slot-btn ${isSelected ? 'spa-slot-btn--active' : ''}`}
+                          onClick={() => setSelectedSlot(slot)}
+                          id={`spa-slot-${slot.startTime.replace(':', '')}-${slot.therapistId}`}
+                          aria-pressed={isSelected}
+                        >
+                          <div className="spa-slot-time">
+                            <Clock size={14} />
+                            <span>{slot.startTime} — {slot.endTime}</span>
+                          </div>
+                          <div className="spa-slot-details">
+                            <span className="spa-slot-therapist">
+                              <User size={12} /> {slot.therapistName}
+                            </span>
+                            <span className="spa-slot-room">
+                              <MapPin size={12} /> {localize(slot.roomName)}
+                            </span>
+                          </div>
+                          {isSelected && <Check size={16} className="spa-slot-check" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="spa-slots-footer-alt">
+                    <button
+                      type="button"
+                      className="spa-view-other-times-btn"
+                      onClick={() => navigate(`/customer/spa/alternatives?treatment=${selectedTreatmentId}&date=${selectedDate}`)}
+                      id="btn-view-other-available-times"
+                    >
+                      <Clock size={15} />
+                      <span>{t('spa.viewOtherTimes', 'Looking for other days or times? View Alternative Slots')}</span>
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -455,6 +465,13 @@ export const SpaBookingPage: React.FC = () => {
                   <span>
                     <strong>{t('spa.slotAndSuite', 'Slot & Suite')}:</strong>{' '}
                     {selectedSlot ? `${selectedSlot.startTime}–${selectedSlot.endTime} · ${localize(selectedSlot.roomName)}` : t('spa.slotPendingMsg', 'Required — select time slot in Step 4')}
+                  </span>
+                </div>
+                <div className={`spa-checklist-item ${hasActiveStay ? 'spa-checklist-item--complete' : 'spa-checklist-item--incomplete'}`}>
+                  {hasActiveStay ? <Check size={14} /> : <AlertCircle size={14} />}
+                  <span>
+                    <strong>{t('spa.activeBookingRef', 'Retreat Booking')}:</strong>{' '}
+                    {activeBooking ? activeBooking.bookingReference : t('spa.noActiveBooking', 'No Active Retreat Booking')}
                   </span>
                 </div>
               </div>
@@ -536,9 +553,35 @@ export const SpaBookingPage: React.FC = () => {
                   </span>
                 </div>
 
+                {!hasActiveStay && (
+                  <div
+                    className="spa-booking-missing-alert"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      margin: '12px 0',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      color: '#f87171',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                    }}
+                    role="alert"
+                  >
+                    <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                    <span>
+                      {t('spa.activeBookingRequired', 'An active retreat booking and signed-in customer profile are required to reserve spa sessions.')}
+                    </span>
+                  </div>
+                )}
+
                 <button
+                  type="button"
                   className="spa-confirm-btn"
-                  disabled={!selectedSlot}
+                  disabled={!selectedSlot || !hasActiveStay}
                   onClick={handleProceed}
                   id="spa-proceed-to-confirmation"
                 >

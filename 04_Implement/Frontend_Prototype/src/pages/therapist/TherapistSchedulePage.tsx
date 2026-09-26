@@ -27,12 +27,6 @@ import type { LocalizedString } from '../../types/spa';
 
 const CURRENT_THERAPIST_ID = 'THER-01';
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 // Helper: minutes between "HH:MM" strings
 const timeDiffMinutes = (startStr: string, endStr: string): number => {
   const [h1, m1] = startStr.split(':').map(Number);
@@ -41,11 +35,16 @@ const timeDiffMinutes = (startStr: string, endStr: string): number => {
 };
 
 export const TherapistSchedulePage: React.FC = () => {
-  const { t } = useTranslation('operations');
+  const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
   const { getSessionsByTherapist, getTherapistById, startSession } = useSpa();
 
-  const localize = (ls: LocalizedString) => useLocalized(ls);
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
   const therapist = getTherapistById(CURRENT_THERAPIST_ID);
 
   const [selectedDate, setSelectedDate] = useState('2026-09-26');

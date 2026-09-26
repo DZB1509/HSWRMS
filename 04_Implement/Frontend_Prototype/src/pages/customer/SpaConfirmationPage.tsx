@@ -49,14 +49,8 @@ interface PendingBookingData {
   customerSpecialRequest?: string;
 }
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const SpaConfirmationPage: React.FC = () => {
-  const { t } = useTranslation('customer');
+  const { t, i18n } = useTranslation('customer');
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -97,7 +91,12 @@ export const SpaConfirmationPage: React.FC = () => {
   } | null>(null);
   const [simulatedNotice, setSimulatedNotice] = useState<string | null>(null);
 
-  const localize = (ls: LocalizedString) => useLocalized(ls);
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -118,17 +117,31 @@ export const SpaConfirmationPage: React.FC = () => {
 
   // ── ATOMIC CONFIRMATION HANDLER ────────────────────────
   const handleConfirmReservation = () => {
-    if (!pendingTreatment || !pendingTherapist || !pendingRoom || !activeBooking || pendingTherapistId === 'any' || pendingRoomId === 'any') return;
+    if (!pendingTreatment || !pendingTherapist || !pendingRoom || pendingTherapistId === 'any' || pendingRoomId === 'any') return;
 
     setIsSubmitting(true);
-    setConflictError(null);
+    const bookingRef = activeBooking?.bookingReference || locationState?.bookingReference;
+    const custId = profile?.id || locationState?.customerId;
+    const custName = profile?.fullName || locationState?.customerName;
+
+    if (!bookingRef || !custId) {
+      setIsSubmitting(false);
+      setConflictError({
+        conflictType: 'RESOURCE_UNAVAILABLE',
+        message: t(
+          'spa.activeBookingRequired',
+          'An active retreat booking and signed-in customer profile are required to reserve spa sessions.'
+        ),
+      });
+      return;
+    }
 
     // Centralized atomic re-check and mutation
     setTimeout(() => {
       const result = bookSpaSession({
-        bookingReference: activeBooking.bookingReference,
-        customerId: profile.id,
-        customerName: profile.fullName,
+        bookingReference: bookingRef,
+        customerId: custId,
+        customerName: custName || '',
         treatmentId: pendingTreatment.id,
         therapistId: pendingTherapist.id,
         roomId: pendingRoom.id,
@@ -142,8 +155,12 @@ export const SpaConfirmationPage: React.FC = () => {
       setIsSubmitting(false);
 
       if (result.success) {
-        // Success: Atomic booking completed -> Navigate directly to Screen 29 (My Spa Sessions)
-        navigate('/customer/spa/sessions');
+        // Success: Atomic booking completed -> Navigate to confirmed session view with CTAs
+        if (result.session?.id) {
+          navigate(`/customer/spa/confirmation?session=${result.session.id}`);
+        } else {
+          navigate('/customer/spa/sessions');
+        }
       } else {
         // Failure: Stale slot or resource conflict -> NO mutation performed!
         setConflictError({
@@ -459,7 +476,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <User size={18} />
                 <div>
                   <span className="spa-confirmation-label">{t('spa.customer', 'Customer')}</span>
-                  <span className="spa-confirmation-value">{profile.fullName}</span>
+                  <span className="spa-confirmation-value">{profile?.fullName || locationState?.customerName || '—'}</span>
                 </div>
               </div>
 
@@ -467,7 +484,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <Shield size={18} />
                 <div>
                   <span className="spa-confirmation-label">{t('spa.bookingReference', 'Retreat Booking Ref')}</span>
-                  <span className="spa-confirmation-value">{activeBooking?.bookingReference || 'HSW-88192'}</span>
+                  <span className="spa-confirmation-value">{activeBooking?.bookingReference || locationState?.bookingReference || '—'}</span>
                 </div>
               </div>
             </div>
@@ -485,10 +502,36 @@ export const SpaConfirmationPage: React.FC = () => {
 
           {/* Action CTAs */}
           <div className="spa-confirmation-actions">
+            {!(activeBooking?.bookingReference || locationState?.bookingReference) && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '1rem',
+                  padding: '10px 14px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  color: '#f87171',
+                  fontSize: '13px',
+                  width: '100%',
+                }}
+                role="alert"
+              >
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{t('spa.activeBookingRequired', 'An active retreat booking and signed-in customer profile are required to reserve spa sessions.')}</span>
+              </div>
+            )}
+
             <button
               className="spa-confirm-btn"
               onClick={handleConfirmReservation}
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                !(activeBooking?.bookingReference || locationState?.bookingReference) ||
+                !(profile?.id || locationState?.customerId)
+              }
               id="btn-confirm-spa-booking"
             >
               {isSubmitting ? (

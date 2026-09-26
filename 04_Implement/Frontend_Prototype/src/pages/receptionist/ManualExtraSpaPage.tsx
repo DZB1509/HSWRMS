@@ -33,16 +33,17 @@ import {
 } from 'lucide-react';
 import type { LocalizedString, AvailableSlot } from '../../types/spa';
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const ManualExtraSpaPage: React.FC = () => {
-  const { t } = useTranslation('operations');
+  const { t, i18n } = useTranslation('operations');
   const { arrivals } = useOperations();
   const { treatments, bookSpaSession, getAvailableSlots } = useSpa();
+
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   // Only show checked-in customers eligible for in-stay charges
   const checkedInCustomers = useMemo(
@@ -66,8 +67,6 @@ export const ManualExtraSpaPage: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const localize = (ls: LocalizedString) => useLocalized(ls);
 
   const selectedArrival = checkedInCustomers.find((a) => a.bookingReference === selectedCustomer);
   const selectedTreatment = treatments.find((t) => t.id === selectedTreatmentId);

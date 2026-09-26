@@ -18,6 +18,7 @@ import {
   Filter,
   Heart,
   Shield,
+  CalendarCheck,
 } from 'lucide-react';
 import type { TreatmentCategory, LocalizedString } from '../../types/spa';
 
@@ -32,17 +33,17 @@ const CATEGORY_FILTERS: { key: TreatmentCategory | 'all'; labelKey: string; defa
   { key: 'aromatherapy', labelKey: 'spa.categories.aromatherapy', defaultLabel: 'Aromatherapy', icon: <Heart size={16} /> },
 ];
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const SpaTreatmentListPage: React.FC = () => {
-  const { t } = useTranslation('customer');
+  const { t, i18n } = useTranslation('customer');
   const { treatments } = useSpa();
   const navigate = useNavigate();
-  const localize = (ls: LocalizedString) => useLocalized(ls);
+
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   const [activeCategory, setActiveCategory] = useState<TreatmentCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,7 +82,45 @@ export const SpaTreatmentListPage: React.FC = () => {
           <p className="spa-hero-subtitle">
             {t('spa.subtitle', 'Discover our curated collection of healing treatments designed for your complete wellness journey')}
           </p>
+
+          <div className="spa-hero-actions">
+            <button
+              type="button"
+              className="spa-hero-my-sessions-btn"
+              onClick={() => navigate('/customer/spa/sessions')}
+              id="btn-nav-my-sessions-hero"
+            >
+              <CalendarCheck size={16} />
+              <span>{t('spa.viewMySessions', 'View My Sessions')}</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Section Navigation Tabs: Treatment Catalogue | My Spa Sessions */}
+      <div className="spa-section-nav" role="tablist" aria-label="Spa Navigation">
+        <button
+          type="button"
+          className="spa-section-nav-tab spa-section-nav-tab--active"
+          onClick={() => navigate('/customer/spa')}
+          role="tab"
+          aria-selected="true"
+        >
+          <Sparkles size={16} />
+          <span>{t('spa.navCatalogue', 'Treatment Catalogue')}</span>
+        </button>
+        <button
+          type="button"
+          className="spa-section-nav-tab"
+          onClick={() => navigate('/customer/spa/sessions')}
+          id="btn-nav-my-sessions-tab"
+          role="tab"
+          aria-selected="false"
+        >
+          <CalendarCheck size={16} />
+          <span>{t('spa.mySessions', 'My Spa Sessions')}</span>
+        </button>
       </div>
 
       {/* Search & Filters */}

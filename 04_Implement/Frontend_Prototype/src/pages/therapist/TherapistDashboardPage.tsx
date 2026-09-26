@@ -22,18 +22,17 @@ import type { LocalizedString } from '../../types/spa';
 const CURRENT_THERAPIST_ID = 'THER-01'; // Demo: logged-in therapist
 const TODAY = '2026-09-26';
 
-const useLocalized = (ls: LocalizedString): string => {
-  const { i18n } = useTranslation();
-  const lang = i18n.language as keyof LocalizedString;
-  return ls[lang] || ls.en;
-};
-
 export const TherapistDashboardPage: React.FC = () => {
-  const { t } = useTranslation('operations');
+  const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
   const { getSessionsByTherapist, getTherapistById, sessions, getTherapistRelevantWellnessInfo } = useSpa();
 
-  const localize = (ls: LocalizedString) => useLocalized(ls);
+  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
+  const localize = (ls?: LocalizedString | null): string => {
+    if (!ls) return '';
+    if (typeof ls === 'string') return ls;
+    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+  };
 
   const therapist = getTherapistById(CURRENT_THERAPIST_ID);
   const todaySessions = useMemo(

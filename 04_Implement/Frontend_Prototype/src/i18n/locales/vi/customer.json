@@ -286,6 +286,8 @@
     "selectTimeSlot": "Chọn Khung Giờ",
     "noSlotsAvailable": "Không có khung giờ khả dụng cho lựa chọn này. Vui lòng chọn ngày hoặc chuyên viên khác.",
     "viewAlternatives": "Xem Khung Giờ Thay Thế",
+    "viewOtherTimes": "Tìm kiếm ngày hoặc khung giờ khác? Xem các khung giờ thay thế",
+    "navCatalogue": "Danh Mục Trị Liệu",
     "specialRequest": "Yêu Cầu Đặc Biệt",
     "specialRequestPlaceholder": "Ghi chú hoặc mong muốn gửi tới chuyên viên trị liệu...",
     "bookingSummary": "Tóm Tắt Đặt Lịch",
@@ -363,6 +365,9 @@
     "bookComplimentary": "Đặt Phiên Trong Gói",
     "bookAdditional": "Đặt Phiên Bổ Sung",
     "bookTreatment": "Đặt Liệu Trình",
-    "additionalCharge": "Dịch Vụ Bổ Sung"
+    "additionalCharge": "Dịch Vụ Bổ Sung",
+    "activeBookingRequired": "Cần có đặt phòng nghỉ dưỡng đang hiệu lực và hồ sơ khách hàng đã đăng nhập để đặt buổi spa.",
+    "noActiveBooking": "Chưa có đặt phòng nghỉ dưỡng hiệu lực",
+    "activeBookingRef": "Mã đặt phòng nghỉ dưỡng"
   }
 }

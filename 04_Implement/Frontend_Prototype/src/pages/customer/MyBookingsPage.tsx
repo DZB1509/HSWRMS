@@ -213,23 +213,14 @@ export const MyBookingsPage: React.FC = () => {
               return (
                 <div
                   key={b.id}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden',
-                    boxShadow: 'var(--shadow-card)',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-                    transition: 'box-shadow 0.2s ease',
-                  }}
+                  className="customer-booking-card"
+                  id={`booking-card-${b.id}`}
                 >
                   {/* Left Column: Image */}
-                  <div style={{ position: 'relative', minHeight: '200px' }}>
+                  <div className="customer-booking-card-media">
                     <img
                       src={b.heroImage}
                       alt={pkgName}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div
                       style={{

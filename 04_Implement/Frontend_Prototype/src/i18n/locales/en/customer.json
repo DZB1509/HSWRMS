@@ -286,6 +286,8 @@
     "selectTimeSlot": "Select Time Slot",
     "noSlotsAvailable": "No available slots for this combination. Try a different date or therapist.",
     "viewAlternatives": "View Alternative Slots",
+    "viewOtherTimes": "Looking for other days or times? View Alternative Slots",
+    "navCatalogue": "Treatment Catalogue",
     "specialRequest": "Special Request",
     "specialRequestPlaceholder": "Any preferences or notes for your therapist...",
     "bookingSummary": "Booking Summary",
@@ -363,6 +365,9 @@
     "bookComplimentary": "Book Included Session",
     "bookAdditional": "Book Additional Session",
     "bookTreatment": "Book Treatment",
-    "additionalCharge": "Additional Service"
+    "additionalCharge": "Additional Service",
+    "activeBookingRequired": "An active retreat booking and signed-in customer profile are required to reserve spa sessions.",
+    "noActiveBooking": "No Active Retreat Booking",
+    "activeBookingRef": "Retreat Booking"
   }
 }

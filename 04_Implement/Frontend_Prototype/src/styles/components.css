@@ -1140,4 +1140,50 @@
   }
 }
 
+/* ==========================================================================
+   Customer Booking Card - Interactive Elevation & Hover Polish
+   ========================================================================== */
+.customer-booking-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) 1fr 220px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+  will-change: transform, box-shadow;
+}
+
+@media (max-width: 960px) {
+  .customer-booking-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+.customer-booking-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(32, 75, 35, 0.09), 0 4px 10px rgba(0, 0, 0, 0.03);
+  border-color: rgba(32, 75, 35, 0.25);
+}
+
+.customer-booking-card-media {
+  position: relative;
+  min-height: 200px;
+  max-height: 240px;
+  overflow: hidden;
+  background: var(--bg-soft);
+}
+
+.customer-booking-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.customer-booking-card:hover .customer-booking-card-media img {
+  transform: scale(1.03);
+}
+
 
