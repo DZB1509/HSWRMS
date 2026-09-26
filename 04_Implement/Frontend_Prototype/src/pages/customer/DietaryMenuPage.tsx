@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import type { DietaryMenuItem, MealPeriod, LocalizedString } from '../../types/dining';
-import { Search, Info, AlertCircle, Sparkles, CalendarCheck, Coffee } from 'lucide-react';
+import { Search, Info, AlertCircle, CalendarCheck, Coffee } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
+import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 
 export const DietaryMenuPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
@@ -201,17 +202,8 @@ export const DietaryMenuPage: React.FC = () => {
 
                 <p className="hsw-culinary-desc">{localizedDesc}</p>
 
-                {/* Dietary Tags */}
-                {item.dietaryTags.length > 0 && (
-                  <div className="hsw-dietary-chips">
-                    {item.dietaryTags.map((tag) => (
-                      <span key={tag} className="hsw-dietary-chip">
-                        <Sparkles size={11} style={{ color: 'var(--accent-olive)' }} />
-                        {t(`dining.dietaryTags.${tag}`, tag.replace('_', ' '))}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {/* Dietary Badges (Prioritized, ingredient-aware, beverage-reduced) */}
+                <DietaryBadgeList item={item} />
 
                 {/* Allergy warning box */}
                 {warning && (

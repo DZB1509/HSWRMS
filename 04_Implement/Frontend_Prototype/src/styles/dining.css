@@ -144,6 +144,25 @@
   font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.hsw-dietary-chip.hsw-chip-diet {
+  background-color: rgba(68, 86, 68, 0.08);
+  color: var(--accent-forest);
+  border-color: rgba(68, 86, 68, 0.22);
+}
+
+.hsw-dietary-chip.hsw-chip-exclusion {
+  background-color: var(--bg-card);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+.hsw-dietary-chip.hsw-chip-attribute {
+  background-color: rgba(200, 169, 126, 0.12);
+  color: #7d5926;
+  border-color: rgba(200, 169, 126, 0.3);
 }
 
 .hsw-allergy-alert-box {

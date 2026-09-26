@@ -6,6 +6,7 @@ import type { LocalizedString } from '../../types/dining';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Coffee, Info, MapPin, Receipt, ListOrdered } from 'lucide-react';
 import { FoodImage } from '../../components/common/FoodImage';
+import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 
 export const MyMealPlanPage: React.FC = () => {
@@ -299,6 +300,7 @@ export const MyMealPlanPage: React.FC = () => {
                               <h3 className="hsw-culinary-dish-name" style={{ fontSize: 'var(--text-md)', marginBottom: '4px' }}>
                                 {localizedName}
                               </h3>
+                              <DietaryBadgeList item={item} maxBadges={2} />
 
                               {sel.notes && (
                                 <p

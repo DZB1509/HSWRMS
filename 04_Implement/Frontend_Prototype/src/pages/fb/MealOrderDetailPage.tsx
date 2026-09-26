@@ -5,6 +5,7 @@ import { OperationalPageHeader } from '../../components/operations/OperationalPa
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, Clock, MapPin, User, ChevronLeft, Shield, Utensils, CheckCircle } from 'lucide-react';
 import { FoodImage } from '../../components/common/FoodImage';
+import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import type { LocalizedString } from '../../types/dining';
 
 export const MealOrderDetailPage: React.FC = () => {
@@ -156,13 +157,14 @@ export const MealOrderDetailPage: React.FC = () => {
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 8px 0', lineHeight: 1.4 }}>
                         {descStr}
                       </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {menuItem.dietaryTags.map((tag: string) => (
-                          <span key={tag} className="hsw-tag-item" style={{ fontSize: '11px' }}>
-                            {t(`customer:dining.dietaryTags.${tag}`, t(`customer:dining.dietary.${tag}`, tag.replace(/_/g, ' ')))}
-                          </span>
-                        ))}
-                      </div>
+                      {menuItem && (
+                        <div style={{ marginTop: '2px', marginBottom: '4px' }}>
+                          <DietaryBadgeList
+                            item={menuItem}
+                            prefix="customer:dining.dietaryTags."
+                          />
+                        </div>
+                      )}
                       {lineItem.notes && (
                         <div style={{ marginTop: '6px', fontSize: '12px', fontStyle: 'italic', color: 'var(--accent-sand)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span>Note:</span> "{lineItem.notes}"

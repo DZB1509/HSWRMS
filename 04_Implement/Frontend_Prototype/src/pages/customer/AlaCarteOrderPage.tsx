@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
 import type { DietaryMenuItem, LocalizedString } from '../../types/dining';
-import { AlertCircle, Minus, Plus, ShoppingBag, Info, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertCircle, Minus, Plus, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
+import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 
 interface CartItem {
   menuItem: DietaryMenuItem;
@@ -218,16 +219,8 @@ export const AlaCarteOrderPage: React.FC = () => {
 
                     <p className="hsw-culinary-desc">{localizedDesc}</p>
 
-                    {item.dietaryTags.length > 0 && (
-                      <div className="hsw-dietary-chips">
-                        {item.dietaryTags.map((tag) => (
-                          <span key={tag} className="hsw-dietary-chip">
-                            <Sparkles size={11} style={{ color: 'var(--accent-olive)' }} />
-                            {t(`dining.dietaryTags.${tag}`, tag.replace('_', ' '))}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Dietary Badges (Prioritized, ingredient-aware, beverage-reduced) */}
+                    <DietaryBadgeList item={item} />
 
                     {warning && (
                       <div className="hsw-allergy-alert-box" role="alert">
