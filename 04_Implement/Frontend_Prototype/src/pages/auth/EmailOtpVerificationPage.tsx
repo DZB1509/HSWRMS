@@ -57,14 +57,14 @@ export const EmailOtpVerificationPage: React.FC = () => {
   const handleResend = () => {
     setSecondsLeft(60);
     setCanResend(false);
-    showToast('Mã OTP mới đã được gửi (Mô phỏng: 123456)', 'info');
+    showToast(t('auth.alerts.codeResent'), 'info');
   };
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
     const fullCode = otp.join('');
     if (fullCode.length < 6) {
-      showToast('Vui lòng nhập đủ 6 chữ số mã xác thực', 'warning');
+      showToast(t('auth.alerts.codeIncomplete'), 'warning');
       return;
     }
 
@@ -72,27 +72,15 @@ export const EmailOtpVerificationPage: React.FC = () => {
     setTimeout(() => {
       setIsLoading(false);
       loginAs('customer');
-      showToast('Tài khoản đã được kích hoạt thành công!', 'success');
+      showToast(t('auth.alerts.accountActivated'), 'success');
       navigate('/customer/dashboard');
     }, 700);
   };
 
   return (
     <div className="hsw-auth-form-wrap" style={{ textAlign: 'center' }}>
-      <div
-        style={{
-          width: '52px',
-          height: '52px',
-          borderRadius: '50%',
-          backgroundColor: 'var(--accent-sand-soft)',
-          color: 'var(--accent-forest)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto var(--space-4)',
-        }}
-      >
-        <Mail size={24} />
+      <div className="hsw-auth-emblem" aria-hidden="true">
+        <Mail size={22} />
       </div>
 
       <h1
@@ -143,19 +131,10 @@ export const EmailOtpVerificationPage: React.FC = () => {
               onKeyDown={(e) => handleKeyDown(i, e)}
               autoFocus={i === 0}
               aria-label={`OTP digit ${i + 1}`}
+              className="hsw-otp-input"
               style={{
-                width: '46px',
-                height: '54px',
-                textAlign: 'center',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-2xl)',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                backgroundColor: '#ffffff',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-                outline: 'none',
-                boxShadow: digit ? '0 0 0 2px var(--accent-forest)' : 'none',
+                borderColor: digit ? 'var(--accent-forest)' : undefined,
+                boxShadow: digit ? '0 0 0 2px rgba(79, 90, 80, 0.15)' : undefined,
               }}
             />
           ))}

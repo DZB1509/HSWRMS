@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogIn, ArrowRight } from 'lucide-react';
+import { LogIn, ArrowRight, Sparkles } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
 import { TextInput } from '../../components/common/TextInput';
 import { PasswordInput } from '../../components/common/PasswordInput';
 import { Checkbox } from '../../components/common/Checkbox';
 import { Button } from '../../components/common/Button';
+import { GoogleIcon, FacebookIcon } from '../../components/common/BrandIcons';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 
@@ -29,8 +30,8 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
-    if (!email.trim()) newErrors.email = 'Vui lòng nhập email';
-    if (!password) newErrors.password = 'Vui lòng nhập mật khẩu';
+    if (!email.trim()) newErrors.email = t('auth.alerts.emailRequired');
+    if (!password) newErrors.password = t('auth.alerts.passwordRequired');
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -42,7 +43,7 @@ export const LoginPage: React.FC = () => {
     setTimeout(() => {
       setIsLoading(false);
       loginAs('customer');
-      showToast('Đăng nhập thành công với vai trò Customer (Eleanor Vance)', 'success');
+      showToast(t('auth.alerts.loginSuccess'), 'success');
       navigate(redirectUrl);
     }, 600);
   };
@@ -52,7 +53,7 @@ export const LoginPage: React.FC = () => {
     setTimeout(() => {
       setIsLoading(false);
       loginAs('customer');
-      showToast(`Đăng nhập thành công qua ${provider} SSO`, 'success');
+      showToast(t('auth.alerts.ssoSuccess', { provider }), 'success');
       navigate(redirectUrl);
     }, 500);
   };
@@ -60,6 +61,10 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="hsw-auth-form-wrap">
       <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+        {/* Serene welcome / retreat access emblem */}
+        <div className="hsw-auth-emblem" aria-hidden="true">
+          <Sparkles size={22} />
+        </div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
           {t('auth.login.title')}
         </h1>
@@ -100,7 +105,8 @@ export const LoginPage: React.FC = () => {
 
           <Link
             to="/password-reset"
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 500 }}
+            className="hsw-auth-link"
+            style={{ fontSize: 'var(--text-xs)' }}
           >
             {t('auth.login.forgotPassword')}
           </Link>
@@ -118,50 +124,42 @@ export const LoginPage: React.FC = () => {
         </Button>
       </form>
 
-      {/* Simulated SSO Dividers */}
-      <div style={{ position: 'relative', margin: 'var(--space-6) 0', textAlign: 'center' }}>
-        <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-        <span
-          style={{
-            position: 'relative',
-            backgroundColor: '#ffffff',
-            padding: '0 var(--space-3)',
-            fontSize: '11px',
-            color: 'var(--text-tertiary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-          }}
-        >
+      {/* Simulated SSO Dividers with refined gradient line */}
+      <div className="hsw-auth-divider">
+        <div className="hsw-auth-divider-line" />
+        <span className="hsw-auth-divider-text">
           {t('auth.login.orContinueWith')}
         </span>
       </div>
 
+      {/* Native Brand Colored SSO Buttons */}
       <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-        <Button
+        <button
           type="button"
-          variant="secondary"
-          size="md"
+          className="hsw-btn-sso"
           onClick={() => handleSimulatedSSO('Google')}
-          style={{ flex: 1, fontSize: 'var(--text-xs)' }}
+          aria-label={t('auth.login.google')}
         >
-          <span style={{ fontWeight: 600 }}>G</span> Google
-        </Button>
+          <GoogleIcon size={18} />
+          <span>Google</span>
+        </button>
 
-        <Button
+        <button
           type="button"
-          variant="secondary"
-          size="md"
+          className="hsw-btn-sso"
           onClick={() => handleSimulatedSSO('Facebook')}
-          style={{ flex: 1, fontSize: 'var(--text-xs)' }}
+          aria-label={t('auth.login.facebook')}
         >
-          <span style={{ fontWeight: 600 }}>f</span> Facebook
-        </Button>
+          <FacebookIcon size={18} />
+          <span>Facebook</span>
+        </button>
       </div>
 
       <div style={{ textAlign: 'center', marginTop: 'var(--space-6)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
         <span>{t('auth.login.noAccount')} </span>
-        <Link to="/register" style={{ color: 'var(--accent-forest)', fontWeight: 600 }}>
-          {t('auth.login.registerNow')} <ArrowRight size={12} style={{ display: 'inline' }} />
+        <Link to="/register" className="hsw-auth-link">
+          <span>{t('auth.login.registerNow')}</span>
+          <ArrowRight size={12} style={{ display: 'inline' }} />
         </Link>
       </div>
     </div>

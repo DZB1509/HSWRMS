@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, UserPlus } from 'lucide-react';
+import { ArrowRight, UserPlus, Compass } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
 import { TextInput } from '../../components/common/TextInput';
 import { PasswordInput } from '../../components/common/PasswordInput';
@@ -27,11 +27,11 @@ export const RegisterPage: React.FC = () => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
-    if (!fullName.trim()) newErrors.fullName = 'Vui lòng nhập họ và tên';
-    if (!email.trim()) newErrors.email = 'Vui lòng nhập email hợp lệ';
-    if (!password || password.length < 8) newErrors.password = 'Mật khẩu cần tối thiểu 8 ký tự';
-    if (password !== confirmPassword) newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-    if (!consent) newErrors.consent = 'Vui lòng chấp thuận điều khoản bảo mật dữ liệu sức khỏe';
+    if (!fullName.trim()) newErrors.fullName = t('auth.alerts.fullNameRequired');
+    if (!email.trim()) newErrors.email = t('auth.alerts.emailInvalid');
+    if (!password || password.length < 8) newErrors.password = t('auth.alerts.passwordMinLength');
+    if (password !== confirmPassword) newErrors.confirmPassword = t('auth.alerts.passwordMismatch');
+    if (!consent) newErrors.consent = t('auth.alerts.consentRequired');
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -45,7 +45,7 @@ export const RegisterPage: React.FC = () => {
     setTimeout(() => {
       setIsLoading(false);
       sessionStorage.setItem('hswrms_pending_verification_email', email);
-      showToast('Mã OTP 6 số đã được gửi tới email của bạn (Mô phỏng)', 'success');
+      showToast(t('auth.alerts.otpDispatched'), 'success');
       navigate('/register/verify');
     }, 800);
   };
@@ -53,6 +53,10 @@ export const RegisterPage: React.FC = () => {
   return (
     <div className="hsw-auth-form-wrap">
       <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+        {/* Begin wellness journey thematic accent */}
+        <div className="hsw-auth-emblem" aria-hidden="true">
+          <Compass size={22} />
+        </div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
           {t('auth.register.title')}
         </h1>
@@ -135,8 +139,9 @@ export const RegisterPage: React.FC = () => {
 
       <div style={{ textAlign: 'center', marginTop: 'var(--space-6)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
         <span>{t('auth.register.alreadyHaveAccount')} </span>
-        <Link to="/login" style={{ color: 'var(--accent-forest)', fontWeight: 600 }}>
-          {t('auth.register.signInNow')} <ArrowRight size={12} style={{ display: 'inline' }} />
+        <Link to="/login" className="hsw-auth-link">
+          <span>{t('auth.register.signInNow')}</span>
+          <ArrowRight size={12} style={{ display: 'inline' }} />
         </Link>
       </div>
     </div>

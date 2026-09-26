@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { KeyRound, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
 import { TextInput } from '../../components/common/TextInput';
 import { PasswordInput } from '../../components/common/PasswordInput';
@@ -24,7 +24,7 @@ export const PasswordResetPage: React.FC = () => {
   const handleSendCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError('Vui lòng nhập địa chỉ email hợp lệ');
+      setError(t('auth.alerts.emailRequired'));
       return;
     }
     setError('');
@@ -33,22 +33,22 @@ export const PasswordResetPage: React.FC = () => {
     setTimeout(() => {
       setIsLoading(false);
       setStep(2);
-      showToast('Mã khôi phục đã được gửi tới email của bạn (Mô phỏng: 123456)', 'info');
+      showToast(t('auth.alerts.codeSentToast'), 'info');
     }, 600);
   };
 
   const handleSavePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp.trim()) {
-      setError('Vui lòng nhập mã xác thực OTP 6 số');
+      setError(t('auth.alerts.otpRequired'));
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      setError('Mật khẩu mới cần tối thiểu 8 ký tự');
+      setError(t('auth.alerts.passwordMinLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError(t('auth.alerts.passwordMismatch'));
       return;
     }
 
@@ -58,7 +58,7 @@ export const PasswordResetPage: React.FC = () => {
     setTimeout(() => {
       setIsLoading(false);
       setStep(3);
-      showToast('Đổi mật khẩu thành công!', 'success');
+      showToast(t('auth.alerts.resetSuccess'), 'success');
     }, 700);
   };
 
@@ -67,20 +67,9 @@ export const PasswordResetPage: React.FC = () => {
       {step === 1 && (
         <>
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-            <div
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-sand-soft)',
-                color: 'var(--accent-forest)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto var(--space-4)',
-              }}
-            >
-              <KeyRound size={22} />
+            {/* Secure account recovery thematic emblem */}
+            <div className="hsw-auth-emblem" aria-hidden="true">
+              <ShieldCheck size={24} />
             </div>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
               {t('auth.reset.title')}
@@ -116,13 +105,8 @@ export const PasswordResetPage: React.FC = () => {
           <div style={{ textAlign: 'center', marginTop: 'var(--space-6)' }}>
             <Link
               to="/login"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-secondary)',
-              }}
+              className="hsw-auth-link"
+              style={{ fontSize: 'var(--text-xs)' }}
             >
               <ArrowLeft size={14} />
               <span>{t('auth.reset.backToLogin')}</span>
@@ -134,6 +118,10 @@ export const PasswordResetPage: React.FC = () => {
       {step === 2 && (
         <>
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+            {/* Key / credential update emblem */}
+            <div className="hsw-auth-emblem" aria-hidden="true">
+              <KeyRound size={22} />
+            </div>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
               {t('auth.reset.step2Title')}
             </h1>
@@ -187,19 +175,16 @@ export const PasswordResetPage: React.FC = () => {
       {step === 3 && (
         <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
           <div
+            className="hsw-auth-emblem"
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--accent-sand-soft)',
+              background: 'linear-gradient(135deg, var(--success-bg) 0%, rgba(78, 114, 89, 0.2) 100%)',
+              borderColor: 'rgba(78, 114, 89, 0.4)',
               color: 'var(--success)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto var(--space-4)',
+              boxShadow: '0 4px 16px rgba(78, 114, 89, 0.22)',
             }}
+            aria-hidden="true"
           >
-            <CheckCircle2 size={32} />
+            <CheckCircle2 size={26} />
           </div>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>

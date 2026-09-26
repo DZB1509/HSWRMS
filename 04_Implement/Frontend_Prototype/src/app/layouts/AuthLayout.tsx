@@ -8,7 +8,10 @@ export const AuthLayout: React.FC = () => {
 
   return (
     <div className="hsw-auth-layout">
-      <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center' }}>
+      {/* Subtle serene ambient glow */}
+      <div className="hsw-auth-ambient-glow" aria-hidden="true" />
+
+      <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <Link to="/" className="hsw-brand-logo" style={{ justifyContent: 'center' }}>
           <Sparkles size={24} style={{ color: 'var(--accent-sand)' }} />
           <div>
@@ -22,8 +25,11 @@ export const AuthLayout: React.FC = () => {
         <Outlet />
       </div>
 
-      <div style={{ marginTop: 'var(--space-6)' }}>
-        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+      <div style={{ marginTop: 'var(--space-6)', position: 'relative', zIndex: 1 }}>
+        <Link
+          to="/"
+          className="hsw-auth-return-link"
+        >
           <ArrowLeft size={14} />
           <span>{t('auth.returnToSanctuary')}</span>
         </Link>
