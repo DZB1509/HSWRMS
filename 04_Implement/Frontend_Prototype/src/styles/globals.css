@@ -265,18 +265,19 @@ input, select, textarea {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 2px;
+  padding: 3px;
   background: conic-gradient(
     from var(--border-angle, 0deg),
     transparent 0%,
-    transparent 50%,
-    rgba(79, 90, 80, 0.4) 62%,
-    rgba(159, 169, 157, 0.6) 72%,
-    rgba(216, 199, 174, 0.85) 82%,
-    rgba(231, 217, 196, 0.95) 88%,
-    #ffffff 92%,
-    rgba(231, 217, 196, 0.95) 94%,
-    rgba(216, 199, 174, 0.7) 97%,
+    transparent 32%,
+    rgba(79, 90, 80, 0.40) 44%,
+    rgba(159, 169, 157, 0.70) 58%,
+    rgba(216, 199, 174, 0.95) 70%,
+    rgba(231, 217, 196, 1) 78%,
+    #ffffff 83%,
+    #ffffff 91%,
+    rgba(231, 217, 196, 1) 94%,
+    rgba(216, 199, 174, 0.85) 97%,
     transparent 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -349,7 +350,7 @@ input, select, textarea {
 @media (hover: hover) and (pointer: fine) {
   .interactive-card:hover {
     transform: translateY(-3px);
-    box-shadow: var(--shadow-card-hover), 0 0 10px rgba(216, 199, 174, 0.18), 0 0 18px rgba(79, 90, 80, 0.08);
+    box-shadow: var(--shadow-card-hover), 0 0 16px rgba(231, 217, 196, 0.35), 0 0 26px rgba(79, 90, 80, 0.12);
     border-color: var(--accent-sand);
   }
 
@@ -365,7 +366,7 @@ input, select, textarea {
   .interactive-card:hover h4,
   .interactive-card:hover .card-title {
     transform: translateY(-2px);
-    color: var(--text-primary);
+    color: #171d18;
     text-shadow: var(--shadow-text-hover-rich);
   }
 
@@ -373,7 +374,7 @@ input, select, textarea {
   .interactive-card:hover .card-desc,
   .interactive-card:hover .card-subtitle {
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
 }

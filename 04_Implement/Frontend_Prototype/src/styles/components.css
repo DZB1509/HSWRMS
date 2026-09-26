@@ -727,7 +727,7 @@
 @media (hover: hover) and (pointer: fine) {
   .hsw-retreat-card:hover {
     transform: translateY(-3px);
-    box-shadow: var(--shadow-card-hover), 0 0 10px rgba(216, 199, 174, 0.18), 0 0 18px rgba(79, 90, 80, 0.08);
+    box-shadow: var(--shadow-card-hover), 0 0 16px rgba(231, 217, 196, 0.35), 0 0 26px rgba(79, 90, 80, 0.12);
     border-color: var(--accent-sand);
   }
 
@@ -800,12 +800,13 @@
 @media (hover: hover) and (pointer: fine) {
   .hsw-retreat-card:hover .hsw-retreat-card-title {
     transform: translateY(-2px);
+    color: #171d18;
     text-shadow: var(--shadow-text-hover-rich);
   }
 
   .hsw-retreat-card:hover .hsw-retreat-card-desc {
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
 }
@@ -1254,19 +1255,19 @@
 @media (hover: hover) and (pointer: fine) {
   .customer-booking-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(32, 75, 35, 0.09), 0 4px 10px rgba(0, 0, 0, 0.03), 0 0 10px rgba(216, 199, 174, 0.18);
+    box-shadow: 0 12px 28px rgba(32, 75, 35, 0.09), 0 4px 10px rgba(0, 0, 0, 0.03), 0 0 16px rgba(231, 217, 196, 0.35);
     border-color: rgba(32, 75, 35, 0.25);
   }
 
   .customer-booking-card:hover h3 {
     transform: translateY(-2px);
-    color: var(--text-primary);
+    color: #171d18;
     text-shadow: var(--shadow-text-hover-rich);
   }
 
   .customer-booking-card:hover p {
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
 }
@@ -1577,7 +1578,7 @@
   .hsw-editorial-media:hover,
   .hsw-image-reveal-wrap:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-card-hover), 0 0 14px rgba(216, 199, 174, 0.16);
+    box-shadow: var(--shadow-card-hover), 0 0 16px rgba(231, 217, 196, 0.28);
     border-color: var(--accent-sand);
   }
 

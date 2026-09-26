@@ -394,7 +394,7 @@
 @media (hover: hover) and (pointer: fine) {
   .spa-treatment-card:hover {
     border-color: var(--accent-sand);
-    box-shadow: var(--shadow-card-hover), 0 0 10px rgba(216, 199, 174, 0.18), 0 0 18px rgba(79, 90, 80, 0.08);
+    box-shadow: var(--shadow-card-hover), 0 0 16px rgba(231, 217, 196, 0.35), 0 0 26px rgba(79, 90, 80, 0.12);
     transform: translateY(-3px);
   }
 
@@ -409,13 +409,13 @@
 
   .spa-treatment-card:hover .spa-card-title {
     transform: translateY(-2px);
-    color: var(--text-primary);
+    color: #171d18;
     text-shadow: var(--shadow-text-hover-rich);
   }
 
   .spa-treatment-card:hover .spa-card-desc {
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
 }
@@ -993,17 +993,18 @@
   .spa-treatment-option:hover:not(.spa-treatment-option--active) {
     transform: translateY(-2px);
     border-color: var(--accent-sand);
-    box-shadow: var(--shadow-lift-subtle);
+    box-shadow: var(--shadow-lift-subtle), 0 0 12px rgba(231, 217, 196, 0.28);
   }
 
   .spa-treatment-option:hover:not(.spa-treatment-option--active) .spa-option-name {
     transform: translateY(-1.5px);
+    color: #171d18;
     text-shadow: var(--shadow-text-hover);
   }
 
   .spa-treatment-option:hover:not(.spa-treatment-option--active) .spa-option-meta {
     transform: translateY(-0.75px);
-    color: var(--text-primary);
+    color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
 }

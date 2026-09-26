@@ -76,7 +76,7 @@
 @media (hover: hover) and (pointer: fine) {
   .hsw-culinary-card:hover {
     transform: translateY(-3px);
-    box-shadow: var(--shadow-card-hover), 0 0 10px rgba(216, 199, 174, 0.18), 0 0 18px rgba(79, 90, 80, 0.08);
+    box-shadow: var(--shadow-card-hover), 0 0 16px rgba(231, 217, 196, 0.35), 0 0 26px rgba(79, 90, 80, 0.12);
     border-color: var(--accent-sand);
   }
 
@@ -91,13 +91,13 @@
 
   .hsw-culinary-card:hover .hsw-culinary-dish-name {
     transform: translateY(-2px);
-    color: var(--text-primary);
+    color: #171d18;
     text-shadow: var(--shadow-text-hover-rich);
   }
 
   .hsw-culinary-card:hover .hsw-culinary-desc {
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
 }

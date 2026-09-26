@@ -106,13 +106,13 @@
   --shadow-card-hover: 0 8px 28px rgba(30, 30, 30, 0.09);
   --shadow-lift: 0 8px 24px rgba(43, 43, 43, 0.08);
   --shadow-lift-subtle: 0 4px 16px rgba(43, 43, 43, 0.05);
-  --shadow-text-rest: 0 2px 3px rgba(43, 43, 43, 0.08);
-  --shadow-text-hover: 0 4px 7px rgba(43, 43, 43, 0.20);
-  --shadow-text-hover-rich: 0 4px 8px rgba(43, 43, 43, 0.22);
-  --shadow-text-subtle: 0 2px 4px rgba(43, 43, 43, 0.10);
-  --shadow-text-desc-rest: 0 1px 2px rgba(43, 43, 43, 0.04);
-  --shadow-text-desc-hover: 0 3px 6px rgba(43, 43, 43, 0.16);
-  --shadow-text-desc-hover-rich: 0 4px 7px rgba(43, 43, 43, 0.17);
+  --shadow-text-rest: 0 1px 2px rgba(24, 32, 26, 0.06);
+  --shadow-text-hover: 0 2px 4px rgba(24, 32, 26, 0.28), 0 5px 12px rgba(24, 32, 26, 0.32);
+  --shadow-text-hover-rich: 0 2.5px 4px rgba(24, 32, 26, 0.34), 0 6px 15px rgba(24, 32, 26, 0.38);
+  --shadow-text-subtle: 0 1.5px 3px rgba(24, 32, 26, 0.08);
+  --shadow-text-desc-rest: 0 1px 2px rgba(24, 32, 26, 0.04);
+  --shadow-text-desc-hover: 0 1.5px 2.5px rgba(24, 32, 26, 0.30), 0 4px 9px rgba(24, 32, 26, 0.32);
+  --shadow-text-desc-hover-rich: 0 2px 3.5px rgba(24, 32, 26, 0.34), 0 5px 11px rgba(24, 32, 26, 0.36);
   --shadow-modal: 0 12px 40px rgba(30, 30, 30, 0.12);
   --shadow-drawer: -4px 0 24px rgba(30, 30, 30, 0.08);
 
