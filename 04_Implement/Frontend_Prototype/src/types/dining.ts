@@ -18,7 +18,7 @@ export interface DietaryMenuItem {
   image: string;
   category: 'starter' | 'main' | 'dessert' | 'beverage' | 'wellness_drink';
   mealPeriods: MealPeriod[];
-  dietaryTags: ('vegetarian' | 'vegan' | 'gluten_free' | 'dairy_free' | 'keto' | 'halal')[];
+  dietaryTags: ('vegetarian' | 'lacto_ovo_vegetarian' | 'vegan' | 'gluten_free' | 'gluten_conscious' | 'dairy_free' | 'keto' | 'pescatarian' | 'flexitarian')[];
   allergenTags: ('nuts' | 'shellfish' | 'soy' | 'eggs' | 'fish' | 'dairy')[];
   price?: number; // Only for a-la-carte
   isExtra: boolean;

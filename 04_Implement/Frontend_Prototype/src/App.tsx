@@ -15,6 +15,7 @@ import './styles/globals.css';
 import './styles/layouts.css';
 import './styles/components.css';
 import './styles/spa.css';
+import './styles/dining.css';
 
 export const App: React.FC = () => {
   return (

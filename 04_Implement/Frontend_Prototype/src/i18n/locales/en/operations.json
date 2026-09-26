@@ -397,10 +397,16 @@
       "viewPrepList": "View Full Prep List",
       "retreatMeals": "Retreat Meals (Today)",
       "extraOrders": "Extra A-la-carte",
-      "dietaryAlerts": "Dietary/Allergy Alerts",
+      "dietaryAlerts": "Dietary / Allergy Attention",
       "pendingPreparing": "Pending / Preparing",
       "urgentQueue": "Urgent Prep Queue (Preview)",
-      "noQueue": "No items in the prep queue."
+      "noQueue": "No items in the prep queue.",
+      "customer": "Customer",
+      "villa": "Villa",
+      "items": "Items",
+      "status": "Status",
+      "action": "Action",
+      "viewDetails": "Details"
     },
     "prepList": {
       "title": "Daily Meal Prep Queue",
@@ -418,31 +424,40 @@
       "statusPreparing": "Preparing",
       "statusReady": "Ready",
       "statusDelivered": "Delivered",
+      "dietaryAttention": "Dietary Attention Only",
       "colTime": "Time / Period",
       "colCustomer": "Customer (Villa)",
       "colItems": "Items",
-      "colAlerts": "Dietary Alerts",
+      "colAlerts": "Dietary Attention",
       "colStatus": "Status",
       "colAction": "Action",
       "badgeRetreat": "RETREAT",
       "badgeExtra": "EXTRA",
       "noAlerts": "None",
       "viewDetails": "Details",
-      "noResults": "No preparation items match the current filters."
+      "noResults": "No preparation items match the current filters.",
+      "clearFilters": "Clear Filters",
+      "pageShowing": "Showing {{start}}–{{end}} of {{total}}"
     },
     "orderDetail": {
       "notFound": "Order Not Found",
       "backToList": "Back to Prep Queue",
       "subtitle": "Fulfillment details and dietary requirements.",
       "orderItems": "Order Items",
+      "itemsCount": "items",
       "customerNotes": "Customer Preparation Notes",
       "deliveryInfo": "Delivery Information",
       "customerName": "Customer Name",
       "location": "Location",
       "targetTime": "Target Time",
       "dietaryProfile": "Dietary & Allergies",
+      "allergiesTitle": "Allergies & High Attention",
+      "dietaryPreferencesTitle": "Dietary Preferences / Restrictions",
       "noAllergies": "No specific allergies or dietary restrictions recorded for this customer.",
-      "privacyNote": "Privacy Notice: Only culinary-relevant restrictions are shown. Medical details are restricted."
+      "privacyNote": "Privacy Notice: Only culinary-relevant restrictions are shown. Medical details are restricted.",
+      "orderTypeRetreat": "Retreat Meal",
+      "orderTypeExtra": "A-la-carte Order",
+      "statusLabel": "Fulfillment Status"
     },
     "prep": {
       "time": "Time",
@@ -451,6 +466,12 @@
       "status": "Status",
       "typeRetreat": "Retreat Meal",
       "typeExtra": "A-la-carte"
+    },
+    "status": {
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "delivered": "Delivered"
     }
   }
 }
