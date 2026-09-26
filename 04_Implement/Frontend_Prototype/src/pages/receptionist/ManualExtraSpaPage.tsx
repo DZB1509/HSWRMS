@@ -14,7 +14,7 @@
  * Downstream sections are disabled until prerequisites are met, but NOT hidden.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
 import { useOperations } from '../../context/OperationsContext';
@@ -44,7 +44,23 @@ export const ManualExtraSpaPage: React.FC = () => {
   const { arrivals } = useOperations();
   const { treatments, bookSpaSession, getAvailableSlots } = useSpa();
 
-  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  // Only show checked-in customers eligible for in-stay charges
+  const checkedInCustomers = useMemo(
+    () => arrivals.filter((a) => a.arrivalStatus === 'checked_in'),
+    [arrivals]
+  );
+
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(() => {
+    const firstCheckedIn = arrivals.find((a) => a.arrivalStatus === 'checked_in');
+    return firstCheckedIn ? firstCheckedIn.bookingReference : null;
+  });
+
+  useEffect(() => {
+    if (!selectedCustomer && checkedInCustomers.length > 0) {
+      setSelectedCustomer(checkedInCustomers[0].bookingReference);
+    }
+  }, [checkedInCustomers, selectedCustomer]);
+
   const [selectedTreatmentId, setSelectedTreatmentId] = useState('');
   const [selectedDate, setSelectedDate] = useState('2026-09-26');
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
@@ -52,12 +68,6 @@ export const ManualExtraSpaPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const localize = (ls: LocalizedString) => useLocalized(ls);
-
-  // Only show checked-in customers eligible for in-stay charges
-  const checkedInCustomers = useMemo(
-    () => arrivals.filter((a) => a.arrivalStatus === 'checked_in'),
-    [arrivals]
-  );
 
   const selectedArrival = checkedInCustomers.find((a) => a.bookingReference === selectedCustomer);
   const selectedTreatment = treatments.find((t) => t.id === selectedTreatmentId);
@@ -115,7 +125,7 @@ export const ManualExtraSpaPage: React.FC = () => {
           <p className="ops-page-subtitle">
             {t(
               'extraSpa.subtitle',
-              'Book an additional spa service for a checked-in customer. Charges will be posted to their folio.'
+              'Book an additional spa service for a checked-in customer. Charges will be recorded for pending folio posting at checkout.'
             )}
           </p>
         </div>
@@ -148,6 +158,7 @@ export const ManualExtraSpaPage: React.FC = () => {
                   return (
                     <button
                       key={a.bookingReference}
+                      type="button"
                       className={`ops-customer-option ${isSelected ? 'ops-customer-option--active' : ''}`}
                       onClick={() => {
                         setSelectedCustomer(a.bookingReference);
@@ -177,7 +188,7 @@ export const ManualExtraSpaPage: React.FC = () => {
 
           {/* STEP 2: Extra Treatment Selection */}
           <section
-            className={`ops-form-section ${!selectedCustomer ? 'ops-form-section--disabled' : ''}`}
+            className="ops-form-section"
             id="ops-extra-step-2"
           >
             <div className="ops-section-heading">
@@ -187,9 +198,7 @@ export const ManualExtraSpaPage: React.FC = () => {
               <div className="ops-section-heading-text">
                 <h3>{t('extraSpa.step2Title', '2. Extra Spa Treatment')}</h3>
                 <span className="ops-section-sub">
-                  {!selectedCustomer
-                    ? t('extraSpa.step2DisabledHint', 'Prerequisite: Select a customer in Step 1')
-                    : selectedTreatment
+                  {selectedTreatment
                     ? `${localize(selectedTreatment.name)} · ${formatPrice(selectedTreatment.price)}`
                     : t('extraSpa.selectTreatmentPrompt', 'Choose an add-on therapy')}
                 </span>
@@ -204,7 +213,7 @@ export const ManualExtraSpaPage: React.FC = () => {
                   return (
                     <button
                       key={tr.id}
-                      disabled={!selectedCustomer}
+                      type="button"
                       className={`ops-treatment-item ${isSelected ? 'ops-treatment-item--active' : ''}`}
                       onClick={() => {
                         setSelectedTreatmentId(tr.id);
@@ -273,6 +282,7 @@ export const ManualExtraSpaPage: React.FC = () => {
                     return (
                       <button
                         key={`${slot.startTime}-${slot.therapistId}-${idx}`}
+                        type="button"
                         className={`ops-slot-item ${isSelected ? 'ops-slot-item--active' : ''}`}
                         onClick={() => setSelectedSlot(slot)}
                         id={`ops-slot-${slot.startTime.replace(':', '')}`}
@@ -361,7 +371,7 @@ export const ManualExtraSpaPage: React.FC = () => {
                 <h3>{t('extraSpa.step5Title', '5. Availability & Folio Verification')}</h3>
                 <span className="ops-section-sub">
                   {isFormValid
-                    ? t('extraSpa.readyToPost', 'Atomic availability verified. Ready to post to folio.')
+                    ? t('extraSpa.readyToPost', 'Atomic availability verified. Ready for pending folio posting.')
                     : t('extraSpa.completeStepsPrompt', 'Complete preceding steps to enable confirmation.')}
                 </span>
               </div>
@@ -384,7 +394,7 @@ export const ManualExtraSpaPage: React.FC = () => {
                   <p>
                     {t(
                       'extraSpa.atomicCheckPassedDesc',
-                      'Both Therapist and Suite are verified vacant. Folio charge is prepared for posting.'
+                      'Both Therapist and Suite are verified vacant. Spa session will be recorded with pending folio posting.'
                     )}
                   </p>
                 </div>
@@ -463,13 +473,13 @@ export const ManualExtraSpaPage: React.FC = () => {
             <div className="ops-summary-divider" />
 
             <div className="ops-summary-row ops-summary-row--folio">
-              <span>{t('extraSpa.folioCharge', 'Direct Charge to Folio')}</span>
+              <span>{t('extraSpa.folioCharge', 'Pending Folio Posting')}</span>
               <strong className="ops-price-highlight">
                 {selectedTreatment ? formatPrice(selectedTreatment.price) : '0 ₫'}
               </strong>
             </div>
             <span className="ops-folio-sub">
-              {t('extraSpa.folioStatusNote', 'Charge posted immediately to customer in-stay folio; settled at checkout.')}
+              {t('extraSpa.folioStatusNote', 'Pending Folio Posting — will be finalized and settled during checkout.')}
             </span>
 
             {/* Validation pill */}
@@ -489,6 +499,7 @@ export const ManualExtraSpaPage: React.FC = () => {
 
             {/* Primary Action Button */}
             <button
+              type="button"
               className="ops-confirm-btn"
               disabled={!isFormValid || isSubmitting || result?.success}
               onClick={handleBook}
@@ -499,7 +510,7 @@ export const ManualExtraSpaPage: React.FC = () => {
                 {isSubmitting
                   ? t('extraSpa.processing', 'Processing...')
                   : result?.success
-                  ? t('extraSpa.booked', 'Booked & Charged ✓')
+                  ? t('extraSpa.booked', 'Spa Session Booked ✓')
                   : t('extraSpa.confirmAction', 'Confirm Extra Spa Session')}
               </span>
             </button>

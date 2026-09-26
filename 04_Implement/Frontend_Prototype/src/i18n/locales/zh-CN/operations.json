@@ -273,7 +273,7 @@
   },
   "extraSpa": {
     "title": "手工增订水疗服务",
-    "subtitle": "为已办理入住的客户预订额外水疗服务。费用将记入其住宿账单。",
+    "subtitle": "为在店客户预订额外水疗服务。费用将记入待退房转账总账中。",
     "selectCustomer": "选择客户",
     "noCheckedIn": "暂无处于在住状态的客户。",
     "selectTreatment": "选择增订疗程",
@@ -288,7 +288,7 @@
     "therapist": "理疗师",
     "room": "理疗室",
     "processing": "正在处理...",
-    "booked": "预约成功 ✓",
+    "booked": "水疗会话已预订 ✓",
     "confirmAndCharge": "确认并记入房账",
     "step1Title": "1. 顾客 / 当前在住静修",
     "step2Title": "2. 水疗疗程选择",
@@ -301,7 +301,28 @@
     "statusReady": "验证通过 · 可预订",
     "statusIncomplete": "等待选择",
     "confirmBtn": "确认手工增订水疗",
-    "confirmNote": "原子验证成功。确认后费用将直接计入顾客账单。"
+    "confirmNote": "原子验证成功。确认后费用将直接计入顾客账单。",
+    "selectCustomerPrompt": "选择已办理入住的住店客户",
+    "selectTreatmentPrompt": "选择附加水疗疗程",
+    "selectSlotPrompt": "选择护理日期及可用时段",
+    "atomicResourcesLocked": "理疗师与护理套房已同步锁定",
+    "step4DisabledHint": "前置条件：请在步骤3中选择时段以分配资源",
+    "licensedSpecialist": "专业认证理疗师",
+    "sanitizedSuite": "私密水疗静修室",
+    "resourcesPlaceholder": "选择时段后将自动锁定理疗师及专属套房。",
+    "readyToPost": "原子可用性已验证。已准备计入待结账账单。",
+    "completeStepsPrompt": "请完成上述步骤以启用确认。",
+    "atomicCheckPassed": "原子可用性验证通过",
+    "atomicCheckPassedDesc": "理疗师与套房均已确认空闲。水疗会话将记录为待转入退房账单。",
+    "validationPending": "验证未完成",
+    "missingFields": "缺少必要选项：",
+    "bookingRef": "预订编号",
+    "schedule": "预约时间",
+    "folioCharge": "待计入客户总账",
+    "folioStatusNote": "待计入客户总账 — 将在退房时进行统一结算。",
+    "readyToConfirm": "所有前置条件有效",
+    "incompletePill": "选项未完成",
+    "confirmAction": "确认附加水疗会话"
   },
   "therapist": {
     "dashboard": "理疗师工作台",
@@ -366,6 +387,7 @@
     "colTreatment": "疗程项目",
     "colRoom": "疗愈室",
     "colStatus": "状态",
-    "colAction": "操作"
+    "colAction": "操作",
+    "start": "开始"
   }
 }

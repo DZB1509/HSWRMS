@@ -112,10 +112,12 @@ export const TherapistSchedulePage: React.FC = () => {
           return (
             <button
               key={d}
+              type="button"
               role="tab"
               aria-selected={isActive}
               className={`therapist-date-btn ${isActive ? 'therapist-date-btn--active' : ''}`}
               onClick={() => setSelectedDate(d)}
+              id={`therapist-date-${dt.getDate()}`}
             >
               <span className="therapist-date-weekday">
                 {dt.toLocaleDateString('en-US', { weekday: 'short' })}
@@ -264,23 +266,32 @@ export const TherapistSchedulePage: React.FC = () => {
 
                       {/* ACTION */}
                       <div className="th-col-action">
-                        {session.status === 'confirmed' ? (
+                        <button
+                          type="button"
+                          className="therapist-details-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/therapist/sessions/${session.id}`);
+                          }}
+                          id={`therapist-details-${session.id}`}
+                        >
+                          <span>{t('therapist.viewDetails', 'View Details')}</span>
+                          <ChevronRight size={13} />
+                        </button>
+                        {session.status === 'confirmed' && (
                           <button
+                            type="button"
                             className="therapist-start-action-btn"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleStartSession(session.id);
                             }}
                             id={`therapist-start-${session.id}`}
+                            title={t('therapist.startSession', 'Start Session')}
                           >
-                            <Play size={13} />
-                            <span>{t('therapist.startSession', 'Start Session')}</span>
+                            <Play size={12} />
+                            <span>{t('therapist.start', 'Start')}</span>
                           </button>
-                        ) : (
-                          <span className="therapist-details-link">
-                            <span>{t('therapist.viewDetails', 'Details')}</span>
-                            <ChevronRight size={14} />
-                          </span>
                         )}
                       </div>
                     </div>
@@ -373,23 +384,32 @@ export const TherapistSchedulePage: React.FC = () => {
                         </div>
 
                         <div className="therapist-session-col therapist-session-col--action">
-                          {session.status === 'confirmed' ? (
+                          <button
+                            type="button"
+                            className="therapist-details-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/therapist/sessions/${session.id}`);
+                            }}
+                            id={`therapist-timeline-details-${session.id}`}
+                          >
+                            <span>{t('therapist.viewDetails', 'View Details')}</span>
+                            <ChevronRight size={13} />
+                          </button>
+                          {session.status === 'confirmed' && (
                             <button
+                              type="button"
                               className="therapist-start-action-btn"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleStartSession(session.id);
                               }}
                               id={`therapist-timeline-start-${session.id}`}
+                              title={t('therapist.startSession', 'Start Session')}
                             >
-                              <Play size={13} />
-                              <span>{t('therapist.startSession', 'Start Session')}</span>
+                              <Play size={12} />
+                              <span>{t('therapist.start', 'Start')}</span>
                             </button>
-                          ) : (
-                            <span className="therapist-details-link">
-                              <span>{t('therapist.viewDetails', 'Details')}</span>
-                              <ChevronRight size={14} />
-                            </span>
                           )}
                         </div>
                       </div>

@@ -273,7 +273,7 @@
   },
   "extraSpa": {
     "title": "スパ追加予約受付（手動）",
-    "subtitle": "チェックイン中のお客様向けに追加のスパサービスを予約します。料金はお部屋付に記録されます。",
+    "subtitle": "チェックイン済みのお客様に追加のスパサービスを予約します。料金はチェックアウト時フォリオ転記待ちとして記録されます。",
     "selectCustomer": "お客様を選択",
     "noCheckedIn": "滞在中の対象のお客様がいません。",
     "selectTreatment": "追加トリートメントを選択",
@@ -288,7 +288,7 @@
     "therapist": "セラピスト",
     "room": "ルーム",
     "processing": "処理中...",
-    "booked": "予約済 ✓",
+    "booked": "スパセッション予約完了 ✓",
     "confirmAndCharge": "予約確定・お部屋付記録",
     "step1Title": "1. お客様 / ご滞在リトリート",
     "step2Title": "2. スパトリートメント選択",
@@ -301,7 +301,28 @@
     "statusReady": "検証完了・予約可能",
     "statusIncomplete": "選択保留中",
     "confirmBtn": "追加スパセッションを確定",
-    "confirmNote": "リソース検証完了。確定時にお客様の請求フォリオへ加算されます。"
+    "confirmNote": "リソース検証完了。確定時にお客様の請求フォリオへ加算されます。",
+    "selectCustomerPrompt": "チェックイン済みの滞在顧客を選択してください",
+    "selectTreatmentPrompt": "追加トリートメントを選択してください",
+    "selectSlotPrompt": "トリートメント日と空き時間枠を選択してください",
+    "atomicResourcesLocked": "セラピストとトリートメントスイートが同時ロックされました",
+    "step4DisabledHint": "前提条件：ステップ3で時間枠を選択してリソースを割り当ててください",
+    "licensedSpecialist": "認定スパスペシャリスト",
+    "sanitizedSuite": "プライベートトリートメントサンクチュアリ",
+    "resourcesPlaceholder": "時間枠を選択するとセラピストとスイートがロックされます。",
+    "readyToPost": "リソースの空きを確認しました。フォリオ未確定転記の準備が完了しています。",
+    "completeStepsPrompt": "確認を有効にするには前のステップを完了してください。",
+    "atomicCheckPassed": "同時リソース空き確認済み",
+    "atomicCheckPassedDesc": "セラピストおよびスイートの両方が空いています。スパセッションはチェックアウト時フォリオ転記待ちとして記録されます。",
+    "validationPending": "確認が未完了です",
+    "missingFields": "未入力項目:",
+    "bookingRef": "予約番号",
+    "schedule": "予約日時",
+    "folioCharge": "チェックアウト時フォリオ転記待ち",
+    "folioStatusNote": "チェックアウト時フォリオ転記待ち — チェックアウト時に最終精算されます。",
+    "readyToConfirm": "すべての前提条件が有効です",
+    "incompletePill": "選択が未完了です",
+    "confirmAction": "追加スパセッションを確定する"
   },
   "therapist": {
     "dashboard": "セラピストダッシュボード",
@@ -366,6 +387,7 @@
     "colTreatment": "施術内容",
     "colRoom": "施術室",
     "colStatus": "状態",
-    "colAction": "操作"
+    "colAction": "操作",
+    "start": "開始"
   }
 }

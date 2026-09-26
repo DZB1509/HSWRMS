@@ -72,22 +72,22 @@ export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ── Lookups ────────────────────────────────
 
   const getTreatmentById = useCallback(
-    (id: string) => treatments.find((t) => t.id === id),
+    (id: string) => treatments.find((t) => t.id.toLowerCase() === id.toLowerCase()),
     [treatments]
   );
 
   const getTherapistById = useCallback(
-    (id: string) => therapists.find((t) => t.id === id),
+    (id: string) => therapists.find((t) => t.id.toLowerCase() === id.toLowerCase()),
     [therapists]
   );
 
   const getRoomById = useCallback(
-    (id: string) => rooms.find((r) => r.id === id),
+    (id: string) => rooms.find((r) => r.id.toLowerCase() === id.toLowerCase()),
     [rooms]
   );
 
   const getSessionById = useCallback(
-    (id: string) => sessions.find((s) => s.id === id),
+    (id: string) => sessions.find((s) => s.id.toLowerCase() === id.toLowerCase()),
     [sessions]
   );
 

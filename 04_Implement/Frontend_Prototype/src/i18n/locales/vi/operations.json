@@ -273,7 +273,7 @@
   },
   "extraSpa": {
     "title": "Đặt Dịch Vụ Spa Bổ Sung",
-    "subtitle": "Đặt thêm liệu trình spa cho khách hàng đang lưu trú. Chi phí sẽ được ghi nhận vào hóa đơn lưu trú.",
+    "subtitle": "Đặt thêm dịch vụ spa cho khách hàng đang lưu trú. Chi phí sẽ được ghi nhận chờ kết toán hồ sơ khi trả phòng.",
     "selectCustomer": "Chọn Khách Hàng",
     "noCheckedIn": "Không có khách hàng nào đang trong kỳ lưu trú.",
     "selectTreatment": "Chọn Liệu Trình Bổ Sung",
@@ -288,7 +288,7 @@
     "therapist": "Chuyên Viên",
     "room": "Phòng Trị Liệu",
     "processing": "Đang xử lý...",
-    "booked": "Đã Đặt Thành Công ✓",
+    "booked": "Đã đặt phiên trị liệu ✓",
     "confirmAndCharge": "Xác Nhận & Ghi Vào Hóa Đơn",
     "step1Title": "1. Khách Hàng / Kỳ Nghỉ Đang Hoạt Động",
     "step2Title": "2. Chọn Trị Liệu Spa",
@@ -301,7 +301,28 @@
     "statusReady": "Đã Xác Thực & Sẵn Sàng Đặt",
     "statusIncomplete": "Đang Chờ Lựa Chọn",
     "confirmBtn": "Xác Nhận Đặt Spa Bổ Sung",
-    "confirmNote": "Đã xác thực tài nguyên thành công. Chi phí sẽ được ghi trực tiếp vào folio khách hàng khi xác nhận."
+    "confirmNote": "Đã xác thực tài nguyên thành công. Chi phí sẽ được ghi trực tiếp vào folio khách hàng khi xác nhận.",
+    "selectCustomerPrompt": "Chọn khách hàng đang lưu trú đã hoàn tất nhận phòng",
+    "selectTreatmentPrompt": "Chọn liệu trình trị liệu bổ sung",
+    "selectSlotPrompt": "Chọn ngày và khung giờ trống khả dụng",
+    "atomicResourcesLocked": "Chuyên viên và phòng trị liệu được khóa đồng bộ",
+    "step4DisabledHint": "Điều kiện: Chọn khung giờ ở Bước 3 để phân bổ tài nguyên",
+    "licensedSpecialist": "Chuyên viên trị liệu chứng chỉ",
+    "sanitizedSuite": "Phòng trị liệu riêng biệt",
+    "resourcesPlaceholder": "Chuyên viên và phòng trị liệu sẽ được khóa sau khi chọn khung giờ.",
+    "readyToPost": "Đã xác thực tính khả dụng đồng bộ. Sẵn sàng ghi nhận chuyển tiếp hồ sơ thanh toán.",
+    "completeStepsPrompt": "Vui lòng hoàn thành các bước trước để xác nhận.",
+    "atomicCheckPassed": "Đã xác thực khả dụng đồng bộ",
+    "atomicCheckPassedDesc": "Cả chuyên viên và phòng trị liệu đều trống. Phiên trị liệu sẽ được ghi nhận chờ kết toán hồ sơ.",
+    "validationPending": "Chưa hoàn tất xác thực",
+    "missingFields": "Còn thiếu thông tin:",
+    "bookingRef": "Mã đặt phòng",
+    "schedule": "Thời gian đã xếp",
+    "folioCharge": "Chờ kết toán hồ sơ",
+    "folioStatusNote": "Chờ chuyển tiếp hồ sơ thanh toán — sẽ được tổng hợp và quyết toán khi trả phòng.",
+    "readyToConfirm": "Đã đáp ứng đủ điều kiện",
+    "incompletePill": "Chưa chọn đủ thông tin",
+    "confirmAction": "Xác nhận phiên trị liệu thêm"
   },
   "therapist": {
     "dashboard": "Bảng Điều Khiển Chuyên Viên",
@@ -366,6 +387,7 @@
     "colTreatment": "TRỊ LIỆU",
     "colRoom": "PHÒNG TRỊ LIỆU",
     "colStatus": "TRẠNG THÁI",
-    "colAction": "THAO TÁC"
+    "colAction": "THAO TÁC",
+    "start": "Bắt đầu"
   }
 }

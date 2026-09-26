@@ -68,7 +68,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.therapistDashboard', defaultLabel: 'Therapist Dashboard', path: '/therapist/dashboard', icon: LayoutDashboard },
         { labelKey: 'operations.sidebar.dailyWorkSchedule', defaultLabel: 'Daily Work Schedule', path: '/therapist/schedule', icon: CalendarCheck },
-        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Session Details & Notes', path: '/therapist/sessions/ses-301', icon: HeartHandshake }
+        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Session Details & Notes', path: '/therapist/sessions/SES-301', icon: HeartHandshake }
       ]
     }
   ],

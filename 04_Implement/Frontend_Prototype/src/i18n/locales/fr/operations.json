@@ -273,7 +273,7 @@
   },
   "extraSpa": {
     "title": "Réservation Manuelle de Soin Spa",
-    "subtitle": "Réservez un soin supplémentaire pour un client en séjour. Les frais seront reportés sur son folio.",
+    "subtitle": "Réservez un soin spa supplémentaire pour un client séjournant. Les frais seront enregistrés en attente de transfert sur le folio.",
     "selectCustomer": "Sélectionner le client",
     "noCheckedIn": "Aucun client actuellement en séjour.",
     "selectTreatment": "Choisir le soin supplémentaire",
@@ -288,7 +288,7 @@
     "therapist": "Thérapeute",
     "room": "Salle",
     "processing": "Traitement...",
-    "booked": "Réservé ✓",
+    "booked": "Séance de spa réservée ✓",
     "confirmAndCharge": "Confirmer & Imputer au Folio",
     "step1Title": "1. Client / Séjour Actif",
     "step2Title": "2. Sélection du Soin Spa",
@@ -301,7 +301,28 @@
     "statusReady": "Validé & Prêt à Réserver",
     "statusIncomplete": "Sélection en attente",
     "confirmBtn": "Confirmer la Séance Spa Supplémentaire",
-    "confirmNote": "Validation atomique confirmée. Les frais seront imputés au folio du client."
+    "confirmNote": "Validation atomique confirmée. Les frais seront imputés au folio du client.",
+    "selectCustomerPrompt": "Sélectionnez un client séjournant actuellement enregistré",
+    "selectTreatmentPrompt": "Choisissez un soin spa supplémentaire",
+    "selectSlotPrompt": "Sélectionnez la date du soin et le créneau disponible",
+    "atomicResourcesLocked": "Thérapeute et suite de soin verrouillés de manière atomique",
+    "step4DisabledHint": "Condition préalable : choisissez un créneau à l'Étape 3 pour attribuer les ressources",
+    "licensedSpecialist": "Spécialiste spa certifié",
+    "sanitizedSuite": "Sanctuaire de thérapie privé",
+    "resourcesPlaceholder": "Le thérapeute et la suite seront verrouillés après sélection du créneau.",
+    "readyToPost": "Disponibilité atomique vérifiée. Prêt pour enregistrement en attente de folio.",
+    "completeStepsPrompt": "Veuillez compléter les étapes précédentes pour confirmer.",
+    "atomicCheckPassed": "Disponibilité atomique vérifiée",
+    "atomicCheckPassedDesc": "Le thérapeute et la suite sont libres. La séance sera enregistrée en attente de transfert sur le folio.",
+    "validationPending": "Validation incomplète",
+    "missingFields": "Sélections manquantes :",
+    "bookingRef": "Réf. Réservation",
+    "schedule": "Horaire programmé",
+    "folioCharge": "En attente d'inscription au folio",
+    "folioStatusNote": "En attente d'inscription au folio — sera finalisé et réglé lors du départ.",
+    "readyToConfirm": "Toutes les conditions préalables sont valides",
+    "incompletePill": "Sélections incomplètes",
+    "confirmAction": "Confirmer la séance de spa supplémentaire"
   },
   "therapist": {
     "dashboard": "Tableau de Bord Thérapeute",
@@ -366,6 +387,7 @@
     "colTreatment": "SOIN",
     "colRoom": "SUITE / SALLE",
     "colStatus": "STATUT",
-    "colAction": "ACTION"
+    "colAction": "ACTION",
+    "start": "Démarrer"
   }
 }
