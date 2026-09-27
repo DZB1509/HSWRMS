@@ -36,7 +36,9 @@
     "permissionMatrix": "権限マトリクス",
     "managerDelegation": "権限委任設定",
     "sensitiveDataAuditLog": "機密データ監査ログ",
-    "systemOverviewDashboard": "システム稼働概要"
+    "systemOverviewDashboard": "システム稼働概要",
+    "manager": "マネージャー",
+    "admin": "管理者"
   },
   "payment": {
     "requiredDeposit": "所要デポジット",
@@ -488,8 +490,8 @@
       "outstandingSub": "チェックアウト時に回収予定",
       "chartComposition": "部門別収益シェア",
       "chartVolume": "サービス別精算済収益",
-      "tableTitle": "精算履歴・監査ログ",
-      "itemCount": "{{count}} 件の明細を表示中",
+      "tableTitle": "収益精算監査ログ",
+      "itemCount": "追跡可能な {{count}} 件の明細を表示中",
       "colRef": "ソースID",
       "colType": "種別",
       "colDesc": "項目概要",
@@ -498,7 +500,14 @@
       "colStatus": "精算状況",
       "retreatPkg": "リトリート",
       "spaTherapies": "スパセラピー",
-      "fnbDining": "飲食"
+      "fnbDining": "飲食",
+      "currencyVnd": "通貨単位: VND",
+      "consolidatedTotal": "総合計",
+      "retreatStream": "リトリートプラン",
+      "spaStream": "スパ・セラピー",
+      "fnbStream": "養生ダイニング",
+      "revenueLabel": "売上",
+      "amountLabel": "金額"
     },
     "occupancy": {
       "title": "ヴィラ稼働状況・稼働率レポート",
@@ -529,7 +538,15 @@
       "colStatus": "ステータス",
       "colBookingRef": "予約コード",
       "colCustomer": "宿泊者",
-      "unoccupied": "空室"
+      "unoccupied": "空室",
+      "reserved": "予約済み",
+      "inReserved": "予約済",
+      "reservedBadge": "到着予定",
+      "inHouseBadge": "滞在中",
+      "departedGuest": "出発済み (前回の滞在)",
+      "priorStay": "前回の滞在",
+      "prior": "前回",
+      "vacantMaintenance": "空室 · メンテナンス中"
     },
     "therapists": {
       "title": "セラピスト稼働率レポート",
@@ -553,12 +570,21 @@
       "colMinutes": "施術時間",
       "totalHours": "合計予約施術時間（時間）",
       "hoursDerivedFactual": "予約スケジュールに基づく実績集計値",
-      "colHours": "施術時間（時間）"
+      "colHours": "施術時間（時間）",
+      "totalTreatmentMinutes": "総施術分数",
+      "axisMinutes": "分",
+      "sessionsUnit": "セッション"
     }
   },
   "operations": {
     "sidebar": {
       "therapistUtilization": "セラピスト稼働率"
     }
+  },
+  "topbar": {
+    "managerScope": "マネージャー限定権限",
+    "adminClearance": "システム管理者権限",
+    "filterScope": "フィルター",
+    "export": "レポート出力"
   }
 }

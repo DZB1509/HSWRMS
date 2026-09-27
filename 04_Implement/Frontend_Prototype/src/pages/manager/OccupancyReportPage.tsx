@@ -40,10 +40,33 @@ export const OccupancyReportPage: React.FC = () => {
 
   const pieData = [
     { name: t('manager.occupancy.occupied', 'Occupied'), value: analytics.occupiedCount, color: '#3b82f6' },
+    { name: t('manager.occupancy.reserved', 'Reserved'), value: analytics.reservedCount, color: '#8b5cf6' },
     { name: t('manager.occupancy.available', 'Ready / Available'), value: analytics.readyCount, color: '#10b981' },
     { name: t('manager.occupancy.cleaning', 'Cleaning / Sanitizing'), value: analytics.cleaningCount, color: '#f59e0b' },
     { name: t('manager.occupancy.maintenance', 'Maintenance'), value: analytics.maintenanceCount, color: '#6b7280' },
   ].filter((d) => d.value > 0);
+
+  const getVillaStatusLabel = (status: string) => {
+    switch (status) {
+      case 'occupied': return t('status.occupied', t('common.status.occupied', 'Occupied'));
+      case 'reserved': return t('status.reserved', t('common.status.reserved', 'Reserved'));
+      case 'ready': return t('status.ready', t('common.status.ready', 'Ready / Available'));
+      case 'cleaning': return t('status.cleaning', t('common.status.cleaning', 'Cleaning'));
+      case 'maintenance': return t('status.maintenance', t('common.status.maintenance', 'Maintenance'));
+      default: return status.toUpperCase();
+    }
+  };
+
+  const getStatusPillClass = (status: string) => {
+    switch (status) {
+      case 'occupied': return 'deposit_paid';
+      case 'reserved': return 'included';
+      case 'ready': return 'settled';
+      case 'cleaning': return 'pending_settlement';
+      case 'maintenance': return 'refunded';
+      default: return 'settled';
+    }
+  };
 
   return (
     <div className="hsw-manager-page" style={{ padding: 'var(--space-6)' }}>
@@ -120,7 +143,7 @@ export const OccupancyReportPage: React.FC = () => {
             {analytics.occupancyRate.toFixed(1)}%
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {analytics.cleaningCount} {t('manager.occupancy.inCleaning', 'in cleaning')} · {analytics.maintenanceCount} {t('manager.occupancy.inMaintenance', 'maintenance')}
+            {analytics.reservedCount} {t('manager.occupancy.inReserved', 'reserved')} · {analytics.cleaningCount} {t('manager.occupancy.inCleaning', 'in cleaning')} · {analytics.maintenanceCount} {t('manager.occupancy.inMaintenance', 'maintenance')}
           </div>
         </div>
       </div>
@@ -168,6 +191,15 @@ export const OccupancyReportPage: React.FC = () => {
               </span>
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#1e40af' }}>
                 {analytics.occupiedCount} / {analytics.totalVillas} ({analytics.occupancyRate.toFixed(1)}%)
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', backgroundColor: '#f5f3ff', borderRadius: 'var(--radius-md)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#6d28d9' }}>
+                {t('manager.occupancy.reserved', 'Reserved')}
+              </span>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#6d28d9' }}>
+                {analytics.reservedCount} / {analytics.totalVillas} ({((analytics.reservedCount / analytics.totalVillas) * 100).toFixed(1)}%)
               </span>
             </div>
 
@@ -231,6 +263,7 @@ export const OccupancyReportPage: React.FC = () => {
             >
               <option value="all">{t('manager.occupancy.allStatuses', 'All Statuses')}</option>
               <option value="occupied">{t('manager.occupancy.occupied', 'Occupied')}</option>
+              <option value="reserved">{t('manager.occupancy.reserved', 'Reserved')}</option>
               <option value="ready">{t('manager.occupancy.ready', 'Ready / Available')}</option>
               <option value="cleaning">{t('manager.occupancy.cleaning', 'Cleaning')}</option>
               <option value="maintenance">{t('manager.occupancy.maintenance', 'Maintenance')}</option>
@@ -245,8 +278,8 @@ export const OccupancyReportPage: React.FC = () => {
                 <th>{t('manager.occupancy.colVilla', 'Villa Number')}</th>
                 <th>{t('manager.occupancy.colCategory', 'Category')}</th>
                 <th>{t('manager.occupancy.colStatus', 'Operational Status')}</th>
-                <th>{t('manager.occupancy.colBookingRef', 'Active Stay Ref')}</th>
-                <th>{t('manager.occupancy.colCustomer', 'Assigned In-House')}</th>
+                <th>{t('manager.occupancy.colBookingRef', 'Stay Reference')}</th>
+                <th>{t('manager.occupancy.colCustomer', 'Current Occupant / Allocation')}</th>
               </tr>
             </thead>
             <tbody>
@@ -270,32 +303,51 @@ export const OccupancyReportPage: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      <span
-                        className={`hsw-status-pill ${
-                          villa.status === 'occupied'
-                            ? 'deposit_paid'
-                            : villa.status === 'ready'
-                            ? 'settled'
-                            : villa.status === 'cleaning'
-                            ? 'pending_settlement'
-                            : 'included'
-                        }`}
-                      >
-                        {villa.status.toUpperCase()}
+                      <span className={`hsw-status-pill ${getStatusPillClass(villa.status)}`}>
+                        {getVillaStatusLabel(villa.status)}
                       </span>
                     </td>
                     <td>
-                      {villa.bookingRef ? (
-                        <span className="hsw-source-badge">{villa.bookingRef}</span>
+                      {villa.status === 'occupied' && villa.activeBookingRef ? (
+                        <span className="hsw-source-badge">{villa.activeBookingRef}</span>
+                      ) : villa.status === 'reserved' && villa.bookingRef ? (
+                        <span className="hsw-source-badge" style={{ backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#6d28d9', borderColor: 'rgba(139, 92, 246, 0.3)' }}>
+                          {villa.bookingRef}
+                        </span>
+                      ) : villa.previousBookingRef ? (
+                        <span className="hsw-source-badge" style={{ opacity: 0.75, fontStyle: 'italic' }} title={t('manager.occupancy.priorStay', 'Prior Stay')}>
+                          {villa.previousBookingRef} <span style={{ fontSize: '10px' }}>({t('manager.occupancy.prior', 'Prior')})</span>
+                        </span>
                       ) : (
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
                     <td>
-                      {villa.customerName ? (
-                        <span style={{ fontWeight: 500 }}>{villa.customerName}</span>
+                      {villa.status === 'occupied' && villa.activeCustomerName ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{villa.activeCustomerName}</span>
+                          <span className="hsw-status-pill deposit_paid" style={{ fontSize: '10px', padding: '1px 6px' }}>
+                            {t('manager.occupancy.inHouseBadge', 'In-House')}
+                          </span>
+                        </div>
+                      ) : villa.status === 'reserved' && villa.customerName ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 500, color: '#6d28d9' }}>{villa.customerName}</span>
+                          <span className="hsw-status-pill included" style={{ fontSize: '10px', padding: '1px 6px' }}>
+                            {t('manager.occupancy.reservedBadge', 'Incoming')}
+                          </span>
+                        </div>
+                      ) : villa.status === 'cleaning' && villa.previousCustomerName ? (
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>{t('manager.occupancy.departedGuest', 'Departed (Last Stay)')}: </span>
+                          <span style={{ fontStyle: 'italic' }}>{villa.previousCustomerName}</span>
+                        </div>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{t('manager.occupancy.unoccupied', 'Unoccupied')}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                          {villa.status === 'maintenance'
+                            ? t('manager.occupancy.vacantMaintenance', 'Vacant · Maintenance')
+                            : t('manager.occupancy.unoccupied', 'Unoccupied')}
+                        </span>
                       )}
                     </td>
                   </tr>

@@ -590,23 +590,34 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const getOccupancyAnalytics = useCallback(() => {
     const totalVillas = villas.length;
     const occupiedCount = villas.filter((v) => v.status === 'occupied').length;
+    const reservedCount = villas.filter((v) => v.status === 'reserved').length;
     const readyCount = villas.filter((v) => v.status === 'ready').length;
     const cleaningCount = villas.filter((v) => v.status === 'cleaning').length;
     const maintenanceCount = villas.filter((v) => v.status === 'maintenance').length;
-    const occupancyRate = totalVillas > 0 ? Math.round((occupiedCount / totalVillas) * 100) : 0;
+    // Mathematically exact calculation without premature integer rounding (e.g. 1/8 * 100 = 12.5%)
+    const occupancyRate = totalVillas > 0 ? (occupiedCount / totalVillas) * 100 : 0;
 
-    const villaDetails = villas.map((v) => ({
-      id: v.id,
-      code: v.code,
-      category: v.category,
-      status: v.status,
-      customerName: v.currentCustomerName,
-      bookingRef: v.currentBookingRef,
-    }));
+    const villaDetails = villas.map((v) => {
+      const isOccupied = v.status === 'occupied';
+      const isReserved = v.status === 'reserved';
+      return {
+        id: v.id,
+        code: v.code,
+        category: v.category,
+        status: v.status,
+        customerName: isOccupied ? v.currentCustomerName : isReserved ? v.nextArrival?.customerName || v.currentCustomerName : undefined,
+        bookingRef: isOccupied ? v.currentBookingRef : isReserved ? v.nextArrival?.bookingRef || v.currentBookingRef : undefined,
+        activeCustomerName: isOccupied ? v.currentCustomerName : undefined,
+        activeBookingRef: isOccupied ? v.currentBookingRef : undefined,
+        previousCustomerName: !isOccupied && !isReserved && v.currentCustomerName ? v.currentCustomerName : undefined,
+        previousBookingRef: !isOccupied && !isReserved && v.currentBookingRef ? v.currentBookingRef : undefined,
+      };
+    });
 
     return {
       totalVillas,
       occupiedCount,
+      reservedCount,
       readyCount,
       cleaningCount,
       maintenanceCount,

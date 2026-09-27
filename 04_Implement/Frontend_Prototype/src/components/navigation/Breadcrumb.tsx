@@ -22,11 +22,11 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
 
     // Top-level role / module namespaces
     if (s === 'fb') return 'F&B';
-    if (s === 'customer') return 'Customer';
-    if (s === 'receptionist') return 'Receptionist';
-    if (s === 'therapist') return 'Therapist';
-    if (s === 'manager') return 'Manager';
-    if (s === 'admin') return 'Admin';
+    if (s === 'customer') return t('common:roles.customer', 'Customer');
+    if (s === 'receptionist') return t('common:roles.receptionist', 'Receptionist');
+    if (s === 'therapist') return t('common:roles.therapist', 'Therapist');
+    if (s === 'manager') return t('operations:sidebar.manager', 'Manager');
+    if (s === 'admin') return t('operations:sidebar.admin', 'Admin');
 
     // Route-aware dashboard labels
     if (s === 'dashboard') {
@@ -70,7 +70,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
     // Manager / Admin sub-routes
     if (s === 'revenue') return t('operations:sidebar.revenueAnalytics', 'Revenue Analytics');
     if (s === 'occupancy') return t('operations:sidebar.occupancyReports', 'Occupancy Reports');
-    if (s === 'utilization') return t('operations:sidebar.therapistUtilization', 'Therapist Utilization');
+    if (s === 'therapist-utilization' || s === 'utilization') return t('operations:sidebar.therapistUtilization', 'Therapist Utilization');
     if (s === 'compliance') return t('operations:sidebar.governanceCompliance', 'Governance & Compliance');
     if (s === 'police-export') return t('operations:sidebar.systemOverviewPoliceExport', 'System Overview & Police Export');
     if (s === 'accounts') return t('operations:sidebar.staffAccounts', 'Staff Accounts');

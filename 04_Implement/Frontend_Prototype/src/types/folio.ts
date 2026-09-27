@@ -149,6 +149,7 @@ export interface FolioContextType {
   getOccupancyAnalytics: () => {
     totalVillas: number;
     occupiedCount: number;
+    reservedCount: number;
     readyCount: number;
     cleaningCount: number;
     maintenanceCount: number;
@@ -160,6 +161,10 @@ export interface FolioContextType {
       status: string;
       customerName?: string;
       bookingRef?: string;
+      activeCustomerName?: string;
+      activeBookingRef?: string;
+      previousCustomerName?: string;
+      previousBookingRef?: string;
     }[];
   };
   getTherapistUtilizationAnalytics: () => {

@@ -23,7 +23,7 @@ import { formatVND } from '../../i18n';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 
 export const RevenueDashboardPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { getRevenueAnalytics, activeFolio } = useFolio();
 
   const analytics = getRevenueAnalytics();
@@ -54,6 +54,43 @@ export const RevenueDashboardPage: React.FC = () => {
       amount: analytics.fnbRevenue,
     },
   ];
+
+  const getStreamLabel = (type: string) => {
+    switch (type) {
+      case 'retreat':
+        return t('manager.revenue.retreatStream', 'Retreat Package');
+      case 'spa':
+        return t('manager.revenue.spaStream', 'Spa Therapy');
+      case 'fnb':
+        return t('manager.revenue.fnbStream', 'Dining');
+      default:
+        return type.toUpperCase();
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'settled':
+        return t('status.settled', t('common.status.settled', 'Settled'));
+      case 'pending_settlement':
+        return t('status.pendingSettlement', t('common.status.pendingSettlement', 'Pending Settlement'));
+      case 'included':
+        return t('status.included', t('common.status.included', 'Included'));
+      default:
+        return status.replace('_', ' ');
+    }
+  };
+
+  const localizedBreakdown = analytics.categoryBreakdown.map((item) => {
+    let name = item.name;
+    if (item.name === 'Retreat Packages') name = t('manager.revenue.retreatPkg', 'Retreat Packages');
+    else if (item.name === 'Spa & Therapies') name = t('manager.revenue.spaTherapies', 'Spa & Therapies');
+    else if (item.name === 'Nourishing Dining') name = t('manager.revenue.fnbDining', 'Nourishing Dining');
+    return {
+      ...item,
+      name,
+    };
+  });
 
   return (
     <div className="hsw-manager-page" style={{ padding: 'var(--space-6)' }}>
@@ -142,13 +179,13 @@ export const RevenueDashboardPage: React.FC = () => {
         <div className="hsw-manager-chart-card">
           <div className="hsw-manager-chart-title">
             <span>{t('manager.revenue.chartComposition', 'Revenue Share by Department')}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>VND Currency</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manager.revenue.currencyVnd', 'VND Currency')}</span>
           </div>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  data={analytics.categoryBreakdown}
+                  data={localizedBreakdown}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
@@ -157,12 +194,12 @@ export const RevenueDashboardPage: React.FC = () => {
                   innerRadius={50}
                   paddingAngle={4}
                 >
-                  {analytics.categoryBreakdown.map((entry, index) => (
+                  {localizedBreakdown.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [formatVND(Number(value) || 0), 'Revenue']}
+                  formatter={(value: any) => [formatVND(Number(value) || 0), t('manager.revenue.revenueLabel', 'Revenue')]}
                 />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
@@ -174,7 +211,7 @@ export const RevenueDashboardPage: React.FC = () => {
         <div className="hsw-manager-chart-card">
           <div className="hsw-manager-chart-title">
             <span>{t('manager.revenue.chartVolume', 'Settled Revenue by Stream')}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Consolidated Total</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manager.revenue.consolidatedTotal', 'Consolidated Total')}</span>
           </div>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
@@ -186,7 +223,7 @@ export const RevenueDashboardPage: React.FC = () => {
                   tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
                 />
                 <Tooltip
-                  formatter={(value: any) => [formatVND(Number(value) || 0), 'Amount']}
+                  formatter={(value: any) => [formatVND(Number(value) || 0), t('manager.revenue.amountLabel', 'Amount')]}
                 />
                 <Bar dataKey="amount" fill="var(--accent-forest)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -200,7 +237,7 @@ export const RevenueDashboardPage: React.FC = () => {
         <div className="hsw-folio-section-header">
           <div className="hsw-folio-section-title">
             <Receipt size={18} style={{ color: 'var(--actor-manager)' }} />
-            <span>{t('manager.revenue.tableTitle', 'Current Operations Settlement Audit Log')}</span>
+            <span>{t('manager.revenue.tableTitle', 'Revenue Settlement Audit Log')}</span>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
             {t('manager.revenue.itemCount', 'Showing {{count}} traceable line items', { count: totalItems })}
@@ -220,33 +257,40 @@ export const RevenueDashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <span className="hsw-source-badge">{item.sourceId}</span>
-                  </td>
-                  <td>
-                    <span style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                      {item.sourceType}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{item.title?.en || item.title?.vi}</div>
-                    {item.subtitle && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{item.subtitle}</div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {item.totalAmount === 0 ? '0 VND (Included)' : formatVND(item.totalAmount)}
-                  </td>
-                  <td>
-                    <span className={`hsw-status-pill ${item.status}`}>
-                      {item.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {paginatedItems.map((item) => {
+                const localizedTitle =
+                  (item.title as any)?.[i18n.language] ||
+                  item.title?.vi ||
+                  item.title?.en ||
+                  '';
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <span className="hsw-source-badge">{item.sourceId}</span>
+                    </td>
+                    <td>
+                      <span style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        {getStreamLabel(item.sourceType)}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{localizedTitle}</div>
+                      {item.subtitle && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{item.subtitle}</div>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {item.totalAmount === 0 ? `0 VND (${t('status.included', t('common.status.included', 'Included'))})` : formatVND(item.totalAmount)}
+                    </td>
+                    <td>
+                      <span className={`hsw-status-pill ${item.status}`}>
+                        {getStatusLabel(item.status)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

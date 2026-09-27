@@ -34,13 +34,13 @@ export const INITIAL_VILLAS: Villa[] = [
     bedType: '1 King Bed',
     status: 'ready',
     housekeeping: 'clean',
-    currentBookingRef: 'HSW-84920',
+    currentBookingRef: 'HSW-88192',
     currentCustomerName: 'Eleanor Vance',
     nextArrival: {
       date: '2026-09-24',
       time: '14:30',
       customerName: 'Eleanor Vance',
-      bookingRef: 'HSW-84920',
+      bookingRef: 'HSW-88192',
     },
     features: ['Plunge Pool', 'Lotus Pond View', 'Organic Herbal Bar', 'Yoga Mat Pavilion'],
     lastCleanedAt: '2026-09-24T11:30:00Z',
@@ -167,7 +167,7 @@ export const INITIAL_VILLAS: Villa[] = [
 export const INITIAL_ARRIVALS: ArrivalRecord[] = [
   {
     id: 'ARR-01',
-    bookingReference: 'HSW-84920',
+    bookingReference: 'HSW-88192',
     customerId: 'usr-cust-01',
     customerName: 'Eleanor Vance',
     customerPhone: '+84 901 234 567',

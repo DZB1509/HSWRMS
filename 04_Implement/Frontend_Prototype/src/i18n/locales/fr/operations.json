@@ -36,7 +36,9 @@
     "permissionMatrix": "Matrice des Droits",
     "managerDelegation": "Délégation de Pouvoirs",
     "sensitiveDataAuditLog": "Journal d'Audit des Données",
-    "systemOverviewDashboard": "Vue Générale du Système"
+    "systemOverviewDashboard": "Vue Générale du Système",
+    "manager": "Manager",
+    "admin": "Admin"
   },
   "payment": {
     "requiredDeposit": "Acompte Requis",
@@ -488,7 +490,7 @@
       "outstandingSub": "À percevoir au départ",
       "chartComposition": "Répartition par Département",
       "chartVolume": "Revenus Réglés par Flux",
-      "tableTitle": "Journal des Règlements",
+      "tableTitle": "Journal d'Audit du Règlement des Revenus",
       "itemCount": "Affichage de {{count}} lignes traçables",
       "colRef": "ID Source",
       "colType": "Flux",
@@ -498,7 +500,14 @@
       "colStatus": "État de Règlement",
       "retreatPkg": "Forfaits Séjour",
       "spaTherapies": "Thérapies Spa",
-      "fnbDining": "Restauration"
+      "fnbDining": "Restauration",
+      "currencyVnd": "Devise : VND",
+      "consolidatedTotal": "Total Consolidé",
+      "retreatStream": "Forfaits Séjour",
+      "spaStream": "Soins Spa",
+      "fnbStream": "Restauration",
+      "revenueLabel": "Revenus",
+      "amountLabel": "Montant"
     },
     "occupancy": {
       "title": "Rapport d'Occupation & Capacité des Villas",
@@ -529,7 +538,15 @@
       "colStatus": "Statut",
       "colBookingRef": "Réf. Séjour Actif",
       "colCustomer": "Client Assigné",
-      "unoccupied": "Inoccupée"
+      "unoccupied": "Inoccupée",
+      "reserved": "Réservée",
+      "inReserved": "réservée",
+      "reservedBadge": "À Venir",
+      "inHouseBadge": "En Séjour",
+      "departedGuest": "Départ Effectué (Dernier séjour)",
+      "priorStay": "Séjour Antérieur",
+      "prior": "Antérieur",
+      "vacantMaintenance": "Vacante · Maintenance"
     },
     "therapists": {
       "title": "Rapport d'Utilisation des Thérapeutes",
@@ -553,12 +570,21 @@
       "colMinutes": "Durée de Soin",
       "totalHours": "Heures de Soin Réservées",
       "hoursDerivedFactual": "Somme factuelle des séances de soins planifiées",
-      "colHours": "Heures de Soin"
+      "colHours": "Heures de Soin",
+      "totalTreatmentMinutes": "Total des Minutes de Soin",
+      "axisMinutes": "Minutes",
+      "sessionsUnit": "séances"
     }
   },
   "operations": {
     "sidebar": {
       "therapistUtilization": "Utilisation des Thérapeutes"
     }
+  },
+  "topbar": {
+    "managerScope": "Périmètre Restreint Manager",
+    "adminClearance": "Habilitation Administrateur",
+    "filterScope": "Filtrer",
+    "export": "Exporter"
   }
 }

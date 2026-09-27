@@ -251,7 +251,7 @@
       "outstandingSub": "Due upon checkout handover",
       "chartComposition": "Revenue Share by Department",
       "chartVolume": "Settled Revenue by Stream",
-      "tableTitle": "Current Operations Settlement Audit Log",
+      "tableTitle": "Revenue Settlement Audit Log",
       "itemCount": "Showing {{count}} traceable line items",
       "colRef": "Source ID",
       "colType": "Stream",
@@ -261,7 +261,14 @@
       "colStatus": "Settlement State",
       "retreatPkg": "Retreat Packages",
       "spaTherapies": "Spa Therapies",
-      "fnbDining": "F&B Dining"
+      "fnbDining": "F&B Dining",
+      "currencyVnd": "VND Currency",
+      "consolidatedTotal": "Consolidated Total",
+      "retreatStream": "Retreat Package",
+      "spaStream": "Spa Therapy",
+      "fnbStream": "Dining",
+      "revenueLabel": "Revenue",
+      "amountLabel": "Amount"
     },
     "occupancy": {
       "title": "Villa Occupancy & Capacity Report",
@@ -292,7 +299,15 @@
       "colStatus": "Operational Status",
       "colBookingRef": "Active Stay Ref",
       "colCustomer": "Assigned In-House",
-      "unoccupied": "Unoccupied"
+      "unoccupied": "Unoccupied",
+      "reserved": "Reserved",
+      "inReserved": "reserved",
+      "reservedBadge": "Incoming",
+      "inHouseBadge": "In-House",
+      "departedGuest": "Departed (Last Stay)",
+      "priorStay": "Prior Stay",
+      "prior": "Prior",
+      "vacantMaintenance": "Vacant · Maintenance"
     },
     "therapists": {
       "title": "Therapist Utilization Report",
@@ -316,12 +331,25 @@
       "colMinutes": "Treatment Time",
       "totalHours": "Booked Treatment Hours",
       "hoursDerivedFactual": "Factual sum of scheduled treatments",
-      "colHours": "Treatment Hours"
+      "colHours": "Treatment Hours",
+      "totalTreatmentMinutes": "Total Treatment Minutes",
+      "axisMinutes": "Minutes",
+      "sessionsUnit": "sessions"
     }
   },
   "operations": {
     "sidebar": {
       "therapistUtilization": "Therapist Utilization"
     }
+  },
+  "status": {
+    "settled": "Settled",
+    "pendingSettlement": "Pending Settlement",
+    "included": "Included",
+    "maintenance": "Maintenance",
+    "cleaning": "Cleaning & Sanitizing",
+    "occupied": "Occupied",
+    "reserved": "Reserved",
+    "ready": "Ready for Arrival"
   }
 }

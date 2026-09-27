@@ -1,21 +1,49 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { OperationalSidebar } from '../../components/navigation/OperationalSidebar';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
+import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
 import { useAuth } from '../../hooks/useAuth';
-import { ShieldAlert, Download, Filter } from 'lucide-react';
+import { ShieldAlert, Download, Filter, Menu, X } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 
 export const ManagerAdminLayout: React.FC = () => {
   const { role } = useAuth();
+  const { t } = useTranslation(['operations', 'common']);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <div className="hsw-operational-layout">
-      <OperationalSidebar />
+      {/* Mobile drawer backdrop */}
+      <div
+        className={`hsw-sidebar-backdrop ${sidebarOpen ? 'is-visible' : ''}`}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+
+      <OperationalSidebar mobileOpen={sidebarOpen} onCloseMobile={closeSidebar} />
+
       <div className="hsw-operational-main">
         <header className="hsw-operational-topbar">
-          <Breadcrumb />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+            {/* Mobile hamburger */}
+            <button
+              type="button"
+              className="hsw-ops-mobile-toggle"
+              onClick={toggleSidebar}
+              aria-label={sidebarOpen ? t('operations.common.closeMenu', 'Close menu') : t('operations.common.openMenu', 'Open menu')}
+            >
+              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+            <Breadcrumb />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            {/* 1. Manager Scope Badge */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -27,16 +55,28 @@ export const ManagerAdminLayout: React.FC = () => {
               fontSize: '11px',
               fontWeight: 700,
               textTransform: 'uppercase',
-              letterSpacing: '0.06em'
+              letterSpacing: '0.06em',
+              whiteSpace: 'nowrap'
             }}>
               <ShieldAlert size={13} />
-              <span>{role === 'admin' ? 'Administrator Clearance' : 'Manager Limited Scope'}</span>
+              <span>
+                {role === 'admin'
+                  ? t('topbar.adminClearance', 'Administrator Clearance')
+                  : t('topbar.managerScope', 'Manager Limited Scope')}
+              </span>
             </div>
+
+            {/* 2. Language Selector (Shared for Manager & future Admin) */}
+            <LanguageSwitcher />
+
+            {/* 3. Filter Scope */}
             <Button variant="secondary" size="sm" icon={<Filter size={13} />}>
-              Filter Scope
+              {t('topbar.filterScope', 'Filter Scope')}
             </Button>
+
+            {/* 4. Export */}
             <Button variant="tertiary" size="sm" icon={<Download size={13} />}>
-              Export
+              {t('topbar.export', 'Export')}
             </Button>
           </div>
         </header>

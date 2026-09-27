@@ -251,17 +251,24 @@
       "outstandingSub": "Sẽ thu khi khách làm thủ tục trả phòng",
       "chartComposition": "Tỷ Trọng Doanh Thu Theo Bộ Phận",
       "chartVolume": "Doanh Thu Theo Luồng Dịch Vụ",
-      "tableTitle": "Nhật Ký Quyết Toán Chi Phí Hoạt Động",
-      "itemCount": "Hiển thị {{count}} khoản chi phí có thể truy xuất",
+      "tableTitle": "Nhật Ký Quyết Toán Doanh Thu",
+      "itemCount": "Hiển thị {{count}} giao dịch có thể truy xuất",
       "colRef": "Mã Nguồn",
       "colType": "Bộ Phận",
-      "colDesc": "Nội Dung Chi Phí",
+      "colDesc": "Diễn Giải Giao Dịch",
       "colQty": "SL",
       "colAmount": "Tổng Tiền (VND)",
       "colStatus": "Trạng Thái Quyết Toán",
       "retreatPkg": "Gói Nghỉ Dưỡng",
       "spaTherapies": "Trị Liệu Spa",
-      "fnbDining": "Ẩm Thực Dưỡng Sinh"
+      "fnbDining": "Ẩm Thực Dưỡng Sinh",
+      "currencyVnd": "Đơn Vị: VND",
+      "consolidatedTotal": "Tổng Hợp Toàn Khu",
+      "retreatStream": "Gói Nghỉ Dưỡng",
+      "spaStream": "Trị Liệu Spa",
+      "fnbStream": "Ẩm Thực",
+      "revenueLabel": "Doanh Thu",
+      "amountLabel": "Số Tiền"
     },
     "occupancy": {
       "title": "Báo Cáo Công Suất & Tình Trạng Biệt Thự",
@@ -292,7 +299,15 @@
       "colStatus": "Trạng Thái Vận Hành",
       "colBookingRef": "Mã Đặt Chỗ Đang Ở",
       "colCustomer": "Khách Lưu Trú",
-      "unoccupied": "Chưa Có Khách"
+      "unoccupied": "Chưa Có Khách",
+      "reserved": "Đã Đặt Trước",
+      "inReserved": "đã đặt",
+      "reservedBadge": "Sắp Đến",
+      "inHouseBadge": "Đang Ở",
+      "departedGuest": "Đã Trả Phòng (Khách trước)",
+      "priorStay": "Lần Ở Trước",
+      "prior": "Trước",
+      "vacantMaintenance": "Trống · Đang Bảo Trì"
     },
     "therapists": {
       "title": "Báo Cáo Mức Độ Sử Dụng Trị Liệu Viên",
@@ -316,12 +331,25 @@
       "colMinutes": "Thời Gian Trị Liệu",
       "totalHours": "Tổng Giờ Trị Liệu Đã Đặt",
       "hoursDerivedFactual": "Tổng giờ thực tế từ các buổi trị liệu đã xếp lịch",
-      "colHours": "Số Giờ Trị Liệu"
+      "colHours": "Số Giờ Trị Liệu",
+      "totalTreatmentMinutes": "Tổng Số Phút Trị Liệu",
+      "axisMinutes": "Số Phút",
+      "sessionsUnit": "phiên"
     }
   },
   "operations": {
     "sidebar": {
       "therapistUtilization": "Mức Độ Sử Dụng Trị Liệu Viên"
     }
+  },
+  "status": {
+    "settled": "Đã quyết toán",
+    "pendingSettlement": "Chờ quyết toán",
+    "included": "Đã bao gồm",
+    "maintenance": "Bảo trì",
+    "cleaning": "Đang dọn & khử khuẩn",
+    "occupied": "Đang lưu trú",
+    "reserved": "Đã đặt trước",
+    "ready": "Sẵn sàng đón khách"
   }
 }

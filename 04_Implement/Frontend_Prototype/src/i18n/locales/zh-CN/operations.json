@@ -36,7 +36,9 @@
     "permissionMatrix": "权限配置矩阵",
     "managerDelegation": "管理权委派",
     "sensitiveDataAuditLog": "敏感数据审计日志",
-    "systemOverviewDashboard": "系统运行总览"
+    "systemOverviewDashboard": "系统运行总览",
+    "manager": "经理",
+    "admin": "管理员"
   },
   "payment": {
     "requiredDeposit": "预订所需定金",
@@ -488,17 +490,24 @@
       "outstandingSub": "退房交接时应收",
       "chartComposition": "各部门营收占比",
       "chartVolume": "各业务流已结营收",
-      "tableTitle": "当前运营结算审计日志",
-      "itemCount": "显示 {{count}} 条可追溯明细",
+      "tableTitle": "收入结算审计日志",
+      "itemCount": "显示 {{count}} 条可追溯账目",
       "colRef": "来源编号",
       "colType": "业务流",
-      "colDesc": "项目概述",
+      "colDesc": "账目描述",
       "colQty": "数量",
       "colAmount": "金额 (VND)",
       "colStatus": "结算状态",
       "retreatPkg": "疗养套餐",
       "spaTherapies": "水疗护理",
-      "fnbDining": "餐饮美食"
+      "fnbDining": "餐饮美食",
+      "currencyVnd": "货币单位：越南盾",
+      "consolidatedTotal": "综合汇总",
+      "retreatStream": "静修套餐",
+      "spaStream": "水疗理疗",
+      "fnbStream": "养生餐饮",
+      "revenueLabel": "收入",
+      "amountLabel": "金额"
     },
     "occupancy": {
       "title": "专属别墅入住率与容量报告",
@@ -529,7 +538,15 @@
       "colStatus": "运营状态",
       "colBookingRef": "当前预订号",
       "colCustomer": "入住住客",
-      "unoccupied": "暂无住客"
+      "unoccupied": "暂无住客",
+      "reserved": "已预订",
+      "inReserved": "已预订",
+      "reservedBadge": "即将抵离",
+      "inHouseBadge": "住客在住",
+      "departedGuest": "已退房 (前一位住客)",
+      "priorStay": "前次入住",
+      "prior": "历史",
+      "vacantMaintenance": "空房 · 维护中"
     },
     "therapists": {
       "title": "理疗师利用率报告",
@@ -553,12 +570,21 @@
       "colMinutes": "护理时长",
       "totalHours": "总预约理疗时长（小时）",
       "hoursDerivedFactual": "基于实际已排期疗程累加统计",
-      "colHours": "理疗工时（小时）"
+      "colHours": "理疗工时（小时）",
+      "totalTreatmentMinutes": "总理疗分钟数",
+      "axisMinutes": "分钟",
+      "sessionsUnit": "场次"
     }
   },
   "operations": {
     "sidebar": {
       "therapistUtilization": "理疗师利用率"
     }
+  },
+  "topbar": {
+    "managerScope": "经理受限权限",
+    "adminClearance": "系统管理员权限",
+    "filterScope": "筛选范围",
+    "export": "导出报告"
   }
 }
