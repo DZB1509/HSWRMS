@@ -267,7 +267,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
             <Button
               variant="primary"
               size="sm"
-              style={heroActive ? { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)', color: '#ffffff' } : undefined}
+              className="hsw-btn-retreat-primary hsw-btn-retreat-compact"
             >
               {t('common:actions.bookRetreat', 'Book Retreat')}
             </Button>
@@ -352,13 +352,8 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
               <Button
                 variant="primary"
                 size="lg"
-                style={{
-                  width: '100%',
-                  backgroundColor: 'var(--accent-forest)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 14px rgba(79, 90, 80, 0.25)',
-                }}
+                className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
+                style={{ width: '100%' }}
               >
                 {t('common:actions.bookRetreat', 'Book Retreat')}
               </Button>

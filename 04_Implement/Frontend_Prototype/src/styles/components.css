@@ -295,6 +295,260 @@
 }
 
 /* ==========================================================================
+   Primary Retreat CTA Family (DESIGN.md §8.1)
+   Shared Visual DNA: Rich Forest Surface, Warm-White Foreground (#FAF9F6),
+   Champagne Border, Restrained Text Depth & Shadow, Interactive Hover
+   ========================================================================== */
+.hsw-btn.hsw-btn-retreat-primary,
+.hsw-btn-retreat-primary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 var(--space-6, 24px);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm, 14px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #FAF9F6 !important;
+  background: rgba(79, 90, 80, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(231, 217, 196, 0.48);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 
+    0 5px 14px rgba(20, 28, 22, 0.20),
+    0 1px 2px rgba(255, 255, 255, 0.10) inset;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.20);
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 1;
+  transition: 
+    background var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1)),
+    border-color var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--transition-fast, 0.15s cubic-bezier(0.16, 1, 0.3, 1)),
+    color var(--transition-fast, 0.15s cubic-bezier(0.16, 1, 0.3, 1)),
+    text-shadow var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* Moving Luminous Border on Hover */
+.hsw-btn-retreat-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    transparent 0%,
+    transparent 42%,
+    rgba(159, 169, 157, 0.35) 54%,
+    rgba(216, 199, 174, 0.65) 66%,
+    rgba(231, 217, 196, 0.90) 76%,
+    #ffffff 89%,
+    rgba(231, 217, 196, 0.90) 96%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 3;
+  animation: hsw-luminous-spin 3.4s linear infinite;
+}
+
+/* Subtle One-Pass Light Sweep on Hover */
+.hsw-btn-retreat-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: none;
+}
+
+/* Text and Icon Elements */
+.hsw-btn-retreat-primary > span:not(.hsw-btn-icon) {
+  position: relative;
+  z-index: 1;
+  transition: transform var(--transition-fast, 0.15s cubic-bezier(0.16, 1, 0.3, 1)), text-shadow var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.hsw-btn-retreat-primary .hsw-btn-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #FAF9F6 !important;
+  transition: transform var(--transition-fast, 0.15s cubic-bezier(0.16, 1, 0.3, 1)), color var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* Variant 1: Hero Primary CTA (Landing Hero, Retreat Detail Hero, Lower Retreat Booking CTA) */
+.hsw-btn.hsw-btn-retreat-hero,
+.hsw-btn-retreat-hero {
+  min-height: 54px;
+  padding: 0 clamp(28px, 3.5vw, 34px);
+  font-size: var(--text-md, 16px);
+  border-radius: var(--radius-md, 12px);
+  background: rgba(72, 83, 73, 0.95);
+  border: 1px solid rgba(231, 217, 196, 0.52);
+  box-shadow: 
+    0 6px 18px rgba(18, 26, 20, 0.24),
+    0 1px 2px rgba(255, 255, 255, 0.12) inset;
+}
+
+/* Variant 2: Compact CTA (Navbar "Đặt Kỳ Nghỉ" / "Book Retreat") */
+.hsw-btn.hsw-btn-retreat-compact,
+.hsw-btn-retreat-compact {
+  min-height: 38px;
+  padding: 0 var(--space-4, 16px);
+  font-size: var(--text-xs, 12px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(79, 90, 80, 0.94);
+  border: 1px solid rgba(231, 217, 196, 0.44);
+  box-shadow: 
+    0 3px 8px rgba(20, 28, 22, 0.18),
+    0 1px 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+/* Hover Interaction (Enabled Only) */
+@media (hover: hover) and (pointer: fine) {
+  .hsw-btn.hsw-btn-retreat-primary:hover:not(:disabled),
+  .hsw-btn-retreat-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: rgba(92, 105, 93, 0.98);
+    border-color: rgba(231, 217, 196, 0.82);
+    color: #ffffff !important;
+    box-shadow: 
+      0 8px 24px rgba(20, 28, 22, 0.26),
+      0 0 16px rgba(216, 199, 174, 0.18),
+      0 1px 2px rgba(255, 255, 255, 0.18) inset;
+    text-shadow: 0 4px 7px rgba(0, 0, 0, 0.30);
+  }
+
+  .hsw-btn-retreat-primary:hover:not(:disabled)::before {
+    opacity: 1;
+  }
+
+  .hsw-btn-retreat-primary:hover:not(:disabled)::after {
+    opacity: 1;
+    left: 160%;
+    transition: left 0.75s ease-out, opacity 0.75s ease-out;
+  }
+
+  .hsw-btn-retreat-primary:hover:not(:disabled) > span:not(.hsw-btn-icon) {
+    transform: translateY(-1px);
+    text-shadow: 0 4px 7px rgba(0, 0, 0, 0.30);
+  }
+
+  .hsw-btn-retreat-primary:hover:not(:disabled) .hsw-btn-icon {
+    transform: translateX(3px);
+    color: #ffffff !important;
+  }
+
+  /* Compact variant hover */
+  .hsw-btn.hsw-btn-retreat-compact:hover:not(:disabled),
+  .hsw-btn-retreat-compact:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+    box-shadow: 
+      0 5px 14px rgba(20, 28, 22, 0.22),
+      0 0 10px rgba(216, 199, 174, 0.14),
+      0 1px 2px rgba(255, 255, 255, 0.14) inset;
+  }
+}
+
+/* Press / Active State */
+.hsw-btn.hsw-btn-retreat-primary:active:not(:disabled),
+.hsw-btn-retreat-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 
+    0 2px 6px rgba(20, 28, 22, 0.18),
+    0 1px 1px rgba(255, 255, 255, 0.08) inset;
+  transition-duration: 0.1s;
+}
+
+/* Focus Visible */
+.hsw-btn.hsw-btn-retreat-primary:focus-visible,
+.hsw-btn-retreat-primary:focus-visible {
+  outline: 2px solid rgba(231, 217, 196, 0.95);
+  outline-offset: 3px;
+  border-color: rgba(231, 217, 196, 1);
+  box-shadow: 
+    0 5px 14px rgba(20, 28, 22, 0.20),
+    0 0 16px rgba(231, 217, 196, 0.30);
+}
+
+.hsw-btn-retreat-primary:focus-visible::before {
+  opacity: 1;
+}
+
+/* Strict Disabled State Isolation */
+.hsw-btn.hsw-btn-retreat-primary:disabled,
+.hsw-btn-retreat-primary:disabled,
+.hsw-btn-retreat-primary[aria-disabled="true"],
+.hsw-btn-retreat-primary.disabled {
+  opacity: 0.48 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+  color: rgba(250, 249, 246, 0.55) !important;
+  background: rgba(79, 90, 80, 0.45) !important;
+  border-color: rgba(231, 217, 196, 0.20) !important;
+  text-shadow: none !important;
+  pointer-events: none;
+}
+
+.hsw-btn-retreat-primary:disabled::before,
+.hsw-btn-retreat-primary[aria-disabled="true"]::before,
+.hsw-btn-retreat-primary.disabled::before,
+.hsw-btn-retreat-primary:disabled::after,
+.hsw-btn-retreat-primary[aria-disabled="true"]::after,
+.hsw-btn-retreat-primary.disabled::after {
+  display: none !important;
+}
+
+/* Reduced Motion Safety */
+@media (prefers-reduced-motion: reduce) {
+  .hsw-btn.hsw-btn-retreat-primary,
+  .hsw-btn-retreat-primary {
+    transform: none !important;
+    transition: none !important;
+  }
+  .hsw-btn-retreat-primary::before {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  .hsw-btn-retreat-primary::after {
+    display: none !important;
+  }
+  .hsw-btn-retreat-primary:hover:not(:disabled) .hsw-btn-icon {
+    transform: none !important;
+  }
+}
+
+/* ==========================================================================
    Status Chips (DESIGN.md §8.3)
    Text + Color, never color alone
    ========================================================================== */

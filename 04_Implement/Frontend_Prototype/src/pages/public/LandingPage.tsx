@@ -225,12 +225,8 @@ export const LandingPage: React.FC = () => {
                   <Button
                     variant="primary"
                     size="lg"
-                    icon={<ArrowRight size={16} />}
-                    style={{
-                      backgroundColor: 'var(--accent-sand)',
-                      color: 'var(--accent-forest)',
-                      fontWeight: 600,
-                    }}
+                    className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
+                    icon={<ArrowRight size={17} />}
                   >
                     {t('landing.hero.ctaPrimary')}
                   </Button>

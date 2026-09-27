@@ -471,13 +471,9 @@ export const RetreatBookingPage: React.FC = () => {
                   type="submit"
                   variant="primary"
                   size="lg"
-                  icon={<ArrowRight size={16} />}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'var(--accent-forest)',
-                    color: '#ffffff',
-                    fontWeight: 600,
-                  }}
+                  className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
+                  icon={<ArrowRight size={17} />}
+                  style={{ width: '100%' }}
                 >
                   {t('customer.bookingForm.continueBtn', 'Continue to Booking Summary & Deposit')}
                 </Button>

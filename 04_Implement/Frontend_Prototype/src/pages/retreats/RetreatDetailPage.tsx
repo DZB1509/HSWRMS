@@ -185,14 +185,10 @@ export const RetreatDetailPage: React.FC = () => {
                 <Button
                   variant="primary"
                   size="lg"
-                  icon={<ArrowRight size={16} />}
-                  style={{
-                    backgroundColor: 'var(--accent-sand)',
-                    color: 'var(--accent-forest)',
-                    fontWeight: 600,
-                  }}
+                  className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
+                  icon={<ArrowRight size={17} />}
                 >
-                  {t('retreat.detail.ctaBook')}
+                  {t('retreat.detail.ctaBookHero', t('retreat.detail.ctaBook'))}
                 </Button>
               </Link>
             </MagneticButton>
@@ -561,12 +557,8 @@ export const RetreatDetailPage: React.FC = () => {
                 <Button
                   variant="primary"
                   size="lg"
-                  icon={<ArrowRight size={16} />}
-                  style={{
-                    backgroundColor: 'var(--accent-forest)',
-                    color: '#ffffff',
-                    fontWeight: 600,
-                  }}
+                  className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
+                  icon={<ArrowRight size={17} />}
                 >
                   {t('retreat.detail.ctaBook')} — {formatVND(retreat.startingPrice, i18n.language)}
                 </Button>
