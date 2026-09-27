@@ -63,6 +63,16 @@ import { FnbDashboardPage } from '../../pages/fb/FnbDashboardPage';
 import { MealPrepListPage } from '../../pages/fb/MealPrepListPage';
 import { MealOrderDetailPage } from '../../pages/fb/MealOrderDetailPage';
 
+// Phase 2.6 Module 5 Screens (Folio, Payment, Checkout, Review, Analytics)
+import { FolioInvoicePage } from '../../pages/customer/FolioInvoicePage';
+import { FinalPaymentPage } from '../../pages/customer/FinalPaymentPage';
+import { FinalPaymentResultPage } from '../../pages/customer/FinalPaymentResultPage';
+import { CheckoutConfirmationPage } from '../../pages/customer/CheckoutConfirmationPage';
+import { ReviewRatingPage } from '../../pages/customer/ReviewRatingPage';
+import { RevenueDashboardPage } from '../../pages/manager/RevenueDashboardPage';
+import { OccupancyReportPage } from '../../pages/manager/OccupancyReportPage';
+import { TherapistUtilizationReportPage } from '../../pages/manager/TherapistUtilizationReportPage';
+
 // Helper to look up screen metadata by screen number
 const getScreen = (num: number): ScreenMetadata => {
   const found = SCREEN_INVENTORY.find((s) => s.number === num);
@@ -140,20 +150,12 @@ export const AppRouter: React.FC = () => {
         <Route path="dining/extra" element={<AlaCarteOrderPage />} />
         <Route path="dining/orders" element={<MyMealPlanPage />} />
 
-        {/* Module 5: Customer Read-only Folio & Review */}
-        <Route
-          path="folio"
-          element={
-            <PlaceholderScreen
-              screen={{
-                ...getScreen(41),
-                name: 'My Stay Charges & Folio Summary',
-                description: 'Customer read-only view of current retreat balance, spa sessions, and dining charges (role-adapted view of Screen #41).'
-              }}
-            />
-          }
-        />
-        <Route path="review/:bookingId" element={<PlaceholderScreen screen={getScreen(45)} />} />
+        {/* Module 5: Customer Read-only Folio, Payment, Checkout & Review */}
+        <Route path="folio" element={<FolioInvoicePage />} />
+        <Route path="checkout/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/confirmation" element={<CheckoutConfirmationPage />} />
+        <Route path="review/:bookingId" element={<ReviewRatingPage />} />
         
         <Route index element={<Navigate to="/customer/dashboard" replace />} />
       </Route>
@@ -179,10 +181,10 @@ export const AppRouter: React.FC = () => {
         <Route path="spa/extra-booking" element={<ManualExtraSpaPage />} />
         
         {/* Module 5 Checkout Consolidation */}
-        <Route path="folio/:bookingId" element={<PlaceholderScreen screen={getScreen(41)} />} />
-        <Route path="checkout/:bookingId/payment" element={<PlaceholderScreen screen={getScreen(42)} />} />
-        <Route path="checkout/:bookingId/payment-result" element={<PlaceholderScreen screen={getScreen(43)} />} />
-        <Route path="checkout/:bookingId/confirmation" element={<PlaceholderScreen screen={getScreen(44)} />} />
+        <Route path="folio/:bookingId" element={<FolioInvoicePage />} />
+        <Route path="checkout/:bookingId/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/:bookingId/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/:bookingId/confirmation" element={<CheckoutConfirmationPage />} />
 
         <Route index element={<Navigate to="/receptionist/dashboard" replace />} />
       </Route>
@@ -233,9 +235,9 @@ export const AppRouter: React.FC = () => {
         }
       >
         <Route path="dashboard" element={<PlaceholderScreen screen={getScreen(55)} />} />
-        <Route path="revenue" element={<PlaceholderScreen screen={getScreen(46)} />} />
-        <Route path="occupancy" element={<PlaceholderScreen screen={getScreen(47)} />} />
-        <Route path="therapist-utilization" element={<PlaceholderScreen screen={getScreen(48)} />} />
+        <Route path="revenue" element={<RevenueDashboardPage />} />
+        <Route path="occupancy" element={<OccupancyReportPage />} />
+        <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
         <Route
           path="system-overview"
           element={

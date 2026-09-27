@@ -55,8 +55,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       defaultHeading: 'Customer Services & Folio',
       items: [
         { labelKey: 'operations.sidebar.manualExtraSpa', defaultLabel: 'Manual Extra Spa', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
-        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Customer Folio & Invoice', path: '/receptionist/folio/bk-1001', icon: Receipt },
-        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Final Payment & Checkout', path: '/receptionist/checkout/bk-1001/payment', icon: UserCheck }
+        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Customer Folio & Invoice', path: '/receptionist/folio/HSW-88192', icon: Receipt },
+        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Final Payment & Checkout', path: '/receptionist/checkout/HSW-88192/payment', icon: UserCheck }
       ]
     }
   ],

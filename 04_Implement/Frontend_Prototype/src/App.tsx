@@ -10,12 +10,14 @@ import { CustomerProvider } from './context/CustomerContext';
 import { OperationsProvider } from './context/OperationsContext';
 import { SpaProvider } from './context/SpaContext';
 import { DiningProvider } from './context/DiningContext';
+import { FolioProvider } from './context/FolioContext';
 import { PageTransition } from './components/motion/PageTransition';
 import './styles/globals.css';
 import './styles/layouts.css';
 import './styles/components.css';
 import './styles/spa.css';
 import './styles/dining.css';
+import './styles/folio.css';
 
 export const App: React.FC = () => {
   return (
@@ -25,15 +27,17 @@ export const App: React.FC = () => {
           <OperationsProvider>
             <SpaProvider>
               <DiningProvider>
-                <ToastProvider>
-                  <SmoothScrollProvider>
-                    <CursorProvider>
-                      <PageTransition />
-                      <AppRouter />
-                      <RoleSwitcher />
-                    </CursorProvider>
-                  </SmoothScrollProvider>
-                </ToastProvider>
+                <FolioProvider>
+                  <ToastProvider>
+                    <SmoothScrollProvider>
+                      <CursorProvider>
+                        <PageTransition />
+                        <AppRouter />
+                        <RoleSwitcher />
+                      </CursorProvider>
+                    </SmoothScrollProvider>
+                  </ToastProvider>
+                </FolioProvider>
               </DiningProvider>
             </SpaProvider>
           </OperationsProvider>

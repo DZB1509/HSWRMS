@@ -308,7 +308,7 @@ export const MOCK_MEAL_SELECTIONS: DailyMealSelection[] = [
 export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [
   {
     id: 'ORD-9001',
-    bookingId: 'HSW-84920',
+    bookingId: 'HSW-88192',
     customerId: 'usr-cust-01',
     createdAt: '2026-09-24T14:15:00Z',
     targetTime: '15:30',
@@ -329,7 +329,7 @@ export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [
   },
   {
     id: 'ORD-9002',
-    bookingId: 'HSW-84920',
+    bookingId: 'HSW-88192',
     customerId: 'usr-cust-01',
     createdAt: '2026-09-24T17:45:00Z',
     targetTime: '19:15',
@@ -392,7 +392,7 @@ export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [
   },
   {
     id: 'ORD-9005',
-    bookingId: 'HSW-84920',
+    bookingId: 'HSW-88192',
     customerId: 'usr-cust-01',
     createdAt: '2026-09-23T20:30:00Z',
     targetTime: '21:00',
