@@ -139,6 +139,7 @@
   position: sticky;
   top: 0;
   z-index: 500;
+  width: 100%;
 }
 
 .hsw-customer-navbar-inner {
@@ -146,12 +147,30 @@
   align-items: center;
   justify-content: space-between;
   height: 68px;
-  max-width: var(--container-wide);
+  max-width: 1680px;
   margin: 0 auto;
   padding: 0 var(--space-6);
   gap: var(--space-4);
   position: relative;
   box-sizing: border-box;
+}
+
+/* Zone 1: Brand Area (Protected, non-overlapping) */
+.hsw-customer-brand-zone {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: max-content;
+  z-index: 2;
+  margin-right: var(--space-2);
+}
+
+.hsw-customer-brand-zone .hsw-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  flex-shrink: 0;
 }
 
 .hsw-customer-portal-tag {
@@ -165,27 +184,30 @@
   margin-top: 1px;
 }
 
+/* Zone 2: Main Navigation (Flexible space, min-width: 0) */
 .hsw-customer-nav-links {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  flex: 1;
-  justify-content: center;
+  gap: clamp(6px, 0.8vw, 12px);
+  flex: 1 1 auto;
   min-width: 0;
+  justify-content: center;
+  justify-content: safe center;
 }
 
 .hsw-customer-nav-link {
-  font-size: var(--text-sm);
+  font-size: clamp(12.5px, 0.85vw, 14px);
   font-weight: 500;
   color: var(--text-secondary);
-  padding: var(--space-2) var(--space-1);
+  padding: var(--space-2) clamp(4px, 0.5vw, 8px);
   position: relative;
   transition: color var(--transition-fast);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   white-space: nowrap;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .hsw-dropdown-btn {
@@ -199,6 +221,7 @@
 .hsw-dropdown-chevron {
   transition: transform var(--transition-fast);
   color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 .hsw-customer-nav-link:hover,
@@ -287,15 +310,29 @@
   font-weight: 600;
 }
 
+/* Zone 3 & 4: Actions (Language & Profile Zones, protected, flex-shrink: 0) */
 .hsw-customer-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: clamp(8px, 1vw, var(--space-3));
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.hsw-customer-lang-zone {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hsw-customer-profile-zone {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
 /* Wide Desktop vs Compact Desktop Links */
-@media (min-width: 1380px) {
+@media (min-width: 1280px) {
   .hsw-nav-more-wrapper {
     display: none !important;
   }
@@ -304,7 +341,7 @@
   }
 }
 
-@media (max-width: 1379px) and (min-width: 1025px) {
+@media (max-width: 1279px) and (min-width: 1025px) {
   .hsw-nav-desktop-wide-only {
     display: none !important;
   }
@@ -313,7 +350,7 @@
   }
 }
 
-@media (max-width: 1240px) {
+@media (max-width: 1380px) {
   .hsw-customer-portal-tag {
     display: none;
   }
@@ -325,6 +362,14 @@
     padding: var(--space-3) var(--space-4);
     flex-wrap: wrap;
     gap: var(--space-3);
+  }
+
+  .hsw-customer-brand-zone {
+    order: 1;
+  }
+
+  .hsw-customer-actions {
+    order: 2;
   }
 
   .hsw-customer-nav-links {
@@ -342,7 +387,7 @@
   }
 
   .hsw-nav-more-wrapper {
-    display: inline-flex !important;
+    display: none !important;
   }
 
   .hsw-customer-user-text {

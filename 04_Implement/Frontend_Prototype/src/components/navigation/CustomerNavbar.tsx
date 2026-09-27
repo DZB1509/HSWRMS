@@ -75,17 +75,19 @@ export const CustomerNavbar: React.FC = () => {
   return (
     <header className="hsw-customer-navbar" ref={navRef}>
       <div className="hsw-customer-navbar-inner">
-        {/* Brand Area */}
-        <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Home">
-          <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
-          <div className="hsw-brand-text">
-            <span className="hsw-brand-name">HEAVENSTAY</span>
-            <span className="hsw-customer-portal-tag">{t('customer.nav.portalTitle', 'CUSTOMER PORTAL')}</span>
-          </div>
-        </Link>
+        {/* Zone 1: Brand Area (Protected, flex-shrink: 0) */}
+        <div className="hsw-customer-brand-zone">
+          <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Home">
+            <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
+            <div className="hsw-brand-text">
+              <span className="hsw-brand-name">HEAVENSTAY</span>
+              <span className="hsw-customer-portal-tag">{t('customer.nav.portalTitle', 'CUSTOMER PORTAL')}</span>
+            </div>
+          </Link>
+        </div>
 
-        {/* Navigation links */}
-        <nav className="hsw-customer-nav-links" aria-label="Customer portal navigation">
+        {/* Zone 2: Main Navigation (Flexible space, min-width: 0) */}
+        <nav className="hsw-customer-nav-links hsw-customer-nav-zone" aria-label="Customer portal navigation">
           {/* Dashboard */}
           <Link
             to="/customer/dashboard"
@@ -259,25 +261,31 @@ export const CustomerNavbar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Right Controls: Language & Profile */}
+        {/* Right Controls: Language & Profile Zones (Protected, flex-shrink: 0) */}
         <div className="hsw-customer-actions">
-          <LanguageSwitcher />
+          {/* Zone 3: Language Selector */}
+          <div className="hsw-customer-lang-zone">
+            <LanguageSwitcher />
+          </div>
 
-          <Link to="/customer/account" style={{ textDecoration: 'none' }} aria-label="Customer account and settings">
-            <div className="hsw-customer-user-badge">
-              <div className="hsw-avatar-circle">
-                {getInitials(profile.fullName)}
-              </div>
-              <div style={{ textAlign: 'left' }} className="hsw-customer-user-text">
-                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {profile.fullName}
+          {/* Zone 4: Customer Profile */}
+          <div className="hsw-customer-profile-zone">
+            <Link to="/customer/account" style={{ textDecoration: 'none' }} aria-label="Customer account and settings">
+              <div className="hsw-customer-user-badge">
+                <div className="hsw-avatar-circle">
+                  {getInitials(profile.fullName)}
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--accent-olive)' }}>
-                  {activeBooking ? `${activeBooking.villaNumber || 'Villa #102'} · Reserved` : 'Sanctuary Member'}
+                <div style={{ textAlign: 'left' }} className="hsw-customer-user-text">
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {profile.fullName}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--accent-olive)' }}>
+                    {activeBooking ? `${activeBooking.villaNumber || 'Villa #102'} · Reserved` : 'Sanctuary Member'}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          </div>
         </div>
       </div>
     </header>
