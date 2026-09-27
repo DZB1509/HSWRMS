@@ -38,7 +38,10 @@
     "sensitiveDataAuditLog": "敏感数据审计日志",
     "systemOverviewDashboard": "系统运行总览",
     "manager": "经理",
-    "admin": "管理员"
+    "admin": "管理员",
+    "delegatedAdministration": "委托行政权限",
+    "businessParametersDelegated": "业务参数（已委托）",
+    "featureFlagsDelegated": "功能开关（已委托）"
   },
   "payment": {
     "requiredDeposit": "预订所需定金",
@@ -586,5 +589,456 @@
     "adminClearance": "系统管理员权限",
     "filterScope": "筛选范围",
     "export": "导出报告"
+  },
+  "adminDashboard": {
+    "title": "系统管理与治理驾驶舱",
+    "subtitle": "集中管理、业务参数配置、权限委托及安全审计监控。",
+    "bannerTitle": "前端治理原型说明",
+    "bannerNotice": "本原型中的配置参数和权限规则仅在客户端状态下管理，用于操作演示。在生产环境中，授权策略和不可篡改的审计追踪由服务器端策略引擎强制执行。",
+    "kpiParams": "业务参数",
+    "kpiParamsSub": "已配置的运营阈值",
+    "kpiFlags": "功能开关",
+    "kpiFlagsSub": "当前启用的可选模块",
+    "kpiDelegations": "经理委托",
+    "kpiDelegationsSub": "授予经理的有效范围委托",
+    "kpiAudit": "审计活动",
+    "kpiAuditSub": "已记录的敏感元数据访问事件",
+    "navTitle": "行政职能与治理模块",
+    "screensScope": "官方管理员范围：屏幕 10–12 与 50–54、56",
+    "descParams": "配置取消窗口、退款比例、定金比例及膳食预选截止规则。",
+    "descFlags": "安全切换可选模块，包括别墅点餐、在线加订水疗及法定报备程序。",
+    "descMatrix": "检查跨角色权限分配，强制执行不可更改的隐私与最小权限边界。",
+    "descDelegation": "向度假村运营经理（Sarah Jenkins）授予严格限定范围和时效的行政能力。",
+    "descAudit": "审查涉及健康、身份及财务记录的按时间顺序记录的访问元数据。",
+    "descOverview": "跨模块高层运营全景及依照2020年居住法的每日警方暂住报备导出。",
+    "recentAuditTitle": "近期敏感访问审计活动",
+    "viewFullLog": "查看完整审计追踪",
+    "immutableGuaranteesTitle": "强制执行的架构安全不变量",
+    "nonConfigurable": "不可更改",
+    "ruleBr01Title": "BR-01: 水疗双维度资源一致性",
+    "ruleBr01Desc": "水疗预约必须同时确认合格理疗师和空闲理疗室。不可被参数或功能开关绕过。",
+    "ruleBr02Title": "BR-02: 结账前合并账单结清限制",
+    "ruleBr02Desc": "前台结账时，若别墅账单仍有未结清的水疗或餐饮附加费用，则无法完成离店结账。",
+    "ruleBr03Title": "BR-03: 敏感健康与饮食数据最小化",
+    "ruleBr03Desc": "理疗师仅可查看身体禁忌；主厨仅可查看饮食过敏标签；前台和经理严禁查看医疗病历。",
+    "ruleBr06Title": "BR-06: 经理最小权限与角色隔离",
+    "ruleBr06Desc": "经理严格限定于高管报告视角。经理绝不会继承完全管理员权限，仅能获得明确限定的临时委托能力。",
+    "descStaff": "管理员工账户、权限角色、在岗状态及RBAC安全边界（屏幕 10 和 11）。",
+    "descMasterData": "管理静修套餐、水疗理疗服务及符合健康分类的别墅类别（屏幕 12）。"
+  },
+  "params": {
+    "pageTitle": "业务运行参数与操作阈值",
+    "scopeBadge": "可配置规则",
+    "pageSubtitle": "配置运营限额、定金要求、免责取消窗口以及法定批次导出时间。",
+    "safetyNoticeTitle": "严格的业务规则不变性（不可绕过）",
+    "safetyNoticeDesc": "核心安全控制——包括水疗双维度资源匹配、未结费用结账拦截以及敏感健康数据最小化——均为硬编码的架构不变量，无法通过参数调整来绕过。",
+    "savedToast": "参数已成功更新并记录到审计追踪",
+    "resetToast": "参数已恢复至系统默认值",
+    "category": "业务分类",
+    "defaultVal": "默认值",
+    "allowedRange": "允许范围",
+    "lastUpdated": "更新于",
+    "resetTitle": "重置为默认值"
+  },
+  "flags": {
+    "pageTitle": "模块化功能开关与操作切换",
+    "systemScope": "系统模块",
+    "pageSubtitle": "安全启用或停用受支持的宾客自助服务模块及法定监管报备自动流程。",
+    "safetyTitle": "安全与隐私边界不可切换",
+    "safetyDesc": "核心安全不变量（如RBAC数据最小化、双维度水疗匹配验证及结账结算检查）是强制性架构控制，已被特意排除在功能开关之外。",
+    "modularTitle": "可配置的功能模块",
+    "activeCount": "已启用",
+    "highImpact": "高影响",
+    "scope": "范围",
+    "lastModified": "修改时间",
+    "immutableTitle": "不可更改的核心控制（受保护架构）",
+    "alwaysEnforced": "始终强制执行",
+    "confirmTitle": "确认高影响功能开关变更",
+    "confirmPrompt": "您即将更改以下模块的运营状态：",
+    "confirmAuditNote": "此状态切换将立即在原型中生效，并向敏感治理审计日志添加一条带时间戳的事件。",
+    "applyToggle": "应用状态切换"
+  },
+  "matrix": {
+    "pageTitle": "基于角色的访问控制（RBAC）权限矩阵",
+    "pageSubtitle": "跨角色的功能能力分配、操作权限许可边界及敏感数据最小化不变量。",
+    "legendTitle": "安全与法定数据最小化矩阵",
+    "legendDesc": "带有锁图标的单元格表示根据越南第13/2023号法令、2020年居住法及度假村财务控制所必需的不可更改数据最小化边界。经理权限仅限于只读报告，除非被授予委托。",
+    "filterCategory": "筛选领域",
+    "allDomains": "所有功能领域",
+    "colCapability": "功能能力 / 业务领域",
+    "granted": "已授予",
+    "activeDelegated": "已委托",
+    "delegable": "可委托给经理",
+    "denied": "拒绝"
+  },
+  "delegation": {
+    "pageTitle": "向经理进行有限行政权限委托",
+    "pageSubtitle": "向度假村运营经理（Sarah Jenkins）授予临时、严格受限的运营能力，而不赋予无限制的管理员权限。",
+    "btnGrant": "授予受限委托",
+    "safeguardTitle": "特权提升保护（符合BR-06规定）",
+    "safeguardDesc": "委托严格限于经批准的运营职能。行政凭证管理、RBAC矩阵重新配置、安全审计审查及再委托权限绝对无法委托给经理。",
+    "historyTitle": "委托记录与运营历史",
+    "activeCount": "生效中",
+    "colId": "委托编号",
+    "colRecipient": "受委托人",
+    "colCapabilities": "授予的能力",
+    "colWindow": "有效时间窗口",
+    "colStatus": "状态",
+    "colGrantor": "授权人与原因",
+    "from": "起始",
+    "until": "截止",
+    "revoke": "撤销",
+    "modalTitle": "授予临时受限运营委托",
+    "delegateeLabel": "指定受委托人",
+    "selectCapsLabel": "选择可委托能力（仅白名单范围）",
+    "durationLabel": "委托有效时间窗口",
+    "reasonLabel": "业务正当理由（审计追踪必填）",
+    "btnSubmitGrant": "批准委托",
+    "revokeModalTitle": "确认立即撤销委托",
+    "revokePrompt": "您确定要撤销委托记录",
+    "revokeNotice": "被委托的能力将立即对Sarah Jenkins失效。该记录仍将保存在委托历史中，且撤销事件将记录到敏感治理审计日志中。",
+    "confirmRevoke": "立即撤销权限",
+    "errorNoCaps": "请至少选择一项可委托的能力。",
+    "errorNoReason": "业务理由为必填项以供审计追踪。",
+    "createdSuccess": "已成功向Sarah Jenkins（经理）授予受限委托",
+    "revokedSuccess": "委托已立即撤销。审计事件已记录。"
+  },
+  "audit": {
+    "pageTitle": "敏感数据访问与治理审计日志",
+    "pageSubtitle": "按时间顺序记录访问元数据、身份验证事件和治理变更的不可篡改审计追踪（第13/2023号法令与2020年居住法）。",
+    "minimizationTitle": "严格元数据记录与敏感数据最小化",
+    "minimizationDesc": "为保护宾客机密性，此审计日志仅记录访问元数据和安全伪匿名引用。原始健康诊断、特定过敏症状、身份证件号码和支付凭证绝对不会存储或显示在审计记录中。",
+    "searchPlaceholder": "搜索目标编号或操作人员...",
+    "allCategories": "所有分类",
+    "allRoles": "所有角色",
+    "allResults": "所有结果",
+    "eventsMatched": "条记录符合",
+    "colEventId": "事件编号",
+    "colTimestamp": "时间戳",
+    "colActor": "操作人员与角色",
+    "colAction": "操作",
+    "colCategory": "数据分类",
+    "colTargetRef": "目标引用",
+    "colResult": "结果",
+    "colDetails": "元数据上下文",
+    "noEvents": "未找到符合指定搜索和筛选条件的审计事件。"
+  },
+  "managerDashboard": {
+    "title": "高管管理监督驾驶舱",
+    "subtitle": "高级别运营全景，总结收入实现情况、度假别墅入住率及理疗技师工作负荷。",
+    "delegationActiveTitle": "临时委托权限生效中",
+    "expires": "到期时间",
+    "delegationDesc": "管理员Alexander Wright已临时授权您行使以下限定范围的运营能力：",
+    "revenueSub": "汇总自套餐、水疗及餐饮",
+    "villasOccupied": "栋别墅已有客人",
+    "activeStays": "在店住宿数",
+    "authorizedReports": "经授权的管理报表与分析",
+    "readOnlyOversight": "高管监督 · 仅查看权限",
+    "descRevenue": "查看度假套餐、水疗护理和膳食餐饮之间的收入分布及明细分页。",
+    "descOccupancy": "审查度假别墅库存状态、入住率百分比以及各类别墅的维护比例。",
+    "descTherapists": "监控理疗师与瑜伽师的工作指标、已预订理疗时长及会话完成情况。",
+    "descSystem": "跨模块度假村运营汇总及依照2020年居住法的每日暂住申报批次导出。",
+    "privacyBoundaryTitle": "经理角色边界与敏感数据最小化",
+    "privacyBoundaryDesc": "作为度假村运营经理，您的访问权限严格局限于汇总分析指标。根据第13/2023/NĐ-CP号令和BR-03规则，宾客临床病历、个人医疗记录、身份证件详情和支付密码已被严格排除在所有经理仪表盘之外。"
+  },
+  "systemOverview": {
+    "pageTitle": "系统总览与运营健康仪表盘",
+    "pageSubtitle": "跨模块运营汇总，跟踪住宿、理疗履约、餐饮准备、账单结算及法定居住合规申报。",
+    "btnExportPolice": "导出警方暂住报告",
+    "exportSuccess": "每日警方暂住申报批次已成功生成并记录。",
+    "statusHonestyTitle": "应用运营数据真实性",
+    "statusHonestyDesc": "以下显示的所有运营指标均直接根据进行中的预订、水疗排期、厨房订单及已结算账单计算得出，真实反映跨模块运行状态。",
+    "accommodationTitle": "住宿与度假别墅状态（模块2）",
+    "totalVillas": "物理别墅总数",
+    "inspectedReady": "已清扫并备妥",
+    "turnoverQueue": "待客房部整理",
+    "outOfOrder": "例行维护计划",
+    "therapyTitle": "水疗排期与疗程履约（模块3）",
+    "billingTitle": "合并账单与离店结算（模块5）",
+    "unsettledGuard": "结账拦截门禁",
+    "guardActive": "已激活",
+    "policeComplianceTitle": "警方临时居住申报合规",
+    "policeComplianceDesc": "根据越南2020年居住法和第13/2023/NĐ-CP号法令，HSWRMS在入住办理时自动汇总国内和外籍宾客的每日临时暂住申报。导出的元数据包将传输给地方公安部门。",
+    "batchId": "批次编号",
+    "totalResidents": "总记录数",
+    "domestic": "国内宾客",
+    "foreign": "外籍宾客",
+    "generatedAt": "生成于",
+    "reExport": "重新生成申报文件",
+    "exportModalTitle": "警方临时暂住申报导出",
+    "exportModalSuccess": "法定临时暂住申报导出文件已严格按照2020年居住法地方公安机关规定的电子格式规范完成封装。"
+  },
+  "governance": {
+    "params": {
+      "depositDefault": {
+        "label": "预订所需定金比例",
+        "desc": "确认VNPay前按套餐基础费用计算的所需预付定金百分比。"
+      },
+      "cancellationWindow": {
+        "label": "免费取消截止时间窗口",
+        "desc": "允许无罚金取消或全额退款的最少提前小时数。"
+      },
+      "cancellationRefund": {
+        "label": "标准取消退款比例",
+        "desc": "在截止时间前取消时退还的定金百分比。"
+      },
+      "dietaryCutoff": {
+        "label": "餐食预选提前时间",
+        "desc": "宾客预选每日餐品所需的提前小时数，以便厨房备餐和过敏原核对。"
+      },
+      "policeExportTime": {
+        "label": "每日警方暂住申报批次时间",
+        "desc": "根据2020年居住法每晚自动生成暂住报告的计划时间。"
+      }
+    },
+    "flags": {
+      "extraSpaOnline": {
+        "name": "Customer Online Extra Spa Booking",
+        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
+      },
+      "extraFnbOnline": {
+        "name": "Customer In-Villa Dining A-la-carte Ordering",
+        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
+      },
+      "residenceExport": {
+        "name": "Nightly Police Residence Declaration Batch",
+        "desc": "在计划的导出时间自动汇总每日客户入住登记身份记录（法定的暂住申报职责依然强制有效）。"
+      },
+      "reviewInvites": {
+        "name": "Automated Post-Checkout Review Invitations",
+        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
+      }
+    },
+    "permissions": {
+      "categories": {
+        "experience": "Customer Retreat Experience",
+        "frontDesk": "Front Desk Operations",
+        "wellness": "Spa & Therapy Fulfillment",
+        "culinary": "Culinary & F&B Operations",
+        "management": "Management Analytics & Oversight",
+        "governance": "Governance & System Administration"
+      },
+      "bookRetreat": {
+        "name": "Book Retreat Package & Pay Deposit",
+        "desc": "Browse packages, select retreat dates, configure villa category, and execute deposit via VNPay."
+      },
+      "manageHealth": {
+        "name": "Manage Own Sensitive Health & Dietary Profile",
+        "desc": "Provide explicit consent to record allergies, dietary restrictions, and physical contraindications."
+      },
+      "deleteHealth": {
+        "name": "Request Post-Retreat Health Data Deletion",
+        "desc": "Exercise statutory right to erase or anonymize health notes after retreat completion (BR-07)."
+      },
+      "viewOwnFolio": {
+        "name": "View In-House Consolidated Folio",
+        "desc": "Read-only access to own villa charges, deposits, and invoice line items."
+      },
+      "viewArrivals": {
+        "name": "View Daily Guest Arrivals & Schedules",
+        "desc": "Access expected customer arrivals, arrival times, and check-in preparation status."
+      },
+      "checkInGuest": {
+        "name": "Perform Guest Check-In & Collect Residence ID",
+        "desc": "Verify guest identity, collect passport/CCCD details for Law on Residence compliance, and activate stay."
+      },
+      "assignVillas": {
+        "name": "Assign Physical Villas & Update Operational Status",
+        "desc": "Allocate available villas to bookings and transition villa statuses (Cleaning, Available, Maintenance)."
+      },
+      "bookExtraSpa": {
+        "name": "Manual Front Desk Extra Spa Booking",
+        "desc": "Schedule walk-up or concierge extra spa sessions with strict 2D resource validation (Therapist + Room)."
+      },
+      "checkoutProcess": {
+        "name": "Consolidate Folio, Collect Payment & Checkout",
+        "desc": "Generate consolidated tax invoice, collect final payment, and complete checkout after verifying zero unpaid charges (BR-02)."
+      },
+      "viewTherapistSchedule": {
+        "name": "View Personal Assigned Therapy Schedule",
+        "desc": "Access assigned daily therapy and yoga sessions with guest arrival times and treatment rooms."
+      },
+      "viewHealthNotes": {
+        "name": "View Treatment-Relevant Clinical Health Notes",
+        "desc": "Inspect strictly physical contraindications, injuries, and focus areas for assigned therapy guests (BR-03)."
+      },
+      "completeSpa": {
+        "name": "Record Spa Session Outcomes (Completed / No-Show)",
+        "desc": "Mark therapy sessions completed with practitioner notes or register customer no-show."
+      },
+      "viewMealPrep": {
+        "name": "View Kitchen Daily Meal Preparation Queue",
+        "desc": "Access daily meal orders aggregated by meal window, delivery villa, and prep status."
+      },
+      "viewDietaryWarnings": {
+        "name": "View Food-Related Allergy & Dietary Warnings",
+        "desc": "Inspect strictly culinary allergen tags and food preferences without access to general health records (BR-03)."
+      },
+      "updateMealStatus": {
+        "name": "Update Meal Status (Preparing / Ready / Delivered)",
+        "desc": "Progress meal orders through kitchen prep stages to delivery."
+      },
+      "viewRevenue": {
+        "name": "View Revenue & Financial Performance Reports",
+        "desc": "Access aggregated financial reporting across package base fees, spa revenue, and dining revenue."
+      },
+      "viewOccupancy": {
+        "name": "View Villa Occupancy & Inventory Utilization",
+        "desc": "Inspect real-time resort occupancy rates, villa category performance, and maintenance ratios."
+      },
+      "viewTherapistReports": {
+        "name": "View Practitioner Utilization & Workload Reports",
+        "desc": "Monitor aggregate treatment minutes, scheduled sessions, and completion ratios by therapist."
+      },
+      "viewManagerDashboard": {
+        "name": "Access Executive Management Cockpit",
+        "desc": "Executive cockpit summarizing key operational KPIs and direct navigation to authorized analytical reports."
+      },
+      "exportPolice": {
+        "name": "Export Daily Police Residence Declarations",
+        "desc": "Generate official metadata export file for local police temporary residence compliance (Law on Residence 2020)."
+      },
+      "configureParams": {
+        "name": "Configure System Business Parameters",
+        "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
+      },
+      "manageFlags": {
+        "name": "Manage Modular Feature Flags",
+        "desc": "Toggle optional customer self-service modules and automated compliance routines."
+      },
+      "viewMatrix": {
+        "name": "Inspect System RBAC Permission Matrix",
+        "desc": "Review cross-role functional capability allocations and security boundary definitions."
+      },
+      "delegateRights": {
+        "name": "Delegate Limited Admin Rights to Manager",
+        "desc": "Grant time-bounded, scoped subset of administrative capabilities to Resort Operations Manager."
+      },
+      "viewAuditLog": {
+        "name": "View Sensitive Data Access Audit Log",
+        "desc": "Inspect chronological metadata log of sensitive health, identity, and financial access events."
+      },
+      "viewSystemOverview": {
+        "name": "View System-Wide Operational Health & Compliance",
+        "desc": "Cross-module rollup of bookings, villas, treatments, dining, and daily police export status."
+      },
+      "boundaries": {
+        "healthConsent": "Strict privacy boundary: Sensitive health records require explicit self-consent under Decree 13.",
+        "statutoryDeletion": "Statutory Customer Right: Data subject deletion request cannot be executed by staff.",
+        "frontDeskOnly": "Operational integrity: Physical identification check and key handover restricted to Front Desk.",
+        "frontDeskCheckout": "Financial accountability: Cashier and key return operations belong strictly to Front Desk.",
+        "therapistHealthOnly": "Data minimization (BR-03): Clinical health notes accessible ONLY by assigned treating therapists.",
+        "fnbDietaryOnly": "Data minimization (BR-03): Kitchen staff sees allergy tags only; clinical diagnoses strictly withheld.",
+        "adminOnly": "Security governance: RBAC matrix configuration reserved strictly for System Administrator.",
+        "delegationAdminOnly": "Privilege escalation protection: Delegation powers cannot be sub-delegated or self-assigned.",
+        "auditAdminOnly": "Accountability: Audit trail inspection reserved exclusively for System Administrator."
+      }
+    },
+    "audit": {
+      "details": {
+        "treatmentNotesConsultation": "Consulted treatment-relevant clinical notes for scheduled afternoon herbal bath session.",
+        "residenceIdVerified": "Verified guest residence identification document metadata during physical check-in.",
+        "receptionistHealthBlocked": "Access to full medical contraindications blocked by RBAC data minimization policy (BR-03).",
+        "kitchenAllergenCheck": "Accessed culinary allergen flags for lunch course preparation (Gluten-Free & Tree Nut allergy).",
+        "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
+        "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
+        "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
+        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
+        "parameterUpdated": "Successfully updated business parameter value.",
+        "permissionUpdated": "Successfully updated permission matrix capability.",
+        "delegationCreated": "Successfully created limited delegation record for Manager.",
+        "delegationRevoked": "Successfully revoked Manager delegation authority."
+      }
+    }
+  },
+  "staffList": {
+    "title": "员工账户管理",
+    "subtitle": "运营人员配置、RBAC角色分配、在岗状态及隐私保护边界（屏幕 10）。",
+    "searchPlaceholder": "按姓名、邮箱或角色搜索...",
+    "allRoles": "所有角色",
+    "allStatuses": "所有状态",
+    "staffCount": "个员工账户",
+    "provisionBtn": "配置新员工账户",
+    "colStaff": "员工姓名",
+    "colRole": "角色权限",
+    "colStatus": "账户状态",
+    "colContact": "工作联系方式",
+    "colJoined": "入职日期",
+    "colActions": "操作",
+    "viewDetail": "查看详情",
+    "noStaff": "未找到符合筛选条件的员工账户。",
+    "modalTitle": "配置新员工账户",
+    "fullName": "全名",
+    "workEmail": "工作邮箱",
+    "phoneNumber": "电话号码",
+    "systemRole": "系统角色",
+    "statusActive": "正常在岗",
+    "statusSuspended": "已停用",
+    "statusPending": "等待激活",
+    "createdSuccess": "员工账户已成功配置。",
+    "validationRequired": "请提供完整的全名和有效的工作邮箱。"
+  },
+  "staffDetail": {
+    "pageTitle": "员工账户权限与档案",
+    "backLink": "返回员工列表",
+    "accountMetadata": "运营人员基本信息",
+    "staffId": "员工工号",
+    "roleClearance": "角色权限级别",
+    "email": "工作邮箱",
+    "phone": "电话号码",
+    "joinedDate": "入职日期",
+    "lastActive": "最后活动时间",
+    "statusActive": "正常在岗",
+    "statusSuspended": "账户已暂停",
+    "suspendAccount": "暂停该账户",
+    "reactivateAccount": "重新激活账户",
+    "clearanceSectionTitle": "RBAC权限范围与数据最小化控制",
+    "scopeAdminTitle": "系统全面管理权限",
+    "scopeAdminDesc": "有权配置业务参数、模块化功能开关、RBAC矩阵、权限委派及敏感安全审计日志。",
+    "scopeAdminMin": "不接触客户原始医疗诊断或支付凭证秘钥。",
+    "scopeManagerTitle": "运营管理与分析报表权限",
+    "scopeManagerDesc": "有权查看高管收入报表、别墅入住率统计、理疗师利用率及系统综合运行健康度。",
+    "scopeManagerMin": "严格的只读分析访问权限。经理无法查看个人医疗档案或绕过结账账单。",
+    "scopeRecTitle": "前台与客户住宿管理权限",
+    "scopeRecDesc": "有权管理每日到店客户、登记居留身份信息、分配实际别墅、安排手工加购水疗及生成合并结账账单。",
+    "scopeRecMin": "受保护健康数据已做最小化脱敏；前台无法查阅医疗诊断记录。",
+    "scopeThTitle": "水疗理疗与身体健康护理权限",
+    "scopeThDesc": "查看分配的每日护理日程、更新护理结果（已完成/未出席）并访问治疗相关的身体健康注意事项。",
+    "scopeThMin": "理疗师仅能查看相关的身体禁忌症（受伤、皮肤过敏），且仅限已分配的客户（BR-03）。",
+    "scopeFbTitle": "膳食餐饮与厨房运营权限",
+    "scopeFbDesc": "访问每日备餐队列、推进备餐状态（准备中/已备妥）并查看烹饪过敏原警告。",
+    "scopeFbMin": "后厨人员仅能查看食品过敏原标签；通用医疗病史完全不可见（BR-03）。",
+    "suspendSuccess": "员工账户已成功暂停。",
+    "reactivateSuccess": "员工账户已成功重新激活。",
+    "notFound": "未找到员工账户记录。"
+  },
+  "masterData": {
+    "title": "主数据目录管理",
+    "subtitle": "依据国际健康学会（GWI）标准管理静修套餐、水疗服务目录及别墅分类（屏幕 12）。",
+    "wellnessTaxonomyBadge": "GWI健康分类标准",
+    "wellnessTaxonomyNotice": "核心主数据遵循整体身心健康术语（身体禁忌、理疗手法、静心居所）。修改内容将即时生效于 M1–M5 流程中。",
+    "tabRetreats": "静修养生套餐",
+    "tabSpa": "水疗理疗目录",
+    "tabVillas": "养生别墅分类",
+    "searchPlaceholder": "搜索目录项...",
+    "colPackage": "静修套餐",
+    "colTheme": "养生主旨",
+    "colDuration": "周期",
+    "colBasePrice": "基础价格",
+    "colStatus": "状态",
+    "colService": "理疗项目",
+    "colModality": "理疗流派",
+    "colContraindications": "禁忌症",
+    "colCategory": "别墅类别",
+    "colOccupancy": "容纳人数",
+    "colFeatures": "特色设施",
+    "colInventory": "物理房间数",
+    "colNightlyRate": "每晚费率",
+    "customersUnit": "位客户",
+    "viewEdit": "查看 / 编辑",
+    "editModalTitle": "配置主数据记录",
+    "nameLabel": "目录显示名称",
+    "priceLabel": "发布价格 (VND)",
+    "saveSuccess": "主数据项更新成功。"
   }
 }

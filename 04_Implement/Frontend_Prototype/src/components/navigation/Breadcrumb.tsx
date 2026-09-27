@@ -73,15 +73,17 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
     if (s === 'therapist-utilization' || s === 'utilization') return t('operations:sidebar.therapistUtilization', 'Therapist Utilization');
     if (s === 'compliance') return t('operations:sidebar.governanceCompliance', 'Governance & Compliance');
     if (s === 'police-export') return t('operations:sidebar.systemOverviewPoliceExport', 'System Overview & Police Export');
-    if (s === 'accounts') return t('operations:sidebar.staffAccounts', 'Staff Accounts');
+    if (s === 'staff' || s === 'accounts') return t('operations:sidebar.staffAccounts', 'Staff Accounts');
     if (s === 'master-data') return t('operations:sidebar.masterDataManagement', 'Master Data Management');
     if (s === 'security') return t('operations:sidebar.securityGovernance', 'Security & Governance');
-    if (s === 'parameters') return t('operations:sidebar.businessParameters', 'Business Parameters');
-    if (s === 'flags') return t('operations:sidebar.featureFlags', 'Feature Flags');
+    if (s === 'parameters' || s === 'business-params') return t('operations:sidebar.businessParameters', 'Business Parameters');
+    if (s === 'flags' || s === 'feature-flags') return t('operations:sidebar.featureFlags', 'Feature Flags');
     if (s === 'permissions') return t('operations:sidebar.permissionMatrix', 'Permission Matrix');
     if (s === 'delegation') return t('operations:sidebar.managerDelegation', 'Manager Delegation');
     if (s === 'audit-log') return t('operations:sidebar.sensitiveDataAuditLog', 'Sensitive Data Audit Log');
-    if (s === 'system') return t('operations:sidebar.systemOverviewDashboard', 'System Overview Dashboard');
+    if (s === 'system' || s === 'system-overview') {
+      return t('operations:sidebar.systemOverviewDashboard', 'System Overview Dashboard');
+    }
 
     return segment
       .replace(/-/g, ' ')

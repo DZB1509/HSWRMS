@@ -1,0 +1,445 @@
+/* ==========================================================================
+   HSWRMS Module 6 — Governance, Permissions, Administration & Monitoring
+   Operational quiet-luxury density: data-first, restrained accents, low motion
+   ========================================================================== */
+
+/* Top header & section title bars */
+.hsw-gov-header {
+  margin-bottom: var(--space-6);
+}
+
+.hsw-gov-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1) 0;
+  letter-spacing: -0.01em;
+}
+
+.hsw-gov-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Notice / Compliance Banners */
+.hsw-gov-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-forest);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.hsw-gov-banner.warning {
+  border-left-color: var(--warning);
+  background-color: #fdfaf3;
+}
+
+.hsw-gov-banner.privacy {
+  border-left-color: var(--accent-terracotta);
+  background-color: #faf5f3;
+}
+
+/* Operational Metric Grid */
+.hsw-gov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.hsw-gov-kpi {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hsw-gov-kpi-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.hsw-gov-kpi-val {
+  font-size: var(--text-3xl);
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: var(--space-1);
+}
+
+.hsw-gov-kpi-sub {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* Table Containers */
+.hsw-gov-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.hsw-gov-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.hsw-gov-card-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Switch Toggle Component */
+.hsw-switch-container {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.hsw-switch-track {
+  width: 44px;
+  height: 24px;
+  background-color: var(--border-medium);
+  border-radius: 12px;
+  position: relative;
+  transition: background-color 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.hsw-switch-track:focus-visible {
+  outline: 2px solid var(--accent-forest);
+  outline-offset: 2px;
+}
+
+.hsw-switch-track.is-on {
+  background-color: var(--accent-forest);
+}
+
+.hsw-switch-thumb {
+  width: 18px;
+  height: 18px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.hsw-switch-track.is-on .hsw-switch-thumb {
+  transform: translateX(18px);
+}
+
+.hsw-switch-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.hsw-switch-label.is-on {
+  color: var(--accent-forest);
+}
+
+/* Permission Matrix Specifics */
+.hsw-matrix-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.hsw-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.hsw-matrix-table th,
+.hsw-matrix-table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.hsw-matrix-table th {
+  background-color: #f7f6f2;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.hsw-matrix-table td.role-col {
+  text-align: center;
+}
+
+.hsw-matrix-table tr:hover td {
+  background-color: #faf9f6;
+}
+
+/* Permission State Badges */
+.hsw-perm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hsw-perm-badge.granted {
+  background-color: #eaf3ed;
+  color: var(--accent-forest);
+}
+
+.hsw-perm-badge.denied {
+  background-color: #f3f3f1;
+  color: var(--text-muted);
+}
+
+.hsw-perm-badge.delegable {
+  background-color: #eef6f6;
+  color: #1a6b68;
+  border: 1px dashed #7fc1be;
+}
+
+.hsw-perm-lock {
+  color: var(--accent-terracotta);
+  margin-left: 4px;
+}
+
+/* Modals */
+.hsw-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+.hsw-modal-box {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.hsw-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.hsw-modal-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.hsw-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Audit Log Table Pill */
+.hsw-audit-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.hsw-audit-pill.success {
+  background-color: #eaf3ed;
+  color: var(--accent-forest);
+}
+
+.hsw-audit-pill.denied {
+  background-color: #fbeeed;
+  color: var(--danger);
+}
+
+.hsw-audit-cat {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: #f4f3ef;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Search and Filters Toolbar */
+.hsw-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.hsw-filter-input {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background-color: #ffffff;
+  color: var(--text-primary);
+  min-width: 200px;
+}
+
+.hsw-filter-select {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background-color: #ffffff;
+  color: var(--text-primary);
+}
+
+/* Quick Nav Tiles */
+.hsw-quicknav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.hsw-quicknav-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.hsw-quicknav-tile:hover {
+  border-color: var(--accent-forest);
+  background-color: #faf9f6;
+}
+
+.hsw-quicknav-tile-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background-color: #f2f0ea;
+  color: var(--accent-forest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hsw-quicknav-tile-content h4 {
+  margin: 0 0 var(--space-1) 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.hsw-quicknav-tile-content p {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Responsive Adaptations for M6 screens
+   ========================================================================== */
+@media (max-width: 768px) {
+  .hsw-gov-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .hsw-quicknav-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .hsw-filter-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hsw-filter-input,
+  .hsw-filter-select {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .hsw-gov-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .hsw-gov-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hsw-gov-modal {
+    width: 95vw;
+    max-width: 95vw;
+    margin: var(--space-4);
+  }
+}

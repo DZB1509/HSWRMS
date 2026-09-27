@@ -38,7 +38,10 @@
     "sensitiveDataAuditLog": "Journal d'Audit des Données",
     "systemOverviewDashboard": "Vue Générale du Système",
     "manager": "Manager",
-    "admin": "Admin"
+    "admin": "Admin",
+    "delegatedAdministration": "Administration Déléguée",
+    "businessParametersDelegated": "Paramètres Opérationnels (Délégués)",
+    "featureFlagsDelegated": "Drapeaux de Fonctionnalités (Délégués)"
   },
   "payment": {
     "requiredDeposit": "Acompte Requis",
@@ -586,5 +589,456 @@
     "adminClearance": "Habilitation Administrateur",
     "filterScope": "Filtrer",
     "export": "Exporter"
+  },
+  "adminDashboard": {
+    "title": "Cockpit d'Administration et Gouvernance Système",
+    "subtitle": "Gouvernance centralisée, configuration des paramètres, délégation d'accès et surveillance d'audit de sécurité.",
+    "bannerTitle": "Prototype de Gouvernance Front-End",
+    "bannerNotice": "Les paramètres et règles de permissions de ce prototype sont gérés dans l'état client à des fins de démonstration. En production, les politiques d'autorisation et les pistes d'audit immuables sont appliquées par des moteurs de règles côté serveur.",
+    "kpiParams": "Paramètres Opérationnels",
+    "kpiParamsSub": "Seuils opérationnels configurés",
+    "kpiFlags": "Drapeaux de Fonctionnalités",
+    "kpiFlagsSub": "Modules optionnels actuellement actifs",
+    "kpiDelegations": "Délégations Gestionnaire",
+    "kpiDelegationsSub": "Délégations restreintes actives au Gestionnaire",
+    "kpiAudit": "Activité de la Piste d'Audit",
+    "kpiAuditSub": "Événements de métadonnées sensibles enregistrés",
+    "navTitle": "Fonctions Administratives & Modules de Gouvernance",
+    "screensScope": "Périmètre officiel administrateur : Écrans 10–12 & 50–54, 56",
+    "descParams": "Configurez les délais d'annulation, taux de remboursement, pourcentage d'acompte et délais de sélection des repas.",
+    "descFlags": "Activez ou désactivez en toute sécurité les services optionnels tels que la commande en villa ou le spa supplémentaire.",
+    "descMatrix": "Examinez les attributions de capacités par rôle et appliquez les limites immuables de confidentialité et de moindre privilège.",
+    "descDelegation": "Accordez des capacités administratives temporaires et strictement délimitées au Gestionnaire (Sarah Jenkins).",
+    "descAudit": "Consultez les métadonnées chronologiques des accès relatifs à la santé, à l'identité et aux dossiers financiers.",
+    "descOverview": "Vue d'ensemble opérationnelle inter-modules et exportation des déclarations de résidence de police (Loi de 2020).",
+    "recentAuditTitle": "Activité Récente d'Audit d'Accès Sensible",
+    "viewFullLog": "Voir la Piste d'Audit Complète",
+    "immutableGuaranteesTitle": "Invariants de Sécurité Architecturaux (Non Dépassables)",
+    "nonConfigurable": "NON CONFIGURABLE",
+    "ruleBr01Title": "BR-01 : Intégrité des Ressources Spa à Deux Dimensions",
+    "ruleBr01Desc": "Une séance de spa nécessite la disponibilité simultanée d'un thérapeute et d'une salle de soin. Incontournable.",
+    "ruleBr02Title": "BR-02 : Blocage de Départ pour Charges Non Soldées",
+    "ruleBr02Desc": "Le départ à la réception ne peut être finalisé tant que des frais supplémentaires de spa ou de restauration restent impayés.",
+    "ruleBr03Title": "BR-03 : Minimisation des Données Sensibles de Santé & Alimentation",
+    "ruleBr03Desc": "Les thérapeutes ne voient que les contre-indications physiques ; les chefs ne voient que les allergènes alimentaires ; réceptionnistes et gestionnaires sont exclus des dossiers médicaux.",
+    "ruleBr06Title": "BR-06 : Moindre Privilège du Gestionnaire et Séparation des Rôles",
+    "ruleBr06Desc": "Le gestionnaire est strictement limité aux rapports analytiques. Il n'hérite jamais des droits d'administrateur sans délégation explicite.",
+    "descStaff": "Gérer les comptes du personnel, les rôles d'autorisation, le statut de travail et les limites de sécurité RBAC (Écrans 10 & 11).",
+    "descMasterData": "Administrer les forfaits de retraite, les soins de spa et les catégories de villas selon la taxonomie de bien-être (Écran 12)."
+  },
+  "params": {
+    "pageTitle": "Paramètres Opérationnels & Seuils Métier",
+    "scopeBadge": "Règles Configurables",
+    "pageSubtitle": "Configurez les limites opérationnelles, exigences d'acompte, délais d'annulation et horaires des exports réglementaires.",
+    "safetyNoticeTitle": "Invariance Stricte des Règles Métier (Non Contournables)",
+    "safetyNoticeDesc": "Les contrôles de sécurité fondamentaux du resort—incluant la validation spa 2D, le blocage de départ pour solde impayé et la minimisation des données de santé—sont des invariants architecturaux intangibles.",
+    "savedToast": "Paramètre mis à jour avec succès et enregistré dans la piste d'audit",
+    "resetToast": "Paramètre rétabli à sa valeur par défaut",
+    "category": "Catégorie",
+    "defaultVal": "Défaut",
+    "allowedRange": "Plage Autorisée",
+    "lastUpdated": "Mis à jour le",
+    "resetTitle": "Rétablir la valeur par défaut"
+  },
+  "flags": {
+    "pageTitle": "Drapeaux de Fonctionnalités & Sélecteurs Opérationnels",
+    "systemScope": "Modules Système",
+    "pageSubtitle": "Activez ou désactivez les modules clients en libre-service et les procédures automatisées de déclaration réglementaire.",
+    "safetyTitle": "Les Limites de Sécurité et Confidentialité sont Non Modifiables",
+    "safetyDesc": "Les invariants de sécurité (tels que la minimisation des données RBAC et le contrôle des règlements au départ) sont des règles architecturales obligatoires exclues des drapeaux de fonctionnalités.",
+    "modularTitle": "Modules Fonctionnels Configurables",
+    "activeCount": "Actifs",
+    "highImpact": "Fort Impact",
+    "scope": "Portée",
+    "lastModified": "Modifié le",
+    "immutableTitle": "Contrôles Fondamentaux Immuables (Architecture Protégée)",
+    "alwaysEnforced": "TOUJOURS EN VIGUEUR",
+    "confirmTitle": "Confirmer la Modification à Fort Impact",
+    "confirmPrompt": "Vous êtes sur le point de modifier l'état opérationnel de :",
+    "confirmAuditNote": "Cette transition d'état prendra effet immédiatement dans le prototype et ajoutera un événement horodaté au journal d'audit.",
+    "applyToggle": "Appliquer la Transition"
+  },
+  "matrix": {
+    "pageTitle": "Matrice de Permissions de Contrôle d'Accès Basé sur les Rôles (RBAC)",
+    "pageSubtitle": "Attributions des capacités fonctionnelles entre rôles, limites d'habilitation et invariants de minimisation des données.",
+    "legendTitle": "Matrice de Sécurité & de Minimisation Légale des Données",
+    "legendDesc": "Les cases portant un cadenas représentent des limites de minimisation non négociables requises par le Décret 13/2023/ND-CP, la Loi sur la Résidence 2020 et la comptabilité du resort.",
+    "filterCategory": "Filtrer le Domaine",
+    "allDomains": "Tous les Domaines Fonctionnels",
+    "colCapability": "Capacité / Domaine Fonctionnel",
+    "granted": "Accordé",
+    "activeDelegated": "Délégué",
+    "delegable": "Délégable au Gestionnaire",
+    "denied": "Refusé"
+  },
+  "delegation": {
+    "pageTitle": "Délégation Limitée des Droits d'Administration au Gestionnaire",
+    "pageSubtitle": "Accordez des capacités opérationnelles temporaires et strictement délimitées au Gestionnaire (Sarah Jenkins) sans lui conférer d'autorité administrateur totale.",
+    "btnGrant": "Accorder une Délégation",
+    "safeguardTitle": "Protection Contre l'Escalade de Privilèges (Conforme BR-06)",
+    "safeguardDesc": "La délégation est strictement restreinte aux fonctions opérationnelles approuvées. La gestion des identifiants, la reconfiguration de la matrice RBAC, l'examen de l'audit et la sous-délégation NE PEUVENT PAS être délégués.",
+    "historyTitle": "Registres de Délégation & Historique Opérationnel",
+    "activeCount": "Actives",
+    "colId": "ID Délégation",
+    "colRecipient": "Délégataire",
+    "colCapabilities": "Capacités Accordées",
+    "colWindow": "Période Active",
+    "colStatus": "Statut",
+    "colGrantor": "Auteur & Motif",
+    "from": "Du",
+    "until": "Au",
+    "revoke": "Révoquer",
+    "modalTitle": "Accorder une Délégation Opérationnelle Limitée",
+    "delegateeLabel": "Délégataire Désigné",
+    "selectCapsLabel": "Sélectionnez les Capacités Délégables (Périmètre Autorisé)",
+    "durationLabel": "Durée de la Période Active",
+    "reasonLabel": "Justification Opérationnelle (Obligatoire pour l'Audit)",
+    "btnSubmitGrant": "Autoriser la Délégation",
+    "revokeModalTitle": "Confirmer la Révocation Immédiate de la Délégation",
+    "revokePrompt": "Êtes-vous sûr de vouloir révoquer l'enregistrement de délégation",
+    "revokeNotice": "La capacité déléguée cessera immédiatement d'être accessible à Sarah Jenkins. L'enregistrement restera archivé dans l'historique et consigné dans l'audit.",
+    "confirmRevoke": "Révoquer l'Autorité Immédiatement",
+    "errorNoCaps": "Veuillez sélectionner au moins une capacité délégable.",
+    "errorNoReason": "Le motif opérationnel est obligatoire pour l'audit.",
+    "createdSuccess": "Délégation limitée accordée avec succès à Sarah Jenkins (Gestionnaire)",
+    "revokedSuccess": "Délégation révoquée immédiatement. Événement d'audit consigné."
+  },
+  "audit": {
+    "pageTitle": "Journal d'Audit d'Accès aux Données Sensibles & Gouvernance",
+    "pageSubtitle": "Piste d'audit chronologique immuable enregistrant les métadonnées d'accès, la vérification d'identité et les décisions de gouvernance (Décret 13/2023 & Loi 2020).",
+    "minimizationTitle": "Consignation Stricte de Métadonnées & Minimisation des Données",
+    "minimizationDesc": "Pour protéger la confidentialité des clients, ce journal enregistre uniquement des métadonnées d'accès et des références sécurisées. Les diagnostics détaillés, symptômes d'allergie, numéros de passeport et coordonnées de paiement ne sont JAMAIS stockés ni affichés.",
+    "searchPlaceholder": "Rechercher une référence ou un auteur...",
+    "allCategories": "Toutes les Catégories",
+    "allRoles": "Tous les Rôles",
+    "allResults": "Tous les Résultats",
+    "eventsMatched": "événements enregistrés",
+    "colEventId": "ID Événement",
+    "colTimestamp": "Horodatage",
+    "colActor": "Auteur & Rôle",
+    "colAction": "Action",
+    "colCategory": "Catégorie",
+    "colTargetRef": "Réf. Cible",
+    "colResult": "Résultat",
+    "colDetails": "Contexte des Métadonnées",
+    "noEvents": "Aucun événement d'audit ne correspond aux critères de recherche et de filtrage."
+  },
+  "managerDashboard": {
+    "title": "Cockpit de Supervision de la Direction",
+    "subtitle": "Synthèse opérationnelle de haut niveau récapitulant les revenus, l'occupation des villas et la charge de travail des thérapeutes.",
+    "delegationActiveTitle": "Autorité Déléguée Temporaire Active",
+    "expires": "Expire le",
+    "delegationDesc": "L'administrateur Alexander Wright vous a temporairement autorisé les capacités opérationnelles suivantes :",
+    "revenueSub": "Consolidé sur Forfaits, Spa & Restauration",
+    "villasOccupied": "villas occupées",
+    "activeStays": "Séjours en Cours",
+    "authorizedReports": "Rapports d'Analyse & Gestion Autorisés",
+    "readOnlyOversight": "Supervision de Direction · Accès en Lecture Seule",
+    "descRevenue": "Examinez la répartition des revenus entre Forfaits, Soins Spa et Restauration avec pagination détaillée des règlements.",
+    "descOccupancy": "Passez en revue le statut de l'inventaire des villas, les taux d'occupation et les ratios de maintenance par catégorie.",
+    "descTherapists": "Suivez les indicateurs de charge des praticiens, les minutes de soins planifiées et les séances réalisées.",
+    "descSystem": "Synthèse de l'état général du resort et exportation groupée des déclarations de résidence de police (Loi de 2020).",
+    "privacyBoundaryTitle": "Limites du Rôle Gestionnaire & Minimisation des Données",
+    "privacyBoundaryDesc": "En tant que Gestionnaire du Resort, votre habilitation se limite exclusivement aux indicateurs analytiques agrégés. Les notes cliniques individuelles, antécédents médicaux personnels, pièces d'identité et secrets de paiement sont strictement exclus de tous les écrans gestionnaires conformément au Décret 13/2023/ND-CP et à la règle BR-03."
+  },
+  "systemOverview": {
+    "pageTitle": "Tableau de Bord de Vue d'Ensemble & Santé Opérationnelle",
+    "pageSubtitle": "Synthèse inter-modules surveillant l'hébergement, la réalisation des soins, la préparation culinaire, le règlement des factures et la résidence.",
+    "btnExportPolice": "Exporter la Déclaration de Police",
+    "exportSuccess": "Le lot quotidien de déclaration de résidence de police a été généré et consigné avec succès.",
+    "statusHonestyTitle": "Authenticité des Données Opérationnelles",
+    "statusHonestyDesc": "Tous les indicateurs présentés ci-dessous reflètent l'état applicatif réel calculé directement à partir des réservations, soins planifiés, commandes de cuisine et factures réglées.",
+    "accommodationTitle": "État des Hébergements & Villas Sanctuaires (Module 2)",
+    "totalVillas": "Total des Villas Physiques",
+    "inspectedReady": "Nettoyées & inspectées",
+    "turnoverQueue": "En attente d'entretien",
+    "outOfOrder": "Maintenance planifiée",
+    "therapyTitle": "Planning des Soins & Réalisations (Module 3)",
+    "billingTitle": "Facturation Consolidée & Règlements (Module 5)",
+    "unsettledGuard": "Garde-Fou de Départ",
+    "guardActive": "Actif",
+    "policeComplianceTitle": "Conformité de Déclaration de Résidence Temporaire de Police",
+    "policeComplianceDesc": "Conformément à la Loi sur la Résidence 2020 et au Décret 13/2023/ND-CP, HSWRMS compile les déclarations de résidence temporaire des hôtes nationaux et internationaux lors de l'enregistrement. Le lot de métadonnées est transmis à l'autorité policière locale.",
+    "batchId": "ID du Lot",
+    "totalResidents": "Total des Enregistrements",
+    "domestic": "Hôtes Nationaux",
+    "foreign": "Hôtes Étrangers",
+    "generatedAt": "Généré le",
+    "reExport": "Régénérer le Fichier de Déclaration",
+    "exportModalTitle": "Exportation de la Déclaration de Résidence de Police",
+    "exportModalSuccess": "Le fichier d'exportation de déclaration de résidence a été structuré conformément au schéma électronique officiel requis par les autorités de police en vertu de la Loi sur la Résidence 2020."
+  },
+  "governance": {
+    "params": {
+      "depositDefault": {
+        "label": "Acompte Obligatoire de Réservation",
+        "desc": "Pourcentage d'acompte calculé sur le forfait de séjour avant confirmation VNPay."
+      },
+      "cancellationWindow": {
+        "label": "Délai Limite d'Annulation Sans Frais",
+        "desc": "Nombre minimum d'heures avant l'arrivée pour bénéficier d'une annulation gratuite."
+      },
+      "cancellationRefund": {
+        "label": "Taux de Remboursement d'Annulation",
+        "desc": "Pourcentage de l'acompte remboursé en cas d'annulation avant la date limite."
+      },
+      "dietaryCutoff": {
+        "label": "Délai de Pré-Sélection des Repas",
+        "desc": "Délai d'anticipation pour sélectionner les menus afin de permettre la préparation en cuisine."
+      },
+      "policeExportTime": {
+        "label": "Heure de Génération de Déclaration de Police",
+        "desc": "Heure programmée pour la génération nocturne du rapport de résidence (Loi de 2020)."
+      }
+    },
+    "flags": {
+      "extraSpaOnline": {
+        "name": "Customer Online Extra Spa Booking",
+        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
+      },
+      "extraFnbOnline": {
+        "name": "Customer In-Villa Dining A-la-carte Ordering",
+        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
+      },
+      "residenceExport": {
+        "name": "Nightly Police Residence Declaration Batch",
+        "desc": "Compile automatiquement les données d'identification des arrivées des clients à l'heure programmée (l'obligation légale de déclaration de résidence reste obligatoire)."
+      },
+      "reviewInvites": {
+        "name": "Automated Post-Checkout Review Invitations",
+        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
+      }
+    },
+    "permissions": {
+      "categories": {
+        "experience": "Customer Retreat Experience",
+        "frontDesk": "Front Desk Operations",
+        "wellness": "Spa & Therapy Fulfillment",
+        "culinary": "Culinary & F&B Operations",
+        "management": "Management Analytics & Oversight",
+        "governance": "Governance & System Administration"
+      },
+      "bookRetreat": {
+        "name": "Book Retreat Package & Pay Deposit",
+        "desc": "Browse packages, select retreat dates, configure villa category, and execute deposit via VNPay."
+      },
+      "manageHealth": {
+        "name": "Manage Own Sensitive Health & Dietary Profile",
+        "desc": "Provide explicit consent to record allergies, dietary restrictions, and physical contraindications."
+      },
+      "deleteHealth": {
+        "name": "Request Post-Retreat Health Data Deletion",
+        "desc": "Exercise statutory right to erase or anonymize health notes after retreat completion (BR-07)."
+      },
+      "viewOwnFolio": {
+        "name": "View In-House Consolidated Folio",
+        "desc": "Read-only access to own villa charges, deposits, and invoice line items."
+      },
+      "viewArrivals": {
+        "name": "View Daily Guest Arrivals & Schedules",
+        "desc": "Access expected customer arrivals, arrival times, and check-in preparation status."
+      },
+      "checkInGuest": {
+        "name": "Perform Guest Check-In & Collect Residence ID",
+        "desc": "Verify guest identity, collect passport/CCCD details for Law on Residence compliance, and activate stay."
+      },
+      "assignVillas": {
+        "name": "Assign Physical Villas & Update Operational Status",
+        "desc": "Allocate available villas to bookings and transition villa statuses (Cleaning, Available, Maintenance)."
+      },
+      "bookExtraSpa": {
+        "name": "Manual Front Desk Extra Spa Booking",
+        "desc": "Schedule walk-up or concierge extra spa sessions with strict 2D resource validation (Therapist + Room)."
+      },
+      "checkoutProcess": {
+        "name": "Consolidate Folio, Collect Payment & Checkout",
+        "desc": "Generate consolidated tax invoice, collect final payment, and complete checkout after verifying zero unpaid charges (BR-02)."
+      },
+      "viewTherapistSchedule": {
+        "name": "View Personal Assigned Therapy Schedule",
+        "desc": "Access assigned daily therapy and yoga sessions with guest arrival times and treatment rooms."
+      },
+      "viewHealthNotes": {
+        "name": "View Treatment-Relevant Clinical Health Notes",
+        "desc": "Inspect strictly physical contraindications, injuries, and focus areas for assigned therapy guests (BR-03)."
+      },
+      "completeSpa": {
+        "name": "Record Spa Session Outcomes (Completed / No-Show)",
+        "desc": "Mark therapy sessions completed with practitioner notes or register customer no-show."
+      },
+      "viewMealPrep": {
+        "name": "View Kitchen Daily Meal Preparation Queue",
+        "desc": "Access daily meal orders aggregated by meal window, delivery villa, and prep status."
+      },
+      "viewDietaryWarnings": {
+        "name": "View Food-Related Allergy & Dietary Warnings",
+        "desc": "Inspect strictly culinary allergen tags and food preferences without access to general health records (BR-03)."
+      },
+      "updateMealStatus": {
+        "name": "Update Meal Status (Preparing / Ready / Delivered)",
+        "desc": "Progress meal orders through kitchen prep stages to delivery."
+      },
+      "viewRevenue": {
+        "name": "View Revenue & Financial Performance Reports",
+        "desc": "Access aggregated financial reporting across package base fees, spa revenue, and dining revenue."
+      },
+      "viewOccupancy": {
+        "name": "View Villa Occupancy & Inventory Utilization",
+        "desc": "Inspect real-time resort occupancy rates, villa category performance, and maintenance ratios."
+      },
+      "viewTherapistReports": {
+        "name": "View Practitioner Utilization & Workload Reports",
+        "desc": "Monitor aggregate treatment minutes, scheduled sessions, and completion ratios by therapist."
+      },
+      "viewManagerDashboard": {
+        "name": "Access Executive Management Cockpit",
+        "desc": "Executive cockpit summarizing key operational KPIs and direct navigation to authorized analytical reports."
+      },
+      "exportPolice": {
+        "name": "Export Daily Police Residence Declarations",
+        "desc": "Generate official metadata export file for local police temporary residence compliance (Law on Residence 2020)."
+      },
+      "configureParams": {
+        "name": "Configure System Business Parameters",
+        "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
+      },
+      "manageFlags": {
+        "name": "Manage Modular Feature Flags",
+        "desc": "Toggle optional customer self-service modules and automated compliance routines."
+      },
+      "viewMatrix": {
+        "name": "Inspect System RBAC Permission Matrix",
+        "desc": "Review cross-role functional capability allocations and security boundary definitions."
+      },
+      "delegateRights": {
+        "name": "Delegate Limited Admin Rights to Manager",
+        "desc": "Grant time-bounded, scoped subset of administrative capabilities to Resort Operations Manager."
+      },
+      "viewAuditLog": {
+        "name": "View Sensitive Data Access Audit Log",
+        "desc": "Inspect chronological metadata log of sensitive health, identity, and financial access events."
+      },
+      "viewSystemOverview": {
+        "name": "View System-Wide Operational Health & Compliance",
+        "desc": "Cross-module rollup of bookings, villas, treatments, dining, and daily police export status."
+      },
+      "boundaries": {
+        "healthConsent": "Strict privacy boundary: Sensitive health records require explicit self-consent under Decree 13.",
+        "statutoryDeletion": "Statutory Customer Right: Data subject deletion request cannot be executed by staff.",
+        "frontDeskOnly": "Operational integrity: Physical identification check and key handover restricted to Front Desk.",
+        "frontDeskCheckout": "Financial accountability: Cashier and key return operations belong strictly to Front Desk.",
+        "therapistHealthOnly": "Data minimization (BR-03): Clinical health notes accessible ONLY by assigned treating therapists.",
+        "fnbDietaryOnly": "Data minimization (BR-03): Kitchen staff sees allergy tags only; clinical diagnoses strictly withheld.",
+        "adminOnly": "Security governance: RBAC matrix configuration reserved strictly for System Administrator.",
+        "delegationAdminOnly": "Privilege escalation protection: Delegation powers cannot be sub-delegated or self-assigned.",
+        "auditAdminOnly": "Accountability: Audit trail inspection reserved exclusively for System Administrator."
+      }
+    },
+    "audit": {
+      "details": {
+        "treatmentNotesConsultation": "Consulted treatment-relevant clinical notes for scheduled afternoon herbal bath session.",
+        "residenceIdVerified": "Verified guest residence identification document metadata during physical check-in.",
+        "receptionistHealthBlocked": "Access to full medical contraindications blocked by RBAC data minimization policy (BR-03).",
+        "kitchenAllergenCheck": "Accessed culinary allergen flags for lunch course preparation (Gluten-Free & Tree Nut allergy).",
+        "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
+        "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
+        "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
+        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
+        "parameterUpdated": "Successfully updated business parameter value.",
+        "permissionUpdated": "Successfully updated permission matrix capability.",
+        "delegationCreated": "Successfully created limited delegation record for Manager.",
+        "delegationRevoked": "Successfully revoked Manager delegation authority."
+      }
+    }
+  },
+  "staffList": {
+    "title": "Gestion des comptes du personnel",
+    "subtitle": "Provisionnement du personnel opérationnel, attributions de rôles RBAC, statut de service et limites de confidentialité (Écran 10).",
+    "searchPlaceholder": "Rechercher par nom, email ou rôle...",
+    "allRoles": "Tous les rôles",
+    "allStatuses": "Tous les statuts",
+    "staffCount": "comptes du personnel",
+    "provisionBtn": "Créer un compte de personnel",
+    "colStaff": "Membre du personnel",
+    "colRole": "Rôle système",
+    "colStatus": "Statut du compte",
+    "colContact": "Contact professionnel",
+    "colJoined": "Date d'intégration",
+    "colActions": "Actions",
+    "viewDetail": "Voir les détails",
+    "noStaff": "Aucun compte de personnel ne correspond aux critères de recherche.",
+    "modalTitle": "Créer un nouveau compte de personnel",
+    "fullName": "Nom complet",
+    "workEmail": "Email professionnel",
+    "phoneNumber": "Numéro de téléphone",
+    "systemRole": "Rôle système",
+    "statusActive": "Actif",
+    "statusSuspended": "Suspendu",
+    "statusPending": "En attente",
+    "createdSuccess": "Compte de personnel créé avec succès.",
+    "validationRequired": "Veuillez fournir un nom complet et un email professionnel valide."
+  },
+  "staffDetail": {
+    "pageTitle": "Profil et autorisations du personnel",
+    "backLink": "Retour à la liste du personnel",
+    "accountMetadata": "Métadonnées du personnel opérationnel",
+    "staffId": "Identifiant personnel",
+    "roleClearance": "Autorisation du rôle",
+    "email": "Email professionnel",
+    "phone": "Numéro de téléphone",
+    "joinedDate": "Date d'intégration",
+    "lastActive": "Dernière activité",
+    "statusActive": "En service",
+    "statusSuspended": "Compte suspendu",
+    "suspendAccount": "Suspendre le compte",
+    "reactivateAccount": "Réactiver le compte",
+    "clearanceSectionTitle": "Périmètre RBAC et minimisation des données",
+    "scopeAdminTitle": "Autorité complète d'administration système",
+    "scopeAdminDesc": "Autorisé à configurer les paramètres métier, les indicateurs de fonctionnalités, la matrice RBAC, la délégation et le journal d'audit de sécurité.",
+    "scopeAdminMin": "N'expose pas les diagnostics médicaux bruts des clients ni les secrets de paiement.",
+    "scopeManagerTitle": "Gestion opérationnelle et autorité analytique",
+    "scopeManagerDesc": "Autorisé à consulter les rapports de revenus, les statistiques d'occupation des villas, l'utilisation des thérapeutes et la santé opérationnelle du système.",
+    "scopeManagerMin": "Accès analytique strictement en lecture seule. Le responsable ne peut pas accéder aux dossiers médicaux individuels ni modifier la facturation.",
+    "scopeRecTitle": "Réception et autorité d'hébergement client",
+    "scopeRecDesc": "Autorisé à gérer les arrivées quotidiennes, collecter les pièces d'identité de résidence, attribuer les villas physiques, enregistrer des services de spa supplémentaires et générer les factures consolidées.",
+    "scopeRecMin": "Les données de santé protégées sont minimisées; le réceptionniste ne peut pas accéder aux diagnostics médicaux.",
+    "scopeThTitle": "Thérapie spa et autorité de bien-être physique",
+    "scopeThDesc": "Autorisation de consulter le planning quotidien des soins attribués, de mettre à jour les statuts (Terminé/Non présenté) et d'accéder aux notes physiques pertinentes.",
+    "scopeThMin": "Le thérapeute voit strictement les contre-indications physiques (blessures, allergies) et uniquement pour les clients assignés (BR-03).",
+    "scopeFbTitle": "Restauration diététique et opérations de cuisine",
+    "scopeFbDesc": "Accès à la file de préparation des repas, progression des commandes (En préparation / Prêt) et inspection des avertissements d'allergènes.",
+    "scopeFbMin": "Le personnel de cuisine voit strictement les étiquettes d'allergènes; les dossiers médicaux généraux sont totalement masqués (BR-03).",
+    "suspendSuccess": "Compte du personnel suspendu avec succès.",
+    "reactivateSuccess": "Compte du personnel réactivé avec succès.",
+    "notFound": "Enregistrement du compte de personnel introuvable."
+  },
+  "masterData": {
+    "title": "Gestion des données de référence",
+    "subtitle": "Gérer les forfaits de retraite, le catalogue de spa et les catégories de villas selon la taxonomie de bien-être GWI (Écran 12).",
+    "wellnessTaxonomyBadge": "Taxonomie de bien-être GWI",
+    "wellnessTaxonomyNotice": "Les données de référence reflètent une terminologie de bien-être holistique. Les mises à jour s'appliquent immédiatement aux parcours M1–M5.",
+    "tabRetreats": "Forfaits de retraite",
+    "tabSpa": "Catalogue Spa & Thérapie",
+    "tabVillas": "Catégories de villas",
+    "searchPlaceholder": "Rechercher des éléments du catalogue...",
+    "colPackage": "Forfait de retraite",
+    "colTheme": "Thème bien-être",
+    "colDuration": "Durée",
+    "colBasePrice": "Prix de base",
+    "colStatus": "Statut",
+    "colService": "Soin thérapeutique",
+    "colModality": "Modalité",
+    "colContraindications": "Contre-indications",
+    "colCategory": "Catégorie de villa",
+    "colOccupancy": "Capacité",
+    "colFeatures": "Équipements bien-être",
+    "colInventory": "Inventaire",
+    "colNightlyRate": "Tarif par nuit",
+    "customersUnit": "Clients",
+    "viewEdit": "Voir / Modifier",
+    "editModalTitle": "Configurer l'entrée de données de référence",
+    "nameLabel": "Nom d'affichage",
+    "priceLabel": "Prix affiché (VND)",
+    "saveSuccess": "Entrée de données de référence mise à jour avec succès."
   }
 }

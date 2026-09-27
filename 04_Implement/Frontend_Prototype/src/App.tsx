@@ -11,6 +11,7 @@ import { OperationsProvider } from './context/OperationsContext';
 import { SpaProvider } from './context/SpaContext';
 import { DiningProvider } from './context/DiningContext';
 import { FolioProvider } from './context/FolioContext';
+import { GovernanceProvider } from './context/GovernanceContext';
 import { PageTransition } from './components/motion/PageTransition';
 import './styles/globals.css';
 import './styles/layouts.css';
@@ -18,6 +19,7 @@ import './styles/components.css';
 import './styles/spa.css';
 import './styles/dining.css';
 import './styles/folio.css';
+import './styles/governance.css';
 
 export const App: React.FC = () => {
   return (
@@ -28,15 +30,17 @@ export const App: React.FC = () => {
             <SpaProvider>
               <DiningProvider>
                 <FolioProvider>
-                  <ToastProvider>
-                    <SmoothScrollProvider>
-                      <CursorProvider>
-                        <PageTransition />
-                        <AppRouter />
-                        <RoleSwitcher />
-                      </CursorProvider>
-                    </SmoothScrollProvider>
-                  </ToastProvider>
+                  <GovernanceProvider>
+                    <ToastProvider>
+                      <SmoothScrollProvider>
+                        <CursorProvider>
+                          <PageTransition />
+                          <AppRouter />
+                          <RoleSwitcher />
+                        </CursorProvider>
+                      </SmoothScrollProvider>
+                    </ToastProvider>
+                  </GovernanceProvider>
                 </FolioProvider>
               </DiningProvider>
             </SpaProvider>

@@ -6,9 +6,9 @@ import { OperationalLayout } from '../layouts/OperationalLayout';
 import { ManagerAdminLayout } from '../layouts/ManagerAdminLayout';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { RoleGuard } from './guards/RoleGuard';
-import { PlaceholderScreen } from '../../components/common/PlaceholderScreen';
-import type { ScreenMetadata } from '../../types/screen';
-import { SCREEN_INVENTORY } from '../../types/screen';
+import { StaffAccountListPage } from '../../pages/admin/StaffAccountListPage';
+import { StaffAccountDetailPage } from '../../pages/admin/StaffAccountDetailPage';
+import { MasterDataPage } from '../../pages/admin/MasterDataPage';
 
 // Phase 2.1 Implemented Screens
 import { LandingPage } from '../../pages/public/LandingPage';
@@ -73,14 +73,15 @@ import { RevenueDashboardPage } from '../../pages/manager/RevenueDashboardPage';
 import { OccupancyReportPage } from '../../pages/manager/OccupancyReportPage';
 import { TherapistUtilizationReportPage } from '../../pages/manager/TherapistUtilizationReportPage';
 
-// Helper to look up screen metadata by screen number
-const getScreen = (num: number): ScreenMetadata => {
-  const found = SCREEN_INVENTORY.find((s) => s.number === num);
-  if (!found) {
-    throw new Error(`Screen #${num} not found in inventory`);
-  }
-  return found;
-};
+// Phase 2.7 Module 6 Screens (Admin, Permissions, Governance & Monitoring)
+import { AdminDashboardPage } from '../../pages/admin/AdminDashboardPage';
+import { BusinessParametersPage } from '../../pages/admin/BusinessParametersPage';
+import { FeatureFlagsPage } from '../../pages/admin/FeatureFlagsPage';
+import { PermissionMatrixPage } from '../../pages/admin/PermissionMatrixPage';
+import { AdminDelegationPage } from '../../pages/admin/AdminDelegationPage';
+import { SensitiveAuditLogPage } from '../../pages/admin/SensitiveAuditLogPage';
+import { ManagerDashboardPage } from '../../pages/manager/ManagerDashboardPage';
+import { SystemOverviewPage } from '../../pages/common/SystemOverviewPage';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -234,46 +235,49 @@ export const AppRouter: React.FC = () => {
           </RoleGuard>
         }
       >
-        <Route path="dashboard" element={<PlaceholderScreen screen={getScreen(55)} />} />
+        <Route path="dashboard" element={<ManagerDashboardPage />} />
         <Route path="revenue" element={<RevenueDashboardPage />} />
         <Route path="occupancy" element={<OccupancyReportPage />} />
         <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
-        <Route
-          path="system-overview"
-          element={
-            <PlaceholderScreen
-              screen={{
-                ...getScreen(56),
-                name: 'System Overview Dashboard (Manager View)',
-                description: 'Manager-scoped view of resort operations overview and Police Residency Declaration export.'
-              }}
-            />
-          }
-        />
+        <Route path="system-overview" element={<SystemOverviewPage />} />
         <Route index element={<Navigate to="/manager/dashboard" replace />} />
       </Route>
 
       {/* ====================================================================
-          8. Admin System Administration (ManagerAdminLayout - Guard: Admin)
+          8. Admin System Administration (ManagerAdminLayout - Guard: Admin / Delegated Manager)
           ==================================================================== */}
       <Route
         path="/admin"
         element={
-          <RoleGuard allowedRoles={['admin']}>
+          <RoleGuard allowedRoles={['admin', 'manager']}>
             <ManagerAdminLayout />
           </RoleGuard>
         }
       >
-        <Route path="dashboard" element={<PlaceholderScreen screen={getScreen(49)} />} />
-        <Route path="staff" element={<PlaceholderScreen screen={getScreen(10)} />} />
-        <Route path="staff/:id" element={<PlaceholderScreen screen={getScreen(11)} />} />
-        <Route path="master-data" element={<PlaceholderScreen screen={getScreen(12)} />} />
-        <Route path="business-params" element={<PlaceholderScreen screen={getScreen(50)} />} />
-        <Route path="feature-flags" element={<PlaceholderScreen screen={getScreen(51)} />} />
-        <Route path="permissions" element={<PlaceholderScreen screen={getScreen(52)} />} />
-        <Route path="delegation" element={<PlaceholderScreen screen={getScreen(53)} />} />
-        <Route path="audit-log" element={<PlaceholderScreen screen={getScreen(54)} />} />
-        <Route path="system-overview" element={<PlaceholderScreen screen={getScreen(56)} />} />
+        <Route path="dashboard" element={<RoleGuard allowedRoles={['admin']}><AdminDashboardPage /></RoleGuard>} />
+        <Route path="staff" element={<RoleGuard allowedRoles={['admin']}><StaffAccountListPage /></RoleGuard>} />
+        <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']}><StaffAccountDetailPage /></RoleGuard>} />
+        <Route path="master-data" element={<RoleGuard allowedRoles={['admin']}><MasterDataPage /></RoleGuard>} />
+        <Route
+          path="business-params"
+          element={
+            <RoleGuard requiredCapability="configure_business_parameters">
+              <BusinessParametersPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="feature-flags"
+          element={
+            <RoleGuard requiredCapability="manage_feature_flags">
+              <FeatureFlagsPage />
+            </RoleGuard>
+          }
+        />
+        <Route path="permissions" element={<RoleGuard allowedRoles={['admin']}><PermissionMatrixPage /></RoleGuard>} />
+        <Route path="delegation" element={<RoleGuard allowedRoles={['admin']}><AdminDelegationPage /></RoleGuard>} />
+        <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']}><SensitiveAuditLogPage /></RoleGuard>} />
+        <Route path="system-overview" element={<SystemOverviewPage />} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 

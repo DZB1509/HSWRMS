@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
+import { useGovernance } from '../../hooks/useGovernance';
 import type { Role } from '../../types/auth';
 import {
   Sparkles,
@@ -96,7 +97,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       headingKey: 'operations.sidebar.governanceCompliance',
       defaultHeading: 'Governance & Compliance',
       items: [
-        { labelKey: 'operations.sidebar.systemOverviewPoliceExport', defaultLabel: 'System Overview & Police Export', path: '/manager/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'System Overview Dashboard', path: '/manager/system-overview', icon: Activity }
       ]
     }
   ],
@@ -130,12 +131,43 @@ export const OperationalSidebar: React.FC<{
   onCloseMobile?: () => void;
 }> = ({ mobileOpen = false, onCloseMobile: _onCloseMobile }) => {
   const { currentUser, role, logout } = useAuth();
+  const { managerDelegatedCapabilities } = useGovernance();
   const location = useLocation();
   const { t } = useTranslation();
 
   if (!role || role === 'customer') return null;
 
-  const sections = ROLE_NAV[role] || [];
+  const baseSections = ROLE_NAV[role] || [];
+  const sections = [...baseSections];
+
+  // Dynamically show delegated capabilities to Manager when active
+  if (role === 'manager' && managerDelegatedCapabilities.length > 0) {
+    const delegatedItems: SidebarItem[] = [];
+    if (managerDelegatedCapabilities.includes('configure_business_parameters')) {
+      delegatedItems.push({
+        labelKey: 'operations.sidebar.businessParametersDelegated',
+        defaultLabel: 'Business Parameters (Delegated)',
+        path: '/admin/business-params',
+        icon: Settings2
+      });
+    }
+    if (managerDelegatedCapabilities.includes('manage_feature_flags')) {
+      delegatedItems.push({
+        labelKey: 'operations.sidebar.featureFlagsDelegated',
+        defaultLabel: 'Feature Flags (Delegated)',
+        path: '/admin/feature-flags',
+        icon: ToggleLeft
+      });
+    }
+
+    if (delegatedItems.length > 0) {
+      sections.push({
+        headingKey: 'operations.sidebar.delegatedAdministration',
+        defaultHeading: 'Delegated Administration',
+        items: delegatedItems
+      });
+    }
+  }
 
   return (
     <aside

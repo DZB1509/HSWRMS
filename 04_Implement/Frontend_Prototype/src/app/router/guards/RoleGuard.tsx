@@ -2,32 +2,39 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import type { Role } from '../../../types/auth';
+import type { CapabilityKey } from '../../../types/governance';
+import { useGovernance } from '../../../hooks/useGovernance';
 import { ShieldAlert, ArrowRight } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 
 export interface RoleGuardProps {
   children: React.ReactNode;
   allowedRoles?: Role[];
+  requiredCapability?: CapabilityKey;
 }
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   children,
-  allowedRoles
+  allowedRoles,
+  requiredCapability
 }) => {
   const { role, isAuthenticated, currentUser } = useAuth();
+  const { hasCapability } = useGovernance();
   const location = useLocation();
-
-  if (!allowedRoles || allowedRoles.length === 0) {
-    return <>{children}</>;
-  }
 
   // Not logged in at all
   if (!isAuthenticated) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
-  // Logged in, but unauthorized for this specific role
-  if (role && !allowedRoles.includes(role)) {
+  // Capability check if specified
+  const isCapabilityDenied = requiredCapability && !hasCapability(role, requiredCapability);
+
+  // Role check if specified
+  const isRoleDenied = allowedRoles && allowedRoles.length > 0 && role && !allowedRoles.includes(role);
+
+  // Unauthorized for role or capability
+  if (isRoleDenied || isCapabilityDenied) {
     return (
       <div style={{
         maxWidth: '560px',
@@ -57,7 +64,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
           Your current session persona is <strong>{currentUser?.name}</strong> with role <code>{role}</code>.
-          This route strictly requires authorization clearance for: <code>{allowedRoles.join(' / ')}</code>.
+          This route strictly requires authorization clearance for: {allowedRoles && allowedRoles.length > 0 ? <code>{allowedRoles.join(' / ')}</code> : ''}{requiredCapability ? <span> with capability: <code>{requiredCapability}</code></span> : ''}.
         </p>
         <div style={{
           padding: 'var(--space-3)',
