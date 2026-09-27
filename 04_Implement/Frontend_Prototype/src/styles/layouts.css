@@ -147,7 +147,7 @@
   align-items: center;
   justify-content: space-between;
   height: 68px;
-  max-width: 1680px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: 0 var(--space-6);
   gap: var(--space-4);
@@ -331,8 +331,8 @@
   flex-shrink: 0;
 }
 
-/* Wide Desktop vs Compact Desktop Links */
-@media (min-width: 1280px) {
+/* Wide Desktop (>= 1680px) -> all 6 nav items visible */
+@media (min-width: 1680px) {
   .hsw-nav-more-wrapper {
     display: none !important;
   }
@@ -341,7 +341,8 @@
   }
 }
 
-@media (max-width: 1279px) and (min-width: 1025px) {
+/* Intermediate Desktop (1025px - 1679px) -> 4 items + Plus menu */
+@media (max-width: 1679px) and (min-width: 1025px) {
   .hsw-nav-desktop-wide-only {
     display: none !important;
   }
@@ -350,8 +351,19 @@
   }
 }
 
-@media (max-width: 1380px) {
+.hsw-nav-more-wrapper .hsw-nav-dropdown {
+  right: 0;
+  left: auto;
+}
+
+@media (max-width: 1440px) {
   .hsw-customer-portal-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .hsw-customer-user-text {
     display: none;
   }
 }
