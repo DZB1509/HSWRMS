@@ -237,18 +237,17 @@ export const LandingPage: React.FC = () => {
                 </Link>
               </MagneticButton>
 
-              <Button
-                variant="secondary"
-                size="lg"
-                onClick={scrollToPhilosophy}
-                style={{
-                  color: '#ffffff',
-                  borderColor: 'rgba(255, 255, 255, 0.4)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                }}
-              >
-                {t('landing.hero.ctaSecondary')}
-              </Button>
+              <MagneticButton distance={0.2} maxOffset={6}>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="hsw-btn-hero-secondary"
+                  icon={<Sparkles size={16} />}
+                  onClick={scrollToPhilosophy}
+                >
+                  {t('landing.hero.ctaSecondary')}
+                </Button>
+              </MagneticButton>
             </div>
           </div>
         </Container>
