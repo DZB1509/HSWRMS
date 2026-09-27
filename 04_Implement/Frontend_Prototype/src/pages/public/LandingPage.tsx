@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
 import {
@@ -22,11 +22,26 @@ import { MOCK_RETREAT_PACKAGES } from '../../data/mockRetreats';
 
 export const LandingPage: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const heroRef = useRef<HTMLDivElement>(null);
   const heroBgRef = useRef<HTMLImageElement>(null);
   const heroHeadlineRef = useRef<HTMLHeadingElement>(null);
   const heroSubRef = useRef<HTMLParagraphElement>(null);
   const heroCtaRef = useRef<HTMLDivElement>(null);
+
+  // Hash-based smooth scroll for deep links from external routes or reload
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const timer = setTimeout(() => {
+        const elem = document.getElementById(id);
+        if (elem) {
+          elem.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [location.hash, location.pathname]);
 
   // Desktop Hero Scroll Choreography (Section 7)
   useEffect(() => {
@@ -442,14 +457,16 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div
+            className="hsw-retreat-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
               gap: 'var(--space-8)',
+              alignItems: 'stretch',
             }}
           >
             {MOCK_RETREAT_PACKAGES.map((retreat, index) => (
-              <RevealOnScroll key={retreat.id} delayMs={index * 120}>
+              <RevealOnScroll key={retreat.id} delayMs={index * 120} className="hsw-retreat-grid-item">
                 <RetreatCard retreat={retreat} />
               </RevealOnScroll>
             ))}
@@ -461,10 +478,12 @@ export const LandingPage: React.FC = () => {
           E. Wellness Experiences — Sticky Media Storytelling
           ==================================================================== */}
       <section
+        id="spa"
         style={{
           padding: 'var(--space-16) 0',
           backgroundColor: 'var(--bg-canvas)',
           borderBottom: '1px solid var(--border-subtle)',
+          scrollMarginTop: '80px',
         }}
       >
         <Container size="standard">
@@ -482,10 +501,12 @@ export const LandingPage: React.FC = () => {
           F. Sanctuary Residences & Villas
           ==================================================================== */}
       <section
+        id="villas"
         style={{
           padding: 'var(--space-16) 0',
           backgroundColor: '#ffffff',
           borderBottom: '1px solid var(--border-subtle)',
+          scrollMarginTop: '80px',
         }}
       >
         <Container size="standard">

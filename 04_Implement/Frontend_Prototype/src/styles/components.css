@@ -1187,11 +1187,27 @@
 }
 
 /* ==========================================================================
-   Retreat Card Component (Screen 1 & Screen 13)
+   Retreat Grid & Card Component (Screen 1 & Screen 13)
    ========================================================================== */
-.hsw-retreat-card {
+.hsw-retreat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-8);
+  align-items: stretch;
+}
+
+.hsw-retreat-grid-item,
+.hsw-retreat-grid > .hsw-reveal {
+  height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.hsw-retreat-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   background-color: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);

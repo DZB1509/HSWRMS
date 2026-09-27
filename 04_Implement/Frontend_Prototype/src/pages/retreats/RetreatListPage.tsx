@@ -118,14 +118,16 @@ export const RetreatListPage: React.FC = () => {
 
         {/* Package Grid */}
         <div
+          className="hsw-retreat-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
             gap: 'var(--space-8)',
+            alignItems: 'stretch',
           }}
         >
           {filteredRetreats.map((retreat, idx) => (
-            <RevealOnScroll key={retreat.id} delayMs={idx * 100}>
+            <RevealOnScroll key={retreat.id} delayMs={idx * 100} className="hsw-retreat-grid-item">
               <RetreatCard retreat={retreat} />
             </RevealOnScroll>
           ))}

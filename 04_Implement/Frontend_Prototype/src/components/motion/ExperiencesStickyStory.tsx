@@ -66,6 +66,21 @@ export const ExperiencesStickyStory: React.FC = () => {
     return () => ctx.revert();
   }, [isDesktop]);
 
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash === '#dining') {
+        setActiveExp(2);
+      } else if (hash === '#spa') {
+        setActiveExp(0);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
   const experiences = [
     {
       index: '01',
@@ -100,9 +115,10 @@ export const ExperiencesStickyStory: React.FC = () => {
           gap: 'var(--space-8)',
         }}
       >
-        {experiences.map((exp) => (
+        {experiences.map((exp, idx) => (
           <div
             key={exp.index}
+            id={idx === 2 ? 'dining' : undefined}
             className="hsw-experience-card"
             style={{
               backgroundColor: '#ffffff',
@@ -110,6 +126,7 @@ export const ExperiencesStickyStory: React.FC = () => {
               overflow: 'hidden',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-card)',
+              scrollMarginTop: '80px',
             }}
           >
             <div style={{ aspectRatio: '16/10', overflow: 'hidden', position: 'relative' }}>
@@ -185,6 +202,7 @@ export const ExperiencesStickyStory: React.FC = () => {
           return (
             <div
               key={exp.index}
+              id={idx === 2 ? 'dining' : undefined}
               onClick={() => setActiveExp(idx)}
               data-cursor="explore"
               style={{
@@ -199,6 +217,7 @@ export const ExperiencesStickyStory: React.FC = () => {
                 opacity: isActive ? 1 : 0.45,
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 cursor: 'pointer',
+                scrollMarginTop: '80px',
               }}
             >
               <div

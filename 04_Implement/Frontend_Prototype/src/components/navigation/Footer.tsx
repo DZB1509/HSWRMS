@@ -28,9 +28,9 @@ export const Footer: React.FC = () => {
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             <li><Link to="/retreats">{t('nav.retreats')}</Link></li>
-            <li><Link to="/retreats">{t('nav.villas')}</Link></li>
-            <li><Link to="/retreats">{t('nav.spa')}</Link></li>
-            <li><Link to="/retreats">{t('nav.dining')}</Link></li>
+            <li><Link to="/#villas">{t('nav.villas')}</Link></li>
+            <li><Link to="/#spa">{t('nav.spa')}</Link></li>
+            <li><Link to="/#dining">{t('nav.dining')}</Link></li>
           </ul>
         </div>
 

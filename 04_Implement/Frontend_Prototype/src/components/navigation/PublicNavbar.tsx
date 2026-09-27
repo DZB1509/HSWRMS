@@ -93,12 +93,49 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
     };
   }, [mobileMenuOpen]);
 
-  const navLinks = [
+  interface NavItem {
+    label: string;
+    path: string;
+    hash?: string;
+  }
+
+  const navItems: NavItem[] = [
     { label: t('navigation:nav.retreats', 'Retreats'), path: '/retreats' },
-    { label: t('navigation:nav.villas', 'Villas & Spaces'), path: '/retreats' },
-    { label: t('navigation:nav.spa', 'Spa & Wellness'), path: '/retreats' },
-    { label: t('navigation:nav.dining', 'Nourishing Dining'), path: '/retreats' },
+    { label: t('navigation:nav.villas', 'Villas & Spaces'), path: '/', hash: '#villas' },
+    { label: t('navigation:nav.spa', 'Spa & Wellness'), path: '/', hash: '#spa' },
+    { label: t('navigation:nav.dining', 'Nourishing Dining'), path: '/', hash: '#dining' },
   ];
+
+  const handleNavClick = (e: React.MouseEvent, item: NavItem) => {
+    if (item.hash) {
+      if (location.pathname === '/') {
+        e.preventDefault();
+        const targetId = item.hash.replace('#', '');
+        const elem = document.getElementById(targetId);
+        if (elem) {
+          elem.scrollIntoView({ behavior: 'smooth' });
+          navigate({ pathname: '/', hash: item.hash }, { replace: true });
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        }
+      } else {
+        e.preventDefault();
+        navigate({ pathname: '/', hash: item.hash });
+      }
+      setMobileMenuOpen(false);
+    } else {
+      if (location.pathname === item.path) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      setMobileMenuOpen(false);
+    }
+  };
+
+  const isItemActive = (item: NavItem) => {
+    if (item.hash) {
+      return location.pathname === '/' && location.hash === item.hash;
+    }
+    return location.pathname === item.path && !location.hash;
+  };
 
   const heroActive = isHeroMode && !isScrolled;
 
@@ -121,13 +158,14 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
 
         {/* Desktop Navigation */}
         <nav className="hsw-public-nav-links" aria-label="Main Navigation">
-          {navLinks.map((link) => (
+          {navItems.map((item) => (
             <Link
-              key={link.label}
-              to={link.path}
-              className={`hsw-public-nav-link ${location.pathname === link.path ? 'active' : ''}`}
+              key={item.label}
+              to={item.hash ? `${item.path}${item.hash}` : item.path}
+              onClick={(e) => handleNavClick(e, item)}
+              className={`hsw-public-nav-link ${isItemActive(item) ? 'active' : ''}`}
             >
-              {link.label}
+              {item.label}
             </Link>
           ))}
         </nav>
@@ -333,14 +371,14 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
             )}
 
             <nav className="hsw-mobile-nav-links">
-              {navLinks.map((link) => (
+              {navItems.map((item) => (
                 <Link
-                  key={link.label}
-                  to={link.path}
-                  className="hsw-mobile-nav-link"
-                  onClick={() => setMobileMenuOpen(false)}
+                  key={item.label}
+                  to={item.hash ? `${item.path}${item.hash}` : item.path}
+                  className={`hsw-mobile-nav-link ${isItemActive(item) ? 'active' : ''}`}
+                  onClick={(e) => handleNavClick(e, item)}
                 >
-                  <span>{link.label}</span>
+                  <span>{item.label}</span>
                   <ArrowRight size={16} style={{ color: 'var(--accent-olive)', opacity: 0.7 }} />
                 </Link>
               ))}
