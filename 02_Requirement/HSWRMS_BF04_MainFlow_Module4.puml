@@ -1,0 +1,185 @@
+' [TRACEABILITY HEADER]
+' Project: HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)
+' Module: Module 4 — Dietary F&B Management (CORE) — BF-04
+' Requirements Reference: SRS Ver2 (Section 2.4 - BF-04) & Project Specification Ver2 (Section 4, Module 4)
+' Business Rules: BR-FNB-01 (Batch Availability), BR-FNB-02 (Allergy Filter), BR-FNB-03 (Data Minimization RBAC), BR-FNB-04 (Extra F&B Folio Posting)
+' Legal Compliance: Nghị định 13/2023/NĐ-CP & 356/2025/NĐ-CP (Personal Data Protection PII)
+' BF-04 Trigger: A Customer wants to select or order a meal during the retreat.
+' BF-04 End Condition: The meal has been prepared/fulfilled and any additional F&B charge has been recorded in the Customer Folio.
+' File: HSWRMS_BF04_MainFlow_Module4.puml
+
+@startuml HSWRMS_BF04_MainFlow_Module4
+
+title HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)\nBF-04: PERSONALIZED DINING & F&B SERVICE FULFILLMENT\nMODULE 4 — DIETARY F&B MANAGEMENT (MAIN BUSINESS FLOW)
+
+skinparam backgroundColor #FFFFFF
+skinparam fontName "Segoe UI", Arial, sans-serif
+skinparam sequenceMessageAlign center
+skinparam shadowing true
+
+' Actor & Participant Styling
+skinparam participant {
+    BackgroundColor #F0F9FF
+    BorderColor #0284C7
+    FontColor #0F172A
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #F0F9FF
+    BorderColor #0284C7
+    FontColor #0F172A
+    FontSize 11
+}
+skinparam note {
+    BackgroundColor #FFF7ED
+    BorderColor #F97316
+    FontColor #0F172A
+    FontSize 10
+}
+
+' Participants
+actor "Customer\n(Khách hàng)" as Customer
+actor "Chef / F&B Staff\n(Đầu bếp / Nhân viên F&B)" as Chef
+
+participant "Guest App / Portal UI\n(Giao diện khách hàng)" as UI
+participant "F&B Controller\n(Module 4 Backend)" as BE
+participant "Module 1: Health Profile\n(RBAC Data Store)" as HealthDB
+participant "Central Database\n(MEAL_ORDER & INVENTORY)" as DB
+participant "Module 5: Guest Folio\n(Billing & Folio System)" as Folio
+
+== Phase A: F&B Staff Manages Ingredient Batches & Menu Availability (UC16) ==
+
+note over Chef, DB
+  **UC16: Manage Ingredient Batches & Availability**
+  BR-FNB-01: RemainingQuantity + ExpiryDate + ConditionStatus → MENU_ITEM.IsAvailable
+end note
+
+Chef -> UI : Open Ingredient Inventory Screen\n(F&B Dashboard)
+UI -> BE : Request: Load INGREDIENT_BATCH list
+BE -> DB : SELECT INGREDIENT, INGREDIENT_BATCH\n(RemainingQuantity, ExpiryDate, ConditionStatus)
+DB --> BE : Return batch records
+BE --> UI : Display batch inventory with condition status
+
+alt New batch received
+    Chef -> UI : Input Batch details\n(BatchNumber, ReceivedDate, ExpiryDate, Qty, ConditionStatus)
+    UI -> BE : POST: Create INGREDIENT_BATCH
+    BE -> DB : INSERT INGREDIENT_BATCH
+else Discard expired batch
+    Chef -> UI : Mark INGREDIENT_BATCH ConditionStatus = EXPIRED / DISCARDED
+    UI -> BE : PATCH: Update ConditionStatus
+    BE -> DB : UPDATE INGREDIENT_BATCH SET ConditionStatus = 'DISCARDED'
+end
+
+BE -> DB : Recalculate MENU_ITEM.IsAvailable\nfor all items with affected ingredients
+DB --> BE : Updated availability results
+BE --> UI : Notify: "Menu availability updated"
+
+== Phase B: Customer Views Allergy-Filtered Personalized Daily Menu (UC17) ==
+
+note over Customer, HealthDB
+  **UC17: Select Personalized Daily Meals**
+  BR-FNB-02: MENU_ITEM.AllergenTags ∩ GUEST_HEALTH_PROFILE.FoodAllergies → Filter/Flag
+  BR-FNB-03 (UC20): Only FoodAllergies & DietaryPreferences visible to F&B Staff
+  MedicalConditions & PhysicalLimitations MASKED / HIDDEN
+end note
+
+Customer -> UI : Open "Daily Meal Selection" screen
+UI -> BE : GET: Load Menu for today (MEAL_TYPE, DATE)
+BE -> HealthDB : Fetch FoodAllergies & DietaryPreferences\n🔒 MASKED: MedicalConditions, PhysicalLimitations
+HealthDB --> BE : Return {FoodAllergies, DietaryPreferences}
+BE -> DB : SELECT MENU_ITEM WHERE IsAvailable = TRUE
+DB --> BE : Return available MENU_ITEM records
+BE -> BE : Cross-check AllergenTags vs FoodAllergies\n→ Tag conflicting items with ⚠ AllergyWarning
+BE --> UI : Return filtered menu:\n• Allergen-matched items: FLAGGED / BLOCKED\n• Dietary type filter applied (VEGAN, KETO, HALAL...)
+
+Customer -> UI : Select meals for Breakfast, Lunch, Dinner
+Customer -> UI : Optionally add SpecialNotes
+Customer -> UI : Confirm daily meal selection
+
+UI -> BE : POST: Submit meal selection
+BE -> DB : INSERT MEAL_ORDER\n(RoomBookingID, AccountID, OrderDate, MealType, IsALaCarte=FALSE)
+BE -> DB : INSERT MEAL_ORDER_LINE\n(MenuItemID, Quantity, UnitPrice=0, AllergyWarning)
+DB --> BE : OK - Meal order created
+BE --> UI : Show confirmation: "Your meals are pre-selected"
+UI --> Customer : Display "My Meal Plan" with selected items
+
+== Phase C: Customer Orders Extra A-la-carte Items (UC18) ==
+
+note over Customer, Folio
+  **UC18: Order Extra A-la-carte Items**
+  BR-FNB-04 / BR-08: IsALaCarte=TRUE → Auto-post FOLIO_CHARGE_ITEM (ChargeType='EXTRA_FB')
+end note
+
+Customer -> UI : Open "Extra A-la-carte Order" screen
+UI -> BE : GET: Load a-la-carte menu (all available extras with prices)
+BE -> DB : SELECT MENU_ITEM WHERE Price > 0 AND IsAvailable = TRUE
+DB --> BE : Return a-la-carte items with prices
+BE --> UI : Display a-la-carte catalog with prices
+
+Customer -> UI : Select extra items & quantities
+UI -> BE : Subtotal preview = SUM(Quantity × UnitPrice)
+BE --> UI : Confirm preview amount in VND
+
+Customer -> UI : Confirm order\n(Agree to post charge to Folio)
+UI -> BE : POST: Submit a-la-carte order
+BE -> DB : INSERT MEAL_ORDER\n(IsALaCarte=TRUE, TotalAmount=SUM)
+BE -> DB : INSERT MEAL_ORDER_LINE\n(Quantity, UnitPrice, AllergyWarning if applicable)
+
+BE -> Folio : POST: Create FOLIO_CHARGE_ITEM\n(ChargeType='EXTRA_FB', Amount=TotalAmount,\nPaymentStatus='PENDING', MealOrderID)
+Folio --> BE : ChargeItemID confirmed
+DB --> BE : MEAL_ORDER created
+BE --> UI : "A-la-carte order placed & charge posted to your folio"
+UI --> Customer : Show order confirmation with folio reference
+
+== Phase D: Chef / F&B Staff Fulfills Meal Orders (UC19 / UC20) ==
+
+note over Chef, DB
+  **UC19: Fulfill Meal Orders**
+  **UC20: Enforce F&B Health-Data Minimization (RBAC)**
+  BR-FNB-03: Chef sees ONLY FoodAllergies in AllergyWarning field.
+  All MedicalConditions, PhysicalLimitations → STRICTLY HIDDEN.
+end note
+
+Chef -> UI : Open "Daily Meal Prep Dashboard" (Kitchen KDS View)
+UI -> BE : GET: Load active MEAL_ORDER list for today
+BE -> DB : SELECT MEAL_ORDER JOIN MEAL_ORDER_LINE\nWHERE OrderDate = TODAY AND OrderStatus = 'PENDING'
+DB --> BE : Return active meal orders with order lines
+
+note over BE
+  **RBAC Enforcement (BR-FNB-03 / UC20):**
+  Output includes ONLY:
+  ✅ AllergyWarning (food allergy flags)
+  ✅ DietaryPreferences (VEGAN, HALAL, etc.)
+  🔒 BLOCKED: MedicalConditions
+  🔒 BLOCKED: PhysicalLimitations
+end note
+
+BE --> UI : Display orders with:\n• Villa No. / Room No.\n• Meal items & quantities\n• ⚠ ALLERGY WARNING (if any)\n• No medical/payment data exposed
+
+Chef -> UI : Mark order line as PREPARING
+UI -> BE : PATCH: OrderLineID → PreparationStatus = 'PREPARING'
+BE -> DB : UPDATE MEAL_ORDER_LINE SET PreparationStatus = 'PREPARING'
+
+Chef -> UI : Mark order line as READY (meal prepared)
+UI -> BE : PATCH: OrderLineID → PreparationStatus = 'READY'
+BE -> DB : UPDATE MEAL_ORDER_LINE SET PreparationStatus = 'READY'
+
+BE -> DB : INSERT INGREDIENT_USAGE_LOG\n(OrderLineID, BatchID, QuantityUsed, LoggedByStaffID, DeductedAt)
+BE -> DB : UPDATE INGREDIENT_BATCH\nSET RemainingQuantity = RemainingQuantity - QuantityUsed
+DB --> BE : Ingredient batch deducted successfully
+
+Chef -> UI : Mark MEAL_ORDER as DELIVERED
+UI -> BE : PATCH: MealOrderID → OrderStatus = 'DELIVERED'
+BE -> DB : UPDATE MEAL_ORDER SET OrderStatus = 'DELIVERED', UpdatedAt = NOW()
+DB --> BE : Status updated
+BE --> UI : Order marked DELIVERED
+
+note over DB, Folio
+  **System Auto-trigger (BR-FNB-04):**
+  A-la-carte orders with IsALaCarte=TRUE already have their
+  FOLIO_CHARGE_ITEM (ChargeType='EXTRA_FB') posted to
+  Module 5 Guest Folio at order submission time (Phase C).
+  This charge is locked in until Checkout (Module 5 - BR-09).
+end note
+
+@enduml
