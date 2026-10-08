@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "retreats": "リトリートプラン",
+    "villas": "客室ヴィラ",
+    "spa": "スパ＆セラピー",
+    "dining": "ウェルネス料理",
+    "experiences": "特別体験",
+    "about": "HeavenStayについて",
+    "dashboard": "ダッシュボード",
+    "myBookings": "予約一覧",
+    "healthProfile": "ウェルネスカルテ",
+    "folio": "ご利用明細",
+    "accountSettings": "アカウント設定"
+  },
+  "roles": {
+    "public": "ビジター",
+    "customer": "ご宿泊者様 (Customer)",
+    "receptionist": "フロント係 (Receptionist)",
+    "therapist": "セラピスト／ヨガ講師",
+    "fb_staff": "料飲・シェフスタッフ",
+    "manager": "リゾート支配人",
+    "admin": "システム管理者"
+  },
+  "languages": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "fr": "Français"
+  }
+}

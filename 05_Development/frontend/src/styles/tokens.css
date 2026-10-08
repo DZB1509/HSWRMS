@@ -1,0 +1,124 @@
+/**
+ * HSWRMS Design System Tokens
+ * Source of Truth: 03_Design/UI_UX/HSWRMS_DESIGN.md
+ * Aesthetic: Quiet Luxury & Minimalist Hospitality (Amanoi-inspired)
+ */
+
+/* Luminous Angle Property Registration (Must precede rules per CSS Houdini spec) */
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+:root {
+  /* Brand & Core Palette (DESIGN.md §3.1) */
+  --bg-canvas: #faf9f6;
+  --bg-soft: #f5f3ef;
+  --surface: #ffffff;
+  --surface-alt: #fcfbf9;
+  --text-primary: #2b2b2b;
+  --text-secondary: #706e6b;
+  --text-tertiary: #9c9994;
+  --border-subtle: #e5e2dc;
+  --border-strong: #c8c4bc;
+  
+  /* Brand Accents */
+  --accent-forest: #4f5a50;
+  --accent-forest-hover: #3d463e;
+  --accent-olive: #6d7466;
+  --accent-sand: #d8c7ae;
+  --accent-sand-soft: #f2ede5;
+  
+  /* Status Colors */
+  --success: #4e7259;
+  --success-bg: #edf4ef;
+  --warning: #a9783b;
+  --warning-bg: #fdf6ec;
+  --danger: #a24b43;
+  --danger-bg: #fcf0ef;
+  --info: #527086;
+  --info-bg: #eef4f8;
+  --overlay: rgba(0, 0, 0, 0.4);
+
+  /* Actor Badge / Conventional Indicator Colors (DESIGN.md §3.2) */
+  --actor-public: #e0e0e0;
+  --actor-customer: #c8e6c9;
+  --actor-customer-text: #204b23;
+  --actor-receptionist: #fff3b0;
+  --actor-receptionist-text: #665a00;
+  --actor-therapist: #d1c4e9;
+  --actor-therapist-text: #3c2466;
+  --actor-fb: #ffd8a8;
+  --actor-fb-text: #703c00;
+  --actor-manager: #b2dfdb;
+  --actor-manager-text: #004d40;
+  --actor-admin: #bbdefb;
+  --actor-admin-text: #0d47a1;
+
+  /* Typography */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Font sizes (DESIGN.md §4.3) */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 44px;
+  --text-display: 56px;
+
+  /* Shape Language (Quiet Luxury Soft-Surface Architecture) */
+  --radius-xs: 6px;
+  --radius-sm: 10px;    /* Inputs, compact controls, tags */
+  --radius-md: 14px;    /* Buttons, chips, selectors, small option tiles */
+  --radius-lg: 18px;    /* Cards, option tiles, standard modals */
+  --radius-xl: 22px;    /* Large hero/media blocks, featured panels */
+  --radius-pill: 9999px;
+
+  /* Spacing Scale (8px system - DESIGN.md §5.1) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* Container Max Widths */
+  --container-editorial: 760px;
+  --container-standard: 1280px;
+  --container-wide: 1440px;
+
+  /* Shadows (Restrained, tactile, quiet luxury) */
+  --shadow-subtle: 0 1px 3px rgba(30, 30, 30, 0.04);
+  --shadow-card: 0 4px 20px rgba(30, 30, 30, 0.06);
+  --shadow-card-hover: 0 8px 28px rgba(30, 30, 30, 0.09);
+  --shadow-lift: 0 8px 24px rgba(43, 43, 43, 0.08);
+  --shadow-lift-subtle: 0 4px 16px rgba(43, 43, 43, 0.05);
+  --shadow-text-rest: 0 1px 2px rgba(24, 32, 26, 0.06);
+  --shadow-text-hover: 0 2px 4px rgba(24, 32, 26, 0.28), 0 5px 12px rgba(24, 32, 26, 0.32);
+  --shadow-text-hover-rich: 0 2.5px 4px rgba(24, 32, 26, 0.34), 0 6px 15px rgba(24, 32, 26, 0.38);
+  --shadow-text-subtle: 0 1.5px 3px rgba(24, 32, 26, 0.08);
+  --shadow-text-desc-rest: 0 1px 2px rgba(24, 32, 26, 0.04);
+  --shadow-text-desc-hover: 0 1.5px 2.5px rgba(24, 32, 26, 0.30), 0 4px 9px rgba(24, 32, 26, 0.32);
+  --shadow-text-desc-hover-rich: 0 2px 3.5px rgba(24, 32, 26, 0.34), 0 5px 11px rgba(24, 32, 26, 0.36);
+  --shadow-modal: 0 12px 40px rgba(30, 30, 30, 0.12);
+  --shadow-drawer: -4px 0 24px rgba(30, 30, 30, 0.08);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-lift: 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}

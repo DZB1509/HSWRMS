@@ -1,0 +1,121 @@
+import type { StaffAccount } from '../types/staff';
+
+export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
+  {
+    id: 'usr-adm-01',
+    name: 'Alexander Wright',
+    email: 'alexander.wright@heavenstay.com',
+    role: 'admin',
+    title: 'System & Governance Administrator',
+    department: 'Information Systems',
+    status: 'active',
+    joinedDate: '2025-01-15',
+    lastActiveAt: '2026-09-27 18:30',
+    avatar: 'AW',
+    phone: '+84 258 399 1001'
+  },
+  {
+    id: 'usr-mgr-01',
+    name: 'Sarah Jenkins',
+    email: 'sarah.jenkins@heavenstay.com',
+    role: 'manager',
+    title: 'Resort Operations Manager',
+    department: 'Resort Management',
+    status: 'active',
+    joinedDate: '2025-02-01',
+    lastActiveAt: '2026-09-27 17:45',
+    avatar: 'SJ',
+    phone: '+84 258 399 1002'
+  },
+  {
+    id: 'usr-rec-01',
+    name: 'Linh Tran',
+    email: 'linh.tran@heavenstay.com',
+    role: 'receptionist',
+    title: 'Senior Front Desk Officer',
+    department: 'Front Office',
+    status: 'active',
+    joinedDate: '2025-03-10',
+    lastActiveAt: '2026-09-27 18:15',
+    avatar: 'LT',
+    phone: '+84 258 399 1003'
+  },
+  {
+    id: 'usr-rec-02',
+    name: 'Pham Huong',
+    email: 'pham.huong@heavenstay.com',
+    role: 'receptionist',
+    title: 'Front Desk Associate',
+    department: 'Front Office',
+    status: 'active',
+    joinedDate: '2025-06-20',
+    lastActiveAt: '2026-09-26 14:00',
+    avatar: 'PH',
+    phone: '+84 258 399 1004'
+  },
+  {
+    id: 'usr-th-01',
+    name: 'David Kim',
+    email: 'david.kim@heavenstay.com',
+    role: 'therapist',
+    title: 'Holistic Therapist & Yoga Master',
+    department: 'Spa & Wellness',
+    status: 'active',
+    joinedDate: '2025-02-15',
+    lastActiveAt: '2026-09-27 16:45',
+    avatar: 'DK',
+    phone: '+84 258 399 1005'
+  },
+  {
+    id: 'usr-th-02',
+    name: 'Nguyen Thi Lan',
+    email: 'lan.nguyen@heavenstay.com',
+    role: 'therapist',
+    title: 'Senior Spa Therapist',
+    department: 'Spa & Wellness',
+    status: 'active',
+    joinedDate: '2025-03-01',
+    lastActiveAt: '2026-09-27 15:30',
+    avatar: 'NL',
+    phone: '+84 258 399 1006'
+  },
+  {
+    id: 'usr-th-03',
+    name: 'Tran Van Minh',
+    email: 'minh.tran@heavenstay.com',
+    role: 'therapist',
+    title: 'Acupressure & Herbal Specialist',
+    department: 'Spa & Wellness',
+    status: 'active',
+    joinedDate: '2025-04-12',
+    lastActiveAt: '2026-09-27 14:15',
+    avatar: 'TM',
+    phone: '+84 258 399 1007'
+  },
+  {
+    id: 'usr-fb-01',
+    name: 'Chef Marcus Chen',
+    email: 'marcus.chen@heavenstay.com',
+    role: 'fb_staff',
+    title: 'Executive Wellness Chef',
+    department: 'Dietary Food & Beverage',
+    status: 'active',
+    joinedDate: '2025-01-20',
+    lastActiveAt: '2026-09-27 18:00',
+    avatar: 'MC',
+    phone: '+84 258 399 1008'
+  },
+  {
+    id: 'usr-fb-02',
+    name: 'Mai Hoang',
+    email: 'mai.hoang@heavenstay.com',
+    role: 'fb_staff',
+    title: 'Dietary Nutrition Sous Chef',
+    department: 'Dietary Food & Beverage',
+    status: 'active',
+    joinedDate: '2025-05-18',
+    lastActiveAt: '2026-09-27 11:30',
+    avatar: 'MH',
+    phone: '+84 258 399 1009'
+  }
+];

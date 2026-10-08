@@ -1,0 +1,35 @@
+# ==========================================
+# HSWRMS Development Git Ignore Rules
+# ==========================================
+
+# ─── Frontend Build & Dependencies ───
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# ─── Backend Build & Artifacts ───
+backend/target/
+backend/*.log
+backend/application-local.yml
+backend/application-local.properties
+
+# ─── IDE & Tooling ───
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ─── OS Metadata ───
+.DS_Store
+Thumbs.db
+desktop.ini

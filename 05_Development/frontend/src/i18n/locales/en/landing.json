@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "badge": "A PRISTINE COASTAL SANCTUARY",
+    "headline": "Rediscover Serenity in Pure Nature",
+    "subheadline": "A transformative wellness immersion nestled between ancient cliffs and tranquil waters, blending time-honored Vietnamese herbal therapies, mindful yoga, and bespoke organic cuisine.",
+    "ctaPrimary": "Explore Retreat Packages",
+    "ctaSecondary": "The Wellness Journey",
+    "scrollHint": "Scroll to explore"
+  },
+  "philosophy": {
+    "badge": "HEAVENSTAY PHILOSOPHY",
+    "title": "The Art of Silence & Deep Restoration",
+    "paragraph1": "Nestled in an untouched national biosphere reserve embracing a secluded marine bay, HeavenStay was conceived as an unhurried haven where modern pace surrenders to the cadence of the tides and forest breezes.",
+    "paragraph2": "We believe authentic vitality begins when the body is deeply rested, the mind unburdened, and intrinsic energy rekindled through bespoke, attentive care."
+  },
+  "pillars": {
+    "badge": "THREE WELLNESS PILLARS",
+    "title": "A Trinity of Rejuvenation",
+    "restore": {
+      "title": "Restore",
+      "desc": "Purify and decompress through mineral hydrotherapy, herbal poultice acupressure, and time-honored Eastern bodywork."
+    },
+    "reconnect": {
+      "title": "Reconnect",
+      "desc": "Quiet the wandering mind in silence alongside master instructors, breathwork meditation, and Tibetan singing bowl resonance."
+    },
+    "nourish": {
+      "title": "Nourish",
+      "desc": "Wholesome culinary creations crafted from local organic micro-farms, calibrated to your metabolic requirements and allergies."
+    }
+  },
+  "showcase": {
+    "badge": "SIGNATURE RETREATS",
+    "title": "Curated Holistic Immersions",
+    "subtitle": "Each multi-day journey is individually tuned to your wellness objectives, from brief restorative escapes to profound life resets.",
+    "viewAll": "View All Retreat Packages"
+  },
+  "experiences": {
+    "badge": "DISTINCTIVE AMENITIES",
+    "title": "Essence of HeavenStay Living",
+    "spa": {
+      "title": "Bespoke Herbal Therapy",
+      "desc": "Private pavilion treatment rooms overlooking the ocean, guided by master practitioners using proprietary botanical elixirs."
+    },
+    "yoga": {
+      "title": "Dawn Yoga & Mindfulness",
+      "desc": "Greet the morning over cliffside open-air pavilions, practicing mindful vinyasa flow and pranayama breathing."
+    },
+    "dining": {
+      "title": "Farm-to-Table Gastronomy",
+      "desc": "Every dish is tailored to your verified dietary preferences, honoring organic produce and culinary refinement."
+    }
+  },
+  "villas": {
+    "badge": "SANCTUARY RESIDENCES",
+    "title": "Secluded Pavilions Sheltered by Earth & Stone",
+    "desc": "Minimalist architecture sculpted from native timber, granite, and coastal breezes. Each freestanding villa features a private heated mineral pool and tranquil meditation deck.",
+    "features": [
+      "Panoramic views of protected national bay and jungle canopy",
+      "Private heated mineral plunge pool",
+      "Open-air meditation and sun deck",
+      "Dedicated wellness ambassador service"
+    ]
+  },
+  "resonance": {
+    "badge": "CUSTOMER VOICES",
+    "title": "Echoes of Transformation",
+    "quote1": "“Three days at HeavenStay restored the deep, restorative sleep I hadn't experienced in years. Every detail—from herbal infusions to sunset sound baths—was flawless.”",
+    "author1": "Eleanor Vance — Mindful Renewal Retreat Customer",
+    "quote2": "“Complete seclusion, therapists with deep intuitive knowledge, and cuisine that feels like medicine for the soul. Truly an extraordinary sanctuary.”",
+    "author2": "Jonathan Vance — Complete Reset Retreat Customer"
+  },
+  "cta": {
+    "badge": "HEAVENSTAY SANCTUARY",
+    "title": "Begin Your Personal Restoration",
+    "desc": "Let HeavenStay guide your return to balance, vitality, and enduring inner peace.",
+    "button": "Explore Retreat Packages"
+  }
+}

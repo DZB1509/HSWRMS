@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "retreats": "Gói Nghỉ Dưỡng",
+    "villas": "Biệt Thự & Không Gian",
+    "spa": "Spa & Trị Liệu",
+    "dining": "Ẩm Thực Dưỡng Sinh",
+    "experiences": "Trải Nghiệm",
+    "about": "Về HeavenStay",
+    "dashboard": "Tổng Quan",
+    "myBookings": "Kỳ Nghỉ Của Tôi",
+    "healthProfile": "Hồ Sơ Sức Khỏe",
+    "folio": "Hóa Đơn Lưu Trú",
+    "accountSettings": "Cài Đặt Tài Khoản"
+  },
+  "roles": {
+    "public": "Khách Tham Quan",
+    "customer": "Khách Hàng (Customer)",
+    "receptionist": "Lễ Tân (Receptionist)",
+    "therapist": "Chuyên Viên Trị Liệu (Therapist)",
+    "fb_staff": "Nhân Viên Bếp/F&B (Chef & F&B)",
+    "manager": "Quản Lý (Manager)",
+    "admin": "Quản Trị Viên (Admin)"
+  },
+  "languages": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "fr": "Français"
+  }
+}
