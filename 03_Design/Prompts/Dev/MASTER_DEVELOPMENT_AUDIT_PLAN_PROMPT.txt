@@ -1,0 +1,826 @@
+You are the Lead Full-Stack Engineer and System Architect responsible for completing the
+HeavenStay Wellness Resort Management System (HSWRMS).
+
+You are taking over an EXISTING repository with:
+- approved/current SRS and requirement documents;
+- design diagrams;
+- a high-fidelity 56-screen React UI prototype;
+- revised business decisions that are newer than parts of the original UI prototype.
+
+Your task is NOT to rebuild the project blindly.
+
+Your task is to convert the existing frontend prototype into a complete full-stack HSWRMS application
+using the architecture and business rules below.
+
+==================================================
+0. CRITICAL DEVELOPMENT SCOPE OVERRIDE
+==================================================
+
+Repository root:
+Fall26_ISP392_IS2005_G1/
+
+The previous prototype lives in:
+
+04_Implement/Frontend_Prototype/
+
+IMPORTANT:
+
+04_Implement/Frontend_Prototype is now FROZEN REFERENCE MATERIAL.
+
+You MAY:
+- inspect it;
+- run it;
+- read its components;
+- copy/reuse/refactor its code into the new development area;
+- use it as the visual/UI baseline.
+
+You MUST NOT:
+- modify files under 04_Implement/;
+- continue production development inside 04_Implement/;
+- treat its current business logic as automatically correct.
+
+ALL NEW DEVELOPMENT CODE MUST LIVE UNDER:
+
+05_Development/
+
+Target structure:
+
+05_Development/
+├─ frontend/
+├─ backend/
+├─ database/
+├─ docs/
+└─ README.md
+
+Do NOT modify:
+- 00_Policy/
+- 01_Planning/
+- 02_Requirement/
+- 03_Design/
+- 04_Implement/
+- 06_Reports/
+- 07_Document_References/
+- root project documents
+
+unless I explicitly request it later.
+
+The user's new instruction that production/full-stack development must live in
+05_Development supersedes any older prompt or repository note saying frontend code must remain in 04_Implement.
+
+==================================================
+1. REQUIRED TECHNOLOGY STACK
+==================================================
+
+FRONTEND
+- React
+- TypeScript
+- Vite
+
+Preserve useful existing frontend technologies already present where appropriate:
+- React Router
+- i18next / react-i18next
+- GSAP / ScrollTrigger
+- Lenis
+- Lucide React
+- Recharts
+
+Do NOT replace the current design system with Bootstrap, JSP, Thymeleaf, or another frontend framework.
+
+BACKEND
+- Java
+- Spring Boot
+- Spring MVC using REST APIs
+- Spring Data JPA
+- Hibernate
+- Spring Security
+- JWT authentication
+- Maven
+
+DATABASE
+- Microsoft SQL Server
+
+Do NOT switch to MySQL/PostgreSQL unless explicitly requested.
+
+ARCHITECTURE
+- React SPA frontend
+- REST/JSON communication
+- Spring Boot modular monolith backend
+- SQL Server persistence
+- role-based authorization enforced in backend
+- external integrations behind dedicated adapters/services
+
+Do NOT introduce microservices without explicit approval.
+Do NOT add Swagger/OpenAPI merely because REST is used unless explicitly approved later.
+
+==================================================
+2. SOURCE-OF-TRUTH PRECEDENCE
+==================================================
+
+When sources disagree, use this priority:
+
+1. Explicit approved business decisions in THIS prompt.
+2. Latest approved/current SRS requirements and Open Items.
+3. Current approved ERD/database business model.
+4. Official 56-screen Screen Inventory.
+5. HSWRMS_DESIGN.md and approved UI/UX rules.
+6. Current rendered frontend prototype for visual/component reference.
+7. Legacy mock code and comments.
+
+The existing frontend is NOT the final business source of truth.
+
+Do not preserve incorrect mock business logic merely because it already exists.
+
+When a requirement is unresolved:
+- identify the Open Item;
+- do not silently invent a rule;
+- design a replaceable boundary where possible;
+- report the decision required.
+
+==================================================
+3. UI / UX BASELINE TO PRESERVE
+==================================================
+
+The frontend prototype is visually valuable and should be migrated rather than redesigned from zero.
+
+Preserve the HSWRMS visual identity:
+
+Public / Customer:
+- Quiet Luxury
+- wellness hospitality
+- editorial
+- cinematic
+- image-driven
+- generous whitespace
+- calm interaction rhythm
+
+Operational screens:
+- compact
+- data-first
+- efficient
+- low-motion
+- same HeavenStay brand language
+
+Manager / Admin:
+- highly restrained motion
+- analytical
+- clear hierarchy
+- trustworthy
+
+Design baseline:
+- Canvas #FAF9F6
+- Soft #F5F3EF
+- Surface #FFFFFF
+- Primary text #2B2B2B
+- Secondary text #706E6B
+- Border #E5E2DC
+- Forest #4F5A50
+- Olive #6D7466
+- Sand #D8C7AE
+- Cormorant Garamond / serif display style
+- Inter for interface/body
+- 8px spacing rhythm
+- restrained radii and shadows
+
+Preserve accessibility:
+- labels are not placeholders;
+- visible focus state;
+- status uses text + color;
+- touch targets >= 44px;
+- reduced-motion behavior;
+- keyboard-safe dialogs/forms.
+
+Do NOT perform a general visual redesign.
+
+Only change UI where:
+1. business logic has changed;
+2. usability is objectively incorrect;
+3. role/privacy behavior is incorrect;
+4. current UI conflicts with the latest SRS/approved decisions.
+
+==================================================
+4. OFFICIAL SCREEN BASELINE
+==================================================
+
+The official system contains Screens 1–56.
+
+Do NOT casually:
+- renumber screens;
+- rename official screens;
+- create Screen 57+;
+- duplicate a screen merely because another actor uses it.
+
+A role-adapted view or reused form may still be the same official screen.
+
+Example:
+M2 Walk-in Booking does NOT require a new official screen.
+
+Receptionist:
+S20 Receptionist Dashboard
+→ New Walk-in Booking
+→ reuse S15 Retreat Booking Form in Receptionist mode
+→ S22 Check-In & Residence Information
+→ S23 Villa Assignment
+
+==================================================
+5. APPROVED BUSINESS CORRECTIONS
+==================================================
+
+These decisions OVERRIDE outdated frontend prototype behavior and any conflicting old wording.
+
+------------------------------
+M1 — IDENTITY / HEALTH
+------------------------------
+
+Separate:
+- USER identity/authentication
+- CUSTOMER_PROFILE
+- HEALTH_PROFILE
+
+Sensitive data uses minimum-necessary projection.
+
+F&B Staff:
+- allergy/dietary information only.
+
+Therapist:
+- treatment-safety information relevant to assigned session only.
+
+Receptionist:
+- must not receive unrestricted health information.
+
+Consent is required for storing/maintaining applicable health data.
+
+Health deletion request may be Deferred/Pending when an active/upcoming retreat still requires the data.
+
+------------------------------
+M2 — RETREAT / ACCOMMODATION
+------------------------------
+
+RetreatBooking is the stay context used by M3/M4/M5.
+
+Villa Category != Physical Villa.
+
+Customer selects category as part of booking.
+Physical Villa is the operational resource assigned for stay/check-in.
+
+Walk-in/offline booking reuses S15.
+Do not create a separate Walk-in screen.
+
+Booking/payment concurrency must eventually be protected by backend transaction logic,
+not frontend availability alone.
+
+------------------------------
+M3 — SPA / THERAPY
+------------------------------
+
+THIS IS A CRITICAL CORRECTION.
+
+M3 is SYSTEM-DRIVEN scheduling.
+
+Customer or Receptionist provides:
+- treatment;
+- preferred date/time constraints;
+- optional note/flexibility.
+
+Customer/Receptionist MUST NOT independently pick Therapist and Treatment Room in the normal flow.
+
+A generated schedule candidate is one indivisible combination:
+
+Time Slot
++ Qualified Therapist/Yoga Instructor
++ Compatible Treatment Room
+
+S27 shows system-generated complete candidates.
+
+Candidate generation DOES NOT reserve resources.
+
+On S28 final confirmation:
+- revalidate the complete candidate;
+- reserve Therapist + Treatment Room atomically;
+- if either resource fails validation, commit neither resource;
+- regenerate/reload alternatives.
+
+Production backend must use a transaction and appropriate SQL Server/JPA locking/concurrency control.
+Do not claim frontend JavaScript provides atomic reservation.
+
+Session lifecycle:
+
+session_status:
+- SCHEDULED
+- RESCHEDULING
+- CANCELLED
+- COMPLETED
+- NO_SHOW
+
+Attendance confirmation lifecycle is SEPARATE:
+
+confirmation_status:
+- PENDING
+- CONFIRMED
+- DECLINED
+- EXPIRED
+
+IMPORTANT:
+CUSTOMER_CONFIRMED is NOT an approved session_status.
+
+If Customer confirms attendance:
+session_status remains SCHEDULED
+confirmation_status becomes CONFIRMED.
+
+IN_PROGRESS is NOT an approved persisted SpaSession status unless explicitly approved later.
+
+Reminder timeline:
+- T-24h informational reminder
+- T-2h confirmation request
+- T-75m final reminder if still pending
+- T-60m response deadline
+- T-15m upcoming-session reminder
+
+At T-60m if confirmation is still PENDING:
+confirmation_status → EXPIRED
+session_status → RESCHEDULING
+invoke recovery.
+
+EXPIRED != NO_SHOW.
+
+Recovery order:
+1. preserve same session time and replace unavailable Therapist/Room;
+2. if session time changes, explicit Customer consent is required;
+3. slot swap is last resort and all affected Customers must consent;
+4. resources must be revalidated before commit.
+
+Therapist final fulfillment action:
+- COMPLETED
+or
+- NO_SHOW
+
+Extra Spa uses the same scheduling engine.
+
+The exact M3/M4 → M5 Folio posting ownership remains an Open Item.
+Do not silently hard-wire a module ownership decision.
+
+------------------------------
+M4 — DIETARY F&B
+------------------------------
+
+M4 is not only order CRUD.
+
+It includes:
+- personalized menu;
+- ingredient batches;
+- recipe quantity;
+- menu availability;
+- meal fulfillment;
+- inventory usage;
+- extra a-la-carte charge traceability.
+
+MENU_ITEM ↔ INGREDIENT is M:N through:
+
+MENU_ITEM_INGREDIENT
+
+It stores the recipe quantity per serving.
+
+Business calculation:
+
+required ingredient quantity
+=
+quantity_per_serving × ordered_servings
+
+Usable stock must consider:
+- remaining quantity;
+- expiration;
+- stock condition.
+
+Do NOT treat expired/unusable stock as available.
+
+F&B Dashboard hierarchy should support:
+
+KPI Summary
+→ Today's Meal Orders
+→ Ingredient Demand + Inventory Alerts
+→ Menu Availability
+
+Ingredient Demand is operational data, NOT a catalog.
+
+No new official screen is required for this feature.
+
+Recipe definition may be incorporated into existing Menu Item management.
+Ingredient demand/shortage belongs on F&B Dashboard.
+
+Inventory consumption/reservation must use backend transactional validation when implemented.
+
+------------------------------
+M5 — FOLIO / PAYMENT / CHECKOUT
+------------------------------
+
+Folio is a running stay account.
+
+Invoice is the formal consolidated billing result.
+
+PaymentTransaction records payment activity.
+
+Payment Successful != Checkout Completed.
+
+Final checkout requires correct finalization of:
+- applicable service states;
+- Folio;
+- Invoice;
+- Payment;
+- RetreatBooking;
+- PhysicalVilla operational state.
+
+If Spa/F&B service remains unresolved:
+checkout must be blocked until resolved according to approved rules.
+
+Payment callbacks must be idempotent.
+Duplicate provider callbacks must not:
+- double charge;
+- create duplicate payment;
+- close Folio twice;
+- finalize stay twice.
+
+M2 deposit vs M5 final payment ownership remains an Open Item.
+Supported CASH vs VNPay scope may also remain open if current SRS has not resolved it.
+
+Do not silently decide an unresolved scope.
+
+------------------------------
+M6 — ADMIN / PERMISSIONS
+------------------------------
+
+Backend authorization is mandatory.
+
+Hiding a menu/button is NOT security.
+
+Use:
+- roles;
+- permissions;
+- Spring Security;
+- JWT;
+- backend authorization checks.
+
+Manager != Admin.
+
+Limited delegation:
+- temporary;
+- scope-limited;
+- time-bounded;
+- cannot grant protected core admin powers.
+
+Audit records must be treated as immutable through business UI.
+
+Feature flags must not disable protected core rules such as:
+- RBAC;
+- audit logging;
+- checkout/payment guard.
+
+==================================================
+6. TARGET BACKEND DESIGN
+==================================================
+
+Use a modular monolith package structure similar to:
+
+com.heavenstay.hswrms
+├─ common
+├─ config
+├─ security
+├─ integration
+├─ m1identity
+├─ m2booking
+├─ m3spa
+├─ m4fnb
+├─ m5billing
+└─ m6admin
+
+Within a module, use clear layers such as:
+- controller
+- service
+- repository
+- entity
+- dto
+- mapper/validation where useful
+
+Do not create excessive architecture ceremony for a student project.
+
+Use DTOs for API boundaries.
+Do not expose JPA entities directly to React.
+
+Use:
+- Bean/Jakarta validation for request validation where appropriate;
+- centralized exception handling;
+- consistent API error model;
+- transactions at service boundaries;
+- secure password hashing;
+- environment-based secrets/configuration.
+
+Never commit:
+- database password;
+- JWT secret;
+- VNPay secret;
+- OAuth secret.
+
+Provide safe example configuration files only.
+
+==================================================
+7. SQL SERVER / JPA RULES
+==================================================
+
+Inspect the current ERD / SQL Server schema before generating entities.
+
+Do not allow Hibernate to redefine the business data model silently.
+
+Map entities according to the current approved relational schema.
+
+Preserve:
+- FK integrity;
+- unique constraints;
+- indexes;
+- non-negative monetary constraints;
+- one-to-one uniqueness where applicable;
+- bridge tables required by relational implementation.
+
+M3 scheduling:
+use @Transactional and appropriate JPA/SQL Server locking/revalidation.
+
+M4 inventory:
+stock decrement/reservation must not allow two concurrent preparations to consume the same remaining quantity incorrectly.
+
+M5 payment:
+provider transaction reference/idempotency key must prevent duplicate processing.
+
+==================================================
+8. FRONTEND MIGRATION STRATEGY
+==================================================
+
+Do NOT rebuild all 56 screens from scratch.
+
+First inspect:
+04_Implement/Frontend_Prototype/
+
+Identify:
+A. reusable and still correct visual components;
+B. reusable layouts/navigation;
+C. reusable i18n/motion infrastructure;
+D. screens whose UI can remain mostly unchanged;
+E. screens whose business behavior must change;
+F. mock Context logic that must eventually be replaced by REST data.
+
+The frontend in 05_Development/frontend should initially inherit the strongest visual implementation,
+but business state should gradually move from local mock Contexts to API-backed feature services.
+
+Introduce a clean frontend API boundary, for example:
+
+src/
+├─ api/
+├─ features/
+├─ components/
+├─ app/
+├─ pages/
+├─ hooks/
+├─ types/
+├─ i18n/
+└─ styles/
+
+Do not over-refactor before a business phase actually needs it.
+
+Preserve the five-language support currently present:
+- vi
+- en
+- zh-CN
+- ja
+- fr
+
+==================================================
+9. PHASE WORKFLOW
+==================================================
+
+Every phase MUST follow:
+
+1. Inspect
+2. Baseline test
+3. Plan exact files
+4. Implement only phase scope
+5. Backend tests
+6. Frontend type/build tests
+7. Business-rule verification
+8. git diff review
+9. concise phase report
+10. STOP
+
+Do NOT automatically start the next phase.
+
+At the beginning of every coding phase run/report where applicable:
+
+git status --short
+git diff
+
+Frontend:
+npm install only when needed
+npx tsc --noEmit
+npm run build
+
+Backend:
+mvn test
+mvn package
+
+If commands fail before modifications, report baseline failure separately.
+Do not disguise pre-existing failures as newly introduced failures.
+
+At phase end report:
+
+A. files created
+B. files modified
+C. database/schema changes
+D. REST endpoints added
+E. security/role rules
+F. business rules implemented
+G. tests/build results
+H. unresolved/open items
+I. manual verification path
+J. whether the phase is safe to freeze
+
+Never claim browser/responsive/API verification that was not actually performed.
+
+==================================================
+10. REQUIRED DEVELOPMENT PHASES
+==================================================
+
+PHASE 0 — DISCOVERY / AUDIT / MIGRATION PLAN
+No production code changes.
+
+PHASE 1 — FULL-STACK FOUNDATION
+- create 05_Development workspace
+- migrate frontend baseline safely
+- Spring Boot Maven scaffold
+- SQL Server connectivity configuration
+- common API/error/security foundations
+- CORS
+- environment config
+- development README
+- PROJECT_DECISIONS.md
+
+PHASE 2 — M1 IDENTITY / AUTH / HEALTH
+- authentication
+- JWT
+- roles
+- Customer Profile
+- Consent
+- Health Profile
+- privacy projections
+- health deletion request
+
+PHASE 3 — M2 RETREAT BOOKING / RECEPTIONIST
+- packages
+- villas
+- booking
+- deposit boundary
+- My Bookings / itinerary
+- Receptionist arrivals/check-in/residence/villa assignment
+- walk-in reuse of S15
+
+PHASE 4 — M3 SPA / THERAPY
+- corrected system-driven scheduling
+- qualification
+- room compatibility
+- interval overlap
+- atomic reservation
+- confirmation lifecycle
+- recovery/rescheduling
+- Therapist operations
+- background reminder model
+
+PHASE 5 — M4 DIETARY F&B
+- personalized menu
+- MenuItemIngredient recipe model
+- IngredientBatch inventory
+- orders
+- ingredient demand calculation
+- shortage validation
+- prep/ready/delivered lifecycle
+
+PHASE 6 — M5 FOLIO / PAYMENT / CHECKOUT / ANALYTICS
+- Folio
+- FolioItem
+- consolidated invoice
+- final payment
+- payment idempotency
+- guarded checkout
+- Customer review
+- revenue / occupancy / therapist utilization
+
+PHASE 7 — M6 ADMIN / PERMISSION / GOVERNANCE
+- staff accounts
+- master data
+- business parameters
+- feature flags
+- permission matrix
+- limited delegation
+- audit log
+- system overview
+
+PHASE 8 — EXTERNAL INTEGRATION & BACKGROUND PROCESSING
+Only approved integrations:
+- VNPay
+- email
+- supported SSO providers
+- calendar/notification
+
+Keep provider adapters replaceable.
+Do not allow provider failure to corrupt internal domain state.
+
+PHASE 9 — CROSS-MODULE INTEGRATION
+- eliminate obsolete mock business state
+- reconcile API contracts
+- cross-module charge flow
+- privacy projections
+- end-to-end role flow
+- persistent DB data
+
+PHASE 10 — FINAL QA / RELEASE
+- 56/56 real screens
+- no obsolete mock-only business paths
+- no placeholders
+- REST integration complete
+- RBAC direct-route/backend verification
+- responsive
+- five-language check
+- business regression
+- SQL Server integrity
+- backend tests
+- frontend tsc/build
+- production build
+- final freeze report
+
+==================================================
+11. PHASE 0 TASK — DO THIS NOW
+==================================================
+
+DO NOT WRITE PRODUCTION CODE YET.
+
+Perform a full discovery audit.
+
+Inspect at minimum:
+
+- root repository structure;
+- current git state;
+- AGENTS.md;
+- latest SRS;
+- Screen_List;
+- project specification;
+- HSWRMS_DESIGN.md;
+- 03_Design/Diagrams if present;
+- 04_Implement/Frontend_Prototype;
+- package.json;
+- router;
+- layouts;
+- providers/contexts;
+- types;
+- mock datasets;
+- all 56 screen components;
+- current M3 implementation;
+- current M4 implementation;
+- current M5 checkout implementation;
+- role guards;
+- i18n;
+- motion infrastructure;
+- any SQL/ERD/database script already stored in the repository.
+
+Compare the existing frontend against the APPROVED BUSINESS CORRECTIONS in this prompt.
+
+Produce:
+
+1. CURRENT REPOSITORY MAP
+2. FRONTEND BASELINE STATUS
+3. 56-SCREEN REAL/PARTIAL/INCORRECT MATRIX
+4. BUSINESS LOGIC CONTRADICTIONS
+5. M3 CORRECTION IMPACT MAP
+6. M4 CORRECTION IMPACT MAP
+7. DATABASE/ERD READINESS
+8. BACKEND IMPLEMENTATION GAP
+9. PROPOSED 05_Development DIRECTORY TREE
+10. EXACT PHASE PLAN
+11. FILES TO COPY FROM 04_Implement TO 05_Development
+12. FILES THAT SHOULD NOT BE COPIED
+13. REQUIRED DEPENDENCIES
+14. OPEN ITEMS REQUIRING USER DECISION
+15. PHASE 1 ACCEPTANCE CRITERIA
+
+Do NOT modify 04_Implement.
+
+Do NOT create 05_Development code yet.
+
+PHASE 0 IS STRICTLY READ-ONLY.
+
+Do NOT create, delete, move, rename, or modify ANY repository file during Phase 0.
+
+Do NOT initialize 05_Development yet.
+
+Return the complete audit and migration plan in the Antigravity response only.
+
+If a source conflict is found:
+- report the conflicting files/requirements;
+- identify which source wins according to SOURCE-OF-TRUTH PRECEDENCE;
+- do not fix the conflict yet.
+
+Do not start Phase 1 automatically.
+
+STOP after the audit and wait for approval.
