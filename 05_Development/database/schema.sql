@@ -1,4 +1,4 @@
-﻿/*
+/*
 ================================================================================
 HSWRMS - HeavenStay Wellness Resort Management System
 SQL Server Database Schema
@@ -338,6 +338,8 @@ CREATE TABLE dbo.SpaTreatment (
     treatment_name      NVARCHAR(150) NOT NULL,
     duration_minutes    INT NOT NULL,
     base_price          DECIMAL(18,2) NOT NULL,
+    category            VARCHAR(50) NULL,
+    description         NVARCHAR(1000) NULL,
     treatment_status    VARCHAR(20) NOT NULL
         CONSTRAINT DF_SpaTreatment_Status DEFAULT ('ACTIVE'),
 

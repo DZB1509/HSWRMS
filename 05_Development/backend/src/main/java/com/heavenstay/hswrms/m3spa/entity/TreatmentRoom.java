@@ -1,0 +1,53 @@
+package com.heavenstay.hswrms.m3spa.entity;
+
+import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentRoomStatus;
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "TreatmentRoom", schema = "dbo")
+public class TreatmentRoom {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "room_id")
+    private Integer roomId;
+
+    @Column(name = "room_name", nullable = false, length = 100, unique = true)
+    private String roomName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "room_status", nullable = false, length = 20)
+    private TreatmentRoomStatus roomStatus = TreatmentRoomStatus.AVAILABLE;
+
+    public TreatmentRoom() {
+    }
+
+    public TreatmentRoom(String roomName, TreatmentRoomStatus roomStatus) {
+        this.roomName = roomName;
+        this.roomStatus = roomStatus;
+    }
+
+    public Integer getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(Integer roomId) {
+        this.roomId = roomId;
+    }
+
+    public String getRoomName() {
+        return roomName;
+    }
+
+    public void setRoomName(String roomName) {
+        this.roomName = roomName;
+    }
+
+    public TreatmentRoomStatus getRoomStatus() {
+        return roomStatus;
+    }
+
+    public void setRoomStatus(TreatmentRoomStatus roomStatus) {
+        this.roomStatus = roomStatus;
+    }
+}
