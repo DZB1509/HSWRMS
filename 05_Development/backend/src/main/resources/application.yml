@@ -31,6 +31,12 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+  spa:
+    scheduling:
+      # Configurable technical parameters pending definitive business policy freeze in M6
+      operating-open: ${SPA_OPEN_TIME:"08:00"}
+      operating-close: ${SPA_CLOSE_TIME:"20:00"}
+      alternative-search-days: ${SPA_ALT_DAYS:3}
 
 logging:
   level:
