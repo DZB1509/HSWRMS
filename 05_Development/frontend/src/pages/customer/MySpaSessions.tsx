@@ -1,15 +1,27 @@
 /**
  * Screen #29 — My Spa Sessions
  * Displays upcoming and historical spa/therapy sessions for the Customer.
- * Highlights the NEXT upcoming session prominently first.
- * Provides compact empty states and calendar/reminder mock indicators.
+ *
+ * AUTHORITATIVE M3 STATUS MODEL:
+ * 1. Two separate status concepts:
+ *    - session_status: SCHEDULED, RESCHEDULING, CANCELLED, COMPLETED, NO_SHOW
+ *    - confirmation_status: PENDING, CONFIRMED, DECLINED, EXPIRED
+ * 2. Separate badges displayed for session_status and confirmation_status.
+ * 3. Customer Attendance Confirmation action (PENDING -> CONFIRMED).
+ * 4. Customer Reschedule action (entry point to Screen 26 -> Screen 27 -> Screen 28).
+ * 5. Real API-backed session listing via spaApi.getMySpaSessions().
  */
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useCustomerSpaSessions } from '../../features/m3-spa/hooks/useSpaFeature';
 import { useSpa } from '../../context/SpaContext';
-import { useCustomer } from '../../context/CustomerContext';
+import type {
+  BackendSpaSession,
+  BackendSpaSessionStatus,
+  BackendSpaConfirmationStatus,
+} from '../../features/m3-spa/types/spaTypes';
 import {
   Calendar,
   Clock,
@@ -17,34 +29,27 @@ import {
   MapPin,
   Sparkles,
   CheckCircle,
-  XCircle,
-  AlertCircle,
-  Play,
-  Filter,
-  Leaf,
+  RotateCcw,
   Ban,
-  Bell,
   LayoutDashboard,
-  CalendarCheck,
+  Check,
+  Leaf,
 } from 'lucide-react';
-import type { LocalizedString, SpaSession, SpaSessionStatus } from '../../types/spa';
-
-const STATUS_CONFIG: Record<SpaSessionStatus, { icon: React.ReactNode; className: string; labelKey: string; defaultLabel: string }> = {
-  booked: { icon: <Calendar size={14} />, className: 'spa-status--booked', labelKey: 'spa.status.booked', defaultLabel: 'Booked' },
-  confirmed: { icon: <CheckCircle size={14} />, className: 'spa-status--confirmed', labelKey: 'spa.status.confirmed', defaultLabel: 'Confirmed' },
-  in_progress: { icon: <Play size={14} />, className: 'spa-status--progress', labelKey: 'spa.status.inProgress', defaultLabel: 'In Progress' },
-  completed: { icon: <CheckCircle size={14} />, className: 'spa-status--completed', labelKey: 'spa.status.completed', defaultLabel: 'Completed' },
-  no_show: { icon: <AlertCircle size={14} />, className: 'spa-status--noshow', labelKey: 'spa.status.noShow', defaultLabel: 'No Show' },
-  cancelled: { icon: <XCircle size={14} />, className: 'spa-status--cancelled', labelKey: 'spa.status.cancelled', defaultLabel: 'Cancelled' },
-};
+import type { LocalizedString } from '../../types/spa';
 
 type TabFilter = 'upcoming' | 'completed' | 'all';
 
 export const MySpaSessions: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const navigate = useNavigate();
-  const { sessions, cancelSession } = useSpa();
-  const { activeBooking } = useCustomer();
+
+  const {
+    sessions: backendSessions,
+    confirmAttendance,
+    cancelSession: cancelBackendSession,
+  } = useCustomerSpaSessions();
+
+  const { sessions: fallbackSessions } = useSpa();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | null): string => {
@@ -54,142 +59,87 @@ export const MySpaSessions: React.FC = () => {
   };
 
   const [activeTab, setActiveTab] = useState<TabFilter>('upcoming');
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [actionSessionId, setActionSessionId] = useState<number | null>(null);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
-  // Filter sessions for current retreat booking, sorted chronologically
-  const bookingSessions = useMemo(() => {
-    if (!activeBooking) return [];
-    return sessions
-      .filter((s) => s.bookingReference === activeBooking.bookingReference)
-      .sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date);
-        if (dateCompare !== 0) return dateCompare;
-        return a.startTime.localeCompare(b.startTime);
-      });
-  }, [sessions, activeBooking]);
+  // Normalize sessions
+  const normalizedSessions: BackendSpaSession[] = useMemo(() => {
+    if (backendSessions && backendSessions.length > 0) {
+      return backendSessions;
+    }
+    // Fallback adapter for mock sessions
+    return fallbackSessions.map((fs, idx) => ({
+      spaSessionId: Number(fs.id.replace(/\D/g, '')) || 300 + idx,
+      retreatBookingId: 101,
+      bookingReference: fs.bookingReference,
+      customerName: fs.customerName,
+      treatmentId: Number(fs.treatmentId.replace(/\D/g, '')) || 1,
+      treatmentName: localize(fs.treatmentName),
+      durationMinutes: fs.durationMinutes,
+      basePrice: fs.price,
+      isIncluded: fs.chargeType === 'included',
+      therapistId: Number(fs.therapistId.replace(/\D/g, '')) || 1,
+      therapistName: fs.therapistName,
+      roomId: Number(fs.roomId.replace(/\D/g, '')) || 1,
+      roomName: localize(fs.roomName),
+      scheduledStartAt: `${fs.date}T${fs.startTime}:00`,
+      scheduledEndAt: `${fs.date}T${fs.endTime}:00`,
+      date: fs.date,
+      startTime: fs.startTime,
+      endTime: fs.endTime,
+      bookingSource: 'CUSTOMER',
+      sessionStatus: (fs.status.toUpperCase() === 'IN_PROGRESS' || fs.status.toUpperCase() === 'BOOKED'
+        ? 'SCHEDULED'
+        : fs.status.toUpperCase()) as BackendSpaSessionStatus,
+      confirmationStatus: (fs.status === 'confirmed' ? 'CONFIRMED' : 'PENDING') as BackendSpaConfirmationStatus,
+      customerNote: fs.customerSpecialRequest,
+    }));
+  }, [backendSessions, fallbackSessions, currentLang]);
 
-  const upcomingSessions = useMemo(
-    () => bookingSessions.filter((s) => ['booked', 'confirmed', 'in_progress'].includes(s.status)),
-    [bookingSessions]
-  );
+  // Filter sessions by active tab
+  const filteredSessions = useMemo(() => {
+    return normalizedSessions
+      .filter((s) => {
+        if (activeTab === 'upcoming') {
+          return s.sessionStatus === 'SCHEDULED' || s.sessionStatus === 'RESCHEDULING';
+        }
+        if (activeTab === 'completed') {
+          return s.sessionStatus === 'COMPLETED' || s.sessionStatus === 'NO_SHOW' || s.sessionStatus === 'CANCELLED';
+        }
+        return true;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+  }, [normalizedSessions, activeTab]);
 
-  const historySessions = useMemo(
-    () => bookingSessions.filter((s) => ['completed', 'no_show', 'cancelled'].includes(s.status)),
-    [bookingSessions]
-  );
+  const handleConfirmAttendance = async (sessionId: number) => {
+    setActionSessionId(sessionId);
+    setActionSuccessMsg(null);
+    try {
+      await confirmAttendance(sessionId);
+      setActionSuccessMsg('Attendance confirmed successfully! Your therapist has been notified.');
+      setTimeout(() => setActionSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      console.error('Failed to confirm attendance', err);
+    } finally {
+      setActionSessionId(null);
+    }
+  };
 
-  // Next upcoming session is the first active or upcoming session
-  const nextUpcomingSession = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
-
-  // The rest of the upcoming sessions
-  const subsequentUpcomingSessions = nextUpcomingSession
-    ? upcomingSessions.filter((s) => s.id !== nextUpcomingSession.id)
-    : [];
-
-  const handleCancel = (sessionId: string) => {
-    setCancellingId(sessionId);
-    setTimeout(() => {
-      cancelSession(sessionId);
-      setCancellingId(null);
-    }, 500);
+  const handleCancelSession = async (sessionId: number) => {
+    setActionSessionId(sessionId);
+    try {
+      await cancelBackendSession(sessionId);
+      setActionSuccessMsg('Session cancelled.');
+      setTimeout(() => setActionSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      console.error('Failed to cancel session', err);
+    } finally {
+      setActionSessionId(null);
+    }
   };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
-
-  const renderSessionCard = (session: SpaSession, isProminentNext: boolean = false) => {
-    const statusConfig = STATUS_CONFIG[session.status];
-    const isUpcoming = ['booked', 'confirmed'].includes(session.status);
-    const isCancelling = cancellingId === session.id;
-
-    return (
-      <div
-        key={session.id}
-        className={`spa-session-card ${isProminentNext ? 'spa-session-card--prominent' : ''} ${statusConfig.className}`}
-        id={`spa-session-${session.id}`}
-      >
-        {isProminentNext && (
-          <div className="spa-prominent-badge">
-            <Sparkles size={14} />
-            <span>{t('spa.nextUpcomingBadge', 'Next Upcoming Therapy Session')}</span>
-          </div>
-        )}
-
-        <div className="spa-session-header">
-          <div className="spa-session-treatment">
-            <h3 className="spa-session-title">{localize(session.treatmentName)}</h3>
-            <span className={`spa-status-badge ${statusConfig.className}`}>
-              {statusConfig.icon}
-              {t(statusConfig.labelKey, statusConfig.defaultLabel)}
-            </span>
-          </div>
-          {session.chargeType === 'included' ? (
-            <span className="spa-session-charge spa-session-charge--included">
-              <Leaf size={12} /> {t('spa.included', 'Included in Retreat')}
-            </span>
-          ) : (
-            <span className="spa-session-charge">{formatPrice(session.price)}</span>
-          )}
-        </div>
-
-        <div className="spa-session-details">
-          <div className="spa-session-detail">
-            <Calendar size={14} />
-            <span>
-              {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </span>
-          </div>
-          <div className="spa-session-detail">
-            <Clock size={14} />
-            <span>
-              {session.startTime} — {session.endTime} ({session.durationMinutes} {t('spa.minutes', 'min')})
-            </span>
-          </div>
-          <div className="spa-session-detail">
-            <User size={14} />
-            <span>{session.therapistName}</span>
-          </div>
-          <div className="spa-session-detail">
-            <MapPin size={14} />
-            <span>{localize(session.roomName)}</span>
-          </div>
-        </div>
-
-        {session.therapistNotes && (
-          <div className="spa-session-notes">
-            <Sparkles size={14} />
-            <p>{session.therapistNotes}</p>
-          </div>
-        )}
-
-        {/* Prototype calendar sync and reminder metadata */}
-        {session.calendarSyncStatus === 'synced' && (
-          <div className="spa-session-reminder-badge">
-            <Bell size={13} />
-            <span>{t('spa.calendarSyncedNote', 'Calendar Synced · 1h Reminder Active (Simulation)')}</span>
-          </div>
-        )}
-
-        {isUpcoming && (
-          <div className="spa-session-actions">
-            <button
-              className="spa-cancel-btn"
-              onClick={() => handleCancel(session.id)}
-              disabled={isCancelling}
-              id={`spa-cancel-${session.id}`}
-            >
-              <Ban size={14} />
-              <span>{isCancelling ? t('spa.cancelling', 'Cancelling...') : t('spa.cancelSession', 'Cancel Session')}</span>
-            </button>
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -219,159 +169,245 @@ export const MySpaSessions: React.FC = () => {
             onClick={() => navigate('/customer/spa')}
             id="spa-book-new"
           >
-            <Leaf size={16} />
-            <span>{t('spa.bookNewSession', 'Book Treatment')}</span>
+            <Sparkles size={16} />
+            <span>{t('spa.bookNewTreatment', 'Book New Treatment')}</span>
           </button>
         </div>
       </div>
 
-      {/* Section Navigation Tabs: Treatment Catalogue | My Spa Sessions */}
-      <div className="spa-section-nav" role="tablist" aria-label="Spa Navigation">
-        <button
-          type="button"
-          className="spa-section-nav-tab"
-          onClick={() => navigate('/customer/spa')}
-          id="btn-nav-catalogue-tab"
-          role="tab"
-          aria-selected="false"
+      {actionSuccessMsg && (
+        <div
+          style={{
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            color: '#15803d',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
         >
-          <Sparkles size={16} />
-          <span>{t('spa.navCatalogue', 'Treatment Catalogue')}</span>
+          <CheckCircle size={18} />
+          <span>{actionSuccessMsg}</span>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="spa-sessions-tabs">
+        <button
+          className={`spa-tab ${activeTab === 'upcoming' ? 'spa-tab--active' : ''}`}
+          onClick={() => setActiveTab('upcoming')}
+          id="tab-upcoming-sessions"
+        >
+          {t('spa.tabUpcoming', 'Upcoming')}
         </button>
         <button
-          type="button"
-          className="spa-section-nav-tab spa-section-nav-tab--active"
-          onClick={() => navigate('/customer/spa/sessions')}
-          role="tab"
-          aria-selected="true"
+          className={`spa-tab ${activeTab === 'completed' ? 'spa-tab--active' : ''}`}
+          onClick={() => setActiveTab('completed')}
+          id="tab-history-sessions"
         >
-          <CalendarCheck size={16} />
-          <span>{t('spa.mySessions', 'My Spa Sessions')}</span>
+          {t('spa.tabCompleted', 'History')}
+        </button>
+        <button
+          className={`spa-tab ${activeTab === 'all' ? 'spa-tab--active' : ''}`}
+          onClick={() => setActiveTab('all')}
+          id="tab-all-sessions"
+        >
+          {t('spa.tabAll', 'All Sessions')} ({normalizedSessions.length})
         </button>
       </div>
 
-      {bookingSessions.length > 0 ? (
-        <div className="spa-sessions-content">
-          {/* 1. Visually Dominant Next Session (Requirement 5) */}
-          {nextUpcomingSession && (
-            <section className="spa-prominent-next-section" aria-labelledby="next-session-heading">
-              <h2 id="next-session-heading" className="spa-section-title">
-                <CalendarCheck size={18} />
-                <span>{t('spa.nextSessionTitle', 'Next Upcoming Session')}</span>
-              </h2>
-              {renderSessionCard(nextUpcomingSession, true)}
-            </section>
-          )}
-
-          {/* 2. Subsequent Upcoming & History Tabs */}
-          <div className="spa-sessions-tabs-container">
-            <div className="spa-sessions-tabs" role="tablist">
-              <button
-                className={`spa-tab ${activeTab === 'upcoming' ? 'spa-tab--active' : ''}`}
-                onClick={() => setActiveTab('upcoming')}
-                role="tab"
-                aria-selected={activeTab === 'upcoming'}
-              >
-                <Calendar size={15} />
-                <span>{t('spa.upcoming', 'Upcoming')}</span>
-                {upcomingSessions.length > 0 && (
-                  <span className="spa-tab-count">{upcomingSessions.length}</span>
-                )}
-              </button>
-              <button
-                className={`spa-tab ${activeTab === 'completed' ? 'spa-tab--active' : ''}`}
-                onClick={() => setActiveTab('completed')}
-                role="tab"
-                aria-selected={activeTab === 'completed'}
-              >
-                <CheckCircle size={15} />
-                <span>{t('spa.history', 'History')}</span>
-                {historySessions.length > 0 && (
-                  <span className="spa-tab-count">{historySessions.length}</span>
-                )}
-              </button>
-              <button
-                className={`spa-tab ${activeTab === 'all' ? 'spa-tab--active' : ''}`}
-                onClick={() => setActiveTab('all')}
-                role="tab"
-                aria-selected={activeTab === 'all'}
-              >
-                <Filter size={15} />
-                <span>{t('spa.allSessions', 'All')}</span>
-                <span className="spa-tab-count">{bookingSessions.length}</span>
-              </button>
-            </div>
-
-            {/* Tab Panel Content */}
-            <div className="spa-sessions-tab-panel">
-              {activeTab === 'upcoming' ? (
-                subsequentUpcomingSessions.length > 0 ? (
-                  <div className="spa-sessions-list">
-                    {subsequentUpcomingSessions.map((s) => renderSessionCard(s, false))}
-                  </div>
-                ) : nextUpcomingSession ? (
-                  <div className="spa-quiet-notice">
-                    <CheckCircle size={16} />
-                    <span>{t('spa.noMoreUpcoming', 'No further upcoming sessions scheduled after your next session.')}</span>
-                  </div>
-                ) : (
-                  <div className="spa-quiet-notice">
-                    <Calendar size={16} />
-                    <span>{t('spa.noUpcomingSessions', 'No upcoming sessions currently scheduled.')}</span>
-                  </div>
-                )
-              ) : activeTab === 'completed' ? (
-                historySessions.length > 0 ? (
-                  <div className="spa-sessions-list">
-                    {historySessions.map((s) => renderSessionCard(s, false))}
-                  </div>
-                ) : (
-                  <div className="spa-quiet-notice">
-                    <CheckCircle size={16} />
-                    <span>{t('spa.noCompletedYet', 'No completed or historical treatments on file for this stay.')}</span>
-                  </div>
-                )
-              ) : (
-                <div className="spa-sessions-list">
-                  {bookingSessions.map((s) => renderSessionCard(s, s.id === nextUpcomingSession?.id))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Compact, Helpful Empty State (Requirement 4 & 5) */
-        <div className="spa-empty-card" id="screen-29-empty-state">
-          <div className="spa-empty-icon-box">
-            <Sparkles size={32} />
-          </div>
-          <h3>{t('spa.noSessions', 'No Spa Sessions Scheduled')}</h3>
-          <p>
-            {t(
-              'spa.noSessionsDesc',
-              'You have not reserved any therapy or wellness treatments for your current retreat stay yet.'
-            )}
-          </p>
-          <div className="spa-empty-actions">
+      {/* Sessions Grid */}
+      <div className="spa-sessions-content">
+        {filteredSessions.length === 0 ? (
+          <div className="spa-empty-sessions">
+            <Calendar size={48} />
+            <h3>{t('spa.noSessionsFound', 'No Spa Sessions Found')}</h3>
+            <p>{t('spa.noSessionsDesc', 'You have no treatments in this view. Browse our catalogue to book healing sessions.')}</p>
             <button
-              className="spa-confirm-btn"
+              className="hsw-btn hsw-btn-primary"
               onClick={() => navigate('/customer/spa')}
-              id="spa-empty-explore-btn"
+              style={{ marginTop: '16px' }}
             >
-              <Leaf size={16} />
-              <span>{t('spa.browseTreatments', 'Explore Treatments')}</span>
-            </button>
-            <button
-              className="spa-secondary-btn"
-              onClick={() => navigate('/customer/dashboard')}
-              id="spa-empty-dashboard-btn"
-            >
-              <LayoutDashboard size={16} />
-              <span>{t('spa.returnToDashboard', 'Dashboard')}</span>
+              {t('spa.exploreTreatments', 'Explore Treatments')}
             </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="spa-sessions-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {filteredSessions.map((session) => {
+              const isPendingAttendance = session.confirmationStatus === 'PENDING';
+              const isScheduled = session.sessionStatus === 'SCHEDULED' || session.sessionStatus === 'RESCHEDULING';
+
+              return (
+                <div
+                  key={session.spaSessionId}
+                  className="spa-session-card"
+                  id={`spa-session-${session.spaSessionId}`}
+                  style={{
+                    backgroundColor: '#fff',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    padding: '20px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                    <div>
+                      <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 600 }}>{session.treatmentName}</h3>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {/* Session Status Badge */}
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor:
+                              session.sessionStatus === 'SCHEDULED'
+                                ? '#ecfeff'
+                                : session.sessionStatus === 'RESCHEDULING'
+                                ? '#fffbeb'
+                                : session.sessionStatus === 'COMPLETED'
+                                ? '#f0fdf4'
+                                : session.sessionStatus === 'NO_SHOW'
+                                ? '#faf5ff'
+                                : '#fef2f2',
+                            color:
+                              session.sessionStatus === 'SCHEDULED'
+                                ? '#0e7490'
+                                : session.sessionStatus === 'RESCHEDULING'
+                                ? '#b45309'
+                                : session.sessionStatus === 'COMPLETED'
+                                ? '#15803d'
+                                : session.sessionStatus === 'NO_SHOW'
+                                ? '#7e22ce'
+                                : '#b91c1c',
+                            border: '1px solid currentColor',
+                          }}
+                        >
+                          Status: {session.sessionStatus}
+                        </span>
+
+                        {/* Confirmation Status Badge (SEPARATE) */}
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor:
+                              session.confirmationStatus === 'CONFIRMED'
+                                ? '#f0fdf4'
+                                : session.confirmationStatus === 'PENDING'
+                                ? '#fefce8'
+                                : session.confirmationStatus === 'EXPIRED'
+                                ? '#fff7ed'
+                                : '#fef2f2',
+                            color:
+                              session.confirmationStatus === 'CONFIRMED'
+                                ? '#166534'
+                                : session.confirmationStatus === 'PENDING'
+                                ? '#a16207'
+                                : session.confirmationStatus === 'EXPIRED'
+                                ? '#c2410c'
+                                : '#991b1b',
+                            border: '1px solid currentColor',
+                          }}
+                        >
+                          Attendance: {session.confirmationStatus}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      {session.isIncluded ? (
+                        <span style={{ color: '#0d9488', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Leaf size={14} /> {t('spa.includedInPackage', 'Package Inclusive')}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#334155' }}>
+                          {formatPrice(session.basePrice)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', fontSize: '14px', color: '#475569', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calendar size={15} style={{ color: '#0d9488' }} />
+                      <span>{session.date}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Clock size={15} style={{ color: '#0d9488' }} />
+                      <span>{session.startTime} – {session.endTime} ({session.durationMinutes} min)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <User size={15} style={{ color: '#0d9488' }} />
+                      <span>Therapist: <strong>{session.therapistName}</strong></span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={15} style={{ color: '#0d9488' }} />
+                      <span>Suite: <strong>{session.roomName}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  {isScheduled && (
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+                      {/* Attendance Confirmation Action */}
+                      {isPendingAttendance && (
+                        <button
+                          type="button"
+                          className="hsw-btn hsw-btn-primary"
+                          disabled={actionSessionId === session.spaSessionId}
+                          onClick={() => handleConfirmAttendance(session.spaSessionId)}
+                          id={`btn-confirm-attendance-${session.spaSessionId}`}
+                          style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Check size={14} />
+                          <span>{t('spa.confirmAttendanceBtn', 'Confirm Attendance')}</span>
+                        </button>
+                      )}
+
+                      {/* Reschedule Entry Point (Customer-Initiated) */}
+                      <button
+                        type="button"
+                        className="hsw-btn hsw-btn-secondary"
+                        onClick={() =>
+                          navigate(
+                            `/customer/spa/book?treatment=${session.treatmentId}&reschedule=${session.spaSessionId}`
+                          )
+                        }
+                        id={`btn-reschedule-${session.spaSessionId}`}
+                        style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <RotateCcw size={14} />
+                        <span>{t('spa.rescheduleBtn', 'Reschedule Session')}</span>
+                      </button>
+
+                      {/* Cancel Session */}
+                      <button
+                        type="button"
+                        className="spa-cancel-btn"
+                        disabled={actionSessionId === session.spaSessionId}
+                        onClick={() => handleCancelSession(session.spaSessionId)}
+                        id={`btn-cancel-${session.spaSessionId}`}
+                        style={{ padding: '8px 14px', fontSize: '13px', marginLeft: 'auto' }}
+                      >
+                        <Ban size={14} />
+                        <span>{t('spa.cancelBtn', 'Cancel')}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
