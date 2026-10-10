@@ -31,14 +31,14 @@ public class SchedulingEngineService {
     private final TreatmentRoomRepository roomRepository;
     private final SpaSessionRepository sessionRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.operating-open:08:00}")
-    private String operatingOpenStr = "08:00";
+    @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.operating-open:#{null}}")
+    private String operatingOpenStr;
 
-    @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.operating-close:20:00}")
-    private String operatingCloseStr = "20:00";
+    @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.operating-close:#{null}}")
+    private String operatingCloseStr;
 
-    @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.alternative-search-days:3}")
-    private int defaultAlternativeSearchDays = 3;
+    @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.alternative-search-days:#{null}}")
+    private Integer configuredAlternativeSearchDays;
 
     public SchedulingEngineService(SpaTreatmentRepository treatmentRepository,
                                    TherapistRepository therapistRepository,
@@ -58,6 +58,14 @@ public class SchedulingEngineService {
     public CandidateGenerationResultDto generateCandidates(GenerateCandidatesRequest req) {
         SpaTreatment treatment = treatmentRepository.findById(req.getTreatmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Treatment", "treatmentId", req.getTreatmentId()));
+
+        LocalTime openTime = parseTimeSafe(operatingOpenStr);
+        LocalTime closeTime = parseTimeSafe(operatingCloseStr);
+        if (openTime == null || closeTime == null || !openTime.isBefore(closeTime)) {
+            throw new com.heavenstay.hswrms.common.exception.BusinessRuleException(
+                    "Spa scheduling operating hours are not configured or unresolved. Candidate generation requires an active operating window (app.spa.scheduling.operating-open and operating-close)."
+            );
+        }
 
         LocalDate requestedDate = req.getPreferredDate();
         Long excludeSessionId = req.getRescheduleSessionId();
@@ -81,7 +89,7 @@ public class SchedulingEngineService {
         // 3. Search slots for requested date
         List<SchedulingCandidateDto> primaryCandidates = searchCandidatesForDate(
                 treatment, requestedDate, req.getTimeRangeConstraint(),
-                qualifiedTherapists, compatibleRooms, excludeSessionId, false
+                qualifiedTherapists, compatibleRooms, excludeSessionId, false, openTime, closeTime
         );
 
         if (!primaryCandidates.isEmpty()) {
@@ -91,19 +99,25 @@ public class SchedulingEngineService {
         }
 
         // 4. No availability on requested date -> attempt nearest alternative date within configured horizon
-        int searchHorizon = req.getAlternativeSearchDays() != null && req.getAlternativeSearchDays() > 0
-                ? req.getAlternativeSearchDays()
-                : defaultAlternativeSearchDays;
+        // In absence of an explicitly approved parameter or caller request, search horizon is 0 (safe fail-closed).
+        int searchHorizon = 0;
+        if (req.getAlternativeSearchDays() != null && req.getAlternativeSearchDays() > 0) {
+            searchHorizon = req.getAlternativeSearchDays();
+        } else if (configuredAlternativeSearchDays != null && configuredAlternativeSearchDays > 0) {
+            searchHorizon = configuredAlternativeSearchDays;
+        }
 
         List<SchedulingCandidateDto> alternativeCandidates = new ArrayList<>();
-        for (int i = 1; i <= searchHorizon; i++) {
-            LocalDate altDate = requestedDate.plusDays(i);
-            List<SchedulingCandidateDto> altSlots = searchCandidatesForDate(
-                    treatment, altDate, null, qualifiedTherapists, compatibleRooms, excludeSessionId, true
-            );
-            if (!altSlots.isEmpty()) {
-                alternativeCandidates.addAll(altSlots);
-                break; // Return nearest available cluster
+        if (searchHorizon > 0) {
+            for (int i = 1; i <= searchHorizon; i++) {
+                LocalDate altDate = requestedDate.plusDays(i);
+                List<SchedulingCandidateDto> altSlots = searchCandidatesForDate(
+                        treatment, altDate, null, qualifiedTherapists, compatibleRooms, excludeSessionId, true, openTime, closeTime
+                );
+                if (!altSlots.isEmpty()) {
+                    alternativeCandidates.addAll(altSlots);
+                    break; // Return nearest available cluster
+                }
             }
         }
 
@@ -119,12 +133,12 @@ public class SchedulingEngineService {
             List<Therapist> qualifiedTherapists,
             List<TreatmentRoom> compatibleRooms,
             Long excludeSessionId,
-            boolean isAlternative
+            boolean isAlternative,
+            LocalTime openTime,
+            LocalTime closeTime
     ) {
         List<SchedulingCandidateDto> candidates = new ArrayList<>();
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
-        LocalTime openTime = parseTimeSafe(operatingOpenStr, LocalTime.of(8, 0));
-        LocalTime closeTime = parseTimeSafe(operatingCloseStr, LocalTime.of(20, 0));
         List<LocalTime> slotStarts = generateSlotStarts(openTime, closeTime);
 
         for (LocalTime slotStart : slotStarts) {
@@ -215,9 +229,9 @@ public class SchedulingEngineService {
         return slots;
     }
 
-    private LocalTime parseTimeSafe(String val, LocalTime fallback) {
+    private LocalTime parseTimeSafe(String val) {
         if (val == null || val.isBlank()) {
-            return fallback;
+            return null;
         }
         String clean = val.trim();
         try {
@@ -231,7 +245,7 @@ public class SchedulingEngineService {
             }
             return LocalTime.parse(clean);
         } catch (Exception e) {
-            return fallback;
+            return null;
         }
     }
 }
