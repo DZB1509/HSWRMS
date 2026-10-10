@@ -1,4 +1,4 @@
-﻿/*
+/*
 ================================================================================
 HSWRMS - HeavenStay Wellness Resort Management System
 SQL Server Database Schema
@@ -94,6 +94,28 @@ CREATE TABLE dbo.UserRole (
 );
 GO
 
+CREATE TABLE dbo.EmailOtp (
+    otp_id              INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_EmailOtp PRIMARY KEY,
+    user_id             INT NOT NULL,
+    otp_hash            VARCHAR(255) NOT NULL,
+    purpose             VARCHAR(30) NOT NULL,
+    expires_at          DATETIME2(0) NOT NULL,
+    consumed            BIT NOT NULL
+        CONSTRAINT DF_EmailOtp_Consumed DEFAULT (0),
+    consumed_at         DATETIME2(0) NULL,
+    attempt_count       INT NOT NULL
+        CONSTRAINT DF_EmailOtp_AttemptCount DEFAULT (0),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_EmailOtp_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT FK_EmailOtp_User
+        FOREIGN KEY (user_id) REFERENCES dbo.[User](user_id),
+    CONSTRAINT CK_EmailOtp_Purpose
+        CHECK (purpose IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET'))
+);
+GO
+
 
 /* ============================================================================
    2. CUSTOMER / HEALTH / CONSENT
@@ -103,7 +125,14 @@ CREATE TABLE dbo.CustomerProfile (
     customer_profile_id     INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_CustomerProfile PRIMARY KEY,
     user_id                 INT NOT NULL,
-    emergency_contact       NVARCHAR(300) NULL,
+    date_of_birth           DATE NULL,
+    residential_address     NVARCHAR(500) NULL,
+    preferred_language      VARCHAR(10) NULL
+        CONSTRAINT DF_CustomerProfile_PrefLang DEFAULT ('en'),
+    emergency_contact       NVARCHAR(300) NULL, -- legacy unstructured contact
+    emergency_contact_name  NVARCHAR(255) NULL,
+    emergency_contact_phone NVARCHAR(50) NULL,
+    emergency_contact_relationship NVARCHAR(100) NULL,
     notification_preference NVARCHAR(100) NULL,
     created_at              DATETIME2(0) NOT NULL
         CONSTRAINT DF_CustomerProfile_CreatedAt DEFAULT (SYSUTCDATETIME()),
