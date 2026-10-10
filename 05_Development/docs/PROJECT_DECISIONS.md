@@ -73,3 +73,25 @@ The following architectural open items remain officially unresolved and must not
 7. **OI-07:** Package-specific menu restrictions.
 8. **OI-08:** M3 Start Session / `IN_PROGRESS` persistence prohibition.
 9. **OI-09:** M3 confirmation persistence representation (session lifecycle vs. confirmation lifecycle).
+
+---
+
+## ADR-07: M3 Spa & Therapy Scheduling Engine Architecture
+* **System-Driven Scheduling Model:** Customer and Receptionist select Treatment, preferred Date, and Time Window; the backend Scheduling Engine (`SchedulingEngineService`) evaluates duration, therapist qualifications (`TherapistTreatmentQualification`), treatment room compatibility (`TreatmentRoomCompatibility`), and interval non-overlap (`existing.start < requested.end AND existing.end > requested.start`).
+* **Operational Parameters Without Fabricated Defaults:** Operating hours and alternative date search horizon are NOT hardcoded business rules. Operating hours must be supplied via operational configuration (`app.spa.scheduling.operating-open` and `close`); absence of configuration halts candidate generation safely with an explicit exception rather than applying speculative resort hours. Alternative date search horizon is caller-supplied or configured (`app.spa.scheduling.alternative-search-days`); in the absence of an explicit horizon, the engine defaults safely to 0 (no speculative forward searching).
+* **Indivisible Candidate Bundles:** The engine returns complete bundles (`Time + Qualified Therapist + Compatible Room`). No independent mixing of resources is permitted. Candidate generation is strictly read-only and acquires no locks or reservations.
+* **Concurrency & Atomic Reservation:** Final confirmation (`SpaSessionService.confirmReservation`) executes inside a `@Transactional` boundary, acquiring pessimistic write locks (`PESSIMISTIC_WRITE`) on both the Therapist and Treatment Room, re-validating qualifications, compatibility, and interval conflicts. If any check fails, the transaction rolls back completely (no partial reservation) and emits HTTP 409 (`ConflictException`). Tested on H2 in-memory engine; SQL Server runtime integration remains pending.
+* **Dual Lifecycle Status Model:** The business lifecycle is partitioned into two distinct state machines:
+  * `session_status`: `SCHEDULED`, `RESCHEDULING`, `CANCELLED`, `COMPLETED`, `NO_SHOW` (persisted on `dbo.SpaSession.session_status`).
+  * `confirmation_status`: `PENDING`, `CONFIRMED`, `DECLINED`, `EXPIRED` (persisted on `dbo.SpaSession.confirmation_status`).
+  * Persisting `IN_PROGRESS` or `CUSTOMER_CONFIRMED` as session statuses is prohibited (OI-08, OI-09).
+* **Customer-Initiated Rescheduling:** Rescheduling reuses the existing candidate engine. Browsing replacement candidates does not modify or release the original reservation. Atomic reassignment occurs only upon confirming the replacement; if a race condition occurs, the original session remains intact and HTTP 409 is returned.
+* **System-Initiated Recovery Engine:** Implemented via `SessionRecoveryService`:
+  * Same-time recovery prioritizes finding a qualified replacement Therapist or compatible Treatment Room while preserving the original session time.
+  * Time-changing recovery strictly requires explicit Customer consent and MUST NOT silently commit a new time.
+  * Cross-customer slot-swaps require mutual consent (marked PARTIAL).
+* **T-60m Attendance Deadline:** `SessionTimelineScheduler` enforces transition of unconfirmed sessions at T-60m from `SCHEDULED + PENDING` to `RESCHEDULING + EXPIRED`.
+* **Authoritative API Security:** Only `GET /api/v1/spa/treatments/**` is public. All booking, candidate generation, attendance confirmation, and cancellation endpoints require authenticated `CUSTOMER` / `RECEPTIONIST` authority with session ownership verification. Therapist endpoints require authenticated `THERAPIST` authority with assigned session verification.
+* **Fail-Closed Upstream Adapters:** Production adapters (`DefaultCustomerStayAdapter`, `DefaultTherapistHealthProjectionAdapter`, `DefaultBillingAdapter`) fail closed when upstream M1/M2/M5 systems are unavailable. Test fakes reside strictly in test scope (`SpaTestConfig`).
+* **Cancellation Lifecycle:** `POST /api/v1/spa/sessions/{id}/cancel` performs lifecycle transition to `CANCELLED`. Cancellation fee calculation, penalty deadlines, and refund rules remain unresolved Open Items (marked PARTIAL).
+* **Sensitive Data Minimization:** Therapist session detail endpoint returns a dedicated projection DTO (`TherapistSessionDetailDto`) containing only treatment-safety precautions and first names, strictly redacting unrestricted medical and customer profiles.
