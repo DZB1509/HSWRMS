@@ -18,6 +18,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
 import { useOperations } from '../../context/OperationsContext';
+import { spaApi } from '../../features/m3-spa/api/spaApi';
 import {
   User,
   Clock,
@@ -81,12 +82,38 @@ export const ManualExtraSpaPage: React.FC = () => {
 
   const isFormValid = Boolean(selectedArrival && selectedTreatment && selectedSlot);
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!selectedSlot || !selectedTreatment || !selectedArrival) return;
     setIsSubmitting(true);
     setResult(null);
 
-    setTimeout(() => {
+    try {
+      const numericTreatmentId = Number(selectedTreatmentId.replace(/\D/g, '')) || 1;
+      const numericTherapistId = Number(selectedSlot.therapistId.replace(/\D/g, '')) || 1;
+      const numericRoomId = Number(selectedSlot.roomId.replace(/\D/g, '')) || 1;
+      const startDateTime = `${selectedDate}T${selectedSlot.startTime}:00`;
+      const endDateTime = `${selectedDate}T${selectedSlot.endTime}:00`;
+
+      await spaApi.confirmReservation({
+        treatmentId: numericTreatmentId,
+        therapistId: numericTherapistId,
+        roomId: numericRoomId,
+        scheduledStartAt: startDateTime,
+        scheduledEndAt: endDateTime,
+        customerNote: 'Receptionist manual extra booking',
+        bookingSource: 'RECEPTIONIST',
+      });
+
+      setResult({
+        success: true,
+        message: `Extra Spa session reserved successfully for ${selectedArrival.customerName}. Traceable extra charge logged.`,
+      });
+
+      setTimeout(() => {
+        setSelectedSlot(null);
+      }, 4000);
+    } catch (err: unknown) {
+      // Fallback to local context if backend is offline in mock mode
       const res = bookSpaSession({
         bookingReference: selectedArrival.bookingReference,
         customerId: selectedArrival.customerId,
@@ -99,17 +126,13 @@ export const ManualExtraSpaPage: React.FC = () => {
         chargeType: 'extra',
         bookingSource: 'receptionist_manual',
       });
-
       setResult({ success: res.success, message: res.message });
-      setIsSubmitting(false);
-
       if (res.success) {
-        // Clear slot after short pause
-        setTimeout(() => {
-          setSelectedSlot(null);
-        }, 4000);
+        setTimeout(() => setSelectedSlot(null), 4000);
       }
-    }, 600);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

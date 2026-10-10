@@ -40,13 +40,12 @@ export const TherapistDashboardPage: React.FC = () => {
     [getSessionsByTherapist]
   );
 
-  const confirmedCount = todaySessions.filter((s) => s.status === 'confirmed').length;
-  const inProgressCount = todaySessions.filter((s) => s.status === 'in_progress').length;
+  const confirmedCount = todaySessions.filter((s) => s.status === 'confirmed' || s.status === 'booked').length;
   const completedCount = todaySessions.filter((s) => s.status === 'completed').length;
   
-  // Next session is current active in-progress or next upcoming confirmed
+  // Next session is the next upcoming scheduled session
   const nextSession = useMemo(
-    () => todaySessions.find((s) => s.status === 'in_progress') || todaySessions.find((s) => s.status === 'confirmed'),
+    () => todaySessions.find((s) => s.status === 'confirmed' || s.status === 'booked'),
     [todaySessions]
   );
 
@@ -106,11 +105,11 @@ export const TherapistDashboardPage: React.FC = () => {
         </div>
         <div className="therapist-stat-card">
           <div className="therapist-stat-icon therapist-stat-icon--active">
-            <Activity size={20} />
+            <Clock size={20} />
           </div>
           <div className="therapist-stat-info">
-            <span className="therapist-stat-value">{inProgressCount}</span>
-            <span className="therapist-stat-label">{t('therapist.inProgress', 'In Progress')}</span>
+            <span className="therapist-stat-value">{confirmedCount}</span>
+            <span className="therapist-stat-label">{t('therapist.scheduled', 'Scheduled')}</span>
           </div>
         </div>
         <div className="therapist-stat-card">
@@ -141,11 +140,9 @@ export const TherapistDashboardPage: React.FC = () => {
               <Sparkles size={14} />
               <span id="next-session-title">{t('therapist.nextSession', 'Next Session')}</span>
             </div>
-            {nextSession.status === 'in_progress' && (
-              <span className="spa-status-badge spa-status--in_progress">
-                <Activity size={13} /> {t('therapist.inProgress', 'In Progress')}
-              </span>
-            )}
+            <span className="spa-status-badge spa-status--confirmed">
+              <Clock size={13} /> {t('therapist.scheduled', 'Scheduled')}
+            </span>
           </div>
           <div className="therapist-next-card ops-card">
             <div className="therapist-next-main">
