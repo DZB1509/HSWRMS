@@ -413,21 +413,21 @@ GO
 CREATE TABLE dbo.Ingredient (
     ingredient_id   INT            IDENTITY (1, 1) NOT NULL CONSTRAINT PK_Ingredient PRIMARY KEY,
     ingredient_name NVARCHAR (150) NOT NULL,
-    unit_of_measure NVARCHAR (30)  CONSTRAINT DF_Ingredient_UnitOfMeasure DEFAULT (N'unit') NOT NULL,
     CONSTRAINT UQ_Ingredient_Name UNIQUE (ingredient_name)
 );
 
 
 GO
-/* Logical bridge MENU_ITEM_INGREDIENT: recipe quantities are per serving. */
+/* Logical bridge: Menu Item requires Ingredients. */
 CREATE TABLE dbo.MenuItemIngredient (
-    menu_item_id         INT             NOT NULL,
-    ingredient_id        INT             NOT NULL,
-    quantity_per_serving DECIMAL (18, 3) NOT NULL,
+    menu_item_id      INT             NOT NULL,
+    ingredient_id     INT             NOT NULL,
+    required_quantity DECIMAL (18, 3) NULL,
     CONSTRAINT PK_MenuItemIngredient PRIMARY KEY (menu_item_id, ingredient_id),
     CONSTRAINT FK_MenuItemIngredient_MenuItem FOREIGN KEY (menu_item_id) REFERENCES dbo.MenuItem (menu_item_id),
     CONSTRAINT FK_MenuItemIngredient_Ingredient FOREIGN KEY (ingredient_id) REFERENCES dbo.Ingredient (ingredient_id),
-    CONSTRAINT CK_MenuItemIngredient_Quantity CHECK (quantity_per_serving > 0)
+    CONSTRAINT CK_MenuItemIngredient_Quantity CHECK (required_quantity IS NULL
+                                                     OR required_quantity > 0)
 );
 
 
@@ -447,14 +447,13 @@ CREATE TABLE dbo.IngredientBatch (
 
 GO
 CREATE TABLE dbo.MealOrder (
-    meal_order_id      INT             IDENTITY (1, 1) NOT NULL CONSTRAINT PK_MealOrder PRIMARY KEY,
-    retreat_booking_id INT             NOT NULL,
-    order_date         DATE            NOT NULL,
-    meal_type          NVARCHAR (50)   NULL,
-    order_type         VARCHAR (20)    NOT NULL,
-    order_status       VARCHAR (20)    CONSTRAINT DF_MealOrder_Status DEFAULT ('PENDING') NOT NULL,
-    special_notes      NVARCHAR (1000) NULL,
-    created_at         DATETIME2 (0)   CONSTRAINT DF_MealOrder_CreatedAt DEFAULT (SYSUTCDATETIME()) NOT NULL,
+    meal_order_id      INT           IDENTITY (1, 1) NOT NULL CONSTRAINT PK_MealOrder PRIMARY KEY,
+    retreat_booking_id INT           NOT NULL,
+    order_date         DATE          NOT NULL,
+    meal_type          NVARCHAR (50) NULL,
+    order_type         VARCHAR (20)  NOT NULL,
+    order_status       VARCHAR (20)  CONSTRAINT DF_MealOrder_Status DEFAULT ('PENDING') NOT NULL,
+    created_at         DATETIME2 (0) CONSTRAINT DF_MealOrder_CreatedAt DEFAULT (SYSUTCDATETIME()) NOT NULL,
     CONSTRAINT FK_MealOrder_Booking FOREIGN KEY (retreat_booking_id) REFERENCES dbo.RetreatBooking (retreat_booking_id),
     CONSTRAINT CK_MealOrder_Type CHECK (order_type IN ('DAILY_MEAL', 'A_LA_CARTE')),
     CONSTRAINT CK_MealOrder_Status CHECK (order_status IN ('PENDING', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED'))
@@ -463,31 +462,14 @@ CREATE TABLE dbo.MealOrder (
 
 GO
 CREATE TABLE dbo.MealOrderItem (
-    meal_order_item_id INT             IDENTITY (1, 1) NOT NULL CONSTRAINT PK_MealOrderItem PRIMARY KEY,
-    meal_order_id      INT             NOT NULL,
-    menu_item_id       INT             NOT NULL,
-    quantity           INT             NOT NULL,
-    unit_price         DECIMAL (18, 2) CONSTRAINT DF_MealOrderItem_UnitPrice DEFAULT (0) NOT NULL,
+    meal_order_item_id INT IDENTITY (1, 1) NOT NULL CONSTRAINT PK_MealOrderItem PRIMARY KEY,
+    meal_order_id      INT NOT NULL,
+    menu_item_id       INT NOT NULL,
+    quantity           INT NOT NULL,
     CONSTRAINT FK_MealOrderItem_Order FOREIGN KEY (meal_order_id) REFERENCES dbo.MealOrder (meal_order_id),
     CONSTRAINT FK_MealOrderItem_MenuItem FOREIGN KEY (menu_item_id) REFERENCES dbo.MenuItem (menu_item_id),
     CONSTRAINT CK_MealOrderItem_Quantity CHECK (quantity > 0),
-    CONSTRAINT CK_MealOrderItem_UnitPrice CHECK (unit_price >= 0),
     CONSTRAINT UQ_MealOrderItem_OrderMenu UNIQUE (meal_order_id, menu_item_id)
-);
-
-
-GO
-CREATE TABLE dbo.IngredientUsageLog (
-    ingredient_usage_log_id INT             IDENTITY (1, 1) NOT NULL CONSTRAINT PK_IngredientUsageLog PRIMARY KEY,
-    meal_order_item_id      INT             NOT NULL,
-    ingredient_batch_id     INT             NOT NULL,
-    logged_by_user_id       INT             NOT NULL,
-    quantity_used           DECIMAL (18, 3) NOT NULL,
-    deducted_at             DATETIME2 (0)   CONSTRAINT DF_IngredientUsageLog_DeductedAt DEFAULT (SYSUTCDATETIME()) NOT NULL,
-    CONSTRAINT FK_IngredientUsageLog_MealOrderItem FOREIGN KEY (meal_order_item_id) REFERENCES dbo.MealOrderItem (meal_order_item_id),
-    CONSTRAINT FK_IngredientUsageLog_IngredientBatch FOREIGN KEY (ingredient_batch_id) REFERENCES dbo.IngredientBatch (ingredient_batch_id),
-    CONSTRAINT FK_IngredientUsageLog_User FOREIGN KEY (logged_by_user_id) REFERENCES dbo.[User] (user_id),
-    CONSTRAINT CK_IngredientUsageLog_Quantity CHECK (quantity_used > 0)
 );
 
 
@@ -769,12 +751,6 @@ CREATE INDEX IX_RetreatBooking_Dates
 GO
 CREATE INDEX IX_MealOrder_Booking_Date
     ON dbo.MealOrder(retreat_booking_id, order_date);
-
-
-GO
-CREATE UNIQUE INDEX UX_MealOrder_DailySelection
-    ON dbo.MealOrder(retreat_booking_id, order_date, meal_type) WHERE order_type = 'DAILY_MEAL'
-                                                                      AND order_status <> 'CANCELLED';
 
 
 GO
