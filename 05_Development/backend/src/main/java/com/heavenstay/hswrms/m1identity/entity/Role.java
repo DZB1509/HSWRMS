@@ -8,7 +8,7 @@ import java.util.Objects;
  * Mapped to dbo.[Role].
  */
 @Entity
-@Table(name = "[Role]")
+@Table(name = "\"Role\"", schema = "dbo")
 public class Role {
 
     @Id

@@ -11,7 +11,7 @@ import java.util.Objects;
  * Mapped to dbo.CustomerProfile.
  */
 @Entity
-@Table(name = "CustomerProfile")
+@Table(name = "\"CustomerProfile\"", schema = "dbo")
 public class CustomerProfile {
 
     @Id

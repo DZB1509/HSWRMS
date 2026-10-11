@@ -5,6 +5,7 @@ import com.heavenstay.hswrms.security.RestAccessDeniedHandler;
 import com.heavenstay.hswrms.security.RestAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -50,13 +51,13 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        // Public Foundation & Health Endpoints
                         .requestMatchers("/api/v1/health").permitAll()
-                        // Public Auth Endpoints (Phase 2 extension)
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        // Public Retreat Packages Catalog (Phase 3 extension)
+                        
+                        // CHANGED: Narrowed from wildcard to exact public registration endpoint
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/verify-email").permitAll()
+                        
                         .requestMatchers("/api/v1/packages/**").permitAll()
-                        // Any other request requires valid authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

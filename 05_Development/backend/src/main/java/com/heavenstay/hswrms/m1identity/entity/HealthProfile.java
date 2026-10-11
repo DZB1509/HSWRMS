@@ -10,7 +10,7 @@ import java.util.Objects;
  * Mapped to dbo.HealthProfile.
  */
 @Entity
-@Table(name = "HealthProfile")
+@Table(name = "\"HealthProfile\"", schema = "dbo")
 public class HealthProfile {
 
     @Id

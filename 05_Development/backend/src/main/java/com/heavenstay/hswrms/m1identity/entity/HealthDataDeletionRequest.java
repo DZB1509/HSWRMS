@@ -10,7 +10,7 @@ import java.util.Objects;
  * Mapped to dbo.HealthDataDeletionRequest.
  */
 @Entity
-@Table(name = "HealthDataDeletionRequest")
+@Table(name = "\"HealthDataDeletionRequest\"", schema = "dbo")
 public class HealthDataDeletionRequest {
 
     @Id

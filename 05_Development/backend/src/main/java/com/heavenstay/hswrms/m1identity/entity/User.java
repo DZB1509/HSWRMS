@@ -11,7 +11,7 @@ import java.util.Set;
  * Mapped to dbo.[User].
  */
 @Entity
-@Table(name = "[User]")
+@Table(name = "\"User\"", schema = "dbo")
 public class User {
 
     @Id
@@ -43,13 +43,8 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "UserRole",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private Set<Role> roles = new HashSet<>();
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<UserRole> userRoles = new HashSet<>();
 
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private CustomerProfile customerProfile;
@@ -158,13 +153,13 @@ public class User {
         this.updatedAt = updatedAt;
     }
 
-    public Set<Role> getRoles() {
-        return roles;
+    public Set<UserRole> getUserRoles() {
+    return userRoles;
     }
 
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
-    }
+    public void setUserRoles(Set<UserRole> userRoles) {
+    this.userRoles = userRoles;
+   }
 
     public CustomerProfile getCustomerProfile() {
         return customerProfile;

@@ -10,7 +10,8 @@ import java.util.Objects;
  */
 @Entity
 @Table(
-    name = "AuthIdentity",
+    name = "\"AuthIdentity\"",
+    schema = "dbo",
     uniqueConstraints = {
         @UniqueConstraint(name = "UQ_AuthIdentity_ProviderSubject", columnNames = {"provider", "provider_subject"})
     }

@@ -13,7 +13,7 @@ import java.util.Objects;
  * never the raw 6-digit OTP code.
  */
 @Entity
-@Table(name = "EmailOtp")
+@Table(name = "\"EmailOtp\"", schema = "dbo")
 public class EmailOtp {
 
     @Id

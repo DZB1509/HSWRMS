@@ -1,3 +1,4 @@
+
 package com.heavenstay.hswrms.m1identity.repository;
 
 import com.heavenstay.hswrms.m1identity.entity.User;
@@ -17,9 +18,21 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     Optional<User> findByPhoneNumber(String phoneNumber);
 
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.email = :email")
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.userRoles ur
+        LEFT JOIN FETCH ur.role
+        WHERE u.email = :email
+        """)
     Optional<User> findByEmailWithRoles(@Param("email") String email);
 
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.userId = :userId")
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.userRoles ur
+        LEFT JOIN FETCH ur.role
+        WHERE u.userId = :userId
+        """)
     Optional<User> findByIdWithRoles(@Param("userId") Integer userId);
 }

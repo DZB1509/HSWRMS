@@ -10,7 +10,7 @@ import java.util.Objects;
  * Mapped to dbo.ConsentRecord.
  */
 @Entity
-@Table(name = "ConsentRecord")
+@Table(name = "\"ConsentRecord\"", schema = "dbo")
 public class ConsentRecord {
 
     @Id

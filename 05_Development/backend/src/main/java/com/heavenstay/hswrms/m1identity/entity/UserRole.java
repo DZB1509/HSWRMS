@@ -9,7 +9,7 @@ import java.util.Objects;
  * Mapped to dbo.UserRole.
  */
 @Entity
-@Table(name = "UserRole")
+@Table(name = "\"UserRole\"", schema = "dbo")
 public class UserRole {
 
     @EmbeddedId
