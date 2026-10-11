@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: hswrms
+  profiles:
+    default: local
 
   datasource:
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true

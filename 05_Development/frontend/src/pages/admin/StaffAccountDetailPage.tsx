@@ -37,8 +37,8 @@ export const StaffAccountDetailPage: React.FC = () => {
     setStatusModalOpen(false);
     showToast(
       nextStatus === 'active'
-        ? t('operations.staffDetail.reactivatedToast', 'Staff account access restored to Active')
-        : t('operations.staffDetail.suspendedToast', 'Staff account access temporarily suspended'),
+        ? t('operations.staffDetail.reactivatedToast', 'Đã khôi phục quyền truy cập tài khoản nhân viên (Hoạt động)')
+        : t('operations.staffDetail.suspendedToast', 'Đã tạm khóa quyền truy cập tài khoản nhân viên'),
       nextStatus === 'active' ? 'success' : 'info'
     );
   };
@@ -47,39 +47,39 @@ export const StaffAccountDetailPage: React.FC = () => {
     switch (role) {
       case 'admin':
         return {
-          title: t('operations.staffDetail.scopeAdminTitle', 'System Administration & Governance Authority'),
-          desc: t('operations.staffDetail.scopeAdminDesc', 'Full clearance to manage master data, configure business parameters, maintain the RBAC matrix, and audit sensitive data access logs.'),
-          minimization: t('operations.staffDetail.scopeAdminMin', 'Administrative governance does not grant access to raw medical records or customer payment card credentials.')
+          title: t('operations.staffDetail.scopeAdminTitle', 'Thẩm Quyền Quản Trị Hệ Thống & Quản Trị Dữ Liệu'),
+          desc: t('operations.staffDetail.scopeAdminDesc', 'Toàn quyền quản lý dữ liệu gốc, cấu hình tham số nghiệp vụ, duy trì ma trận RBAC và kiểm tra nhật ký truy cập dữ liệu nhạy cảm.'),
+          minimization: t('operations.staffDetail.scopeAdminMin', 'Quyền quản trị hệ thống không bao gồm quyền truy cập vào hồ sơ bệnh án thô hoặc thông tin thẻ thanh toán của khách hàng.')
         };
       case 'manager':
         return {
-          title: t('operations.staffDetail.scopeManagerTitle', 'Executive Management & Operational Analytics Authority'),
-          desc: t('operations.staffDetail.scopeManagerDesc', 'Authorized for high-level executive revenue reporting, villa occupancy statistics, therapist utilization, and system operational health.'),
-          minimization: t('operations.staffDetail.scopeManagerMin', 'Strictly read-only analytical access. Manager cannot access individual medical files or override checkout billing.')
+          title: t('operations.staffDetail.scopeManagerTitle', 'Thẩm Quyền Quản Lý Điều Hành & Phân Tích Vận Hành'),
+          desc: t('operations.staffDetail.scopeManagerDesc', 'Được phép xem báo cáo doanh thu cấp cao, tỷ lệ lấp đầy biệt thự, hiệu suất kỹ thuật viên và tình trạng vận hành hệ thống.'),
+          minimization: t('operations.staffDetail.scopeManagerMin', 'Quyền phân tích chỉ đọc nghiêm ngặt. Quản lý không thể xem hồ sơ bệnh án cá nhân hoặc ghi đè thanh toán trả phòng.')
         };
       case 'receptionist':
         return {
-          title: t('operations.staffDetail.scopeRecTitle', 'Front Desk & Customer Accommodation Authority'),
-          desc: t('operations.staffDetail.scopeRecDesc', 'Authorized to manage daily arrivals, collect residence identification, assign physical villas, post extra spa services, and generate consolidated checkout folios.'),
-          minimization: t('operations.staffDetail.scopeRecMin', 'Protected health data is minimized; receptionist cannot access medical diagnosis records.')
+          title: t('operations.staffDetail.scopeRecTitle', 'Thẩm Quyền Lễ Tân & Tiếp Đón Lưu Trú'),
+          desc: t('operations.staffDetail.scopeRecDesc', 'Được phép quản lý khách đến hàng ngày, thu thập thông tin cư trú, phân bổ biệt thự, ghi nhận dịch vụ spa bổ sung và tạo hóa đơn thanh toán trả phòng.'),
+          minimization: t('operations.staffDetail.scopeRecMin', 'Dữ liệu sức khỏe được bảo vệ và tối thiểu hóa; lễ tân không thể truy cập hồ sơ bệnh án y tế.')
         };
       case 'therapist':
         return {
-          title: t('operations.staffDetail.scopeThTitle', 'Spa Therapy & Physical Wellness Authority'),
-          desc: t('operations.staffDetail.scopeThDesc', 'Clearance to view assigned daily treatment sessions, update session outcomes (Completed/No-Show), and access treatment-relevant physical notes.'),
-          minimization: t('operations.staffDetail.scopeThMin', 'Therapist sees strictly physical contraindications (injuries, allergies) and only for assigned customers (BR-03).')
+          title: t('operations.staffDetail.scopeThTitle', 'Thẩm Quyền Trị Liệu Spa & Chăm Sóc Sức Khỏe'),
+          desc: t('operations.staffDetail.scopeThDesc', 'Quyền xem các buổi trị liệu được phân công trong ngày, cập nhật kết quả buổi trị liệu (Hoạt thành/Vắng mặt) và xem ghi chú sức khỏe phục vụ trị liệu.'),
+          minimization: t('operations.staffDetail.scopeThMin', 'Kỹ thuật viên chỉ xem các chống chỉ định thể chất (chấn thương, dị ứng) và chỉ đối với khách hàng được phân công trực tiếp (BR-03).')
         };
       case 'fb_staff':
         return {
-          title: t('operations.staffDetail.scopeFbTitle', 'Dietary Culinary & Kitchen Operations Authority'),
-          desc: t('operations.staffDetail.scopeFbDesc', 'Clearance to inspect daily meal preparation queues, update meal preparation progress, and fulfill extra a-la-carte dining orders.'),
-          minimization: t('operations.staffDetail.scopeFbMin', 'Culinary team sees strictly food-related allergy and dietary warnings without access to medical history (BR-03).')
+          title: t('operations.staffDetail.scopeFbTitle', 'Thẩm Quyền Ẩm Thực Dinh Dưỡng & Bếp (F&B)'),
+          desc: t('operations.staffDetail.scopeFbDesc', 'Quyền kiểm tra hàng đợi chuẩn bị món ăn hàng ngày, cập nhật tiến độ chế biến và thực hiện các món ăn gọi thêm tại biệt thự.'),
+          minimization: t('operations.staffDetail.scopeFbMin', 'Nhân viên bếp chỉ xem nhãn cảnh báo dị ứng thực phẩm và yêu cầu chế độ ăn uống, không được tiếp cận tiền sử y tế (BR-03).')
         };
       default:
         return {
-          title: 'Standard Access',
-          desc: 'Basic portal access.',
-          minimization: 'Data minimization applies.'
+          title: 'Quyền Truy Cập Tiêu Chuẩn',
+          desc: 'Quyền truy cập cổng thông tin cơ bản.',
+          minimization: 'Áp dụng chính sách tối thiểu hóa dữ liệu.'
         };
     }
   };
@@ -96,7 +96,7 @@ export const StaffAccountDetailPage: React.FC = () => {
           style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
           <ArrowLeft size={14} />
-          {t('operations.staffDetail.backToList', 'Back to Staff Directory')}
+          {t('operations.staffDetail.backToList', 'Quay lại Danh Sách Nhân Viên')}
         </Link>
       </div>
 
@@ -136,14 +136,14 @@ export const StaffAccountDetailPage: React.FC = () => {
                   color: staff.status === 'active' ? 'var(--accent-forest)' : 'var(--danger)'
                 }}>
                   {staff.status === 'active' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                  {staff.status.toUpperCase()}
+                  {staff.status === 'active' ? 'HOẠT ĐỘNG' : 'TẠM KHÓA'}
                 </span>
               </div>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
                 {staff.title} · <span style={{ textTransform: 'capitalize' }}>{staff.department}</span>
               </p>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Account Identifier: <code>{staff.id}</code>
+                Mã tài khoản nhân viên: <code>{staff.id}</code>
               </div>
             </div>
           </div>
@@ -156,8 +156,8 @@ export const StaffAccountDetailPage: React.FC = () => {
               onClick={() => setStatusModalOpen(true)}
             >
               {staff.status === 'active'
-                ? t('operations.staffDetail.suspendBtn', 'Suspend Account Access')
-                : t('operations.staffDetail.activateBtn', 'Restore Account Access')}
+                ? t('operations.staffDetail.suspendBtn', 'Tạm Khóa Quyền Truy Cập')
+                : t('operations.staffDetail.activateBtn', 'Khôi Phục Quyền Truy Cập')}
             </Button>
           </div>
         </div>
@@ -169,42 +169,42 @@ export const StaffAccountDetailPage: React.FC = () => {
           <div className="hsw-gov-card-header">
             <h2 className="hsw-gov-card-title">
               <Building size={18} style={{ color: 'var(--accent-forest)' }} />
-              {t('operations.staffDetail.contactSectionTitle', 'Operational Profile & Contact Metadata')}
+              {t('operations.staffDetail.contactSectionTitle', 'Hồ Sơ Nhân Sự & Thông Tin Liên Hệ')}
             </h2>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--border-subtle)' }}>
               <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Mail size={13} /> {t('common.forms.email', 'Work Email')}
+                <Mail size={13} /> {t('common.forms.email', 'Email Công Việc')}
               </span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{staff.email}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--border-subtle)' }}>
               <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Phone size={13} /> {t('common.forms.phone', 'Internal Telephone Extension')}
+                <Phone size={13} /> {t('common.forms.phone', 'Số Điện Thoại Nội Bộ')}
               </span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{staff.phone || '+84 258 399 1000'}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--border-subtle)' }}>
               <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Building size={13} /> {t('operations.staffList.colDept', 'Assigned Department')}
+                <Building size={13} /> {t('operations.staffList.colDept', 'Phòng Ban Trực Thuộc')}
               </span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{staff.department}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--border-subtle)' }}>
               <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Calendar size={13} /> {t('operations.staffDetail.joinedDate', 'Provisions Date')}
+                <Calendar size={13} /> {t('operations.staffDetail.joinedDate', 'Ngày Cấp Tài Khoản')}
               </span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{staff.joinedDate}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-2) 0' }}>
               <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Clock size={13} /> {t('operations.staffList.colLastActive', 'Last Activity Recorded')}
+                <Clock size={13} /> {t('operations.staffList.colLastActive', 'Lần Hoạt Động Gần Nhất')}
               </span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{staff.lastActiveAt}</span>
             </div>
@@ -216,7 +216,7 @@ export const StaffAccountDetailPage: React.FC = () => {
           <div className="hsw-gov-card-header">
             <h2 className="hsw-gov-card-title">
               <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
-              {t('operations.staffDetail.rbacScopeTitle', 'RBAC Operational Clearance Scope')}
+              {t('operations.staffDetail.rbacScopeTitle', 'Phạm Vi Quyền Hạn Nghiệp Vụ RBAC')}
             </h2>
           </div>
 
@@ -234,7 +234,7 @@ export const StaffAccountDetailPage: React.FC = () => {
               <ShieldAlert size={16} style={{ color: 'var(--accent-terracotta)', flexShrink: 0, marginTop: '2px' }} />
               <div>
                 <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
-                  {t('operations.staffDetail.minimizationRuleTitle', 'BR-03 Data Minimization Protection')}
+                  {t('operations.staffDetail.minimizationRuleTitle', 'Chính Sách Bảo Vệ Tối Thiểu Hóa Dữ Liệu BR-03')}
                 </strong>
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 0 0', lineHeight: 1.4 }}>
                   {scopeInfo.minimization}
@@ -245,7 +245,7 @@ export const StaffAccountDetailPage: React.FC = () => {
 
           <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-2) 0', borderTop: '1px solid var(--border-subtle)', fontSize: '11px', color: 'var(--text-muted)' }}>
             <Lock size={12} style={{ display: 'inline', marginRight: '4px' }} />
-            {t('operations.staffDetail.credentialSafetyNotice', 'Authentication hashes, password credentials, and session tokens are strictly managed in identity layers and not stored on personnel cards.')}
+            {t('operations.staffDetail.credentialSafetyNotice', 'Mã băm xác thực, mật khẩu và phiên đăng nhập được quản lý nghiêm ngặt tại tầng định danh, không lưu trữ trên thẻ nhân sự.')}
           </div>
         </div>
       </div>
@@ -258,28 +258,28 @@ export const StaffAccountDetailPage: React.FC = () => {
               <h3 className="hsw-gov-modal-title">
                 {staff.status === 'active' ? <AlertTriangle size={18} style={{ color: 'var(--danger)' }} /> : <CheckCircle2 size={18} style={{ color: 'var(--accent-forest)' }} />}
                 {staff.status === 'active'
-                  ? t('operations.staffDetail.confirmSuspendTitle', 'Confirm Account Suspension')
-                  : t('operations.staffDetail.confirmRestoreTitle', 'Confirm Account Restoration')}
+                  ? t('operations.staffDetail.confirmSuspendTitle', 'Xác Nhận Tạm Khóa Tài Khoản')
+                  : t('operations.staffDetail.confirmRestoreTitle', 'Xác Nhận Khôi Phục Tài Khoản')}
               </h3>
             </div>
 
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 'var(--space-3) 0' }}>
               {staff.status === 'active'
-                ? t('operations.staffDetail.confirmSuspendDesc', 'Suspending this staff account will immediately revoke their access clearance to operational systems. Existing scheduled sessions or assignments will remain attached for administrative review.')
-                : t('operations.staffDetail.confirmRestoreDesc', 'Restoring this staff account will reinstate their operational privileges according to their assigned RBAC role.')}
+                ? t('operations.staffDetail.confirmSuspendDesc', 'Tạm khóa tài khoản này sẽ thu hồi ngay lập tức quyền truy cập vào các hệ thống vận hành. Các lịch hẹn hoặc nhiệm vụ đã phân công vẫn được bảo lưu để quản trị viên đối soát.')
+                : t('operations.staffDetail.confirmRestoreDesc', 'Khôi phục tài khoản nhân viên này sẽ kích hoạt lại toàn bộ quyền hạn vận hành tương ứng với vai trò RBAC được phân công.')}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
               <Button variant="secondary" onClick={() => setStatusModalOpen(false)}>
-                {t('common.actions.cancel', 'Cancel')}
+                {t('common.actions.cancel', 'Hủy Bỏ')}
               </Button>
               <Button
                 variant={staff.status === 'active' ? 'destructive' : 'primary'}
                 onClick={toggleStatus}
               >
                 {staff.status === 'active'
-                  ? t('operations.staffDetail.btnExecuteSuspend', 'Execute Suspension')
-                  : t('operations.staffDetail.btnExecuteRestore', 'Reinstate Access')}
+                  ? t('operations.staffDetail.btnExecuteSuspend', 'Thực Hiện Tạm Khóa')
+                  : t('operations.staffDetail.btnExecuteRestore', 'Khôi Phục Quyền Truy Cập')}
               </Button>
             </div>
           </div>

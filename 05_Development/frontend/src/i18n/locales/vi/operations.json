@@ -1,4 +1,10 @@
 {
+  "topbar": {
+    "adminClearance": "Thẩm Quyền Quản Trị Viên",
+    "managerScope": "Phạm Vi Giới Hạn Của Quản Lý",
+    "filterScope": "Phạm Vi Lọc",
+    "export": "Xuất Dữ Liệu"
+  },
   "sidebar": {
     "operationalSuite": "HỆ THỐNG VẬN HÀNH",
     "operationsDept": "Vận Hành",

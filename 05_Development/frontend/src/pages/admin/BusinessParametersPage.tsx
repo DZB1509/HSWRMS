@@ -42,10 +42,10 @@ export const BusinessParametersPage: React.FC = () => {
     const res = updateParameter(key, rawVal);
 
     if (!res.success) {
-      setErrors((prev) => ({ ...prev, [key]: res.error || 'Invalid value' }));
-      showToast(res.error || 'Failed to update parameter', 'error');
+      setErrors((prev) => ({ ...prev, [key]: res.error || 'Giá trị không hợp lệ' }));
+      showToast(res.error || 'Cập nhật tham số thất bại', 'error');
     } else {
-      showToast(t('operations.params.savedToast', 'Parameter successfully updated and logged to audit trail'), 'success');
+      showToast(t('operations.params.savedToast', 'Đã cập nhật tham số thành công và ghi nhận vào nhật ký kiểm toán'), 'success');
       setErrors((prev) => {
         const next = { ...prev };
         delete next[key];
@@ -62,7 +62,7 @@ export const BusinessParametersPage: React.FC = () => {
       delete next[key];
       return next;
     });
-    showToast(t('operations.params.resetToast', 'Parameter restored to system default'), 'info');
+    showToast(t('operations.params.resetToast', 'Đã khôi phục tham số về giá trị mặc định của hệ thống'), 'info');
   };
 
   return (
@@ -71,7 +71,7 @@ export const BusinessParametersPage: React.FC = () => {
       <div className="hsw-gov-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
           <h1 className="hsw-gov-title">
-            {t('operations.params.pageTitle', 'Business Parameters & Operational Thresholds')}
+            {t('operations.params.pageTitle', 'Tham Số Nghiệp Vụ & Ngưỡng Vận Hành')}
           </h1>
           <span style={{
             fontSize: '11px',
@@ -83,11 +83,11 @@ export const BusinessParametersPage: React.FC = () => {
             backgroundColor: 'var(--accent-sand)',
             color: 'var(--text-primary)'
           }}>
-            {t('operations.params.scopeBadge', 'Configurable Rules')}
+            {t('operations.params.scopeBadge', 'Quy Tắc Cấu Hình')}
           </span>
         </div>
         <p className="hsw-gov-subtitle">
-          {t('operations.params.pageSubtitle', 'Configure operational limits, deposit requirements, cancellation cutoff windows, and statutory batch export timing.')}
+          {t('operations.params.pageSubtitle', 'Cấu hình các giới hạn vận hành, yêu cầu tiền cọc, khung giờ hủy phòng và thời gian kết xuất báo cáo theo luật định.')}
         </p>
       </div>
 
@@ -96,10 +96,10 @@ export const BusinessParametersPage: React.FC = () => {
         <ShieldAlert size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.params.safetyNoticeTitle', 'Strict Business Rule Invariance (Non-Bypassable)')}
+            {t('operations.params.safetyNoticeTitle', 'Ràng Buộc Nghiệp Vụ An Toàn Tuyệt Đối (Không Thể Ghi Đè)')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.params.safetyNoticeDesc', 'Core wellness resort safety controls—including 2D Spa resource matching (Therapist + Room), checkout settlement blocks on unpaid charges, and sensitive health data minimization—are hard-coded architectural invariants and cannot be overridden by parameter modifications.')}
+            {t('operations.params.safetyNoticeDesc', 'Các kiểm soát an toàn cốt lõi của khu nghỉ dưỡng—bao gồm ràng buộc tài nguyên Spa 2 chiều (Kỹ thuật viên + Phòng trị liệu), chặn check-out khi còn phí chưa thanh toán, và tối thiểu hóa dữ liệu sức khỏe nhạy cảm—là bất biến kiến trúc và không thể bị ghi đè bởi tham số.')}
           </span>
         </div>
       </div>
@@ -137,18 +137,18 @@ export const BusinessParametersPage: React.FC = () => {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', fontSize: '11px', color: 'var(--text-muted)' }}>
                     <span>
-                      <strong>{t('operations.params.category', 'Category')}:</strong> {param.category.toUpperCase()}
+                      <strong>{t('operations.params.category', 'Danh mục')}:</strong> {param.category.toUpperCase()}
                     </span>
                     <span>
-                      <strong>{t('operations.params.defaultVal', 'Default')}:</strong> {param.defaultValue}{param.unit || ''}
+                      <strong>{t('operations.params.defaultVal', 'Mặc định')}:</strong> {param.defaultValue}{param.unit ? ` ${param.unit}` : ''}
                     </span>
                     {param.min !== undefined && param.max !== undefined && (
                       <span>
-                        <strong>{t('operations.params.allowedRange', 'Allowed')}:</strong> {param.min} – {param.max}{param.unit || ''}
+                        <strong>{t('operations.params.allowedRange', 'Phạm vi cho phép')}:</strong> {param.min} – {param.max}{param.unit ? ` ${param.unit}` : ''}
                       </span>
                     )}
                     <span>
-                      <strong>{t('operations.params.lastUpdated', 'Updated')}:</strong> {param.lastUpdatedAt} by {param.lastUpdatedBy}
+                      <strong>{t('operations.params.lastUpdated', 'Cập nhật')}:</strong> {param.lastUpdatedAt} bởi {param.lastUpdatedBy}
                     </span>
                   </div>
                 </div>
@@ -193,7 +193,7 @@ export const BusinessParametersPage: React.FC = () => {
                     onClick={() => handleSave(param.key)}
                     icon={<Check size={14} />}
                   >
-                    {t('common.actions.save', 'Save')}
+                    {t('common.actions.save', 'Lưu thay đổi')}
                   </Button>
 
                   <Button
@@ -201,10 +201,10 @@ export const BusinessParametersPage: React.FC = () => {
                     size="sm"
                     disabled={draftValues[param.key] === param.defaultValue && param.currentValue === param.defaultValue}
                     onClick={() => handleReset(param.key, param.defaultValue)}
-                    title={t('operations.params.resetTitle', 'Reset to system default')}
+                    title={t('operations.params.resetTitle', 'Khôi phục về giá trị mặc định')}
                     icon={<RotateCcw size={13} />}
                   >
-                    {t('common.actions.reset', 'Reset')}
+                    {t('common.actions.reset', 'Đặt lại')}
                   </Button>
                 </div>
               </div>

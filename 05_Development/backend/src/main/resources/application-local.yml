@@ -1,0 +1,33 @@
+# Local profile using H2 In-Memory Database (No SQL Server installation required)
+# Run with: .\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:hswrmsdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+app:
+  jwt:
+    secret: defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong
+    expiration-ms: 86400000
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:4173
+
+logging:
+  level:
+    com.heavenstay.hswrms: DEBUG
+    org.springframework.security: INFO

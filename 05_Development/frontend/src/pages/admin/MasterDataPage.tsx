@@ -72,7 +72,7 @@ export const MasterDataPage: React.FC = () => {
     }
 
     setEditingItem(null);
-    showToast(t('operations.masterData.savedToast', 'Master data catalogue record updated successfully (client-side prototype)'), 'success');
+    showToast(t('operations.masterData.savedToast', 'Đã cập nhật bản ghi dữ liệu gốc thành công (mô phỏng giao diện)'), 'success');
   };
 
   return (
@@ -83,7 +83,7 @@ export const MasterDataPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
               <h1 className="hsw-gov-title">
-                {t('operations.masterData.pageTitle', 'Wellness Resort Master Data Management')}
+                {t('operations.masterData.pageTitle', 'Quản Lý Dữ Liệu Gốc Khu Nghỉ Dưỡng Sức Khỏe')}
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -95,11 +95,11 @@ export const MasterDataPage: React.FC = () => {
                 backgroundColor: 'var(--actor-admin)',
                 color: 'var(--actor-admin-text)'
               }}>
-                {t('topbar.adminClearance', 'Administrator Clearance')}
+                {t('topbar.adminClearance', 'Thẩm Quyền Quản Trị Viên')}
               </span>
             </div>
             <p className="hsw-gov-subtitle">
-              {t('operations.masterData.pageSubtitle', 'Central administrative catalogue defining Retreat Packages, Spa & Therapy Services, and Physical Villa Categories.')}
+              {t('operations.masterData.pageSubtitle', 'Danh mục quản trị trung tâm định nghĩa Gói Nghỉ Dưỡng, Dịch Vụ Spa & Trị Liệu, và Hạng Biệt Thự Lưu Trú.')}
             </p>
           </div>
         </div>
@@ -110,10 +110,10 @@ export const MasterDataPage: React.FC = () => {
         <ShieldCheck size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.masterData.taxonomyTitle', 'Global Wellness Institute (GWI) Taxonomy Alignment')}
+            {t('operations.masterData.taxonomyTitle', 'Chuẩn Hóa Danh Mục Viện Sức Khỏe Toàn Cầu (GWI)')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.masterData.taxonomyDesc', 'All packages, therapeutic treatments, and residences adhere to standardized wellness tourism nomenclature instead of standard hotel classifications.')}
+            {t('operations.masterData.taxonomyDesc', 'Tất cả các gói, dịch vụ trị liệu và biệt thự tuân thủ thuật ngữ du lịch chăm sóc sức khỏe chuẩn hóa thay cho phân loại khách sạn thông thường.')}
           </span>
         </div>
       </div>
@@ -137,7 +137,7 @@ export const MasterDataPage: React.FC = () => {
           }}
         >
           <Calendar size={16} />
-          {t('operations.masterData.tabPackages', 'Retreat Packages')} ({packages.length})
+          {t('operations.masterData.tabPackages', 'Gói Nghỉ Dưỡng')} ({packages.length})
         </button>
 
         <button
@@ -157,7 +157,7 @@ export const MasterDataPage: React.FC = () => {
           }}
         >
           <Sparkles size={16} />
-          {t('operations.masterData.tabSpa', 'Spa & Therapy Catalogue')} ({spaServices.length})
+          {t('operations.masterData.tabSpa', 'Danh Mục Spa & Trị Liệu')} ({spaServices.length})
         </button>
 
         <button
@@ -177,7 +177,7 @@ export const MasterDataPage: React.FC = () => {
           }}
         >
           <Building size={16} />
-          {t('operations.masterData.tabVillas', 'Villa Classifications')} ({villas.length})
+          {t('operations.masterData.tabVillas', 'Phân Hạng Biệt Thự')} ({villas.length})
         </button>
       </div>
 
@@ -189,12 +189,12 @@ export const MasterDataPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('operations.masterData.searchPlaceholder', 'Search master data code or title...')}
+              placeholder={t('operations.masterData.searchPlaceholder', 'Tìm theo mã hoặc tên dữ liệu gốc...')}
               className="hsw-filter-input"
             />
           </div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {t('operations.masterData.authorityNotice', 'Administrative changes update client prototype master catalogues.')}
+            {t('operations.masterData.authorityNotice', 'Thay đổi quản trị cập nhật danh mục dữ liệu gốc mô phỏng giao diện.')}
           </div>
         </div>
       </div>
@@ -205,13 +205,13 @@ export const MasterDataPage: React.FC = () => {
           <table className="hsw-gov-table">
             <thead>
               <tr>
-                <th>{t('operations.masterData.colPackage', 'Retreat Package')}</th>
-                <th>{t('operations.masterData.colDuration', 'Duration')}</th>
-                <th>{t('operations.masterData.colWellnessGoal', 'Target Wellness Goal')}</th>
-                <th>{t('operations.masterData.colSpaSessions', 'Included Spa')}</th>
-                <th>{t('operations.masterData.colBasePrice', 'Base Price (VND)')}</th>
-                <th>{t('operations.masterData.colStatus', 'Status')}</th>
-                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Action')}</th>
+                <th>{t('operations.masterData.colPackage', 'Gói Nghỉ Dưỡng')}</th>
+                <th>{t('operations.masterData.colDuration', 'Thời Lượng')}</th>
+                <th>{t('operations.masterData.colWellnessGoal', 'Mục Tiêu Sức Khỏe')}</th>
+                <th>{t('operations.masterData.colSpaSessions', 'Spa Bao Gồm')}</th>
+                <th>{t('operations.masterData.colBasePrice', 'Giá Cơ Bản (VND)')}</th>
+                <th>{t('operations.masterData.colStatus', 'Trạng Thái')}</th>
+                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Thao Tác')}</th>
               </tr>
             </thead>
             <tbody>
@@ -224,13 +224,13 @@ export const MasterDataPage: React.FC = () => {
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}><code>{pkg.code}</code> · {pkg.id}</div>
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      {pkg.durationDays}D / {pkg.durationNights}N
+                      {pkg.durationDays}N / {pkg.durationNights}Đ
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 500 }}>
                       {pkg.goal}
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      {pkg.includedSpaSessions} sessions
+                      {pkg.includedSpaSessions} buổi
                     </td>
                     <td style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {formatVND(pkg.basePrice, i18n.language)}
@@ -248,7 +248,7 @@ export const MasterDataPage: React.FC = () => {
                         color: pkg.status === 'active' ? 'var(--accent-forest)' : 'var(--text-muted)'
                       }}>
                         <CheckCircle2 size={12} />
-                        {pkg.status.toUpperCase()}
+                        {pkg.status === 'active' ? 'HOẠT ĐỘNG' : 'LƯU TRỮ'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -264,7 +264,7 @@ export const MasterDataPage: React.FC = () => {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                       >
                         <Edit2 size={12} />
-                        {t('common.actions.edit', 'Edit')}
+                        {t('common.actions.edit', 'Chỉnh Sửa')}
                       </button>
                     </td>
                   </tr>
@@ -280,13 +280,13 @@ export const MasterDataPage: React.FC = () => {
           <table className="hsw-gov-table">
             <thead>
               <tr>
-                <th>{t('operations.masterData.colTreatment', 'Treatment Name')}</th>
-                <th>{t('operations.masterData.colCategory', 'Category')}</th>
-                <th>{t('operations.masterData.colDuration', 'Duration')}</th>
-                <th>{t('operations.masterData.colPractitioner', 'Required Practitioner')}</th>
-                <th>{t('operations.masterData.colBasePrice', 'Base Price (VND)')}</th>
-                <th>{t('operations.masterData.colStatus', 'Status')}</th>
-                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Action')}</th>
+                <th>{t('operations.masterData.colTreatment', 'Tên Dịch Vụ Trị Liệu')}</th>
+                <th>{t('operations.masterData.colCategory', 'Danh Mục')}</th>
+                <th>{t('operations.masterData.colDuration', 'Thời Lượng')}</th>
+                <th>{t('operations.masterData.colPractitioner', 'Kỹ Thuật Viên Yêu Cầu')}</th>
+                <th>{t('operations.masterData.colBasePrice', 'Giá Cơ Bản (VND)')}</th>
+                <th>{t('operations.masterData.colStatus', 'Trạng Thái')}</th>
+                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Thao Tác')}</th>
               </tr>
             </thead>
             <tbody>
@@ -303,7 +303,7 @@ export const MasterDataPage: React.FC = () => {
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                      {srv.durationMinutes} mins
+                      {srv.durationMinutes} phút
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 500 }}>
                       {srv.practitionerType}
@@ -324,7 +324,7 @@ export const MasterDataPage: React.FC = () => {
                         color: srv.status === 'active' ? 'var(--accent-forest)' : 'var(--text-muted)'
                       }}>
                         <CheckCircle2 size={12} />
-                        {srv.status.toUpperCase()}
+                        {srv.status === 'active' ? 'HOẠT ĐỘNG' : 'LƯU TRỮ'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -340,7 +340,7 @@ export const MasterDataPage: React.FC = () => {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                       >
                         <Edit2 size={12} />
-                        {t('common.actions.edit', 'Edit')}
+                        {t('common.actions.edit', 'Chỉnh Sửa')}
                       </button>
                     </td>
                   </tr>
@@ -356,13 +356,13 @@ export const MasterDataPage: React.FC = () => {
           <table className="hsw-gov-table">
             <thead>
               <tr>
-                <th>{t('operations.masterData.colVillaCat', 'Villa Classification')}</th>
-                <th>{t('operations.masterData.colOccupancy', 'Max Occupancy')}</th>
-                <th>{t('operations.masterData.colFeatures', 'Wellness Amenities')}</th>
-                <th>{t('operations.masterData.colCount', 'Resort Inventory')}</th>
-                <th>{t('operations.masterData.colRate', 'Nightly Benchmark (VND)')}</th>
-                <th>{t('operations.masterData.colStatus', 'Status')}</th>
-                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Action')}</th>
+                <th>{t('operations.masterData.colVillaCat', 'Phân Hạng Biệt Thự')}</th>
+                <th>{t('operations.masterData.colOccupancy', 'Sức Chứa Tối Đa')}</th>
+                <th>{t('operations.masterData.colFeatures', 'Tiện Ích Sức Khỏe')}</th>
+                <th>{t('operations.masterData.colCount', 'Số Lượng Biệt Thự')}</th>
+                <th>{t('operations.masterData.colRate', 'Giá Chuẩn / Đêm (VND)')}</th>
+                <th>{t('operations.masterData.colStatus', 'Trạng Thái')}</th>
+                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Thao Tác')}</th>
               </tr>
             </thead>
             <tbody>
@@ -375,14 +375,14 @@ export const MasterDataPage: React.FC = () => {
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}><code>{vil.code}</code> · {vil.id}</div>
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      {vil.maxOccupancy} {t('operations.masterData.customersUnit', 'Customers')}
+                      {vil.maxOccupancy} {t('operations.masterData.customersUnit', 'Khách hàng')}
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      {vil.hasPrivatePool && <span className="hsw-audit-cat" style={{ marginRight: '4px' }}>Private Plunge Pool</span>}
-                      {vil.hasTreatmentPavilion && <span className="hsw-audit-cat">Treatment Pavilion</span>}
+                      {vil.hasPrivatePool && <span className="hsw-audit-cat" style={{ marginRight: '4px' }}>Bể bơi riêng</span>}
+                      {vil.hasTreatmentPavilion && <span className="hsw-audit-cat">Chòi trị liệu riêng</span>}
                     </td>
                     <td style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {vil.totalVillasCount} physical villas
+                      {vil.totalVillasCount} căn biệt thự
                     </td>
                     <td style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {formatVND(vil.baseNightlyRate, i18n.language)}
@@ -400,7 +400,7 @@ export const MasterDataPage: React.FC = () => {
                         color: vil.status === 'active' ? 'var(--accent-forest)' : 'var(--text-muted)'
                       }}>
                         <CheckCircle2 size={12} />
-                        {vil.status.toUpperCase()}
+                        {vil.status === 'active' ? 'HOẠT ĐỘNG' : 'LƯU TRỮ'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -416,7 +416,7 @@ export const MasterDataPage: React.FC = () => {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                       >
                         <Edit2 size={12} />
-                        {t('common.actions.edit', 'Edit')}
+                        {t('common.actions.edit', 'Chỉnh Sửa')}
                       </button>
                     </td>
                   </tr>
@@ -433,7 +433,7 @@ export const MasterDataPage: React.FC = () => {
             <div className="hsw-gov-modal-header">
               <h3 className="hsw-gov-modal-title">
                 <Edit2 size={18} style={{ color: 'var(--accent-forest)' }} />
-                {t('operations.masterData.editRecordTitle', 'Edit Master Catalogue Record')}
+                {t('operations.masterData.editRecordTitle', 'Chỉnh Sửa Bản Ghi Danh Mục Dữ Liệu Gốc')}
               </h3>
               <button
                 onClick={() => setEditingItem(null)}
@@ -447,7 +447,7 @@ export const MasterDataPage: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('operations.masterData.colRecordName', 'Official Record Title')}
+                    {t('operations.masterData.colRecordName', 'Tên Bản Ghi Chính Thức')}
                   </label>
                   <input
                     type="text"
@@ -461,7 +461,7 @@ export const MasterDataPage: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('operations.masterData.colBenchmarkPrice', 'Base Price / Rate (VND)')}
+                    {t('operations.masterData.colBenchmarkPrice', 'Giá Cơ Bản / Đơn Giá (VND)')}
                   </label>
                   <input
                     type="number"
@@ -477,7 +477,7 @@ export const MasterDataPage: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('operations.masterData.colStatus', 'Catalogue Lifecycle Status')}
+                    {t('operations.masterData.colStatus', 'Trạng Thái Vòng Đời Danh Mục')}
                   </label>
                   <select
                     value={editingItem.status}
@@ -485,18 +485,18 @@ export const MasterDataPage: React.FC = () => {
                     className="hsw-filter-select"
                     style={{ width: '100%' }}
                   >
-                    <option value="active">{t('common.status.active', 'Active')}</option>
-                    <option value="archived">{t('common.status.archived', 'Archived / Hidden')}</option>
+                    <option value="active">{t('common.status.active', 'Đang Hoạt Động')}</option>
+                    <option value="archived">{t('common.status.archived', 'Lưu Trữ / Tạm Ẩn')}</option>
                   </select>
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
                 <Button variant="secondary" onClick={() => setEditingItem(null)}>
-                  {t('common.actions.cancel', 'Cancel')}
+                  {t('common.actions.cancel', 'Hủy Bỏ')}
                 </Button>
                 <Button variant="primary" type="submit">
-                  {t('common.actions.save', 'Save Changes')}
+                  {t('common.actions.save', 'Lưu Thay Đổi')}
                 </Button>
               </div>
             </form>

@@ -47,11 +47,11 @@ export const AdminDelegationPage: React.FC = () => {
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedCaps.length === 0) {
-      setFormError(t('operations.delegation.errorNoCaps', 'Select at least one delegable capability.'));
+      setFormError(t('operations.delegation.errorNoCaps', 'Vui lòng chọn ít nhất một quyền hạn có thể ủy quyền.'));
       return;
     }
     if (!reason.trim()) {
-      setFormError(t('operations.delegation.errorNoReason', 'Operational justification reason is mandatory for audit logging.'));
+      setFormError(t('operations.delegation.errorNoReason', 'Lý do giải trình nghiệp vụ là bắt buộc để ghi nhật ký kiểm toán.'));
       return;
     }
 
@@ -71,10 +71,10 @@ export const AdminDelegationPage: React.FC = () => {
     });
 
     if (!res.success) {
-      setFormError(res.error || 'Delegation creation failed');
-      showToast(res.error || 'Failed to grant delegation', 'error');
+      setFormError(res.error || 'Cấp ủy quyền thất bại');
+      showToast(res.error || 'Không thể cấp quyền ủy quyền', 'error');
     } else {
-      showToast(t('operations.delegation.createdSuccess', 'Limited delegation successfully granted to Sarah Jenkins (Manager)'), 'success');
+      showToast(t('operations.delegation.createdSuccess', 'Đã cấp ủy quyền giới hạn thành công cho Sarah Jenkins (Quản lý)'), 'success');
       setModalOpen(false);
       setSelectedCaps(['configure_business_parameters']);
       setReason('');
@@ -84,8 +84,8 @@ export const AdminDelegationPage: React.FC = () => {
 
   const handleRevokeConfirm = () => {
     if (!revokeConfirmId) return;
-    revokeDelegation(revokeConfirmId, 'Immediate administrator manual revocation');
-    showToast(t('operations.delegation.revokedSuccess', 'Delegation revoked immediately. Audit event recorded.'), 'warning');
+    revokeDelegation(revokeConfirmId, 'Quản trị viên thu hồi thủ công ngay lập tức');
+    showToast(t('operations.delegation.revokedSuccess', 'Đã thu hồi ủy quyền ngay lập tức. Sự kiện kiểm toán đã được ghi nhận.'), 'warning');
     setRevokeConfirmId(null);
   };
 
@@ -97,7 +97,7 @@ export const AdminDelegationPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
               <h1 className="hsw-gov-title">
-                {t('operations.delegation.pageTitle', 'Limited Admin Rights Delegation to Manager')}
+                {t('operations.delegation.pageTitle', 'Ủy Quyền Quyền Hạn Quản Trị Giới Hạn Cho Quản Lý')}
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -109,11 +109,11 @@ export const AdminDelegationPage: React.FC = () => {
                 backgroundColor: 'var(--actor-admin)',
                 color: 'var(--actor-admin-text)'
               }}>
-                {t('topbar.adminClearance', 'Administrator Clearance')}
+                {t('topbar.adminClearance', 'Thẩm Quyền Quản Trị Viên')}
               </span>
             </div>
             <p className="hsw-gov-subtitle">
-              {t('operations.delegation.pageSubtitle', 'Grant temporary, tightly scoped operational capabilities to Resort Operations Manager (Sarah Jenkins) without conferring unrestricted Admin authority.')}
+              {t('operations.delegation.pageSubtitle', 'Cấp các năng lực vận hành tạm thời, có phạm vi giới hạn chặt chẽ cho Quản Lý Vận Hành Khu Nghỉ Dưỡng (Sarah Jenkins) mà không cấp toàn quyền Quản Trị Viên.')}
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export const AdminDelegationPage: React.FC = () => {
             onClick={() => setModalOpen(true)}
             icon={<Plus size={15} />}
           >
-            {t('operations.delegation.btnGrant', 'Grant Scoped Delegation')}
+            {t('operations.delegation.btnGrant', 'Cấp Ủy Quyền Phạm Vi')}
           </Button>
         </div>
       </div>
@@ -133,10 +133,10 @@ export const AdminDelegationPage: React.FC = () => {
         <ShieldAlert size={18} style={{ color: 'var(--accent-terracotta)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.delegation.safeguardTitle', 'Privilege Escalation Protection (BR-06 Compliance)')}
+            {t('operations.delegation.safeguardTitle', 'Bảo Vệ Ngăn Chặn Leo Thang Đặc Quyền (Tuân thủ BR-06)')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.delegation.safeguardDesc', 'Delegation is strictly restricted to approved operational functions. Administrative credential management, RBAC matrix reconfiguration, security audit review, and sub-delegation powers CANNOT be delegated to Manager.')}
+            {t('operations.delegation.safeguardDesc', 'Ủy quyền bị giới hạn nghiêm ngặt trong các chức năng vận hành được phê duyệt. Quản lý thông tin xác thực quản trị, cấu hình ma trận RBAC, xem nhật ký kiểm toán bảo mật và quyền ủy quyền lại TUYỆT ĐỐI KHÔNG THỂ ủy quyền cho Quản lý.')}
           </span>
         </div>
       </div>
@@ -146,10 +146,10 @@ export const AdminDelegationPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <Users2 size={18} style={{ color: 'var(--accent-forest)' }} />
-            {t('operations.delegation.historyTitle', 'Delegation Records & Operational History')}
+            {t('operations.delegation.historyTitle', 'Hồ Sơ Ủy Quyền & Lịch Sử Vận Hành')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {delegations.filter((d) => d.status === 'active').length} {t('operations.delegation.activeCount', 'Active')} · {totalItems} Total
+            {delegations.filter((d) => d.status === 'active').length} {t('operations.delegation.activeCount', 'Đang hiệu lực')} · Tổng cộng {totalItems}
           </span>
         </div>
 
@@ -157,13 +157,13 @@ export const AdminDelegationPage: React.FC = () => {
           <table className="hsw-matrix-table">
             <thead>
               <tr>
-                <th>{t('operations.delegation.colId', 'Delegation ID')}</th>
-                <th>{t('operations.delegation.colRecipient', 'Delegatee')}</th>
-                <th>{t('operations.delegation.colCapabilities', 'Granted Capabilities')}</th>
-                <th>{t('operations.delegation.colWindow', 'Active Window')}</th>
-                <th>{t('operations.delegation.colStatus', 'Status')}</th>
-                <th>{t('operations.delegation.colGrantor', 'Grantor & Reason')}</th>
-                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Action')}</th>
+                <th>{t('operations.delegation.colId', 'Mã Ủy Quyền')}</th>
+                <th>{t('operations.delegation.colRecipient', 'Người Nhận Ủy Quyền')}</th>
+                <th>{t('operations.delegation.colCapabilities', 'Quyền Hạn Được Cấp')}</th>
+                <th>{t('operations.delegation.colWindow', 'Khung Giờ Hiệu Lực')}</th>
+                <th>{t('operations.delegation.colStatus', 'Trạng Thái')}</th>
+                <th>{t('operations.delegation.colGrantor', 'Người Cấp & Lý Do')}</th>
+                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Thao Tác')}</th>
               </tr>
             </thead>
             <tbody>
@@ -176,12 +176,12 @@ export const AdminDelegationPage: React.FC = () => {
                   <tr key={del.id}>
                     <td>
                       <code style={{ fontWeight: 600, fontSize: '11px' }}>{del.id}</code>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Created {del.createdAt}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Tạo lúc {del.createdAt}</div>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{del.delegateName}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
-                        {del.delegateRole} · {del.delegateUserId}
+                        Quản lý · {del.delegateUserId}
                       </div>
                     </td>
                     <td>
@@ -199,28 +199,28 @@ export const AdminDelegationPage: React.FC = () => {
                     </td>
                     <td>
                       <div style={{ fontSize: '11px', color: 'var(--text-primary)' }}>
-                        <strong>{t('operations.delegation.from', 'From')}:</strong> {del.startsAt}
+                        <strong>{t('operations.delegation.from', 'Từ')}:</strong> {del.startsAt}
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        <strong>{t('operations.delegation.until', 'Until')}:</strong> {del.expiresAt}
+                        <strong>{t('operations.delegation.until', 'Đến')}:</strong> {del.expiresAt}
                       </div>
                     </td>
                     <td>
                       {isActive && (
                         <span className="hsw-audit-pill success" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                           <CheckCircle2 size={11} />
-                          {t('common.status.active', 'ACTIVE')}
+                          {t('common.status.active', 'ĐANG HIỆU LỰC')}
                         </span>
                       )}
                       {isExpired && (
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                          {t('common.status.expired', 'EXPIRED')}
+                          {t('common.status.expired', 'HẾT HẠN')}
                         </span>
                       )}
                       {isRevoked && (
                         <span className="hsw-audit-pill denied" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                           <Ban size={11} />
-                          {t('common.status.revoked', 'REVOKED')}
+                          {t('common.status.revoked', 'ĐÃ THU HỒI')}
                         </span>
                       )}
                     </td>
@@ -231,7 +231,7 @@ export const AdminDelegationPage: React.FC = () => {
                       </div>
                       {del.revokedAt && (
                         <div style={{ fontSize: '10px', color: 'var(--danger)', marginTop: '2px' }}>
-                          Revoked at {del.revokedAt}
+                          Thu hồi lúc {del.revokedAt}
                         </div>
                       )}
                     </td>
@@ -244,7 +244,7 @@ export const AdminDelegationPage: React.FC = () => {
                           style={{ color: 'var(--danger)' }}
                           icon={<Ban size={13} />}
                         >
-                          {t('operations.delegation.revoke', 'Revoke')}
+                          {t('operations.delegation.revoke', 'Thu Hồi')}
                         </Button>
                       ) : (
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>
@@ -279,7 +279,7 @@ export const AdminDelegationPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <Users2 size={20} style={{ color: 'var(--accent-forest)' }} />
                 <h3 className="hsw-modal-title">
-                  {t('operations.delegation.modalTitle', 'Grant Limited Operational Delegation')}
+                  {t('operations.delegation.modalTitle', 'Cấp Quyền Ủy Quyền Vận Hành Giới Hạn')}
                 </h3>
               </div>
               <button
@@ -295,17 +295,17 @@ export const AdminDelegationPage: React.FC = () => {
               {/* Recipient fixed to Sarah Jenkins (Manager) */}
               <div style={{ marginBottom: 'var(--space-4)' }}>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.delegateeLabel', 'Designated Delegatee')}
+                  {t('operations.delegation.delegateeLabel', 'Người Nhận Được Chỉ Định')}
                 </label>
                 <div style={{ padding: 'var(--space-2) var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}>
-                  <strong>Sarah Jenkins</strong> — Resort Operations Manager (<code>usr-mgr-01</code>)
+                  <strong>Sarah Jenkins</strong> — Quản Lý Vận Hành Khu Nghỉ Dưỡng (<code>usr-mgr-01</code>)
                 </div>
               </div>
 
               {/* Scoped Capabilities Checkboxes */}
               <div style={{ marginBottom: 'var(--space-4)' }}>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.selectCapsLabel', 'Select Delegable Capabilities (Whitelisted Scope Only)')}
+                  {t('operations.delegation.selectCapsLabel', 'Chọn Quyền Hạn Ủy Quyền (Chỉ Trong Phạm Vi Cho Phép)')}
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                   {delegableRules.map((r) => {
@@ -347,29 +347,29 @@ export const AdminDelegationPage: React.FC = () => {
               {/* Duration Select */}
               <div style={{ marginBottom: 'var(--space-4)' }}>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.durationLabel', 'Delegation Active Window Duration')}
+                  {t('operations.delegation.durationLabel', 'Thời Hạn Khung Giờ Hiệu Lực')}
                 </label>
                 <select
                   value={durationHours}
                   onChange={(e) => setDurationHours(Number(e.target.value))}
                   style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
                 >
-                  <option value={8}>8 Hours (Single Shift Coverage)</option>
-                  <option value={24}>24 Hours (Next Day Operations)</option>
-                  <option value={48}>48 Hours (Weekend Coverage)</option>
-                  <option value={168}>7 Days (Weekly Management Duty)</option>
+                  <option value={8}>8 Giờ (Bao quát 1 ca làm việc)</option>
+                  <option value={24}>24 Giờ (Vận hành ngày tiếp theo)</option>
+                  <option value={48}>48 Giờ (Bao quát dịp cuối tuần)</option>
+                  <option value={168}>7 Ngày (Nhiệm vụ trực tuần)</option>
                 </select>
               </div>
 
               {/* Justification Reason */}
               <div style={{ marginBottom: 'var(--space-4)' }}>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.reasonLabel', 'Operational Justification (Mandatory for Audit Trail)')}
+                  {t('operations.delegation.reasonLabel', 'Lý Do Giải Trình Nghiệp Vụ (Bắt buộc cho nhật ký kiểm toán)')}
                 </label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g., Weather advisory requires manager authority to adjust cancellation window during weekend shift."
+                  placeholder="Ví dụ: Thông báo thời tiết biển yêu cầu quyền quản lý để điều chỉnh khung giờ hủy phòng trong ca cuối tuần."
                   rows={3}
                   style={{
                     width: '100%',
@@ -391,10 +391,10 @@ export const AdminDelegationPage: React.FC = () => {
 
               <div className="hsw-modal-actions">
                 <Button variant="secondary" size="sm" type="button" onClick={() => setModalOpen(false)}>
-                  {t('common.actions.cancel', 'Cancel')}
+                  {t('common.actions.cancel', 'Hủy Bỏ')}
                 </Button>
                 <Button variant="primary" size="sm" type="submit">
-                  {t('operations.delegation.btnSubmitGrant', 'Authorize Delegation')}
+                  {t('operations.delegation.btnSubmitGrant', 'Xác Nhận Cấp Ủy Quyền')}
                 </Button>
               </div>
             </form>
@@ -410,7 +410,7 @@ export const AdminDelegationPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <AlertTriangle size={20} style={{ color: 'var(--danger)' }} />
                 <h3 className="hsw-modal-title">
-                  {t('operations.delegation.revokeModalTitle', 'Confirm Immediate Delegation Revocation')}
+                  {t('operations.delegation.revokeModalTitle', 'Xác Nhận Thu Hồi Ủy Quyền Ngay Lập Tức')}
                 </h3>
               </div>
               <button
@@ -423,16 +423,16 @@ export const AdminDelegationPage: React.FC = () => {
             </div>
 
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {t('operations.delegation.revokePrompt', 'Are you sure you want to revoke delegation record')} <strong>{revokeConfirmId}</strong>?
+              {t('operations.delegation.revokePrompt', 'Bạn có chắc chắn muốn thu hồi hồ sơ ủy quyền')} <strong>{revokeConfirmId}</strong>?
             </p>
 
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              {t('operations.delegation.revokeNotice', 'The delegated capability will immediately cease to be available to Sarah Jenkins. The record will remain archived in the delegation history and a revocation event will be committed to the Sensitive Governance Audit Log.')}
+              {t('operations.delegation.revokeNotice', 'Quyền hạn được ủy quyền sẽ lập tức ngừng hoạt động đối với Sarah Jenkins. Hồ sơ vẫn được lưu trữ trong lịch sử ủy quyền và một sự kiện thu hồi sẽ được ghi vào Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm.')}
             </p>
 
             <div className="hsw-modal-actions">
               <Button variant="secondary" size="sm" onClick={() => setRevokeConfirmId(null)}>
-                {t('common.actions.cancel', 'Cancel')}
+                {t('common.actions.cancel', 'Hủy Bỏ')}
               </Button>
               <Button
                 variant="primary"
@@ -440,7 +440,7 @@ export const AdminDelegationPage: React.FC = () => {
                 onClick={handleRevokeConfirm}
                 style={{ backgroundColor: 'var(--danger)' }}
               >
-                {t('operations.delegation.confirmRevoke', 'Revoke Authority Immediately')}
+                {t('operations.delegation.confirmRevoke', 'Thu Hồi Quyền Ngay Lập Tức')}
               </Button>
             </div>
           </div>

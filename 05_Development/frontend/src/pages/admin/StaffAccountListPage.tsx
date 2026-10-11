@@ -71,11 +71,11 @@ export const StaffAccountListPage: React.FC = () => {
       name: newName.trim(),
       email: newEmail.trim(),
       role: newRole,
-      title: newTitle.trim() || `${newRole.toUpperCase()} Professional`,
+      title: newTitle.trim() || `Chuyên viên ${newRole.toUpperCase()}`,
       department: newDepartment,
       status: 'active',
       joinedDate: nowStr,
-      lastActiveAt: 'Just now',
+      lastActiveAt: 'Vừa xong',
       avatar: initials
     };
 
@@ -84,7 +84,7 @@ export const StaffAccountListPage: React.FC = () => {
     setNewName('');
     setNewEmail('');
     setNewTitle('');
-    showToast(t('operations.staffList.createdToast', 'Staff account created successfully (client-side prototype)'), 'success');
+    showToast(t('operations.staffList.createdToast', 'Đã cấp tài khoản nhân viên thành công (mô hình thử nghiệm)'), 'success');
   };
 
   const getRoleBadgeStyle = (role: Role) => {
@@ -104,6 +104,17 @@ export const StaffAccountListPage: React.FC = () => {
     }
   };
 
+  const getRoleLabel = (role: Role): string => {
+    switch (role) {
+      case 'admin': return 'Quản Trị Viên';
+      case 'manager': return 'Quản Lý';
+      case 'receptionist': return 'Lễ Tân';
+      case 'therapist': return 'Trị Liệu Viên';
+      case 'fb_staff': return 'Nhân Viên F&B';
+      default: return 'Khách Hàng';
+    }
+  };
+
   return (
     <div style={{ padding: 'var(--space-6) var(--space-8)' }}>
       {/* Header */}
@@ -112,7 +123,7 @@ export const StaffAccountListPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
               <h1 className="hsw-gov-title">
-                {t('operations.staffList.pageTitle', 'Staff Account Management Directory')}
+                {t('operations.staffList.pageTitle', 'Danh Sách Tài Khoản Nhân Viên')}
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -124,11 +135,11 @@ export const StaffAccountListPage: React.FC = () => {
                 backgroundColor: 'var(--actor-admin)',
                 color: 'var(--actor-admin-text)'
               }}>
-                {t('topbar.adminClearance', 'Administrator Clearance')}
+                {t('topbar.adminClearance', 'Quyền Quản Trị Hệ Thống')}
               </span>
             </div>
             <p className="hsw-gov-subtitle">
-              {t('operations.staffList.pageSubtitle', 'Official administrative roster of resort personnel, role authorizations, and operational clearance.')}
+              {t('operations.staffList.pageSubtitle', 'Danh bạ nhân sự khu nghỉ dưỡng chính thức, phân quyền vai trò và trạng thái làm việc.')}
             </p>
           </div>
 
@@ -137,7 +148,7 @@ export const StaffAccountListPage: React.FC = () => {
             icon={<UserPlus size={16} />}
             onClick={() => setAddModalOpen(true)}
           >
-            {t('operations.staffList.addStaffBtn', 'Provision Staff Account')}
+            {t('operations.staffList.addStaffBtn', 'Cấp Tài Khoản Mới')}
           </Button>
         </div>
       </div>
@@ -147,10 +158,10 @@ export const StaffAccountListPage: React.FC = () => {
         <ShieldCheck size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.staffList.privacyBannerTitle', 'Access Control & Credential Protection')}
+            {t('operations.staffList.privacyBannerTitle', 'Kiểm Soát Truy Cập & Bảo Vệ Thông Tin Định Danh')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.staffList.privacyBannerDesc', 'Password hashes, OAuth tokens, and authentication secrets are never exposed in staff management interfaces. Personnel permissions are strictly governed by the system RBAC matrix.')}
+            {t('operations.staffList.privacyBannerDesc', 'Mã băm mật khẩu, mã xác thực OAuth và thông tin bảo mật không bao giờ hiển thị trên giao diện quản trị nhân sự. Quyền hạn của nhân viên được điều chỉnh nghiêm ngặt theo ma trận RBAC.')}
           </span>
         </div>
       </div>
@@ -158,23 +169,23 @@ export const StaffAccountListPage: React.FC = () => {
       {/* KPI Cards */}
       <div className="hsw-gov-grid">
         <div className="hsw-gov-kpi">
-          <span className="hsw-gov-kpi-label">{t('operations.staffList.totalStaff', 'Total Personnel')}</span>
+          <span className="hsw-gov-kpi-label">{t('operations.staffList.totalStaff', 'Tổng Nhân Sự')}</span>
           <span className="hsw-gov-kpi-val">{staffList.length}</span>
-          <span className="hsw-gov-kpi-sub">{t('operations.staffList.totalStaffSub', 'Active on-duty staff members')}</span>
+          <span className="hsw-gov-kpi-sub">{t('operations.staffList.totalStaffSub', 'Nhân viên đang trong biên chế')}</span>
         </div>
         <div className="hsw-gov-kpi">
-          <span className="hsw-gov-kpi-label">{t('operations.staffList.activeAccounts', 'Active Accounts')}</span>
+          <span className="hsw-gov-kpi-label">{t('operations.staffList.activeAccounts', 'Tài Khoản Hoạt Động')}</span>
           <span className="hsw-gov-kpi-val" style={{ color: 'var(--accent-forest)' }}>
             {staffList.filter((s) => s.status === 'active').length}
           </span>
-          <span className="hsw-gov-kpi-sub">{t('operations.staffList.activeAccountsSub', 'Authorized for duty')}</span>
+          <span className="hsw-gov-kpi-sub">{t('operations.staffList.activeAccountsSub', 'Đủ điều kiện làm việc')}</span>
         </div>
         <div className="hsw-gov-kpi">
-          <span className="hsw-gov-kpi-label">{t('operations.staffList.suspendedAccounts', 'Suspended Accounts')}</span>
+          <span className="hsw-gov-kpi-label">{t('operations.staffList.suspendedAccounts', 'Tài Khoản Tạm Dừng')}</span>
           <span className="hsw-gov-kpi-val" style={{ color: staffList.some(s => s.status === 'suspended') ? 'var(--danger)' : 'var(--text-muted)' }}>
             {staffList.filter((s) => s.status === 'suspended').length}
           </span>
-          <span className="hsw-gov-kpi-sub">{t('operations.staffList.suspendedAccountsSub', 'Access temporarily revoked')}</span>
+          <span className="hsw-gov-kpi-sub">{t('operations.staffList.suspendedAccountsSub', 'Tạm thời thu hồi quyền truy cập')}</span>
         </div>
       </div>
 
@@ -187,7 +198,7 @@ export const StaffAccountListPage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('operations.staffList.searchPlaceholder', 'Search staff name, email, or ID...')}
+                placeholder={t('operations.staffList.searchPlaceholder', 'Tìm tên nhân viên, email hoặc mã số...')}
                 className="hsw-filter-input"
               />
             </div>
@@ -197,12 +208,12 @@ export const StaffAccountListPage: React.FC = () => {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="hsw-filter-select"
             >
-              <option value="all">{t('operations.staffList.filterAllRoles', 'All Roles')}</option>
-              <option value="admin">{t('operations.sidebar.admin', 'Admin')}</option>
-              <option value="manager">{t('operations.sidebar.manager', 'Manager')}</option>
-              <option value="receptionist">{t('common.roles.receptionist', 'Receptionist')}</option>
-              <option value="therapist">{t('common.roles.therapist', 'Therapist')}</option>
-              <option value="fb_staff">{t('common.roles.fb_staff', 'F&B Staff / Chef')}</option>
+              <option value="all">{t('operations.staffList.filterAllRoles', 'Tất Cả Vai Trò')}</option>
+              <option value="admin">{t('operations.sidebar.admin', 'Quản Trị Viên')}</option>
+              <option value="manager">{t('operations.sidebar.manager', 'Quản Lý')}</option>
+              <option value="receptionist">{t('common.roles.receptionist', 'Lễ Tân')}</option>
+              <option value="therapist">{t('common.roles.therapist', 'Chuyên Viên Trị Liệu')}</option>
+              <option value="fb_staff">{t('common.roles.fb_staff', 'Nhân Viên F&B / Bếp')}</option>
             </select>
 
             <select
@@ -210,14 +221,14 @@ export const StaffAccountListPage: React.FC = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="hsw-filter-select"
             >
-              <option value="all">{t('operations.staffList.filterAllStatuses', 'All Statuses')}</option>
-              <option value="active">{t('common.status.active', 'Active')}</option>
-              <option value="suspended">{t('common.status.suspended', 'Suspended')}</option>
+              <option value="all">{t('operations.staffList.filterAllStatuses', 'Tất Cả Trạng Thái')}</option>
+              <option value="active">{t('common.status.active', 'Đang Hoạt Động')}</option>
+              <option value="suspended">{t('common.status.suspended', 'Tạm Dừng')}</option>
             </select>
           </div>
 
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {t('common.showing', 'Showing')} <strong>{filteredStaff.length}</strong> / {staffList.length} {t('operations.staffList.personnelLabel', 'personnel')}
+            {t('common.showing', 'Hiển thị')} <strong>{filteredStaff.length}</strong> / {staffList.length} {t('operations.staffList.personnelLabel', 'nhân sự')}
           </div>
         </div>
       </div>
@@ -227,12 +238,12 @@ export const StaffAccountListPage: React.FC = () => {
         <table className="hsw-gov-table">
           <thead>
             <tr>
-              <th>{t('operations.staffList.colMember', 'Staff Member')}</th>
-              <th>{t('operations.staffList.colRole', 'Assigned Role')}</th>
-              <th>{t('operations.staffList.colDept', 'Department')}</th>
-              <th>{t('operations.staffList.colStatus', 'Status')}</th>
-              <th>{t('operations.staffList.colLastActive', 'Last Activity')}</th>
-              <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Action')}</th>
+              <th>{t('operations.staffList.colMember', 'Nhân Viên')}</th>
+              <th>{t('operations.staffList.colRole', 'Vai Trò Hệ Thống')}</th>
+              <th>{t('operations.staffList.colDept', 'Bộ Phận')}</th>
+              <th>{t('operations.staffList.colStatus', 'Trạng Thái')}</th>
+              <th>{t('operations.staffList.colLastActive', 'Hoạt Động Gần Nhất')}</th>
+              <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Thao Tác')}</th>
             </tr>
           </thead>
           <tbody>
@@ -270,10 +281,9 @@ export const StaffAccountListPage: React.FC = () => {
                       fontSize: '11px',
                       fontWeight: 600,
                       backgroundColor: badgeStyle.bg,
-                      color: badgeStyle.text,
-                      textTransform: 'capitalize'
+                      color: badgeStyle.text
                     }}>
-                      {staff.role.replace('_', ' ')}
+                      {getRoleLabel(staff.role)}
                     </span>
                   </td>
                   <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
@@ -292,7 +302,7 @@ export const StaffAccountListPage: React.FC = () => {
                       color: staff.status === 'active' ? 'var(--accent-forest)' : 'var(--danger)'
                     }}>
                       {staff.status === 'active' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                      {staff.status.toUpperCase()}
+                      {staff.status === 'active' ? 'HOẠT ĐỘNG' : 'TẠM DỪNG'}
                     </span>
                   </td>
                   <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
@@ -304,7 +314,7 @@ export const StaffAccountListPage: React.FC = () => {
                       className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
                       style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
-                      {t('common.actions.view', 'View Detail')}
+                      {t('common.actions.view', 'Xem Chi Tiết')}
                       <ArrowRight size={13} />
                     </Link>
                   </td>
@@ -322,7 +332,7 @@ export const StaffAccountListPage: React.FC = () => {
             <div className="hsw-gov-modal-header">
               <h3 className="hsw-gov-modal-title">
                 <UserPlus size={18} style={{ color: 'var(--accent-forest)' }} />
-                {t('operations.staffList.modalTitle', 'Provision New Staff Account')}
+                {t('operations.staffList.modalTitle', 'Cấp Tài Khoản Nhân Viên Mới')}
               </h3>
               <button
                 onClick={() => setAddModalOpen(false)}
@@ -336,14 +346,14 @@ export const StaffAccountListPage: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('common.forms.fullName', 'Full Name')} *
+                    {t('common.forms.fullName', 'Họ và Tên')} *
                   </label>
                   <input
                     type="text"
                     required
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g. Tran Bao Ngoc"
+                    placeholder="Ví dụ: Trần Bảo Ngọc"
                     className="hsw-filter-input"
                     style={{ width: '100%' }}
                   />
@@ -351,14 +361,14 @@ export const StaffAccountListPage: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('common.forms.email', 'Work Email')} *
+                    {t('common.forms.email', 'Email Công Việc')} *
                   </label>
                   <input
                     type="email"
                     required
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="e.g. ngoc.tran@heavenstay.com"
+                    placeholder="Ví dụ: ngoc.tran@heavenstay.com"
                     className="hsw-filter-input"
                     style={{ width: '100%' }}
                   />
@@ -367,33 +377,33 @@ export const StaffAccountListPage: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                      {t('operations.staffList.colRole', 'Role Authorization')}
+                      {t('operations.staffList.colRole', 'Phân Quyền Vai Trò')}
                     </label>
                     <select
                       value={newRole}
                       onChange={(e) => {
                         const r = e.target.value as Role;
                         setNewRole(r);
-                        if (r === 'therapist') setNewDepartment('Spa & Wellness');
-                        else if (r === 'receptionist') setNewDepartment('Front Office');
-                        else if (r === 'fb_staff') setNewDepartment('Dietary Food & Beverage');
-                        else if (r === 'manager') setNewDepartment('Resort Management');
-                        else if (r === 'admin') setNewDepartment('Information Systems');
+                        if (r === 'therapist') setNewDepartment('Chăm Sóc Sức Khỏe & Spa');
+                        else if (r === 'receptionist') setNewDepartment('Bộ Phận Tiền Sảnh');
+                        else if (r === 'fb_staff') setNewDepartment('Ẩm Thực & Dinh Dưỡng F&B');
+                        else if (r === 'manager') setNewDepartment('Ban Quản Lý Điều Hành');
+                        else if (r === 'admin') setNewDepartment('Công Nghệ & Hệ Thống Thông Tin');
                       }}
                       className="hsw-filter-select"
                       style={{ width: '100%' }}
                     >
-                      <option value="receptionist">Receptionist</option>
-                      <option value="therapist">Spa Therapist / Yoga Instructor</option>
-                      <option value="fb_staff">F&B Staff / Chef</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">System Administrator</option>
+                      <option value="receptionist">Lễ Tân</option>
+                      <option value="therapist">Chuyên Viên Trị Liệu / Yoga</option>
+                      <option value="fb_staff">Nhân Viên F&B / Bếp</option>
+                      <option value="manager">Quản Lý</option>
+                      <option value="admin">Quản Trị Viên Hệ Thống</option>
                     </select>
                   </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                      {t('operations.staffList.colDept', 'Department')}
+                      {t('operations.staffList.colDept', 'Bộ Phận')}
                     </label>
                     <input
                       type="text"
@@ -407,13 +417,13 @@ export const StaffAccountListPage: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('operations.staffList.titleLabel', 'Position / Job Title')}
+                    {t('operations.staffList.titleLabel', 'Chức Danh / Vị Trí Công Việc')}
                   </label>
                   <input
                     type="text"
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="e.g. Certified Ayurvedic Practitioner"
+                    placeholder="Ví dụ: Chuyên Viên Trị Liệu Spa"
                     className="hsw-filter-input"
                     style={{ width: '100%' }}
                   />
@@ -422,10 +432,10 @@ export const StaffAccountListPage: React.FC = () => {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
                 <Button variant="secondary" onClick={() => setAddModalOpen(false)}>
-                  {t('common.actions.cancel', 'Cancel')}
+                  {t('common.actions.cancel', 'Hủy Bỏ')}
                 </Button>
                 <Button variant="primary" type="submit">
-                  {t('operations.staffList.confirmCreate', 'Provision Account')}
+                  {t('operations.staffList.confirmCreate', 'Xác Nhận Cấp Tài Khoản')}
                 </Button>
               </div>
             </form>

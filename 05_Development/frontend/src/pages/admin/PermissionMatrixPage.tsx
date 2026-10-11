@@ -13,12 +13,12 @@ import { useGovernance } from '../../hooks/useGovernance';
 import type { Role } from '../../types/auth';
 
 const ROLES: { key: Role; labelKey: string; defaultLabel: string }[] = [
-  { key: 'customer', labelKey: 'common.roles.customer', defaultLabel: 'Customer' },
-  { key: 'receptionist', labelKey: 'common.roles.receptionist', defaultLabel: 'Receptionist' },
-  { key: 'therapist', labelKey: 'common.roles.therapist', defaultLabel: 'Therapist / Yoga' },
-  { key: 'fb_staff', labelKey: 'common.roles.fb_staff', defaultLabel: 'F&B / Chef' },
-  { key: 'manager', labelKey: 'operations.sidebar.manager', defaultLabel: 'Manager' },
-  { key: 'admin', labelKey: 'operations.sidebar.admin', defaultLabel: 'Admin' }
+  { key: 'customer', labelKey: 'common.roles.customer', defaultLabel: 'Khách Hàng' },
+  { key: 'receptionist', labelKey: 'common.roles.receptionist', defaultLabel: 'Lễ Tân' },
+  { key: 'therapist', labelKey: 'common.roles.therapist', defaultLabel: 'Kỹ Thuật Viên / Yoga' },
+  { key: 'fb_staff', labelKey: 'common.roles.fb_staff', defaultLabel: 'Nhân Viên Bếp / F&B' },
+  { key: 'manager', labelKey: 'operations.sidebar.manager', defaultLabel: 'Quản Lý' },
+  { key: 'admin', labelKey: 'operations.sidebar.admin', defaultLabel: 'Quản Trị Viên' }
 ];
 
 export const PermissionMatrixPage: React.FC = () => {
@@ -52,9 +52,9 @@ export const PermissionMatrixPage: React.FC = () => {
     isImmutable: boolean,
     reason?: string
   ) => {
-    let statusText = grantState === 'granted' ? 'Directly Granted' : 'Denied / Restrained';
-    if (roleLabel === 'Manager' && isDelegable) {
-      statusText = 'Delegable via Admin Delegation (Screen 53)';
+    let statusText = grantState === 'granted' ? 'Được cấp quyền trực tiếp' : 'Bị từ chối / Giới hạn';
+    if (roleLabel === 'Quản Lý' && isDelegable) {
+      statusText = 'Có thể ủy quyền qua Quản trị ủy quyền (Màn hình S52)';
     }
 
     setSelectedCellInfo({
@@ -72,7 +72,7 @@ export const PermissionMatrixPage: React.FC = () => {
       <div className="hsw-gov-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
           <h1 className="hsw-gov-title">
-            {t('operations.matrix.pageTitle', 'Role-Based Access Control (RBAC) Permission Matrix')}
+            {t('operations.matrix.pageTitle', 'Ma Trận Phân Quyền Kiểm Soát Truy Cập Dựa Trên Vai Trò (RBAC)')}
           </h1>
           <span style={{
             fontSize: '11px',
@@ -84,11 +84,11 @@ export const PermissionMatrixPage: React.FC = () => {
             backgroundColor: 'var(--actor-admin)',
             color: 'var(--actor-admin-text)'
           }}>
-            {t('topbar.adminClearance', 'Administrator Clearance')}
+            {t('topbar.adminClearance', 'Thẩm Quyền Quản Trị Viên')}
           </span>
         </div>
         <p className="hsw-gov-subtitle">
-          {t('operations.matrix.pageSubtitle', 'Cross-role functional capability allocations, operational clearance boundaries, and sensitive data minimization invariants.')}
+          {t('operations.matrix.pageSubtitle', 'Phân bổ năng lực chức năng giữa các vai trò, ranh giới thẩm quyền vận hành và bất biến tối thiểu hóa dữ liệu nhạy cảm.')}
         </p>
       </div>
 
@@ -97,10 +97,10 @@ export const PermissionMatrixPage: React.FC = () => {
         <Shield size={18} style={{ color: 'var(--accent-terracotta)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.matrix.legendTitle', 'Security & Statutory Data Minimization Matrix')}
+            {t('operations.matrix.legendTitle', 'Ma Trận Bảo Mật & Tối Thiểu Hóa Dữ Liệu Theo Luật Định')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.matrix.legendDesc', 'Cells marked with lock icons represent non-negotiable data minimization boundaries required by Vietnam Decree 13/2023/ND-CP, Law on Residence 2020, and resort financial controls. Manager permissions are strictly read-only reporting unless delegated.')}
+            {t('operations.matrix.legendDesc', 'Các ô có biểu tượng khóa thể hiện ranh giới bảo vệ dữ liệu bắt buộc không thể thương lượng theo Nghị định 13/2023/NĐ-CP, Luật Cư trú 2020 và kiểm soát tài chính. Quyền của Quản lý nghiêm ngặt chỉ đọc báo cáo trừ khi được ủy quyền.')}
           </span>
         </div>
       </div>
@@ -111,14 +111,14 @@ export const PermissionMatrixPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <Filter size={15} style={{ color: 'var(--text-secondary)' }} />
             <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              {t('operations.matrix.filterCategory', 'Filter Domain')}:
+              {t('operations.matrix.filterCategory', 'Lọc theo miền chức năng')}:
             </span>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
               className="hsw-filter-select"
             >
-              <option value="all">{t('operations.matrix.allDomains', 'All Functional Domains')} ({permissionRules.length})</option>
+              <option value="all">{t('operations.matrix.allDomains', 'Tất cả miền chức năng')} ({permissionRules.length})</option>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -127,16 +127,16 @@ export const PermissionMatrixPage: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap', fontSize: '11px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="hsw-perm-badge granted"><Check size={11} /> Granted</span>
+              <span className="hsw-perm-badge granted"><Check size={11} /> Được Cấp Quyền</span>
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="hsw-perm-badge denied"><Minus size={11} /> Denied</span>
+              <span className="hsw-perm-badge denied"><Minus size={11} /> Từ Chối</span>
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="hsw-perm-badge delegable"><Users2 size={11} /> Delegable to Manager</span>
+              <span className="hsw-perm-badge delegable"><Users2 size={11} /> Có Thể Ủy Quyền Cho Quản Lý</span>
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-terracotta)', fontWeight: 600 }}>
-              <Lock size={12} /> Immutable Safety Boundary
+              <Lock size={12} /> Ranh Giới An Toàn Bất Biến
             </span>
           </div>
         </div>
@@ -148,7 +148,7 @@ export const PermissionMatrixPage: React.FC = () => {
           <thead>
             <tr>
               <th style={{ minWidth: '280px' }}>
-                {t('operations.matrix.colCapability', 'Capability / Functional Domain')}
+                {t('operations.matrix.colCapability', 'Năng Lực / Miền Chức Năng Nghiệp Vụ')}
               </th>
               {ROLES.map((r) => (
                 <th key={r.key} className="role-col" style={{ minWidth: '120px' }}>
@@ -176,7 +176,7 @@ export const PermissionMatrixPage: React.FC = () => {
                           {t(rule.descriptionKey, rule.defaultDescription)}
                         </div>
                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Domain: <strong>{rule.defaultCategory}</strong> · Key: <code>{rule.capability}</code>
+                          Miền nghiệp vụ: <strong>{rule.defaultCategory}</strong> · Khóa: <code>{rule.capability}</code>
                         </div>
                       </div>
                     </div>
@@ -207,22 +207,22 @@ export const PermissionMatrixPage: React.FC = () => {
                         {grantState === 'granted' ? (
                           <span className="hsw-perm-badge granted">
                             <Check size={12} />
-                            {t('operations.matrix.granted', 'Granted')}
+                            {t('operations.matrix.granted', 'Được Phép')}
                           </span>
                         ) : isCurrentlyDelegated ? (
                           <span className="hsw-perm-badge delegable" style={{ backgroundColor: '#dcf4f2' }}>
                             <Sparkles size={11} />
-                            {t('operations.matrix.activeDelegated', 'Delegated')}
+                            {t('operations.matrix.activeDelegated', 'Đang Ủy Quyền')}
                           </span>
                         ) : isDelegable ? (
                           <span className="hsw-perm-badge delegable">
                             <Users2 size={11} />
-                            {t('operations.matrix.delegable', 'Delegable')}
+                            {t('operations.matrix.delegable', 'Có Thể Ủy Quyền')}
                           </span>
                         ) : (
                           <span className="hsw-perm-badge denied">
                             <Minus size={11} />
-                            {t('operations.matrix.denied', 'Denied')}
+                            {t('operations.matrix.denied', 'Từ Chối')}
                           </span>
                         )}
                       </td>
@@ -264,7 +264,7 @@ export const PermissionMatrixPage: React.FC = () => {
               onClick={() => setSelectedCellInfo(null)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}
             >
-              Dismiss
+              Đóng
             </button>
           </div>
         </div>

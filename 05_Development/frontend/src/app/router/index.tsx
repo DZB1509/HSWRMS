@@ -76,7 +76,6 @@ import { TherapistUtilizationReportPage } from '../../pages/manager/TherapistUti
 // Phase 2.7 Module 6 Screens (Admin, Permissions, Governance & Monitoring)
 import { AdminDashboardPage } from '../../pages/admin/AdminDashboardPage';
 import { BusinessParametersPage } from '../../pages/admin/BusinessParametersPage';
-import { FeatureFlagsPage } from '../../pages/admin/FeatureFlagsPage';
 import { PermissionMatrixPage } from '../../pages/admin/PermissionMatrixPage';
 import { AdminDelegationPage } from '../../pages/admin/AdminDelegationPage';
 import { SensitiveAuditLogPage } from '../../pages/admin/SensitiveAuditLogPage';
@@ -263,14 +262,6 @@ export const AppRouter: React.FC = () => {
           element={
             <RoleGuard requiredCapability="configure_business_parameters">
               <BusinessParametersPage />
-            </RoleGuard>
-          }
-        />
-        <Route
-          path="feature-flags"
-          element={
-            <RoleGuard requiredCapability="manage_feature_flags">
-              <FeatureFlagsPage />
             </RoleGuard>
           }
         />

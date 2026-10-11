@@ -1,0 +1,46 @@
+# ==========================================
+# HSWRMS Root Git Ignore Rules
+# ==========================================
+
+# ─── Java / Maven Backend ───
+*.class
+**/*.class
+target/
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+**/.flattened-pom.xml
+*.log
+**/*.log
+
+# ─── Node / Frontend ───
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+.env.local
+.env.*.local
+**/.env.local
+**/.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── IDEs, Editors & System ───
+.idea/
+**/.idea/
+*.iml
+.vscode/
+**/.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
+
+# ─── Temporary / Redundant folders ───
+fal26-isp392-is2005-g1-main/

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ShieldAlert,
   Settings2,
-  ToggleLeft,
   Shield,
   Users2,
   UserPlus,
@@ -16,12 +15,12 @@ import {
   Info
 } from 'lucide-react';
 import { useGovernance } from '../../hooks/useGovernance';
+import { INITIAL_STAFF_ACCOUNTS } from '../../data/mockStaff';
 
 export const AdminDashboardPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
-  const { parameters, featureFlags, delegations, auditEvents } = useGovernance();
+  const { parameters, delegations, auditEvents } = useGovernance();
 
-  const enabledFlagsCount = featureFlags.filter((f) => f.enabled).length;
   const activeDelegationsCount = delegations.filter((d) => d.status === 'active').length;
   const recentAuditEvents = auditEvents.slice(0, 5);
 
@@ -31,7 +30,7 @@ export const AdminDashboardPage: React.FC = () => {
       <div className="hsw-gov-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
           <h1 className="hsw-gov-title">
-            {t('operations.adminDashboard.title', 'System Administration & Governance Cockpit')}
+            {t('operations.adminDashboard.title', 'Bảng Quản Trị & Điều Hành Hệ Thống')}
           </h1>
           <span style={{
             fontSize: '11px',
@@ -43,11 +42,11 @@ export const AdminDashboardPage: React.FC = () => {
             backgroundColor: 'var(--actor-admin)',
             color: 'var(--actor-admin-text)'
           }}>
-            {t('topbar.adminClearance', 'Administrator Clearance')}
+            {t('topbar.adminClearance', 'Quyền Quản Trị Hệ Thống')}
           </span>
         </div>
         <p className="hsw-gov-subtitle">
-          {t('operations.adminDashboard.subtitle', 'Centralized governance, business parameter configuration, access delegation, and security audit monitoring.')}
+          {t('operations.adminDashboard.subtitle', 'Quản trị tập trung, cấu hình tham số vận hành, ủy quyền truy cập và kiểm toán an ninh hệ thống.')}
         </p>
       </div>
 
@@ -56,10 +55,10 @@ export const AdminDashboardPage: React.FC = () => {
         <Info size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.adminDashboard.bannerTitle', 'Frontend Governance Prototype')}
+            {t('operations.adminDashboard.bannerTitle', 'Mô Hình Quản Trị Mẫu Giao Diện')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.adminDashboard.bannerNotice', 'Configuration parameters and permission rules in this prototype are managed in client state for operational demonstration. In production, authorization policies and append-only audit histories are enforced by server-side policy engines.')}
+            {t('operations.adminDashboard.bannerNotice', 'Các tham số cấu hình và quy tắc phân quyền trong bản thử nghiệm này được quản lý ở trạng thái giao diện nhằm phục vụ đánh giá quy trình. Trong môi trường thực tế, chính sách xác thực và lưu vết bất biến được thực thi bởi máy chủ ứng dụng.')}
           </span>
         </div>
       </div>
@@ -68,43 +67,43 @@ export const AdminDashboardPage: React.FC = () => {
       <div className="hsw-gov-grid">
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiParams', 'Business Parameters')}
+            {t('operations.adminDashboard.kpiParams', 'Tham Số Vận Hành')}
           </span>
           <span className="hsw-gov-kpi-val">{parameters.length}</span>
           <span className="hsw-gov-kpi-sub">
-            {t('operations.adminDashboard.kpiParamsSub', 'Operational thresholds configured')}
+            {t('operations.adminDashboard.kpiParamsSub', 'Định mức vận hành đang áp dụng')}
           </span>
         </div>
 
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiFlags', 'Feature Flags')}
+            {t('operations.adminDashboard.kpiStaff', 'Tài Khoản Nhân Viên')}
           </span>
-          <span className="hsw-gov-kpi-val">{enabledFlagsCount} / {featureFlags.length}</span>
+          <span className="hsw-gov-kpi-val">{INITIAL_STAFF_ACCOUNTS.length}</span>
           <span className="hsw-gov-kpi-sub">
-            {t('operations.adminDashboard.kpiFlagsSub', 'Optional modules currently active')}
+            {t('operations.adminDashboard.kpiStaffSub', 'Nhân sự vận hành đang hoạt động')}
           </span>
         </div>
 
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiDelegations', 'Manager Delegations')}
+            {t('operations.adminDashboard.kpiDelegations', 'Ủy Quyền Quản Lý')}
           </span>
           <span className="hsw-gov-kpi-val" style={{ color: activeDelegationsCount > 0 ? 'var(--accent-forest)' : 'var(--text-primary)' }}>
             {activeDelegationsCount}
           </span>
           <span className="hsw-gov-kpi-sub">
-            {t('operations.adminDashboard.kpiDelegationsSub', 'Active scoped delegations to Manager')}
+            {t('operations.adminDashboard.kpiDelegationsSub', 'Ủy quyền giới hạn đang hiệu lực cho Quản lý')}
           </span>
         </div>
 
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiAudit', 'Audit Trail Activity')}
+            {t('operations.adminDashboard.kpiAudit', 'Nhật Ký Kiểm Toán')}
           </span>
           <span className="hsw-gov-kpi-val">{auditEvents.length}</span>
           <span className="hsw-gov-kpi-sub">
-            {t('operations.adminDashboard.kpiAuditSub', 'Sensitive metadata access events logged')}
+            {t('operations.adminDashboard.kpiAuditSub', 'Lượt truy cập siêu dữ liệu nhạy cảm được ghi nhận')}
           </span>
         </div>
       </div>
@@ -114,10 +113,10 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <Settings2 size={18} style={{ color: 'var(--accent-forest)' }} />
-            {t('operations.adminDashboard.navTitle', 'Administrative Functions & Governance Modules')}
+            {t('operations.adminDashboard.navTitle', 'Chức Năng Quản Trị & Mô-đun Điều Hành')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {t('operations.adminDashboard.screensScope', 'Official Administrator Scope: Screens 10–12 & 50–54, 56')}
+            {t('operations.adminDashboard.screensScope', 'Phạm vi quản trị viên chính thức: Màn hình 10–12 & 50–54, 56')}
           </span>
         </div>
 
@@ -127,8 +126,8 @@ export const AdminDashboardPage: React.FC = () => {
               <UserPlus size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.staffAccounts', 'Staff Accounts')}</h4>
-              <p>{t('operations.adminDashboard.descStaff', 'Manage staff accounts, clearance roles, active work status, and RBAC security boundaries (Screens 10 & 11).')}</p>
+              <h4>{t('operations.sidebar.staffAccounts', 'Tài Khoản Nhân Viên')}</h4>
+              <p>{t('operations.adminDashboard.descStaff', 'Quản lý tài khoản nhân viên, quyền hạn vai trò, trạng thái làm việc và ranh giới bảo mật RBAC (Màn hình 10 & 11).')}</p>
             </div>
           </Link>
 
@@ -137,8 +136,8 @@ export const AdminDashboardPage: React.FC = () => {
               <Database size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.masterDataManagement', 'Master Data Management')}</h4>
-              <p>{t('operations.adminDashboard.descMasterData', 'Administer retreat packages, spa therapy services, and villa categories with wellness taxonomy (Screen 12).')}</p>
+              <h4>{t('operations.sidebar.masterDataManagement', 'Quản Lý Dữ Liệu Gốc')}</h4>
+              <p>{t('operations.adminDashboard.descMasterData', 'Quản trị danh mục gói tĩnh dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).')}</p>
             </div>
           </Link>
 
@@ -147,18 +146,8 @@ export const AdminDashboardPage: React.FC = () => {
               <Settings2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.businessParameters', 'Business Parameters')}</h4>
-              <p>{t('operations.adminDashboard.descParams', 'Configure cancellation windows, refund rates, deposit percentages, and dietary cutoff rules.')}</p>
-            </div>
-          </Link>
-
-          <Link to="/admin/feature-flags" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
-              <ToggleLeft size={20} />
-            </div>
-            <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.featureFlags', 'Feature Flags')}</h4>
-              <p>{t('operations.adminDashboard.descFlags', 'Safely toggle modular services including extra dining, extra spa, and statutory export routines.')}</p>
+              <h4>{t('operations.sidebar.businessParameters', 'Tham Số Nghiệp Vụ')}</h4>
+              <p>{t('operations.adminDashboard.descParams', 'Cấu hình hạn chót hủy phòng, tỷ lệ hoàn cọc, tỷ lệ đặt cọc bắt buộc và thời hạn chọn thực đơn.')}</p>
             </div>
           </Link>
 
@@ -167,8 +156,8 @@ export const AdminDashboardPage: React.FC = () => {
               <Shield size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.permissionMatrix', 'Permission Matrix')}</h4>
-              <p>{t('operations.adminDashboard.descMatrix', 'Inspect cross-role capability assignments and enforce privacy & least-privilege boundaries.')}</p>
+              <h4>{t('operations.sidebar.permissionMatrix', 'Ma Trận Phân Quyền')}</h4>
+              <p>{t('operations.adminDashboard.descMatrix', 'Kiểm tra phân bổ quyền hạn theo vai trò và thực thi các giới hạn bảo mật bất biến theo chuẩn tối thiểu hóa dữ liệu.')}</p>
             </div>
           </Link>
 
@@ -177,8 +166,8 @@ export const AdminDashboardPage: React.FC = () => {
               <Users2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.managerDelegation', 'Manager Delegation')}</h4>
-              <p>{t('operations.adminDashboard.descDelegation', 'Grant strictly scoped, time-bounded administrative capabilities to Resort Operations Manager.')}</p>
+              <h4>{t('operations.sidebar.managerDelegation', 'Ủy Quyền Quản Lý')}</h4>
+              <p>{t('operations.adminDashboard.descDelegation', 'Cấp phát quyền hạn vận hành giới hạn, có thời hạn cho Quản lý Khu nghỉ dưỡng (Sarah Jenkins).')}</p>
             </div>
           </Link>
 
@@ -187,8 +176,8 @@ export const AdminDashboardPage: React.FC = () => {
               <History size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.sensitiveDataAuditLog', 'Sensitive Data Audit Log')}</h4>
-              <p>{t('operations.adminDashboard.descAudit', 'Review chronological metadata of access events involving health, identity, and financial records.')}</p>
+              <h4>{t('operations.sidebar.sensitiveDataAuditLog', 'Nhật Ký Kiểm Toán Nhạy Cảm')}</h4>
+              <p>{t('operations.adminDashboard.descAudit', 'Xem xét siêu dữ liệu ghi nhận lượt truy cập hồ sơ sức khỏe, thông tin cư trú và giao dịch tài chính.')}</p>
             </div>
           </Link>
 
@@ -197,8 +186,8 @@ export const AdminDashboardPage: React.FC = () => {
               <Activity size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.systemOverviewDashboard', 'System Overview Dashboard')}</h4>
-              <p>{t('operations.adminDashboard.descOverview', 'High-level cross-module operational health and statutory residence declaration status monitoring.')}</p>
+              <h4>{t('operations.sidebar.systemOverviewDashboard', 'Tổng Quan Tình Trạng Hệ Thống')}</h4>
+              <p>{t('operations.adminDashboard.descOverview', 'Tổng quan vận hành toàn diện và kết xuất danh sách khai báo tạm trú theo Luật Cư trú 2020.')}</p>
             </div>
           </Link>
         </div>
@@ -211,7 +200,7 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="hsw-gov-card-header">
             <h3 className="hsw-gov-card-title">
               <History size={16} style={{ color: 'var(--accent-forest)' }} />
-              {t('operations.adminDashboard.recentAuditTitle', 'Recent Sensitive Access Audit Activity')}
+              {t('operations.adminDashboard.recentAuditTitle', 'Lượt Truy Cập Nhạy Cảm Gần Đây')}
             </h3>
             <Link
               to="/admin/audit-log"
@@ -225,7 +214,7 @@ export const AdminDashboardPage: React.FC = () => {
                 gap: '4px'
               }}
             >
-              {t('operations.adminDashboard.viewFullLog', 'View Full Audit Trail')}
+              {t('operations.adminDashboard.viewFullLog', 'Xem Toàn Bộ Nhật Ký')}
               <ArrowRight size={13} />
             </Link>
           </div>
@@ -248,7 +237,7 @@ export const AdminDashboardPage: React.FC = () => {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '4px' }}>
                     <span className={`hsw-audit-pill ${evt.result === 'SUCCESS' ? 'success' : 'denied'}`}>
-                      {evt.result}
+                      {evt.result === 'SUCCESS' ? 'THÀNH CÔNG' : 'BỊ TỪ CHỐI'}
                     </span>
                     <span className="hsw-audit-cat">{evt.dataCategory}</span>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{evt.timestamp}</span>
@@ -257,7 +246,7 @@ export const AdminDashboardPage: React.FC = () => {
                     {evt.actorName} ({evt.actorRole}): {t(evt.detailsKey, evt.detailsFallback)}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    Target Ref: <code>{evt.targetRef}</code> · Action: {evt.action}
+                    Mã Tham Chiếu: <code>{evt.targetRef}</code> · Thao Tác: {evt.action}
                   </div>
                 </div>
               </div>
@@ -270,10 +259,10 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="hsw-gov-card-header">
             <h3 className="hsw-gov-card-title">
               <ShieldAlert size={16} style={{ color: 'var(--accent-terracotta)' }} />
-              {t('operations.adminDashboard.immutableGuaranteesTitle', 'Enforced Safety & Privacy Safeguards (BR-01, BR-02, BR-03, BR-06)')}
+              {t('operations.adminDashboard.immutableGuaranteesTitle', 'Nguyên Tắc An Toàn & Bảo Mật Bắt Buộc (BR-01, BR-02, BR-03, BR-06)')}
             </h3>
             <span style={{ fontSize: '11px', color: 'var(--accent-forest)', fontWeight: 600 }}>
-              {t('operations.adminDashboard.nonConfigurable', 'PROTOTYPE SAFEGUARDS')}
+              {t('operations.adminDashboard.nonConfigurable', 'BẢO VỆ BẤT BIẾN')}
             </span>
           </div>
 
@@ -282,11 +271,11 @@ export const AdminDashboardPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '3px' }}>
                 <CheckCircle2 size={15} style={{ color: 'var(--accent-forest)' }} />
                 <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
-                  {t('operations.adminDashboard.ruleBr01Title', 'BR-01: Two-Dimensional Spa Booking Integrity')}
+                  {t('operations.adminDashboard.ruleBr01Title', 'BR-01: Kiểm Soát Tài Nguyên 2 Chiều Cho Dịch Vụ Spa')}
                 </strong>
               </div>
               <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {t('operations.adminDashboard.ruleBr01Desc', 'A spa session requires concurrent availability of both an eligible Therapist and an assigned Treatment Room. Cannot be bypassed by parameters or feature flags.')}
+                {t('operations.adminDashboard.ruleBr01Desc', 'Mỗi buổi trị liệu spa bắt buộc phải có sẵn đồng thời cả Chuyên viên trị liệu và Phòng trị liệu. Không thể bỏ qua bằng tham số cấu hình.')}
               </p>
             </div>
 
@@ -294,11 +283,11 @@ export const AdminDashboardPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '3px' }}>
                 <CheckCircle2 size={15} style={{ color: 'var(--accent-forest)' }} />
                 <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
-                  {t('operations.adminDashboard.ruleBr02Title', 'BR-02: Consolidated Folio Settlement Before Checkout')}
+                  {t('operations.adminDashboard.ruleBr02Title', 'BR-02: Chặn Trả Phòng Khi Còn Khoản Chưa Thanh Toán')}
                 </strong>
               </div>
               <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {t('operations.adminDashboard.ruleBr02Desc', 'Front Desk checkout cannot be finalized while any unpaid extra Spa or F&B charges remain on the villa folio. Unpaid balance check is non-bypassable.')}
+                {t('operations.adminDashboard.ruleBr02Desc', 'Lễ tân không thể hoàn tất thủ tục trả phòng nếu hóa đơn biệt thự còn bất kỳ khoản phí spa hoặc ẩm thực phụ trội chưa thanh toán.')}
               </p>
             </div>
 
@@ -306,11 +295,11 @@ export const AdminDashboardPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '3px' }}>
                 <CheckCircle2 size={15} style={{ color: 'var(--accent-forest)' }} />
                 <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
-                  {t('operations.adminDashboard.ruleBr03Title', 'BR-03: Sensitive Health & Dietary Data Minimization')}
+                  {t('operations.adminDashboard.ruleBr03Title', 'BR-03: Tối Thiểu Hóa Dữ Liệu Sức Khỏe & Dinh Dưỡng')}
                 </strong>
               </div>
               <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {t('operations.adminDashboard.ruleBr03Desc', 'Therapists see only physical contraindications; Chefs see only culinary allergen tags; Receptionists and Managers are blocked from medical records.')}
+                {t('operations.adminDashboard.ruleBr03Desc', 'Kỹ thuật viên chỉ thấy ghi chú thể chất; Đầu bếp chỉ thấy cảnh báo dị ứng thực phẩm; Lễ tân và Quản lý bị chặn xem bệnh án cá nhân.')}
               </p>
             </div>
 
@@ -318,11 +307,11 @@ export const AdminDashboardPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '3px' }}>
                 <CheckCircle2 size={15} style={{ color: 'var(--accent-forest)' }} />
                 <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
-                  {t('operations.adminDashboard.ruleBr06Title', 'BR-06: Manager Least Privilege & Role Separation')}
+                  {t('operations.adminDashboard.ruleBr06Title', 'BR-06: Giới Hạn Quyền Tối Thiểu Cho Quản Lý')}
                 </strong>
               </div>
               <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {t('operations.adminDashboard.ruleBr06Desc', 'Manager is strictly executive reporting. Manager never inherits full Admin rights and receives only explicitly delegated, time-bounded capabilities.')}
+                {t('operations.adminDashboard.ruleBr06Desc', 'Quản lý chỉ có quyền xem báo cáo phân tích tổng hợp. Quản lý không bao giờ tự động nhận toàn quyền Quản trị viên trừ khi được ủy quyền có giới hạn.')}
               </p>
             </div>
           </div>

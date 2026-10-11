@@ -84,7 +84,10 @@ const resources = {
     retreat: viRetreat,
     auth: viAuth,
     customer: viCustomer,
-    operations: viOperations,
+    operations: {
+      ...viOperations,
+      operations: viOperations,
+    },
   },
   en: {
     common: {

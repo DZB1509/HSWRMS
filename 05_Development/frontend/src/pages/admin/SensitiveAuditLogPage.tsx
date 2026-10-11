@@ -52,7 +52,7 @@ export const SensitiveAuditLogPage: React.FC = () => {
       <div className="hsw-gov-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
           <h1 className="hsw-gov-title">
-            {t('operations.audit.pageTitle', 'Sensitive Data Access & Governance Audit Log')}
+            {t('operations.audit.pageTitle', 'Nhật Ký Kiểm Toán Truy Cập Dữ Liệu Nhạy Cảm & Quản Trị')}
           </h1>
           <span style={{
             fontSize: '11px',
@@ -64,11 +64,11 @@ export const SensitiveAuditLogPage: React.FC = () => {
             backgroundColor: 'var(--actor-admin)',
             color: 'var(--actor-admin-text)'
           }}>
-            {t('topbar.adminClearance', 'Administrator Clearance')}
+            {t('topbar.adminClearance', 'Thẩm Quyền Quản Trị Viên')}
           </span>
         </div>
         <p className="hsw-gov-subtitle">
-          {t('operations.audit.pageSubtitle', 'Read-only chronological audit history (append-only prototype semantics) recording access metadata, identity verification events, and governance transitions modeled around Decree 13 and Law on Residence requirements.')}
+          {t('operations.audit.pageSubtitle', 'Lịch sử kiểm toán theo dòng thời gian chỉ đọc (ngữ nghĩa chỉ ghi tiếp append-only) ghi nhận siêu dữ liệu truy cập, sự kiện xác minh danh tính và các chuyển đổi quản trị theo Nghị định 13 và Luật Cư trú.')}
         </p>
       </div>
 
@@ -77,10 +77,10 @@ export const SensitiveAuditLogPage: React.FC = () => {
         <ShieldCheck size={18} style={{ color: 'var(--accent-terracotta)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.audit.minimizationTitle', 'Strict Metadata Logging & Sensitive Data Minimization')}
+            {t('operations.audit.minimizationTitle', 'Ghi Nhật Ký Siêu Dữ Liệu Chặt Chẽ & Tối Thiểu Hóa Dữ Liệu Nhạy Cảm')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.audit.minimizationDesc', 'To protect customer confidentiality, this audit log records access metadata and pseudonymous references only. Raw health diagnoses, specific allergy symptoms, passport/identity numbers, and payment credentials are NEVER stored or exposed in audit records.')}
+            {t('operations.audit.minimizationDesc', 'Để bảo vệ quyền riêng tư của khách hàng, nhật ký kiểm toán này chỉ ghi nhận siêu dữ liệu truy cập và mã định danh giả lập danh tính. Bệnh án y tế thô, triệu chứng dị ứng cụ thể, số CCCD/Hộ chiếu và thông tin thẻ thanh toán TUYỆT ĐỐI KHÔNG lưu trữ hoặc hiển thị trong nhật ký.')}
           </span>
         </div>
       </div>
@@ -98,7 +98,7 @@ export const SensitiveAuditLogPage: React.FC = () => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder={t('operations.audit.searchPlaceholder', 'Search target ref or actor...')}
+                placeholder={t('operations.audit.searchPlaceholder', 'Tìm theo mã tham chiếu, người thực hiện...')}
                 className="hsw-filter-input"
               />
             </div>
@@ -112,12 +112,12 @@ export const SensitiveAuditLogPage: React.FC = () => {
               }}
               className="hsw-filter-select"
             >
-              <option value="all">{t('operations.audit.allCategories', 'All Categories')}</option>
-              <option value="HEALTH_WELLNESS">HEALTH_WELLNESS</option>
-              <option value="RESIDENCE_IDENTITY">RESIDENCE_IDENTITY</option>
-              <option value="DIETARY_ALLERGY">DIETARY_ALLERGY</option>
-              <option value="PAYMENT_TRANSACTION">PAYMENT_TRANSACTION</option>
-              <option value="SECURITY_GOVERNANCE">SECURITY_GOVERNANCE</option>
+              <option value="all">{t('operations.audit.allCategories', 'Tất cả danh mục dữ liệu')}</option>
+              <option value="HEALTH_WELLNESS">Sức Khỏe & Trị Liệu (HEALTH_WELLNESS)</option>
+              <option value="RESIDENCE_IDENTITY">Danh Tính & Tạm Trú (RESIDENCE_IDENTITY)</option>
+              <option value="DIETARY_ALLERGY">Dị Ứng & Ẩm Thực (DIETARY_ALLERGY)</option>
+              <option value="PAYMENT_TRANSACTION">Giao Dịch & Thanh Toán (PAYMENT_TRANSACTION)</option>
+              <option value="SECURITY_GOVERNANCE">Quản Trị Bảo Mật (SECURITY_GOVERNANCE)</option>
             </select>
 
             {/* Role Filter */}
@@ -129,13 +129,13 @@ export const SensitiveAuditLogPage: React.FC = () => {
               }}
               className="hsw-filter-select"
             >
-              <option value="all">{t('operations.audit.allRoles', 'All Actor Roles')}</option>
-              <option value="customer">Customer</option>
-              <option value="receptionist">Receptionist</option>
-              <option value="therapist">Therapist</option>
-              <option value="fb_staff">F&B Staff / Chef</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
+              <option value="all">{t('operations.audit.allRoles', 'Tất cả vai trò thực hiện')}</option>
+              <option value="customer">Khách Hàng (Customer)</option>
+              <option value="receptionist">Lễ Tân (Receptionist)</option>
+              <option value="therapist">Kỹ Thuật Viên (Therapist)</option>
+              <option value="fb_staff">Nhân Viên Bếp / F&B</option>
+              <option value="manager">Quản Lý (Manager)</option>
+              <option value="admin">Quản Trị Viên (Admin)</option>
             </select>
 
             {/* Result Filter */}
@@ -147,14 +147,14 @@ export const SensitiveAuditLogPage: React.FC = () => {
               }}
               className="hsw-filter-select"
             >
-              <option value="all">{t('operations.audit.allResults', 'All Outcomes')}</option>
-              <option value="SUCCESS">SUCCESS</option>
-              <option value="DENIED">DENIED (RBAC Block)</option>
+              <option value="all">{t('operations.audit.allResults', 'Tất cả kết quả')}</option>
+              <option value="SUCCESS">THÀNH CÔNG (SUCCESS)</option>
+              <option value="DENIED">TỪ CHỐI / BỊ CHẶN (DENIED)</option>
             </select>
           </div>
 
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {totalItems} {t('operations.audit.eventsMatched', 'events recorded')}
+            {totalItems} {t('operations.audit.eventsMatched', 'sự kiện được ghi nhận')}
           </span>
         </div>
       </div>
@@ -165,21 +165,21 @@ export const SensitiveAuditLogPage: React.FC = () => {
           <table className="hsw-matrix-table">
             <thead>
               <tr>
-                <th>{t('operations.audit.colEventId', 'Event ID')}</th>
-                <th>{t('operations.audit.colTimestamp', 'Timestamp')}</th>
-                <th>{t('operations.audit.colActor', 'Actor & Role')}</th>
-                <th>{t('operations.audit.colAction', 'Action')}</th>
-                <th>{t('operations.audit.colCategory', 'Category')}</th>
-                <th>{t('operations.audit.colTargetRef', 'Target Ref')}</th>
-                <th>{t('operations.audit.colResult', 'Result')}</th>
-                <th>{t('operations.audit.colDetails', 'Metadata Context')}</th>
+                <th>{t('operations.audit.colEventId', 'Mã Sự Kiện')}</th>
+                <th>{t('operations.audit.colTimestamp', 'Thời Gian')}</th>
+                <th>{t('operations.audit.colActor', 'Người Thực Hiện & Vai Trò')}</th>
+                <th>{t('operations.audit.colAction', 'Hành Động')}</th>
+                <th>{t('operations.audit.colCategory', 'Danh Mục Dữ Liệu')}</th>
+                <th>{t('operations.audit.colTargetRef', 'Mã Tham Chiếu')}</th>
+                <th>{t('operations.audit.colResult', 'Kết Quả')}</th>
+                <th>{t('operations.audit.colDetails', 'Ngữ Cảnh Siêu Dữ Liệu')}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedEvents.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-muted)' }}>
-                    {t('operations.audit.noEvents', 'No audit events found matching the specified search and filter criteria.')}
+                    {t('operations.audit.noEvents', 'Không tìm thấy sự kiện kiểm toán nào phù hợp với tiêu chí tìm kiếm và bộ lọc.')}
                   </td>
                 </tr>
               ) : (
@@ -197,7 +197,7 @@ export const SensitiveAuditLogPage: React.FC = () => {
                       <td>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{evt.actorName}</div>
                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                          {evt.actorRole} · {evt.actorId}
+                          {evt.actorRole === 'therapist' ? 'Kỹ thuật viên' : evt.actorRole === 'receptionist' ? 'Lễ tân' : evt.actorRole === 'fb_staff' ? 'Nhân viên bếp' : evt.actorRole === 'admin' ? 'Quản trị viên' : evt.actorRole === 'manager' ? 'Quản lý' : 'Khách hàng'} · {evt.actorId}
                         </div>
                       </td>
                       <td>
@@ -220,7 +220,7 @@ export const SensitiveAuditLogPage: React.FC = () => {
                       </td>
                       <td>
                         <span className={`hsw-audit-pill ${isSuccess ? 'success' : 'denied'}`}>
-                          {evt.result}
+                          {isSuccess ? 'THÀNH CÔNG' : 'TỪ CHỐI'}
                         </span>
                       </td>
                       <td style={{ maxWidth: '320px', fontSize: '11px', color: 'var(--text-primary)', lineHeight: 1.4 }}>

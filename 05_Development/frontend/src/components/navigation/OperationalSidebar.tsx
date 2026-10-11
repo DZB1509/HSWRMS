@@ -16,7 +16,6 @@ import {
   TrendingUp,
   Users2,
   Settings2,
-  ToggleLeft,
   Shield,
   UserPlus,
   Database,
@@ -44,83 +43,82 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
   receptionist: [
     {
       headingKey: 'operations.sidebar.frontDeskOperations',
-      defaultHeading: 'Front Desk Operations',
+      defaultHeading: 'Nghiệp Vụ Lễ Tân & Tiếp Đón',
       items: [
-        { labelKey: 'operations.sidebar.frontDeskDashboard', defaultLabel: 'Front Desk Dashboard', path: '/receptionist/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.dailyArrivals', defaultLabel: 'Daily Arrivals', path: '/receptionist/arrivals', icon: CalendarCheck },
-        { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Villa Management', path: '/receptionist/villas', icon: Home }
+        { labelKey: 'operations.sidebar.frontDeskDashboard', defaultLabel: 'Bảng Điều Khiển Lễ Tân', path: '/receptionist/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.dailyArrivals', defaultLabel: 'Khách Đến Hàng Ngày', path: '/receptionist/arrivals', icon: CalendarCheck },
+        { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Quản Lý Biệt Thự', path: '/receptionist/villas', icon: Home }
       ]
     },
     {
       headingKey: 'operations.sidebar.customerServicesFolio',
-      defaultHeading: 'Customer Services & Folio',
+      defaultHeading: 'Dịch Vụ Khách & Hóa Đơn',
       items: [
-        { labelKey: 'operations.sidebar.manualExtraSpa', defaultLabel: 'Manual Extra Spa', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
-        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Customer Folio & Invoice', path: '/receptionist/folio/HSW-88192', icon: Receipt },
-        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Final Payment & Checkout', path: '/receptionist/checkout/HSW-88192/payment', icon: UserCheck }
+        { labelKey: 'operations.sidebar.manualExtraSpa', defaultLabel: 'Đặt Thêm Spa Thủ Công', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
+        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Hóa Đơn Tạm Tính (Folio)', path: '/receptionist/folio/HSW-88192', icon: Receipt },
+        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Thanh Toán Cuối & Check-out', path: '/receptionist/checkout/HSW-88192/payment', icon: UserCheck }
       ]
     }
   ],
   therapist: [
     {
       headingKey: 'operations.sidebar.therapistSchedule',
-      defaultHeading: 'Therapist Schedule',
+      defaultHeading: 'Lịch Trình Trị Liệu & Sức Khỏe',
       items: [
-        { labelKey: 'operations.sidebar.therapistDashboard', defaultLabel: 'Therapist Dashboard', path: '/therapist/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.dailyWorkSchedule', defaultLabel: 'Daily Work Schedule', path: '/therapist/schedule', icon: CalendarCheck },
-        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Session Details & Notes', path: '/therapist/sessions/SES-301', icon: HeartHandshake }
+        { labelKey: 'operations.sidebar.therapistDashboard', defaultLabel: 'Bảng Điều Khiển Trị Liệu', path: '/therapist/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.dailyWorkSchedule', defaultLabel: 'Lịch Làm Việc Hàng Ngày', path: '/therapist/schedule', icon: CalendarCheck },
+        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Chi Tiết Buổi Trị Liệu & Ghi Chú', path: '/therapist/sessions/SES-301', icon: HeartHandshake }
       ]
     }
   ],
   fb_staff: [
     {
       headingKey: 'operations.sidebar.kitchenOperations',
-      defaultHeading: 'Kitchen Operations',
+      defaultHeading: 'Nghiệp Vụ Bếp & Ẩm Thực',
       items: [
-        { labelKey: 'operations.sidebar.fbDashboard', defaultLabel: 'F&B Dashboard', path: '/fb/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Daily Meal Prep Queue', path: '/fb/meal-prep', icon: ChefHat }
+        { labelKey: 'operations.sidebar.fbDashboard', defaultLabel: 'Bảng Điều Khiển Ẩm Thực (F&B)', path: '/fb/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Hàng Đợi Chuẩn Bị Món Ăn', path: '/fb/meal-prep', icon: ChefHat }
       ]
     }
   ],
   manager: [
     {
       headingKey: 'operations.sidebar.managementCockpit',
-      defaultHeading: 'Management Cockpit',
+      defaultHeading: 'Điều Hành Quản Lý',
       items: [
-        { labelKey: 'operations.sidebar.managerDashboard', defaultLabel: 'Manager Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.revenueAnalytics', defaultLabel: 'Revenue Analytics', path: '/manager/revenue', icon: BarChart3 },
-        { labelKey: 'operations.sidebar.occupancyReports', defaultLabel: 'Occupancy Reports', path: '/manager/occupancy', icon: TrendingUp },
-        { labelKey: 'operations.sidebar.therapistUtilization', defaultLabel: 'Therapist Utilization', path: '/manager/therapist-utilization', icon: Users2 }
+        { labelKey: 'operations.sidebar.managerDashboard', defaultLabel: 'Bảng Điều Khiển Quản Lý', path: '/manager/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.revenueAnalytics', defaultLabel: 'Phân Tích Doanh Thu', path: '/manager/revenue', icon: BarChart3 },
+        { labelKey: 'operations.sidebar.occupancyReports', defaultLabel: 'Báo Cáo Công Suất Phòng', path: '/manager/occupancy', icon: TrendingUp },
+        { labelKey: 'operations.sidebar.therapistUtilization', defaultLabel: 'Hiệu Suất Kỹ Thuật Viên', path: '/manager/therapist-utilization', icon: Users2 }
       ]
     },
     {
       headingKey: 'operations.sidebar.governanceCompliance',
-      defaultHeading: 'Governance & Compliance',
+      defaultHeading: 'Quản Trị & Tuân Thủ',
       items: [
-        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'System Overview Dashboard', path: '/manager/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/manager/system-overview', icon: Activity }
       ]
     }
   ],
   admin: [
     {
       headingKey: 'operations.sidebar.administration',
-      defaultHeading: 'Administration',
+      defaultHeading: 'Quản Trị Hệ Thống',
       items: [
-        { labelKey: 'operations.sidebar.adminDashboard', defaultLabel: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.staffAccounts', defaultLabel: 'Staff Accounts', path: '/admin/staff', icon: UserPlus },
-        { labelKey: 'operations.sidebar.masterDataManagement', defaultLabel: 'Master Data Management', path: '/admin/master-data', icon: Database }
+        { labelKey: 'operations.sidebar.adminDashboard', defaultLabel: 'Bảng Điều Khiển Quản Trị', path: '/admin/dashboard', icon: LayoutDashboard },
+        { labelKey: 'operations.sidebar.staffAccounts', defaultLabel: 'Tài Khoản Nhân Viên', path: '/admin/staff', icon: UserPlus },
+        { labelKey: 'operations.sidebar.masterDataManagement', defaultLabel: 'Quản Lý Dữ Liệu Gốc', path: '/admin/master-data', icon: Database }
       ]
     },
     {
       headingKey: 'operations.sidebar.securityGovernance',
-      defaultHeading: 'Security & Governance',
+      defaultHeading: 'Bảo Mật & Quản Trị Quy Định',
       items: [
-        { labelKey: 'operations.sidebar.businessParameters', defaultLabel: 'Business Parameters', path: '/admin/business-params', icon: Settings2 },
-        { labelKey: 'operations.sidebar.featureFlags', defaultLabel: 'Feature Flags', path: '/admin/feature-flags', icon: ToggleLeft },
-        { labelKey: 'operations.sidebar.permissionMatrix', defaultLabel: 'Permission Matrix', path: '/admin/permissions', icon: Shield },
-        { labelKey: 'operations.sidebar.managerDelegation', defaultLabel: 'Manager Delegation', path: '/admin/delegation', icon: Users2 },
-        { labelKey: 'operations.sidebar.sensitiveDataAuditLog', defaultLabel: 'Sensitive Data Audit Log', path: '/admin/audit-log', icon: History },
-        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'System Overview Dashboard', path: '/admin/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.businessParameters', defaultLabel: 'Tham Số Nghiệp Vụ', path: '/admin/business-params', icon: Settings2 },
+        { labelKey: 'operations.sidebar.permissionMatrix', defaultLabel: 'Ma Trận Phân Quyền (RBAC)', path: '/admin/permissions', icon: Shield },
+        { labelKey: 'operations.sidebar.managerDelegation', defaultLabel: 'Ủy Quyền Cho Quản Lý', path: '/admin/delegation', icon: Users2 },
+        { labelKey: 'operations.sidebar.sensitiveDataAuditLog', defaultLabel: 'Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm', path: '/admin/audit-log', icon: History },
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/admin/system-overview', icon: Activity }
       ]
     }
   ]
@@ -146,24 +144,16 @@ export const OperationalSidebar: React.FC<{
     if (managerDelegatedCapabilities.includes('configure_business_parameters')) {
       delegatedItems.push({
         labelKey: 'operations.sidebar.businessParametersDelegated',
-        defaultLabel: 'Business Parameters (Delegated)',
+        defaultLabel: 'Tham Số Nghiệp Vụ (Được Ủy Quyền)',
         path: '/admin/business-params',
         icon: Settings2
-      });
-    }
-    if (managerDelegatedCapabilities.includes('manage_feature_flags')) {
-      delegatedItems.push({
-        labelKey: 'operations.sidebar.featureFlagsDelegated',
-        defaultLabel: 'Feature Flags (Delegated)',
-        path: '/admin/feature-flags',
-        icon: ToggleLeft
       });
     }
 
     if (delegatedItems.length > 0) {
       sections.push({
         headingKey: 'operations.sidebar.delegatedAdministration',
-        defaultHeading: 'Delegated Administration',
+        defaultHeading: 'Quản Trị Ủy Quyền',
         items: delegatedItems
       });
     }
@@ -172,28 +162,28 @@ export const OperationalSidebar: React.FC<{
   return (
     <aside
       className={`hsw-sidebar ${mobileOpen ? 'is-mobile-open' : ''}`}
-      aria-label="Staff navigation sidebar"
+      aria-label="Thanh điều hướng nhân viên"
     >
       <div className="hsw-sidebar-header">
         <Link to={`/${role}/dashboard`} className="hsw-brand-logo">
           <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
           <div>
             HEAVENSTAY
-            <span>{t('operations.sidebar.operationalSuite', 'OPERATIONAL SUITE')}</span>
+            <span>{t('operations.sidebar.operationalSuite', 'HỆ THỐNG VẬN HÀNH')}</span>
           </div>
         </Link>
       </div>
 
       <div className="hsw-sidebar-user">
         <div className="hsw-avatar-circle" style={{ backgroundColor: 'var(--accent-olive)' }}>
-          {currentUser?.avatar || 'ST'}
+          {currentUser?.avatar || 'NV'}
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {currentUser?.name}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--accent-forest)', textTransform: 'capitalize' }}>
-            {t(`navigation:roles.${role}`, role.replace('_', ' '))} · {currentUser?.department || t('operations.sidebar.operationsDept', 'Operations')}
+            {role === 'admin' ? 'Quản Trị Viên' : role === 'manager' ? 'Quản Lý Vận Hành' : role === 'receptionist' ? 'Lễ Tân' : role === 'therapist' ? 'Kỹ Thuật Viên' : role === 'fb_staff' ? 'Nhân Viên Bếp' : 'Khách Hàng'} · {currentUser?.department || t('operations.sidebar.operationsDept', 'Khối Vận Hành')}
           </div>
         </div>
       </div>
@@ -231,7 +221,7 @@ export const OperationalSidebar: React.FC<{
           style={{ width: '100%', color: 'var(--danger)', justifyContent: 'flex-start' }}
         >
           <LogOut size={16} />
-          <span>{t('operations.sidebar.signOut', 'Sign Out')}</span>
+          <span>{t('operations.sidebar.signOut', 'Đăng Xuất')}</span>
         </button>
       </div>
     </aside>

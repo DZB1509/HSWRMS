@@ -11,9 +11,9 @@ export const INITIAL_BUSINESS_PARAMETERS: BusinessParameter[] = [
   {
     key: 'deposit_default_percentage',
     labelKey: 'governance.params.depositDefault.label',
-    defaultLabel: 'Retreat Booking Required Deposit',
+    defaultLabel: 'Tỷ Lệ Tiền Cọc Đặt Chỗ Nghỉ Dưỡng',
     descriptionKey: 'governance.params.depositDefault.desc',
-    defaultDescription: 'Required upfront deposit percentage calculated on retreat package base cost prior to VNPay confirmation (30% baseline per booking contract).',
+    defaultDescription: 'Tỷ lệ tiền cọc bắt buộc tính trên giá gói nghỉ dưỡng trước khi xác nhận thanh toán VNPay (mặc định 30% theo hợp đồng đặt chỗ).',
     category: 'booking',
     type: 'percentage',
     currentValue: 30,
@@ -22,30 +22,30 @@ export const INITIAL_BUSINESS_PARAMETERS: BusinessParameter[] = [
     min: 20,
     max: 100,
     lastUpdatedAt: '2026-09-24 09:00',
-    lastUpdatedBy: 'Alexander Wright (Admin)'
+    lastUpdatedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'free_cancellation_window_hours',
     labelKey: 'governance.params.cancellationWindow.label',
-    defaultLabel: 'Free Cancellation Cutoff Window',
+    defaultLabel: 'Thời Hạn Hủy Phòng Miễn Phí',
     descriptionKey: 'governance.params.cancellationWindow.desc',
-    defaultDescription: 'Minimum hours prior to retreat arrival date allowed for penalty-free cancellation or full refund eligibility (UC26).',
+    defaultDescription: 'Số giờ tối thiểu trước ngày nhận phòng cho phép hủy đặt chỗ miễn phí hoặc hoàn tiền đầy đủ (UC26).',
     category: 'cancellation',
     type: 'hours',
     currentValue: 72,
     defaultValue: 72,
-    unit: 'hours',
+    unit: 'giờ',
     min: 24,
     max: 168,
     lastUpdatedAt: '2026-09-24 09:00',
-    lastUpdatedBy: 'Alexander Wright (Admin)'
+    lastUpdatedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'cancellation_refund_percentage',
     labelKey: 'governance.params.cancellationRefund.label',
-    defaultLabel: 'Standard Cancellation Refund Rate',
+    defaultLabel: 'Tỷ Lệ Hoàn Tiền Tiêu Chuẩn Khi Hủy',
     descriptionKey: 'governance.params.cancellationRefund.desc',
-    defaultDescription: 'Percentage of deposit refunded when cancellation occurs before the free cancellation cutoff window (UC26).',
+    defaultDescription: 'Tỷ lệ tiền cọc được hoàn lại khi hủy trước thời hạn hủy phòng miễn phí (UC26).',
     category: 'cancellation',
     type: 'percentage',
     currentValue: 80,
@@ -54,37 +54,37 @@ export const INITIAL_BUSINESS_PARAMETERS: BusinessParameter[] = [
     min: 0,
     max: 100,
     lastUpdatedAt: '2026-09-24 09:00',
-    lastUpdatedBy: 'Alexander Wright (Admin)'
+    lastUpdatedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'dietary_preselection_cutoff_hours',
     labelKey: 'governance.params.dietaryCutoff.label',
-    defaultLabel: 'Meal Preselection Lead Time',
+    defaultLabel: 'Thời Gian Báo Trước Chọn Thực Đơn',
     descriptionKey: 'governance.params.dietaryCutoff.desc',
-    defaultDescription: 'Hours in advance required for Customer to preselect daily meal courses to allow culinary kitchen prep and allergen verification (UC16).',
+    defaultDescription: 'Số giờ cần báo trước để Khách hàng chọn thực đơn mỗi ngày nhằm chuẩn bị bếp và kiểm tra dị ứng thực phẩm (UC16).',
     category: 'dietary',
     type: 'hours',
     currentValue: 48,
     defaultValue: 48,
-    unit: 'hours',
+    unit: 'giờ',
     min: 12,
     max: 72,
     lastUpdatedAt: '2026-09-24 09:00',
-    lastUpdatedBy: 'Alexander Wright (Admin)'
+    lastUpdatedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'police_declaration_export_time',
     labelKey: 'governance.params.policeExportTime.label',
-    defaultLabel: 'Daily Police Residence Declaration Batch Time',
+    defaultLabel: 'Giờ Kết Xuất Khai Báo Lưu Trú Công An Hàng Ngày',
     descriptionKey: 'governance.params.policeExportTime.desc',
-    defaultDescription: 'Scheduled local time for nightly generation of the temporary residence report modeled around Vietnam Law on Residence 2020.',
+    defaultDescription: 'Giờ địa phương cố định hàng đêm để tạo báo cáo lưu trú tạm trú theo Luật Cư trú Việt Nam 2020.',
     category: 'compliance',
     type: 'time',
     currentValue: '22:00',
     defaultValue: '22:00',
-    unit: 'local 24h',
+    unit: 'giờ địa phương',
     lastUpdatedAt: '2026-09-25 14:30',
-    lastUpdatedBy: 'Alexander Wright (Admin)'
+    lastUpdatedBy: 'Alexander Wright (Quản trị viên)'
   }
 ];
 
@@ -92,63 +92,63 @@ export const INITIAL_FEATURE_FLAGS: FeatureFlag[] = [
   {
     key: 'enable_online_extra_spa_booking',
     nameKey: 'governance.flags.extraSpaOnline.name',
-    defaultName: 'Customer Online Extra Spa Booking',
+    defaultName: 'Khách Đặt Spa Bổ Sung Trực Tuyến',
     descriptionKey: 'governance.flags.extraSpaOnline.desc',
-    defaultDescription: 'Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking).',
+    defaultDescription: 'Cho phép khách đang lưu trú đặt thêm buổi spa trực tiếp từ cổng thông tin.',
     enabled: true,
     scope: 'customer',
     impactLevel: 'medium',
     lastChangedAt: '2026-09-26 10:15',
-    lastChangedBy: 'Alexander Wright (Admin)'
+    lastChangedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'enable_online_extra_fnb_order',
     nameKey: 'governance.flags.extraFnbOnline.name',
-    defaultName: 'Customer In-Villa Dining A-la-carte Ordering',
+    defaultName: 'Khách Đặt Món Dinh Dưỡng Tại Biệt Thự',
     descriptionKey: 'governance.flags.extraFnbOnline.desc',
-    defaultDescription: 'Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio (UC19).',
+    defaultDescription: 'Cho phép khách gọi thêm món ăn dưỡng sinh thanh toán vào hóa đơn biệt thự (UC19).',
     enabled: true,
     scope: 'customer',
     impactLevel: 'medium',
     lastChangedAt: '2026-09-26 10:15',
-    lastChangedBy: 'Alexander Wright (Admin)'
+    lastChangedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'enable_vietnam_residence_auto_export',
     nameKey: 'governance.flags.residenceExport.name',
-    defaultName: 'Nightly Police Residence Declaration Batch Schedule',
+    defaultName: 'Tự Động Kết Xuất Báo Cáo Tạm Trú Ban Đêm',
     descriptionKey: 'governance.flags.residenceExport.desc',
-    defaultDescription: 'Automates the scheduled nightly batch compiling of daily customer check-in identification records (mandatory temporary residence declaration duty remains active).',
+    defaultDescription: 'Tự động tổng hợp hồ sơ check-in hàng ngày xuất báo cáo cư trú theo quy định.',
     enabled: true,
     scope: 'compliance',
     impactLevel: 'high',
     lastChangedAt: '2026-09-25 15:00',
-    lastChangedBy: 'Alexander Wright (Admin)'
+    lastChangedBy: 'Alexander Wright (Quản trị viên)'
   },
   {
     key: 'enable_post_checkout_review_invitations',
     nameKey: 'governance.flags.reviewInvites.name',
-    defaultName: 'Automated Post-Checkout Review Invitations',
+    defaultName: 'Tự Động Mời Đánh Giá Sau Check-out',
     descriptionKey: 'governance.flags.reviewInvites.desc',
-    defaultDescription: 'Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure (UC23).',
+    defaultDescription: 'Gửi lời mời đánh giá trải nghiệm nghỉ dưỡng sau khi hoàn tất thanh toán và trả phòng (UC23).',
     enabled: true,
     scope: 'customer',
     impactLevel: 'low',
     lastChangedAt: '2026-09-24 09:00',
-    lastChangedBy: 'Alexander Wright (Admin)'
+    lastChangedBy: 'Alexander Wright (Quản trị viên)'
   }
 ];
 
 export const PERMISSION_RULES: PermissionRule[] = [
-  // 1. Customer Experience
+  // 1. Trải nghiệm khách hàng
   {
     capability: 'book_retreat_package',
     categoryKey: 'governance.permissions.categories.experience',
-    defaultCategory: 'Customer Retreat Experience',
+    defaultCategory: 'Trải Nghiệm Nghỉ Dưỡng Của Khách Hàng',
     nameKey: 'governance.permissions.bookRetreat.name',
-    defaultName: 'Book Retreat Package & Pay Deposit',
+    defaultName: 'Đặt Gói Nghỉ Dưỡng & Thanh Toán Tiền Cọc',
     descriptionKey: 'governance.permissions.bookRetreat.desc',
-    defaultDescription: 'Browse packages, select retreat dates, configure villa category, and execute deposit via VNPay.',
+    defaultDescription: 'Duyệt gói, chọn ngày, cấu hình loại biệt thự và đặt cọc qua cổng VNPay.',
     grants: {
       customer: 'granted',
       receptionist: 'denied',
@@ -162,11 +162,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'manage_own_health_profile',
     categoryKey: 'governance.permissions.categories.experience',
-    defaultCategory: 'Customer Retreat Experience',
+    defaultCategory: 'Trải Nghiệm Nghỉ Dưỡng Của Khách Hàng',
     nameKey: 'governance.permissions.manageHealth.name',
-    defaultName: 'Manage Own Sensitive Health & Dietary Profile',
+    defaultName: 'Tự Quản Lý Hồ Sơ Sức Khỏe & Chế Độ Ăn',
     descriptionKey: 'governance.permissions.manageHealth.desc',
-    defaultDescription: 'Provide explicit consent to record allergies, dietary restrictions, and physical contraindications.',
+    defaultDescription: 'Cung cấp đồng ý minh thị ghi nhận dị ứng, kiêng kỵ dinh dưỡng và chống chỉ định thể chất.',
     grants: {
       customer: 'granted',
       receptionist: 'denied',
@@ -177,16 +177,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.healthConsent',
-    defaultBoundaryReason: 'Strict privacy boundary: Sensitive health records require explicit self-consent under Decree 13.'
+    defaultBoundaryReason: 'Ranh giới bảo mật nghiêm ngặt: Dữ liệu sức khỏe nhạy cảm yêu cầu sự đồng ý trực tiếp của khách hàng theo Nghị định 13.'
   },
   {
     capability: 'request_health_data_deletion',
     categoryKey: 'governance.permissions.categories.experience',
-    defaultCategory: 'Customer Retreat Experience',
+    defaultCategory: 'Trải Nghiệm Nghỉ Dưỡng Của Khách Hàng',
     nameKey: 'governance.permissions.deleteHealth.name',
-    defaultName: 'Request Post-Retreat Health Data Deletion',
+    defaultName: 'Yêu Cầu Xóa Dữ Liệu Sức Khỏe Sau Nghỉ Dưỡng',
     descriptionKey: 'governance.permissions.deleteHealth.desc',
-    defaultDescription: 'Exercise statutory right to erase or anonymize health notes after retreat completion (BR-07).',
+    defaultDescription: 'Thực thi quyền yêu cầu xóa hoặc ẩn danh dữ liệu sức khỏe sau khi hoàn tất kỳ nghỉ (BR-07).',
     grants: {
       customer: 'granted',
       receptionist: 'denied',
@@ -197,16 +197,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.statutoryDeletion',
-    defaultBoundaryReason: 'Statutory Customer Right: Data subject deletion request cannot be executed by staff.'
+    defaultBoundaryReason: 'Quyền hợp pháp của Khách hàng: Nhân viên không thể thay thế yêu cầu xóa dữ liệu của chủ thể dữ liệu.'
   },
   {
     capability: 'view_own_folio',
     categoryKey: 'governance.permissions.categories.experience',
-    defaultCategory: 'Customer Retreat Experience',
+    defaultCategory: 'Trải Nghiệm Nghỉ Dưỡng Của Khách Hàng',
     nameKey: 'governance.permissions.viewOwnFolio.name',
-    defaultName: 'View In-House Consolidated Folio',
+    defaultName: 'Xem Chi Tiết Hóa Đơn Tạm Tính (Folio)',
     descriptionKey: 'governance.permissions.viewOwnFolio.desc',
-    defaultDescription: 'Read-only access to own villa charges, deposits, and invoice line items.',
+    defaultDescription: 'Quyền xem chỉ đọc các khoản phí dịch vụ, cọc và chi tiết hóa đơn của biệt thự.',
     grants: {
       customer: 'granted',
       receptionist: 'denied',
@@ -218,15 +218,15 @@ export const PERMISSION_RULES: PermissionRule[] = [
     isImmutableBoundary: false
   },
 
-  // 2. Front Desk Operations
+  // 2. Nghiệp vụ Lễ tân
   {
     capability: 'view_daily_arrivals',
     categoryKey: 'governance.permissions.categories.frontDesk',
-    defaultCategory: 'Front Desk Operations',
+    defaultCategory: 'Nghiệp Vụ Lễ Tân & Tiếp Đón',
     nameKey: 'governance.permissions.viewArrivals.name',
-    defaultName: 'View Daily Customer Arrivals & Schedules',
+    defaultName: 'Xem Danh Sách Khách Đến Hàng Ngày',
     descriptionKey: 'governance.permissions.viewArrivals.desc',
-    defaultDescription: 'Access expected customer arrivals, arrival times, and check-in preparation status.',
+    defaultDescription: 'Truy cập danh sách khách dự kiến đến, giờ đến và trạng thái chuẩn bị nhận phòng.',
     grants: {
       customer: 'denied',
       receptionist: 'granted',
@@ -240,11 +240,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'check_in_customer_collect_residence',
     categoryKey: 'governance.permissions.categories.frontDesk',
-    defaultCategory: 'Front Desk Operations',
+    defaultCategory: 'Nghiệp Vụ Lễ Tân & Tiếp Đón',
     nameKey: 'governance.permissions.checkInGuest.name',
-    defaultName: 'Perform Customer Check-In & Collect Residence ID',
+    defaultName: 'Thực Hiện Check-in & Thu Thập Thông Tin Cư Trú',
     descriptionKey: 'governance.permissions.checkInGuest.desc',
-    defaultDescription: 'Verify customer identity, collect passport/CCCD details for Law on Residence compliance, and activate stay.',
+    defaultDescription: 'Xác minh danh tính khách, thu thập CCCD/Hộ chiếu theo Luật Cư trú và kích hoạt lưu trú.',
     grants: {
       customer: 'denied',
       receptionist: 'granted',
@@ -255,16 +255,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.frontDeskOnly',
-    defaultBoundaryReason: 'Operational integrity: Physical identification check and key handover restricted to Front Desk.'
+    defaultBoundaryReason: 'Toàn vẹn vận hành: Việc kiểm tra giấy tờ tùy thân và bàn giao chìa khóa thuộc thẩm quyền Lễ tân.'
   },
   {
     capability: 'assign_manage_villas',
     categoryKey: 'governance.permissions.categories.frontDesk',
-    defaultCategory: 'Front Desk Operations',
+    defaultCategory: 'Nghiệp Vụ Lễ Tân & Tiếp Đón',
     nameKey: 'governance.permissions.assignVillas.name',
-    defaultName: 'Assign Physical Villas & Update Operational Status',
+    defaultName: 'Phân Bổ Biệt Thự & Cập Nhật Trạng Thái Vận Hành',
     descriptionKey: 'governance.permissions.assignVillas.desc',
-    defaultDescription: 'Allocate available villas to bookings and transition villa statuses (Cleaning, Available, Maintenance).',
+    defaultDescription: 'Gán biệt thự sẵn sàng cho lượt đặt và chuyển đổi trạng thái (Đang dọn, Sẵn sàng, Bảo trì).',
     grants: {
       customer: 'denied',
       receptionist: 'granted',
@@ -278,11 +278,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'book_manual_extra_spa',
     categoryKey: 'governance.permissions.categories.frontDesk',
-    defaultCategory: 'Front Desk Operations',
+    defaultCategory: 'Nghiệp Vụ Lễ Tân & Tiếp Đón',
     nameKey: 'governance.permissions.bookExtraSpa.name',
-    defaultName: 'Manual Front Desk Extra Spa Booking',
+    defaultName: 'Đặt Dịch Vụ Spa Bổ Sung Tại Quầy Lễ Tân',
     descriptionKey: 'governance.permissions.bookExtraSpa.desc',
-    defaultDescription: 'Schedule walk-up or concierge extra spa sessions with strict 2D resource validation (Therapist + Room).',
+    defaultDescription: 'Lên lịch buổi spa bổ sung với kiểm tra ràng buộc 2 chiều nghiêm ngặt (Kỹ thuật viên + Phòng trị liệu).',
     grants: {
       customer: 'denied',
       receptionist: 'granted',
@@ -296,11 +296,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'generate_folio_process_checkout',
     categoryKey: 'governance.permissions.categories.frontDesk',
-    defaultCategory: 'Front Desk Operations',
+    defaultCategory: 'Nghiệp Vụ Lễ Tân & Tiếp Đón',
     nameKey: 'governance.permissions.checkoutProcess.name',
-    defaultName: 'Consolidate Folio, Collect Payment & Checkout',
+    defaultName: 'Tổng Hợp Chi Phí, Thu Tiền & Hoàn Tất Check-out',
     descriptionKey: 'governance.permissions.checkoutProcess.desc',
-    defaultDescription: 'Generate consolidated tax invoice, collect final payment, and complete checkout after verifying zero unpaid charges (BR-02).',
+    defaultDescription: 'Tạo hóa đơn tổng hợp, thu khoản thanh toán cuối và hoàn tất trả phòng khi không còn công nợ chưa thanh toán (BR-02).',
     grants: {
       customer: 'denied',
       receptionist: 'granted',
@@ -311,18 +311,18 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.frontDeskCheckout',
-    defaultBoundaryReason: 'Financial accountability: Cashier and key return operations belong strictly to Front Desk.'
+    defaultBoundaryReason: 'Trách nhiệm tài chính: Nghiệp vụ thu ngân và nhận lại chìa khóa chỉ thuộc thẩm quyền Lễ tân.'
   },
 
-  // 3. Therapy & Wellness
+  // 3. Trị liệu & Sức khỏe
   {
     capability: 'view_assigned_therapist_schedule',
     categoryKey: 'governance.permissions.categories.wellness',
-    defaultCategory: 'Spa & Therapy Fulfillment',
+    defaultCategory: 'Dịch Vụ Trị Liệu Spa & Sức Khỏe',
     nameKey: 'governance.permissions.viewTherapistSchedule.name',
-    defaultName: 'View Personal Assigned Therapy Schedule',
+    defaultName: 'Xem Lịch Trị Liệu Được Phân Công Cá Nhân',
     descriptionKey: 'governance.permissions.viewTherapistSchedule.desc',
-    defaultDescription: 'Access assigned daily therapy and yoga sessions with customer arrival times and treatment rooms.',
+    defaultDescription: 'Truy cập các buổi trị liệu và yoga được phân công trong ngày cùng phòng trị liệu.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -336,11 +336,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'view_treatment_relevant_health_notes',
     categoryKey: 'governance.permissions.categories.wellness',
-    defaultCategory: 'Spa & Therapy Fulfillment',
+    defaultCategory: 'Dịch Vụ Trị Liệu Spa & Sức Khỏe',
     nameKey: 'governance.permissions.viewHealthNotes.name',
-    defaultName: 'View Treatment-Relevant Clinical Health Notes',
+    defaultName: 'Xem Ghi Chú Sức Khỏe Phục Vụ Trị Liệu',
     descriptionKey: 'governance.permissions.viewHealthNotes.desc',
-    defaultDescription: 'Inspect strictly physical contraindications, injuries, and focus areas for assigned therapy customers (BR-03).',
+    defaultDescription: 'Chỉ xem các chống chỉ định thể chất, chấn thương và vùng cần chú ý của khách hàng được phân công (BR-03).',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -351,16 +351,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.therapistHealthOnly',
-    defaultBoundaryReason: 'Data minimization (BR-03): Clinical health notes accessible ONLY by assigned treating therapists.'
+    defaultBoundaryReason: 'Tối thiểu hóa dữ liệu (BR-03): Ghi chú sức khỏe lâm sàng CHỈ kỹ thuật viên trực tiếp điều trị mới được truy cập.'
   },
   {
     capability: 'complete_spa_sessions',
     categoryKey: 'governance.permissions.categories.wellness',
-    defaultCategory: 'Spa & Therapy Fulfillment',
+    defaultCategory: 'Dịch Vụ Trị Liệu Spa & Sức Khỏe',
     nameKey: 'governance.permissions.completeSpa.name',
-    defaultName: 'Record Spa Session Outcomes (Completed / No-Show)',
+    defaultName: 'Ghi Nhận Kết Quả Buổi Trị Liệu Spa (Hoàn thành / Vắng mặt)',
     descriptionKey: 'governance.permissions.completeSpa.desc',
-    defaultDescription: 'Mark therapy sessions completed with practitioner notes or register customer no-show.',
+    defaultDescription: 'Đánh dấu hoàn tất trị liệu kèm ghi chú chuyên môn hoặc ghi nhận khách vắng mặt.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -372,15 +372,15 @@ export const PERMISSION_RULES: PermissionRule[] = [
     isImmutableBoundary: false
   },
 
-  // 4. Culinary & Dietary
+  // 4. Ẩm thực & Dinh dưỡng (F&B)
   {
     capability: 'view_meal_prep_queue',
     categoryKey: 'governance.permissions.categories.culinary',
-    defaultCategory: 'Culinary & F&B Operations',
+    defaultCategory: 'Nghiệp Vụ Ẩm Thực & Bếp (F&B)',
     nameKey: 'governance.permissions.viewMealPrep.name',
-    defaultName: 'View Kitchen Daily Meal Preparation Queue',
+    defaultName: 'Xem Hàng Đợi Chuẩn Bị Suất Ăn Hàng Ngày',
     descriptionKey: 'governance.permissions.viewMealPrep.desc',
-    defaultDescription: 'Access daily meal orders aggregated by meal window, delivery villa, and prep status.',
+    defaultDescription: 'Truy cập danh sách món ăn tổng hợp theo khung giờ, số biệt thự và trạng thái chuẩn bị.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -394,11 +394,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'view_dietary_allergy_warnings',
     categoryKey: 'governance.permissions.categories.culinary',
-    defaultCategory: 'Culinary & F&B Operations',
+    defaultCategory: 'Nghiệp Vụ Ẩm Thực & Bếp (F&B)',
     nameKey: 'governance.permissions.viewDietaryWarnings.name',
-    defaultName: 'View Food-Related Allergy & Dietary Warnings',
+    defaultName: 'Xem Cảnh Báo Dị Ứng & Kiêng Kỵ Dinh Dưỡng',
     descriptionKey: 'governance.permissions.viewDietaryWarnings.desc',
-    defaultDescription: 'Inspect strictly culinary allergen tags and food preferences without access to general health records (BR-03).',
+    defaultDescription: 'Chỉ xem nhãn dị ứng thực phẩm và yêu cầu dinh dưỡng, không xem hồ sơ bệnh án tổng quát (BR-03).',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -409,16 +409,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.fnbDietaryOnly',
-    defaultBoundaryReason: 'Data minimization (BR-03): Kitchen staff sees allergy tags only; clinical diagnoses strictly withheld.'
+    defaultBoundaryReason: 'Tối thiểu hóa dữ liệu (BR-03): Nhân viên bếp chỉ thấy nhãn dị ứng món ăn; tuyệt đối không thấy bệnh án y tế.'
   },
   {
     capability: 'update_meal_order_status',
     categoryKey: 'governance.permissions.categories.culinary',
-    defaultCategory: 'Culinary & F&B Operations',
+    defaultCategory: 'Nghiệp Vụ Ẩm Thực & Bếp (F&B)',
     nameKey: 'governance.permissions.updateMealStatus.name',
-    defaultName: 'Update Meal Status (Preparing / Ready / Delivered)',
+    defaultName: 'Cập Nhật Trạng Thái Món Ăn (Đang làm / Đã xong / Đã giao)',
     descriptionKey: 'governance.permissions.updateMealStatus.desc',
-    defaultDescription: 'Progress meal orders through kitchen prep stages to delivery.',
+    defaultDescription: 'Chuyển trạng thái các món ăn từ khâu chế biến đến bàn giao tới biệt thự.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -430,15 +430,15 @@ export const PERMISSION_RULES: PermissionRule[] = [
     isImmutableBoundary: false
   },
 
-  // 5. Management Reporting
+  // 5. Báo cáo & Quản lý
   {
     capability: 'view_revenue_reports',
     categoryKey: 'governance.permissions.categories.management',
-    defaultCategory: 'Management Analytics & Oversight',
+    defaultCategory: 'Báo Cáo & Giám Sát Quản Lý',
     nameKey: 'governance.permissions.viewRevenue.name',
-    defaultName: 'View Revenue & Financial Performance Reports',
+    defaultName: 'Xem Báo Cáo Doanh Thu & Tài Chính',
     descriptionKey: 'governance.permissions.viewRevenue.desc',
-    defaultDescription: 'Access aggregated financial reporting across package base fees, spa revenue, and dining revenue.',
+    defaultDescription: 'Truy cập báo cáo tài chính tổng hợp từ phí gói nghỉ dưỡng, doanh thu spa và ẩm thực.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -452,11 +452,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'view_occupancy_reports',
     categoryKey: 'governance.permissions.categories.management',
-    defaultCategory: 'Management Analytics & Oversight',
+    defaultCategory: 'Báo Cáo & Giám Sát Quản Lý',
     nameKey: 'governance.permissions.viewOccupancy.name',
-    defaultName: 'View Villa Occupancy & Inventory Utilization',
+    defaultName: 'Xem Báo Cáo Công Suất Phòng & Sử Dụng Biệt Thự',
     descriptionKey: 'governance.permissions.viewOccupancy.desc',
-    defaultDescription: 'Inspect real-time resort occupancy rates, villa category performance, and maintenance ratios.',
+    defaultDescription: 'Giám sát tỷ lệ lấp đầy khu nghỉ dưỡng, hiệu suất theo hạng biệt thự và tỷ lệ bảo trì theo thời gian thực.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -470,11 +470,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'view_therapist_utilization_reports',
     categoryKey: 'governance.permissions.categories.management',
-    defaultCategory: 'Management Analytics & Oversight',
+    defaultCategory: 'Báo Cáo & Giám Sát Quản Lý',
     nameKey: 'governance.permissions.viewTherapistReports.name',
-    defaultName: 'View Practitioner Utilization & Workload Reports',
+    defaultName: 'Xem Báo Cáo Hiệu Suất & Tải Công Việc Kỹ Thuật Viên',
     descriptionKey: 'governance.permissions.viewTherapistReports.desc',
-    defaultDescription: 'Monitor aggregate treatment minutes, scheduled sessions, and completion ratios by therapist.',
+    defaultDescription: 'Giám sát tổng thời lượng trị liệu, số buổi đã thực hiện và tỷ lệ hoàn thành theo từng kỹ thuật viên.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -488,11 +488,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'view_manager_dashboard',
     categoryKey: 'governance.permissions.categories.management',
-    defaultCategory: 'Management Analytics & Oversight',
+    defaultCategory: 'Báo Cáo & Giám Sát Quản Lý',
     nameKey: 'governance.permissions.viewManagerDashboard.name',
-    defaultName: 'Access Executive Management Cockpit',
+    defaultName: 'Truy Cập Bảng Điều Khiển Quản Lý Vận Hành',
     descriptionKey: 'governance.permissions.viewManagerDashboard.desc',
-    defaultDescription: 'Executive cockpit summarizing key operational KPIs and direct navigation to authorized analytical reports.',
+    defaultDescription: 'Bảng thông tin điều hành tổng hợp các chỉ số KPI vận hành chính và báo cáo phân tích.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -504,15 +504,15 @@ export const PERMISSION_RULES: PermissionRule[] = [
     isImmutableBoundary: false
   },
 
-  // 6. Governance & Administration
+  // 6. Quản trị hệ thống & Tuân thủ
   {
     capability: 'export_police_residence_declaration',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.exportPolice.name',
-    defaultName: 'Export Daily Police Residence Declarations',
+    defaultName: 'Kết Xuất Khai Báo Tạm Trú Với Cơ Quan Công An',
     descriptionKey: 'governance.permissions.exportPolice.desc',
-    defaultDescription: 'Generate official metadata export file for local police temporary residence compliance (Law on Residence 2020).',
+    defaultDescription: 'Tạo tệp dữ liệu chính thức phục vụ việc khai báo tạm trú theo Luật Cư trú 2020.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -526,11 +526,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'configure_business_parameters',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.configureParams.name',
-    defaultName: 'Configure System Business Parameters',
+    defaultName: 'Cấu Hình Tham Số Nghiệp Vụ Hệ Thống',
     descriptionKey: 'governance.permissions.configureParams.desc',
-    defaultDescription: 'Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs.',
+    defaultDescription: 'Điều chỉnh tỷ lệ tiền cọc, khung giờ hủy phòng, tỷ lệ hoàn cọc và thời gian báo trước chọn món ăn.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -545,11 +545,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'manage_feature_flags',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.manageFlags.name',
-    defaultName: 'Manage Modular Feature Flags',
+    defaultName: 'Quản Lý Cờ Tính Năng Hệ Thống',
     descriptionKey: 'governance.permissions.manageFlags.desc',
-    defaultDescription: 'Toggle optional customer self-service modules and automated compliance routines.',
+    defaultDescription: 'Bật tắt các mô-đun tùy chọn và quy trình tự động hóa tuân thủ.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -564,11 +564,11 @@ export const PERMISSION_RULES: PermissionRule[] = [
   {
     capability: 'view_permission_matrix',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.viewMatrix.name',
-    defaultName: 'Inspect System RBAC Permission Matrix',
+    defaultName: 'Xem Ma Trận Phân Quyền Vai Trò (RBAC)',
     descriptionKey: 'governance.permissions.viewMatrix.desc',
-    defaultDescription: 'Review cross-role functional capability allocations and security boundary definitions.',
+    defaultDescription: 'Đánh giá phân bổ năng lực chức năng giữa các vai trò và các ranh giới bảo mật.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -579,16 +579,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.adminOnly',
-    defaultBoundaryReason: 'Security governance: RBAC matrix configuration reserved strictly for System Administrator.'
+    defaultBoundaryReason: 'Quản trị bảo mật: Cấu hình ma trận RBAC chỉ dành riêng cho Quản Trị Viên Hệ Thống.'
   },
   {
     capability: 'delegate_admin_rights',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.delegateRights.name',
-    defaultName: 'Delegate Limited Admin Rights to Manager',
+    defaultName: 'Ủy Quyền Quyền Hạn Quản Trị Cho Quản Lý',
     descriptionKey: 'governance.permissions.delegateRights.desc',
-    defaultDescription: 'Grant time-bounded, scoped subset of administrative capabilities to Resort Operations Manager.',
+    defaultDescription: 'Cấp quyền hạn quản trị có giới hạn thời gian và phạm vi cho Quản Lý Vận Hành.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -599,16 +599,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.delegationAdminOnly',
-    defaultBoundaryReason: 'Privilege escalation protection: Delegation powers cannot be sub-delegated or self-assigned.'
+    defaultBoundaryReason: 'Bảo vệ leo thang đặc quyền: Quyền ủy quyền không thể được ủy quyền tiếp hoặc tự cấp.'
   },
   {
     capability: 'view_sensitive_data_audit_log',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.viewAuditLog.name',
-    defaultName: 'View Sensitive Data Access Audit Log',
+    defaultName: 'Xem Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm',
     descriptionKey: 'governance.permissions.viewAuditLog.desc',
-    defaultDescription: 'Inspect chronological metadata log of sensitive health, identity, and financial access events.',
+    defaultDescription: 'Kiểm tra nhật ký thời gian truy cập dữ liệu sức khỏe, danh tính cá nhân và giao dịch tài chính.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -619,16 +619,16 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: true,
     boundaryReasonKey: 'governance.permissions.boundaries.auditAdminOnly',
-    defaultBoundaryReason: 'Accountability: Audit trail inspection reserved exclusively for System Administrator.'
+    defaultBoundaryReason: 'Trách nhiệm giải trình: Quyền kiểm tra nhật ký kiểm toán chỉ dành riêng cho Quản Trị Viên Hệ Thống.'
   },
   {
     capability: 'view_system_overview',
     categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Governance & System Administration',
+    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.viewSystemOverview.name',
-    defaultName: 'View System-Wide Operational Health & Compliance',
+    defaultName: 'Xem Tổng Quan Vận Hành & Tuân Thủ Toàn Hệ Thống',
     descriptionKey: 'governance.permissions.viewSystemOverview.desc',
-    defaultDescription: 'Cross-module rollup of bookings, villas, treatments, dining, and daily police export status.',
+    defaultDescription: 'Tổng hợp dữ liệu liên mô-đun về đặt phòng, biệt thự, trị liệu, ẩm thực và tình trạng khai báo công an.',
     grants: {
       customer: 'denied',
       receptionist: 'denied',
@@ -651,8 +651,8 @@ export const INITIAL_DELEGATIONS: AdminDelegation[] = [
     startsAt: '2026-09-27 08:00',
     expiresAt: '2026-09-28 18:00',
     status: 'active',
-    grantedBy: 'Alexander Wright (Admin)',
-    reason: 'Temporary authority to adjust cancellation lead-time during forecast coastal weather advisory.',
+    grantedBy: 'Alexander Wright (Quản trị viên)',
+    reason: 'Cấp quyền tạm thời điều chỉnh thời hạn hủy phòng do thông báo thời tiết bờ biển.',
     createdAt: '2026-09-27 07:45'
   },
   {
@@ -664,8 +664,8 @@ export const INITIAL_DELEGATIONS: AdminDelegation[] = [
     startsAt: '2026-09-20 08:00',
     expiresAt: '2026-09-22 18:00',
     status: 'expired',
-    grantedBy: 'Alexander Wright (Admin)',
-    reason: 'Operational evaluation of in-villa dining orders during Mid-Autumn wellness festival.',
+    grantedBy: 'Alexander Wright (Quản trị viên)',
+    reason: 'Đánh giá vận hành các đơn đặt ẩm thực tại biệt thự trong dịp lễ hội Trung thu.',
     createdAt: '2026-09-20 07:30'
   }
 ];
@@ -682,7 +682,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'CUST-8801',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.treatmentNotesConsultation',
-    detailsFallback: 'Consulted treatment-relevant clinical notes for scheduled afternoon herbal bath session.'
+    detailsFallback: 'Đã tra cứu ghi chú lâm sàng phục vụ điều trị cho buổi tắm thảo dược buổi chiều theo lịch.'
   },
   {
     id: 'AUD-89103',
@@ -695,7 +695,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'CUST-8802',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.residenceIdVerified',
-    detailsFallback: 'Verified customer residence identification document metadata during physical check-in.'
+    detailsFallback: 'Đã xác minh siêu dữ liệu giấy tờ tùy thân của khách khi thực hiện thủ tục nhận phòng trực tiếp.'
   },
   {
     id: 'AUD-89102',
@@ -708,7 +708,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'CUST-8803',
     result: 'DENIED',
     detailsKey: 'governance.audit.details.receptionistHealthBlocked',
-    detailsFallback: 'Access to full medical contraindications blocked by RBAC data minimization policy (BR-03).'
+    detailsFallback: 'Yêu cầu truy cập toàn bộ chống chỉ định y tế bị chặn bởi chính sách tối thiểu hóa dữ liệu RBAC (BR-03).'
   },
   {
     id: 'AUD-89101',
@@ -721,7 +721,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'CUST-8801',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.kitchenAllergenCheck',
-    detailsFallback: 'Accessed culinary allergen flags for lunch course preparation (Gluten-Free & Tree Nut allergy).'
+    detailsFallback: 'Đã truy cập thông tin cảnh báo dị ứng thực phẩm để chuẩn bị bữa trưa (Không dung nạp Gluten & Dị ứng hạt cây).'
   },
   {
     id: 'AUD-89100',
@@ -734,7 +734,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'FOLIO-2026-001',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.folioSettlementRecorded',
-    detailsFallback: 'Recorded VNPay terminal transaction reference for final checkout folio settlement.'
+    detailsFallback: 'Đã ghi nhận mã tham chiếu giao dịch cổng VNPay cho quyết toán hóa đơn trả phòng.'
   },
   {
     id: 'AUD-89099',
@@ -747,7 +747,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'DEL-2026-001',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.delegationGranted',
-    detailsFallback: 'Granted temporary parameter configuration delegation to Manager Sarah Jenkins.'
+    detailsFallback: 'Đã cấp quyền ủy quyền cấu hình tham số tạm thời cho Quản lý Sarah Jenkins.'
   },
   {
     id: 'AUD-89098',
@@ -760,7 +760,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'BATCH-2026-09-26',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.residenceBatchExported',
-    detailsFallback: 'Generated Law on Residence compliance export package (24 active resident records).'
+    detailsFallback: 'Đã tạo gói dữ liệu xuất tuân thủ Luật Cư trú (24 bản ghi khách đang lưu trú).'
   },
   {
     id: 'AUD-89097',
@@ -773,7 +773,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'enable_online_extra_spa_booking',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.featureFlagToggled',
-    detailsFallback: 'Updated feature flag status to ENABLED with global customer scope.'
+    detailsFallback: 'Cập nhật trạng thái cờ tính năng sang BẬT với phạm vi khách hàng toàn cầu.'
   }
 ];
 
@@ -784,5 +784,5 @@ export const INITIAL_POLICE_EXPORT_SUMMARY: PoliceResidenceExportSummary = {
   domesticCount: 8,
   foreignCount: 6,
   status: 'READY',
-  complianceStandard: 'Vietnam Law on Residence 2020 & Decree 13/2023/ND-CP'
+  complianceStandard: 'Luật Cư trú Việt Nam 2020 & Nghị định 13/2023/NĐ-CP'
 };

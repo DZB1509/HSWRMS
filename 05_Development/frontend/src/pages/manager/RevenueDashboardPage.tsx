@@ -42,15 +42,15 @@ export const RevenueDashboardPage: React.FC = () => {
 
   const barData = [
     {
-      category: t('manager.revenue.retreatPkg', 'Retreat Packages'),
+      category: t('manager.revenue.retreatPkg', 'Gói Nghỉ Dưỡng'),
       amount: analytics.retreatRevenue,
     },
     {
-      category: t('manager.revenue.spaTherapies', 'Spa Therapies'),
+      category: t('manager.revenue.spaTherapies', 'Trị Liệu Spa'),
       amount: analytics.spaRevenue,
     },
     {
-      category: t('manager.revenue.fnbDining', 'F&B Dining'),
+      category: t('manager.revenue.fnbDining', 'Ẩm Thực Dưỡng Sinh'),
       amount: analytics.fnbRevenue,
     },
   ];
@@ -58,11 +58,11 @@ export const RevenueDashboardPage: React.FC = () => {
   const getStreamLabel = (type: string) => {
     switch (type) {
       case 'retreat':
-        return t('manager.revenue.retreatStream', 'Retreat Package');
+        return t('manager.revenue.retreatStream', 'Gói Nghỉ Dưỡng');
       case 'spa':
-        return t('manager.revenue.spaStream', 'Spa Therapy');
+        return t('manager.revenue.spaStream', 'Trị Liệu Spa');
       case 'fnb':
-        return t('manager.revenue.fnbStream', 'Dining');
+        return t('manager.revenue.fnbStream', 'Ẩm Thực');
       default:
         return type.toUpperCase();
     }
@@ -71,11 +71,11 @@ export const RevenueDashboardPage: React.FC = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'settled':
-        return t('status.settled', t('common.status.settled', 'Settled'));
+        return t('status.settled', t('common.status.settled', 'Đã Quyết Toán'));
       case 'pending_settlement':
-        return t('status.pendingSettlement', t('common.status.pendingSettlement', 'Pending Settlement'));
+        return t('status.pendingSettlement', t('common.status.pendingSettlement', 'Chờ Quyết Toán'));
       case 'included':
-        return t('status.included', t('common.status.included', 'Included'));
+        return t('status.included', t('common.status.included', 'Đã Bao Gồm Trong Gói'));
       default:
         return status.replace('_', ' ');
     }
@@ -83,9 +83,9 @@ export const RevenueDashboardPage: React.FC = () => {
 
   const localizedBreakdown = analytics.categoryBreakdown.map((item) => {
     let name = item.name;
-    if (item.name === 'Retreat Packages') name = t('manager.revenue.retreatPkg', 'Retreat Packages');
-    else if (item.name === 'Spa & Therapies') name = t('manager.revenue.spaTherapies', 'Spa & Therapies');
-    else if (item.name === 'Nourishing Dining') name = t('manager.revenue.fnbDining', 'Nourishing Dining');
+    if (item.name === 'Retreat Packages') name = t('manager.revenue.retreatPkg', 'Gói Nghỉ Dưỡng');
+    else if (item.name === 'Spa & Therapies') name = t('manager.revenue.spaTherapies', 'Trị Liệu Spa');
+    else if (item.name === 'Nourishing Dining') name = t('manager.revenue.fnbDining', 'Ẩm Thực Dưỡng Sinh');
     return {
       ...item,
       name,
@@ -100,20 +100,20 @@ export const RevenueDashboardPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <BarChart3 size={24} style={{ color: 'var(--actor-manager)' }} />
             <h1 style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {t('manager.revenue.title', 'Revenue Analytics & Settlement Dashboard')}
+              {t('manager.revenue.title', 'Phân Tích Doanh Thu & Quyết Toán Hóa Đơn')}
             </h1>
           </div>
 
           {/* Privacy & Clearance Tag */}
           <div className="hsw-manager-privacy-notice">
             <ShieldCheck size={14} />
-            <span>{t('manager.revenue.privacyNotice', 'Manager Clearance · Financial Aggregates Only · Personal Data Masked')}</span>
+            <span>{t('manager.revenue.privacyNotice', 'Thẩm Quyền Quản Lý · Chỉ Xem Tổng Hợp Tài Chính · Ẩn Dữ Liệu Cá Nhân')}</span>
           </div>
         </div>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
           {t(
             'manager.revenue.subtitle',
-            'Real-time consolidated revenue reporting derived from retreat bookings, extra spa sessions, and a-la-carte dining.'
+            'Báo cáo doanh thu hợp nhất thời gian thực từ đặt phòng nghỉ dưỡng, dịch vụ spa bổ sung và ăn uống a-la-carte.'
           )}
         </p>
       </div>
@@ -123,52 +123,52 @@ export const RevenueDashboardPage: React.FC = () => {
         {/* Total Settled Revenue */}
         <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid var(--accent-forest)' }}>
           <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.revenue.totalSettled', 'Total Settled Revenue')}
+            {t('manager.revenue.totalSettled', 'Tổng Doanh Thu Đã Quyết Toán')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--accent-forest)' }}>
             {formatVND(analytics.totalRevenue)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('manager.revenue.settledSub', 'Deposits & settled folios')}
+            {t('manager.revenue.settledSub', 'Tiền cọc & hóa đơn đã thanh toán')}
           </div>
         </div>
 
         {/* Retreat Revenue */}
         <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid #2563eb' }}>
           <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.revenue.retreatRevenue', 'Retreat Packages')}
+            {t('manager.revenue.retreatRevenue', 'Doanh Thu Gói Nghỉ Dưỡng')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: '#1e40af' }}>
             {formatVND(analytics.retreatRevenue)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('manager.revenue.retreatSub', 'Core sanctuary stays')}
+            {t('manager.revenue.retreatSub', 'Lưu trú nghỉ dưỡng cốt lõi')}
           </div>
         </div>
 
         {/* Spa & F&B Extras Combined */}
         <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid #d97706' }}>
           <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.revenue.ancillaryExtras', 'Spa & Dining Extras')}
+            {t('manager.revenue.ancillaryExtras', 'Dịch Vụ Spa & Ẩm Thực Bổ Sung')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: '#b45309' }}>
             {formatVND(analytics.spaRevenue + analytics.fnbRevenue)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Spa: {formatVND(analytics.spaRevenue)} · F&B: {formatVND(analytics.fnbRevenue)}
+            Spa: {formatVND(analytics.spaRevenue)} · Ẩm Thực: {formatVND(analytics.fnbRevenue)}
           </div>
         </div>
 
         {/* Outstanding / Pending Settlement */}
         <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid #ef4444' }}>
           <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.revenue.outstandingRevenue', 'Outstanding / Pending')}
+            {t('manager.revenue.outstandingRevenue', 'Chưa Quyết Toán / Còn Nợ')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: '#dc2626' }}>
             {formatVND(analytics.outstandingRevenue)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('manager.revenue.outstandingSub', 'Due upon checkout handover')}
+            {t('manager.revenue.outstandingSub', 'Cần thanh toán khi làm thủ tục trả phòng')}
           </div>
         </div>
       </div>
@@ -178,8 +178,8 @@ export const RevenueDashboardPage: React.FC = () => {
         {/* Chart 1: Category Distribution */}
         <div className="hsw-manager-chart-card">
           <div className="hsw-manager-chart-title">
-            <span>{t('manager.revenue.chartComposition', 'Revenue Share by Department')}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manager.revenue.currencyVnd', 'VND Currency')}</span>
+            <span>{t('manager.revenue.chartComposition', 'Tỷ Trọng Doanh Thu Theo Bộ Phận')}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manager.revenue.currencyVnd', 'Đơn Vị: VNĐ')}</span>
           </div>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
@@ -199,7 +199,7 @@ export const RevenueDashboardPage: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [formatVND(Number(value) || 0), t('manager.revenue.revenueLabel', 'Revenue')]}
+                  formatter={(value: any) => [formatVND(Number(value) || 0), t('manager.revenue.revenueLabel', 'Doanh Thu')]}
                 />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
@@ -210,8 +210,8 @@ export const RevenueDashboardPage: React.FC = () => {
         {/* Chart 2: Volume Comparison */}
         <div className="hsw-manager-chart-card">
           <div className="hsw-manager-chart-title">
-            <span>{t('manager.revenue.chartVolume', 'Settled Revenue by Stream')}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manager.revenue.consolidatedTotal', 'Consolidated Total')}</span>
+            <span>{t('manager.revenue.chartVolume', 'Doanh Thu Đã Quyết Toán Theo Nguồn')}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manager.revenue.consolidatedTotal', 'Tổng Hợp Doanh Thu')}</span>
           </div>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
@@ -223,7 +223,7 @@ export const RevenueDashboardPage: React.FC = () => {
                   tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
                 />
                 <Tooltip
-                  formatter={(value: any) => [formatVND(Number(value) || 0), t('manager.revenue.amountLabel', 'Amount')]}
+                  formatter={(value: any) => [formatVND(Number(value) || 0), t('manager.revenue.amountLabel', 'Số Tiền')]}
                 />
                 <Bar dataKey="amount" fill="var(--accent-forest)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -237,10 +237,10 @@ export const RevenueDashboardPage: React.FC = () => {
         <div className="hsw-folio-section-header">
           <div className="hsw-folio-section-title">
             <Receipt size={18} style={{ color: 'var(--actor-manager)' }} />
-            <span>{t('manager.revenue.tableTitle', 'Revenue Settlement Audit Log')}</span>
+            <span>{t('manager.revenue.tableTitle', 'Nhật Ký Quyết Toán Hóa Đơn Doanh Thu')}</span>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            {t('manager.revenue.itemCount', 'Showing {{count}} traceable line items', { count: totalItems })}
+            {t('manager.revenue.itemCount', 'Hiển thị {{count}} mục chi phí có thể truy xuất', { count: totalItems })}
           </div>
         </div>
 
@@ -248,12 +248,12 @@ export const RevenueDashboardPage: React.FC = () => {
           <table className="hsw-folio-table">
             <thead>
               <tr>
-                <th>{t('manager.revenue.colRef', 'Source ID')}</th>
-                <th>{t('manager.revenue.colType', 'Stream')}</th>
-                <th>{t('manager.revenue.colDesc', 'Item Summary')}</th>
-                <th style={{ textAlign: 'center' }}>{t('manager.revenue.colQty', 'Qty')}</th>
-                <th style={{ textAlign: 'right' }}>{t('manager.revenue.colAmount', 'Total (VND)')}</th>
-                <th>{t('manager.revenue.colStatus', 'Settlement State')}</th>
+                <th>{t('manager.revenue.colRef', 'Mã Giao Dịch')}</th>
+                <th>{t('manager.revenue.colType', 'Nguồn Doanh Thu')}</th>
+                <th>{t('manager.revenue.colDesc', 'Nội Dung Chi Tiết')}</th>
+                <th style={{ textAlign: 'center' }}>{t('manager.revenue.colQty', 'SL')}</th>
+                <th style={{ textAlign: 'right' }}>{t('manager.revenue.colAmount', 'Tổng Tiền (VNĐ)')}</th>
+                <th>{t('manager.revenue.colStatus', 'Trạng Thái Quyết Toán')}</th>
               </tr>
             </thead>
             <tbody>
