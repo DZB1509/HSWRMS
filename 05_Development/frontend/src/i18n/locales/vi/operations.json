@@ -630,7 +630,7 @@
     "ruleBr06Title": "BR-06: Giới Hạn Quyền Tối Thiểu Cho Quản Lý",
     "ruleBr06Desc": "Quản lý chỉ có quyền xem báo cáo phân tích tổng hợp. Quản lý không bao giờ tự động nhận toàn quyền Quản trị viên trừ khi được ủy quyền có giới hạn.",
     "descStaff": "Quản lý tài khoản nhân viên, quyền hạn vai trò, trạng thái làm việc và ranh giới bảo mật RBAC (Màn hình 10 & 11).",
-    "descMasterData": "Quản trị danh mục gói tĩnh dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12)."
+    "descMasterData": "Quản trị danh mục gói nghỉ dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12)."
   },
   "params": {
     "pageTitle": "Tham Số Vận Hành & Định Mức Nghiệp Vụ",
@@ -1020,14 +1020,14 @@
   },
   "masterData": {
     "title": "Quản Lý Dữ Liệu Danh Mục Cốt Lõi",
-    "subtitle": "Quản trị danh mục gói tĩnh dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).",
+    "subtitle": "Quản trị danh mục gói nghỉ dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).",
     "wellnessTaxonomyBadge": "Chuẩn Phân Loại Wellness GWI",
     "wellnessTaxonomyNotice": "Danh mục dữ liệu cốt lõi sử dụng thuật ngữ chăm sóc sức khỏe chuẩn mực (chống chỉ định thể chất, phương thức trị liệu, không gian biệt thự). Mọi thay đổi có hiệu lực ngay trong quy trình vận hành M1–M5.",
-    "tabRetreats": "Gói Tĩnh Dưỡng Retreat",
+    "tabRetreats": "Gói Nghỉ Dưỡng Retreat",
     "tabSpa": "Dịch Vụ Spa & Trị Liệu",
     "tabVillas": "Phân Loại Biệt Thự Villa",
     "searchPlaceholder": "Tìm kiếm dữ liệu danh mục...",
-    "colPackage": "Gói Tĩnh Dưỡng",
+    "colPackage": "Gói Nghỉ Dưỡng",
     "colTheme": "Chủ Đề Trọng Tâm",
     "colDuration": "Thời Lượng",
     "colBasePrice": "Giá Gói Cơ Bản",

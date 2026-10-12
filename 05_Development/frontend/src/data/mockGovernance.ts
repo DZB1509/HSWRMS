@@ -559,7 +559,7 @@ export const PERMISSION_RULES: PermissionRule[] = [
       admin: 'granted'
     },
     isImmutableBoundary: false,
-    isDelegableToManager: true
+    isDelegableToManager: false
   },
   {
     capability: 'view_permission_matrix',
@@ -660,12 +660,12 @@ export const INITIAL_DELEGATIONS: AdminDelegation[] = [
     delegateUserId: 'usr-mgr-01',
     delegateName: 'Sarah Jenkins',
     delegateRole: 'manager',
-    capabilities: ['manage_feature_flags'],
+    capabilities: ['configure_business_parameters'],
     startsAt: '2026-09-20 08:00',
     expiresAt: '2026-09-22 18:00',
     status: 'expired',
     grantedBy: 'Alexander Wright (Quản trị viên)',
-    reason: 'Đánh giá vận hành các đơn đặt ẩm thực tại biệt thự trong dịp lễ hội Trung thu.',
+    reason: 'Cấu hình tham số giờ nhận bàn và hủy phòng dịp lễ hội mùa thu.',
     createdAt: '2026-09-20 07:30'
   }
 ];

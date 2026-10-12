@@ -220,34 +220,38 @@ export const MasterDataPage: React.FC = () => {
                 .map((pkg) => (
                   <tr key={pkg.id}>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{pkg.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}><code>{pkg.code}</code> · {pkg.id}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', marginBottom: '4px' }}>{pkg.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <code style={{ background: '#f5f4f0', padding: '1px 6px', borderRadius: '4px', border: '1px solid #e5e2dc', color: 'var(--accent-forest)' }}>{pkg.code}</code>
+                        <span>·</span>
+                        <span>{pkg.id}</span>
+                      </div>
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                       {pkg.durationDays}N / {pkg.durationNights}Đ
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 500 }}>
+                    <td style={{ fontSize: '13px', color: 'var(--accent-forest)', fontWeight: 500 }}>
                       {pkg.goal}
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                       {pkg.includedSpaSessions} buổi
                     </td>
-                    <td style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <td style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {formatVND(pkg.basePrice, i18n.language)}
                     </td>
                     <td>
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
+                        gap: '5px',
+                        padding: '4px 10px',
                         borderRadius: 'var(--radius-pill)',
                         fontSize: '11px',
                         fontWeight: 600,
-                        backgroundColor: pkg.status === 'active' ? '#eaf3ed' : '#f4f3ef',
-                        color: pkg.status === 'active' ? 'var(--accent-forest)' : 'var(--text-muted)'
+                        backgroundColor: pkg.status === 'active' ? '#7FFFD4' : '#f4f3ef',
+                        color: pkg.status === 'active' ? '#004d40' : 'var(--text-muted)'
                       }}>
-                        <CheckCircle2 size={12} />
+                        <CheckCircle2 size={13} />
                         {pkg.status === 'active' ? 'HOẠT ĐỘNG' : 'LƯU TRỮ'}
                       </span>
                     </td>
@@ -260,10 +264,21 @@ export const MasterDataPage: React.FC = () => {
                           price: pkg.basePrice,
                           status: pkg.status
                         })}
-                        className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          border: '1px solid var(--border-subtle, #e5e2dc)',
+                          backgroundColor: '#ffffff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 500
+                        }}
                       >
-                        <Edit2 size={12} />
+                        <Edit2 size={13} style={{ color: 'var(--accent-forest)' }} />
                         {t('common.actions.edit', 'Chỉnh Sửa')}
                       </button>
                     </td>
@@ -295,35 +310,41 @@ export const MasterDataPage: React.FC = () => {
                 .map((srv) => (
                   <tr key={srv.id}>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{srv.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}><code>{srv.code}</code> · {srv.id}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', marginBottom: '4px' }}>{srv.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <code style={{ background: '#f5f4f0', padding: '1px 6px', borderRadius: '4px', border: '1px solid #e5e2dc', color: 'var(--accent-forest)' }}>{srv.code}</code>
+                        <span>·</span>
+                        <span>{srv.id}</span>
+                      </div>
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                       {srv.category}
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                      {srv.durationMinutes} phút
+                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <Clock size={13} style={{ color: 'var(--text-muted)' }} />
+                        {srv.durationMinutes} phút
+                      </span>
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 500 }}>
+                    <td style={{ fontSize: '13px', color: 'var(--accent-forest)', fontWeight: 500 }}>
                       {srv.practitionerType}
                     </td>
-                    <td style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <td style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {formatVND(srv.basePrice, i18n.language)}
                     </td>
                     <td>
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
+                        gap: '5px',
+                        padding: '4px 10px',
                         borderRadius: 'var(--radius-pill)',
                         fontSize: '11px',
                         fontWeight: 600,
-                        backgroundColor: srv.status === 'active' ? '#eaf3ed' : '#f4f3ef',
-                        color: srv.status === 'active' ? 'var(--accent-forest)' : 'var(--text-muted)'
+                        backgroundColor: srv.status === 'active' ? '#7FFFD4' : '#f4f3ef',
+                        color: srv.status === 'active' ? '#004d40' : 'var(--text-muted)'
                       }}>
-                        <CheckCircle2 size={12} />
+                        <CheckCircle2 size={13} />
                         {srv.status === 'active' ? 'HOẠT ĐỘNG' : 'LƯU TRỮ'}
                       </span>
                     </td>
@@ -336,10 +357,21 @@ export const MasterDataPage: React.FC = () => {
                           price: srv.basePrice,
                           status: srv.status
                         })}
-                        className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          border: '1px solid var(--border-subtle, #e5e2dc)',
+                          backgroundColor: '#ffffff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 500
+                        }}
                       >
-                        <Edit2 size={12} />
+                        <Edit2 size={13} style={{ color: 'var(--accent-forest)' }} />
                         {t('common.actions.edit', 'Chỉnh Sửa')}
                       </button>
                     </td>
@@ -371,35 +403,65 @@ export const MasterDataPage: React.FC = () => {
                 .map((vil) => (
                   <tr key={vil.id}>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{vil.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}><code>{vil.code}</code> · {vil.id}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', marginBottom: '4px' }}>{vil.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <code style={{ background: '#f5f4f0', padding: '1px 6px', borderRadius: '4px', border: '1px solid #e5e2dc', color: 'var(--accent-forest)' }}>{vil.code}</code>
+                        <span>·</span>
+                        <span>{vil.id}</span>
+                      </div>
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                       {vil.maxOccupancy} {t('operations.masterData.customersUnit', 'Khách hàng')}
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      {vil.hasPrivatePool && <span className="hsw-audit-cat" style={{ marginRight: '4px' }}>Bể bơi riêng</span>}
-                      {vil.hasTreatmentPavilion && <span className="hsw-audit-cat">Chòi trị liệu riêng</span>}
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {vil.hasPrivatePool && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            color: 'var(--accent-forest, #4f5a50)',
+                            backgroundColor: '#eef3ef',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #d8e5dc'
+                          }}>
+                            Bể bơi riêng
+                          </span>
+                        )}
+                        {vil.hasTreatmentPavilion && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            color: 'var(--accent-olive, #6d7466)',
+                            backgroundColor: '#f5f4ef',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #e5e3db'
+                          }}>
+                            Chòi trị liệu riêng
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {vil.totalVillasCount} căn biệt thự
                     </td>
-                    <td style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <td style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {formatVND(vil.baseNightlyRate, i18n.language)}
                     </td>
                     <td>
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
+                        gap: '5px',
+                        padding: '4px 10px',
                         borderRadius: 'var(--radius-pill)',
                         fontSize: '11px',
                         fontWeight: 600,
-                        backgroundColor: vil.status === 'active' ? '#eaf3ed' : '#f4f3ef',
-                        color: vil.status === 'active' ? 'var(--accent-forest)' : 'var(--text-muted)'
+                        backgroundColor: vil.status === 'active' ? '#7FFFD4' : '#f4f3ef',
+                        color: vil.status === 'active' ? '#004d40' : 'var(--text-muted)'
                       }}>
-                        <CheckCircle2 size={12} />
+                        <CheckCircle2 size={13} />
                         {vil.status === 'active' ? 'HOẠT ĐỘNG' : 'LƯU TRỮ'}
                       </span>
                     </td>
@@ -412,10 +474,21 @@ export const MasterDataPage: React.FC = () => {
                           price: vil.baseNightlyRate,
                           status: vil.status
                         })}
-                        className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          border: '1px solid var(--border-subtle, #e5e2dc)',
+                          backgroundColor: '#ffffff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 500
+                        }}
                       >
-                        <Edit2 size={12} />
+                        <Edit2 size={13} style={{ color: 'var(--accent-forest)' }} />
                         {t('common.actions.edit', 'Chỉnh Sửa')}
                       </button>
                     </td>

@@ -122,7 +122,7 @@ export const AdminDashboardPage: React.FC = () => {
 
         <div className="hsw-quicknav-grid">
           <Link to="/admin/staff" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-staff">
               <UserPlus size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -132,17 +132,17 @@ export const AdminDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/admin/master-data" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-master-data">
               <Database size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
               <h4>{t('operations.sidebar.masterDataManagement', 'Quản Lý Dữ Liệu Gốc')}</h4>
-              <p>{t('operations.adminDashboard.descMasterData', 'Quản trị danh mục gói tĩnh dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).')}</p>
+              <p>{t('operations.adminDashboard.descMasterData', 'Quản trị danh mục gói nghỉ dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).')}</p>
             </div>
           </Link>
 
           <Link to="/admin/business-params" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-params">
               <Settings2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -152,7 +152,7 @@ export const AdminDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/admin/permissions" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-matrix">
               <Shield size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -162,7 +162,7 @@ export const AdminDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/admin/delegation" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-delegation">
               <Users2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -172,7 +172,7 @@ export const AdminDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/admin/audit-log" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-audit">
               <History size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -182,7 +182,7 @@ export const AdminDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/admin/system-overview" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-overview">
               <Activity size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">

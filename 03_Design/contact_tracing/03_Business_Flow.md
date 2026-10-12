@@ -20,28 +20,28 @@ flowchart LR
     J --> K["Review (tùy chọn)"]
 ```
 
-| Giai đoạn | Actor | Module | Context chính |
-|---|---|---|---|
-| A–C | Customer | M1 | CustomerContext |
-| D | Customer | M2 | CustomerContext |
-| E | Receptionist | M2 | OperationsContext |
-| F | Customer / Receptionist / Therapist | M3 | SpaContext |
-| G | Customer / F&B Staff | M4 | DiningContext |
-| H–K | Customer / Receptionist | M5 | FolioContext |
-| Báo cáo | Manager | M5 | FolioContext (analytics) |
-| Quản trị | Admin (+ Manager được ủy quyền) | M6 | GovernanceContext (FE) / m6admin (BE) |
+| Giai đoạn | Actor                                | Module | Context chính                        |
+| ----------- | ------------------------------------ | ------ | ------------------------------------- |
+| A–C        | Customer                             | M1     | CustomerContext                       |
+| D           | Customer                             | M2     | CustomerContext                       |
+| E           | Receptionist                         | M2     | OperationsContext                     |
+| F           | Customer / Receptionist / Therapist  | M3     | SpaContext                            |
+| G           | Customer / F&B Staff                 | M4     | DiningContext                         |
+| H–K        | Customer / Receptionist              | M5     | FolioContext                          |
+| Báo cáo   | Manager                              | M5     | FolioContext (analytics)              |
+| Quản trị  | Admin (+ Manager được ủy quyền) | M6     | GovernanceContext (FE) / m6admin (BE) |
 
 ---
 
 ## 1. M1 — Identity & Customer Profile
 
-| Bước | Page | Xử lý | Ghi chú |
-|---|---|---|---|
-| Đăng ký → OTP | `pages/auth/RegisterPage` → `EmailOtpVerificationPage` | mô phỏng UI | Không gọi BE |
-| Đăng nhập | `pages/auth/LoginPage` | `AuthProvider.loginAs('customer')` | Bất kỳ email/mật khẩu đều vào được (demo) |
-| Quên mật khẩu | `PasswordResetPage` | mô phỏng UI | |
-| Hồ sơ / sức khỏe | `customer/AccountSettingsPage`, `HealthProfilePage` | `updateProfile`, `updateWellnessProfile` | Lưu localStorage |
-| Yêu cầu xóa dữ liệu sức khỏe | `customer/HealthDataDeletionPage` | `CustomerContext.submitDeletionRequest` | Có booking `upcoming`/`in_stay` → trạng thái **`deferred_active_retreat`** (hoãn tới sau checkout); ngược lại `pending` |
+| Bước                              | Page                                                        | Xử lý                                      | Ghi chú                                                                                                                                      |
+| ----------------------------------- | ----------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Đăng ký → OTP                   | `pages/auth/RegisterPage` → `EmailOtpVerificationPage` | mô phỏng UI                                | Không gọi BE                                                                                                                                |
+| Đăng nhập                        | `pages/auth/LoginPage`                                    | `AuthProvider.loginAs('customer')`         | Bất kỳ email/mật khẩu đều vào được (demo)                                                                                           |
+| Quên mật khẩu                    | `PasswordResetPage`                                       | mô phỏng UI                                |                                                                                                                                               |
+| Hồ sơ / sức khỏe                | `customer/AccountSettingsPage`, `HealthProfilePage`     | `updateProfile`, `updateWellnessProfile` | Lưu localStorage                                                                                                                             |
+| Yêu cầu xóa dữ liệu sức khỏe | `customer/HealthDataDeletionPage`                         | `CustomerContext.submitDeletionRequest`    | Có booking`upcoming`/`in_stay` → trạng thái **`deferred_active_retreat`** (hoãn tới sau checkout); ngược lại `pending` |
 
 **Backend M1 (thật)** — `m1identity/controller/AuthController`:
 
@@ -101,12 +101,12 @@ flowchart TD
 
 Quy tắc trong `OperationsContext`:
 
-| Hàm | Quy tắc |
-|---|---|
-| `assignVillaToBooking` | Villa không `maintenance`; không `occupied` bởi booking khác; `capacity ≥ partySize`; villa cũ của booking được trả về `ready` |
-| `completeCheckIn` | **Cọc phải `paid`**; villa phải tồn tại, không `maintenance`, không `cleaning` |
-| `updateVillaStatus` | Cấm `occupied → ready` trực tiếp (phải qua `cleaning`) |
-| Lưu trữ giấy tờ | Chỉ `sessionStorage` (giảm thiểu lưu dữ liệu nhạy cảm) |
+| Hàm                     | Quy tắc                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assignVillaToBooking` | Villa không`maintenance`; không `occupied` bởi booking khác; `capacity ≥ partySize`; villa cũ của booking được trả về `ready` |
+| `completeCheckIn`      | **Cọc phải `paid`**; villa phải tồn tại, không `maintenance`, không `cleaning`                                                 |
+| `updateVillaStatus`    | Cấm`occupied → ready` trực tiếp (phải qua `cleaning`)                                                                                    |
+| Lưu trữ giấy tờ      | Chỉ`sessionStorage` (giảm thiểu lưu dữ liệu nhạy cảm)                                                                                   |
 
 **Vòng đời villa:**
 
@@ -144,6 +144,7 @@ flowchart TD
 ```
 
 **Quy tắc atomic** (`SpaContext.bookSpaSession`) — đúng yêu cầu *"Spa booking chỉ confirm khi cả Therapist và Treatment Room cùng rảnh"*:
+
 1. Bắt buộc chọn therapist cụ thể (không `any`) và phòng cụ thể.
 2. Kiểm tra trùng giờ (`sessionsOverlap`) của therapist **và** phòng trong ngày (bỏ qua `cancelled`, `no_show`).
 3. Phòng `maintenance` → từ chối; therapist `off_duty`/`on_leave` → từ chối.
@@ -238,15 +239,16 @@ sequenceDiagram
 
 Quy tắc bắt buộc (theo AGENTS.md / SRS) và nơi thực thi:
 
-| Quy tắc | Nơi thực thi |
-|---|---|
-| Checkout **không thể hoàn tất** khi còn nợ Spa/F&B/gói | `completeResortCheckout` kiểm `folio.canCheckout` |
-| **Thanh toán thành công ≠ checkout hoàn tất** | 2 bước riêng: `processPayment` → `completeResortCheckout`; 2 page riêng |
-| Review là **tùy chọn & sau checkout** | `submitReview` kiểm `isStayCheckedOut` + chặn review trùng |
-| Checkout idempotent | Đã có `checkoutRecords[ref]` → trả success, không ghi lại |
-| Receptionist hỗ trợ checkout | Route `/receptionist/folio/:bookingId`, `/receptionist/checkout/:bookingId/*` dùng chung page |
+| Quy tắc                                                           | Nơi thực thi                                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Checkout**không thể hoàn tất** khi còn nợ Spa/F&B/gói | `completeResortCheckout` kiểm `folio.canCheckout`                                            |
+| **Thanh toán thành công ≠ checkout hoàn tất**          | 2 bước riêng:`processPayment` → `completeResortCheckout`; 2 page riêng                   |
+| Review là**tùy chọn & sau checkout**                      | `submitReview` kiểm `isStayCheckedOut` + chặn review trùng                                 |
+| Checkout idempotent                                                | Đã có`checkoutRecords[ref]` → trả success, không ghi lại                                 |
+| Receptionist hỗ trợ checkout                                     | Route`/receptionist/folio/:bookingId`, `/receptionist/checkout/:bookingId/*` dùng chung page |
 
 ### 5.3 Báo cáo Manager (read-only, không lộ dữ liệu cá nhân)
+
 - `manager/RevenueDashboardPage` → `getRevenueAnalytics()`
 - `manager/OccupancyReportPage` → `getOccupancyAnalytics()` (đếm villa theo trạng thái, bảng chi tiết có lọc + phân trang)
 - `manager/TherapistUtilizationReportPage` → `getTherapistUtilizationAnalytics()`
@@ -257,28 +259,28 @@ Quy tắc bắt buộc (theo AGENTS.md / SRS) và nơi thực thi:
 
 ### 6.1 Trên FE (mock — `GovernanceContext`)
 
-| Màn hình | Hàm | Quy tắc |
-|---|---|---|
-| `admin/BusinessParametersPage` | `updateParameter` | Kiểm kiểu số/%, min/max, định dạng `HH:MM`; ghi audit |
-| `admin/FeatureFlagsPage` | `toggleFeatureFlag` | Ghi audit |
-| `admin/PermissionMatrixPage` | `updatePermissionGrant` | Quyền `isImmutableBoundary` **không được sửa** |
-| `admin/AdminDelegationPage` | `createDelegation` / `revokeDelegation` | Chỉ quyền `isDelegableToManager`; `expiresAt > startsAt`; chặn leo thang đặc quyền |
-| `admin/SensitiveAuditLogPage` | `auditEvents` | Audit chỉ lưu metadata |
-| `common/SystemOverviewPage` | — | Dùng chung Manager & Admin |
-| `admin/StaffAccount*`, `MasterDataPage` | mock data | |
+| Màn hình                                  | Hàm                                        | Quy tắc                                                                                    |
+| ------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `admin/BusinessParametersPage`            | `updateParameter`                         | Kiểm kiểu số/%, min/max, định dạng`HH:MM`; ghi audit                                |
+| `admin/FeatureFlagsPage`                  | `toggleFeatureFlag`                       | Ghi audit                                                                                   |
+| `admin/PermissionMatrixPage`              | `updatePermissionGrant`                   | Quyền`isImmutableBoundary` **không được sửa**                                 |
+| `admin/AdminDelegationPage`               | `createDelegation` / `revokeDelegation` | Chỉ quyền`isDelegableToManager`; `expiresAt > startsAt`; chặn leo thang đặc quyền |
+| `admin/SensitiveAuditLogPage`             | `auditEvents`                             | Audit chỉ lưu metadata                                                                    |
+| `common/SystemOverviewPage`               | —                                          | Dùng chung Manager & Admin                                                                 |
+| `admin/StaffAccount*`, `MasterDataPage` | mock data                                   |                                                                                             |
 
 **Manager không phải Admin**: `/admin/*` cho phép manager vào layout, nhưng mọi route con (trừ `system-overview`) yêu cầu `admin`; riêng `business-params` mở cho manager **khi có capability** (grant hoặc ủy quyền còn hạn).
 
 ### 6.2 Trên BE (thật — `m6admin`)
 
-| Endpoint | Quyền (`@perm.has`) |
-|---|---|
-| `GET/POST/... /api/v1/admin/staff` | `S10`, `S11` |
-| `/api/v1/admin/master-data/{group}` | `S12` V/C/U/D |
-| `/api/v1/admin/parameters` | `S50` V/U |
-| `/api/v1/admin/permissions/matrix` (+ `/preview`) | `S51` V/G |
-| `/api/v1/admin/delegations` (+ `/{id}/revoke`) | `S52` V/C/D |
-| `/api/v1/admin/audit-logs` (+ `/export`) | `S53` V/E |
+| Endpoint                                              | Quyền (`@perm.has`) |
+| ----------------------------------------------------- | ---------------------- |
+| `GET/POST/... /api/v1/admin/staff`                  | `S10`, `S11`       |
+| `/api/v1/admin/master-data/{group}`                 | `S12` V/C/U/D        |
+| `/api/v1/admin/parameters`                          | `S50` V/U            |
+| `/api/v1/admin/permissions/matrix` (+ `/preview`) | `S51` V/G            |
+| `/api/v1/admin/delegations` (+ `/{id}/revoke`)    | `S52` V/C/D          |
+| `/api/v1/admin/audit-logs` (+ `/export`)          | `S53` V/E            |
 
 ```mermaid
 flowchart LR

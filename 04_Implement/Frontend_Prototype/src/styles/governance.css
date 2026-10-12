@@ -212,6 +212,48 @@
   background-color: #faf9f6;
 }
 
+/* Operational & Master Data Tables */
+.hsw-gov-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  background-color: #ffffff;
+}
+
+.hsw-gov-table th {
+  padding: 16px 20px;
+  background-color: #f7f6f2;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-align: left;
+  border-bottom: 1px solid var(--border-medium, #e5e2dc);
+  white-space: nowrap;
+}
+
+.hsw-gov-table td {
+  padding: 18px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle, #f0ede8);
+  vertical-align: middle;
+  line-height: 1.5;
+  transition: background-color 0.15s ease;
+}
+
+.hsw-gov-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.hsw-gov-table tbody tr:hover td {
+  background-color: #faf9f6;
+}
+
+.hsw-gov-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* Permission State Badges */
 .hsw-perm-badge {
   display: inline-flex;
@@ -224,13 +266,13 @@
 }
 
 .hsw-perm-badge.granted {
-  background-color: #eaf3ed;
-  color: var(--accent-forest);
+  background-color: #BBDEFB;
+  color: #0d47a1;
 }
 
 .hsw-perm-badge.denied {
-  background-color: #f3f3f1;
-  color: var(--text-muted);
+  background-color: #ffcdd2;
+  color: #b71c1c;
 }
 
 .hsw-perm-badge.delegable {
@@ -248,49 +290,72 @@
 .hsw-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: rgba(17, 24, 39, 0.65);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1050;
   padding: var(--space-4);
+  animation: hswModalFadeIn 0.2s ease-out;
 }
 
 .hsw-modal-box {
-  background-color: var(--bg-card);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle, #e5e2dc);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06);
   width: 100%;
   max-width: 580px;
   max-height: 90vh;
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: 24px 28px;
+  position: relative;
+  z-index: 1051;
+  animation: hswModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes hswModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hswModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .hsw-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle, #e5e2dc);
 }
 
 .hsw-modal-title {
-  font-size: var(--text-lg);
+  font-size: 17px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-primary, #2b2b2b);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .hsw-modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, #e5e2dc);
 }
 
 /* Audit Log Table Pill */
@@ -304,8 +369,8 @@
 }
 
 .hsw-audit-pill.success {
-  background-color: #eaf3ed;
-  color: var(--accent-forest);
+  background-color: #98FB98;
+  color: #1b5e20;
 }
 
 .hsw-audit-pill.denied {
@@ -376,8 +441,8 @@
 }
 
 .hsw-quicknav-tile-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-sm);
   background-color: #f2f0ea;
   color: var(--accent-forest);
@@ -385,6 +450,62 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.hsw-quicknav-tile:hover .hsw-quicknav-tile-icon {
+  transform: scale(1.06);
+}
+
+/* Domain-specific icon color themes */
+.hsw-quicknav-tile-icon.icon-staff {
+  background-color: #E0F2FE;
+  color: #0284C7;
+}
+
+.hsw-quicknav-tile-icon.icon-master-data {
+  background-color: #EDE9FE;
+  color: #7C3AED;
+}
+
+.hsw-quicknav-tile-icon.icon-params {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.hsw-quicknav-tile-icon.icon-matrix {
+  background-color: #DCFCE7;
+  color: #16A34A;
+}
+
+.hsw-quicknav-tile-icon.icon-delegation {
+  background-color: #FCE7F3;
+  color: #DB2777;
+}
+
+.hsw-quicknav-tile-icon.icon-audit {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}
+
+.hsw-quicknav-tile-icon.icon-overview {
+  background-color: #CCFBF1;
+  color: #0D9488;
+}
+
+.hsw-quicknav-tile-icon.icon-revenue {
+  background-color: #E0E7FF;
+  color: #4F46E5;
+}
+
+.hsw-quicknav-tile-icon.icon-occupancy {
+  background-color: #FEF9C3;
+  color: #CA8A04;
+}
+
+.hsw-quicknav-tile-icon.icon-therapists {
+  background-color: #F3E8FF;
+  color: #9333EA;
 }
 
 .hsw-quicknav-tile-content h4 {

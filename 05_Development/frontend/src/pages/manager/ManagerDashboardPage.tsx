@@ -165,7 +165,7 @@ export const ManagerDashboardPage: React.FC = () => {
 
         <div className="hsw-quicknav-grid">
           <Link to="/manager/revenue" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-revenue">
               <BarChart3 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -175,7 +175,7 @@ export const ManagerDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/manager/occupancy" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-occupancy">
               <TrendingUp size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -185,7 +185,7 @@ export const ManagerDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/manager/therapist-utilization" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-therapists">
               <Users2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -195,7 +195,7 @@ export const ManagerDashboardPage: React.FC = () => {
           </Link>
 
           <Link to="/manager/system-overview" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-overview">
               <Activity size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
