@@ -70,8 +70,8 @@ export const HealthDataDeletionPage: React.FC = () => {
         {activeBooking ? (
           <div
             style={{
-              backgroundColor: '#fffbeb',
-              border: '1px solid #fde68a',
+              backgroundColor: 'var(--surface-warning)',
+              border: '1px solid var(--border-warning)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-5)',
               marginBottom: 'var(--space-8)',
@@ -80,12 +80,12 @@ export const HealthDataDeletionPage: React.FC = () => {
               gap: 'var(--space-4)',
             }}
           >
-            <Calendar size={22} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+            <Calendar size={22} style={{ color: 'var(--text-warning)', flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#92400e', margin: '0 0 var(--space-1)' }}>
+              <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-warning)', margin: '0 0 var(--space-1)' }}>
                 {t('customer.deletion.activeRetreatWarning', 'Active / Upcoming Retreat Detected')}
               </h4>
-              <p style={{ fontSize: 'var(--text-xs)', color: '#b45309', margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                 You currently have an active reservation (<strong>Ref: {activeBooking.bookingReference}</strong> · {activeBooking.startDate} to {activeBooking.endDate}).
                 Your health data deletion will be registered immediately and safely executed following retreat check-out.
               </p>
@@ -111,7 +111,7 @@ export const HealthDataDeletionPage: React.FC = () => {
         {deletionRequest ? (
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-8)',
@@ -166,7 +166,7 @@ export const HealthDataDeletionPage: React.FC = () => {
           <form
             onSubmit={handleSubmit}
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-8)',

@@ -16,18 +16,18 @@ export const PrivacyNotice: React.FC<PrivacyNoticeProps> = ({
   icon = 'shield',
   children,
 }) => {
-  let bg = 'var(--bg-soft)';
+  let bg = 'var(--surface-muted)';
   let borderColor = 'var(--border-subtle)';
   let iconColor = 'var(--accent-olive)';
 
   if (variant === 'highlight') {
-    bg = 'rgba(227, 210, 184, 0.2)';
-    borderColor = 'rgba(191, 160, 122, 0.4)';
+    bg = 'var(--accent-sand-soft)';
+    borderColor = 'var(--accent-sand)';
     iconColor = 'var(--accent-forest)';
   } else if (variant === 'warning') {
-    bg = 'rgba(254, 243, 199, 0.4)';
-    borderColor = 'rgba(217, 119, 6, 0.3)';
-    iconColor = '#b45309';
+    bg = 'var(--surface-warning)';
+    borderColor = 'var(--border-warning)';
+    iconColor = 'var(--text-warning)';
   }
 
   const IconComp = icon === 'lock' ? Lock : ShieldCheck;

@@ -6,6 +6,8 @@ import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { useAuth } from '../../hooks/useAuth';
 import { Calendar, Bell, Menu, X } from 'lucide-react';
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
+import { CursorEffectToggle } from '../../components/common/CursorEffectToggle';
 
 export const OperationalLayout: React.FC = () => {
   const { role } = useAuth();
@@ -80,6 +82,8 @@ export const OperationalLayout: React.FC = () => {
               {t('operations.common.role', 'Role')}: {role ? t(`navigation:roles.${role}`, role.replace('_', ' ')) : ''}
             </div>
             <LanguageSwitcher />
+            <ThemeToggle />
+            <CursorEffectToggle />
             <div style={{ position: 'relative', cursor: 'pointer' }} title={t('operations.common.operationalNotifications', 'Operational Notifications')}>
               <Bell size={16} />
               <span style={{

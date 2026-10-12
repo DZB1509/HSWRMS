@@ -247,7 +247,7 @@ export const BookingSummaryPage: React.FC = () => {
             {/* 1. Retreat Overview Card */}
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
@@ -382,7 +382,7 @@ export const BookingSummaryPage: React.FC = () => {
             {/* 2. Deposit Channel Notice */}
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 padding: 'var(--space-6)',
@@ -520,7 +520,7 @@ export const BookingSummaryPage: React.FC = () => {
           >
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 'var(--radius-lg)',
                 maxWidth: '480px',
                 width: '100%',

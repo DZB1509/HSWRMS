@@ -108,7 +108,7 @@ export const HealthProfilePage: React.FC = () => {
               ==================================================================== */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-6)',
@@ -151,7 +151,7 @@ export const HealthProfilePage: React.FC = () => {
               ==================================================================== */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-6)',
@@ -165,7 +165,7 @@ export const HealthProfilePage: React.FC = () => {
                   {t('customer.healthProfile.therapistSection', 'Therapeutic & Physical Health Considerations')}
                 </h2>
               </div>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--accent-olive)', backgroundColor: 'var(--bg-soft)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-subtle)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--accent-olive)', backgroundColor: 'var(--surface-muted)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-subtle)' }}>
                 <Lock size={12} />
                 <span>Therapist Confidentiality Boundary</span>
               </span>
@@ -269,7 +269,8 @@ export const HealthProfilePage: React.FC = () => {
                       borderRadius: 'var(--radius-sm)',
                       border: '1px solid var(--border-subtle)',
                       fontSize: 'var(--text-sm)',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--control-bg, var(--surface))',
+                      color: 'var(--text-primary)',
                     }}
                   >
                     <option value="mild">{t('customer.healthProfile.stressMild', 'Mild (Seeking peaceful rest)')}</option>
@@ -304,7 +305,7 @@ export const HealthProfilePage: React.FC = () => {
               ==================================================================== */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-6)',
@@ -313,12 +314,12 @@ export const HealthProfilePage: React.FC = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Utensils size={20} style={{ color: '#b45309' }} />
+                <Utensils size={20} style={{ color: 'var(--text-warning)' }} />
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
                   {t('customer.healthProfile.dietarySection', 'Nutritional & Dietary Safeguards')}
                 </h2>
               </div>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#b45309', backgroundColor: 'rgba(254, 243, 199, 0.4)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: '1px solid rgba(217, 119, 6, 0.3)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-warning)', backgroundColor: 'var(--surface-warning)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-warning)' }}>
                 <Lock size={12} />
                 <span>Executive Chef Boundary</span>
               </span>
@@ -333,7 +334,7 @@ export const HealthProfilePage: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: '#991b1b', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-danger)', marginBottom: '4px' }}>
                   {t('customer.healthProfile.allergies', 'Known Food Allergies (Strict Safety Alert)')}
                 </label>
                 <input
@@ -345,9 +346,10 @@ export const HealthProfilePage: React.FC = () => {
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: 'var(--radius-sm)',
-                    border: '1px solid #fca5a5',
+                    border: '1px solid var(--border-danger)',
                     fontSize: 'var(--text-sm)',
-                    backgroundColor: '#fffaf9',
+                    backgroundColor: 'var(--surface-danger)',
+                    color: 'var(--text-primary)',
                   }}
                 />
               </div>
@@ -458,7 +460,7 @@ export const HealthProfilePage: React.FC = () => {
               to="/customer/health-profile/deletion"
               style={{
                 fontSize: 'var(--text-xs)',
-                color: '#b45309',
+                color: 'var(--text-warning)',
                 textDecoration: 'underline',
                 display: 'inline-flex',
                 alignItems: 'center',

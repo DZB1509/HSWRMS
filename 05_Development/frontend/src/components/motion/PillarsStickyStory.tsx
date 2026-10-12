@@ -213,22 +213,26 @@ export const PillarsStickyStory: React.FC = () => {
               key={item.num}
               onClick={() => setActiveIndex(idx)}
               data-cursor="explore"
+              className={`hsw-story-nav-item ${isActive ? 'is-active' : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 'var(--space-4)',
                 padding: 'var(--space-4) var(--space-5)',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: isActive ? '#ffffff' : 'transparent',
+                backgroundColor: isActive ? 'var(--surface-elevated, var(--surface))' : 'transparent',
                 border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
-                boxShadow: isActive ? 'var(--shadow-card)' : 'none',
-                opacity: isActive ? 1 : 0.45,
+                boxShadow: isActive ? 'var(--shadow-story-active, var(--shadow-card))' : 'none',
+                opacity: isActive ? 1 : 0.72,
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 cursor: 'pointer',
                 position: 'relative',
                 zIndex: 1,
               }}
             >
+              {/* Decorative Moving Luminous Rim for Active Item */}
+              <span className="hsw-story-rim" aria-hidden="true" />
+
               {/* Refined Timeline Node Indicator */}
               <div
                 aria-hidden="true"
@@ -248,7 +252,7 @@ export const PillarsStickyStory: React.FC = () => {
                     width: isActive ? '8px' : '5px',
                     height: isActive ? '8px' : '5px',
                     borderRadius: '50%',
-                    backgroundColor: isActive ? 'var(--accent-forest)' : 'rgba(159, 169, 157, 0.5)',
+                    backgroundColor: isActive ? 'var(--accent-forest)' : 'var(--border-strong)',
                     boxShadow: isActive ? '0 0 0 2px var(--accent-sand), 0 2px 5px rgba(43, 68, 48, 0.25)' : 'none',
                     transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
@@ -261,10 +265,10 @@ export const PillarsStickyStory: React.FC = () => {
                   fontFamily: 'var(--font-display)',
                   fontSize: 'var(--text-2xl)',
                   fontWeight: isActive ? 600 : 400,
-                  color: isActive ? 'var(--accent-forest)' : 'var(--text-tertiary)',
-                  opacity: isActive ? 1 : 0.4,
+                  color: isActive ? 'var(--accent-forest)' : 'var(--text-secondary)',
+                  opacity: isActive ? 1 : 0.55,
                   transform: isActive ? 'scale(1.02)' : 'scale(1)',
-                  textShadow: isActive ? 'var(--shadow-text-rest)' : 'none',
+                  textShadow: isActive ? 'var(--shadow-story-text-number, var(--shadow-text-rest))' : 'none',
                   width: '32px',
                   flexShrink: 0,
                   transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -275,7 +279,7 @@ export const PillarsStickyStory: React.FC = () => {
 
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ color: isActive ? 'var(--accent-forest)' : 'var(--text-tertiary)' }}>
+                  <span style={{ color: isActive ? 'var(--accent-forest)' : 'var(--text-secondary)' }}>
                     {item.icon}
                   </span>
                   <h3
@@ -284,7 +288,7 @@ export const PillarsStickyStory: React.FC = () => {
                       fontSize: 'var(--text-xl)',
                       fontWeight: 500,
                       color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      textShadow: isActive ? 'var(--shadow-text-rest)' : 'none',
+                      textShadow: isActive ? 'var(--shadow-story-text-title, var(--shadow-text-rest))' : 'none',
                       margin: 0,
                       transition: 'color 0.3s, text-shadow 0.3s',
                     }}
@@ -297,7 +301,7 @@ export const PillarsStickyStory: React.FC = () => {
                   style={{
                     fontSize: 'var(--text-sm)',
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    textShadow: isActive ? 'var(--shadow-text-desc-rest)' : 'none',
+                    textShadow: isActive ? 'var(--shadow-story-text-desc, var(--shadow-text-desc-rest))' : 'none',
                     lineHeight: 1.7,
                     margin: 0,
                     maxWidth: '420px',

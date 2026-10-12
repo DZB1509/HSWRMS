@@ -91,13 +91,13 @@
 
   .hsw-culinary-card:hover .hsw-culinary-dish-name {
     transform: translateY(-2px);
-    color: #171d18;
+    color: var(--text-primary);
     text-shadow: var(--shadow-text-hover-rich);
   }
 
   .hsw-culinary-card:hover .hsw-culinary-desc {
     transform: translateY(-1px);
-    color: #222923;
+    color: var(--text-secondary);
     text-shadow: var(--shadow-text-desc-hover);
   }
 }
@@ -182,9 +182,9 @@
 }
 
 .hsw-dietary-chip.hsw-chip-attribute {
-  background-color: rgba(200, 169, 126, 0.12);
-  color: #7d5926;
-  border-color: rgba(200, 169, 126, 0.3);
+  background-color: var(--surface-warning);
+  color: var(--text-warning);
+  border-color: var(--border-warning);
 }
 
 .hsw-allergy-alert-box {
@@ -192,10 +192,10 @@
   align-items: flex-start;
   gap: 8px;
   padding: 8px 12px;
-  background-color: #fdf2f1;
-  border: 1px solid #f5c2be;
+  background-color: var(--surface-danger);
+  border: 1px solid var(--border-danger);
   border-radius: var(--radius-sm);
-  color: var(--danger);
+  color: var(--text-danger);
   font-family: var(--font-ui);
   font-size: 11px;
   line-height: 1.4;
@@ -375,7 +375,7 @@
 .hsw-selectable-meal-card.is-selected {
   border: 2px solid var(--accent-forest) !important;
   outline: none !important;
-  background-color: #f6f8f6;
+  background-color: var(--surface-interactive);
   box-shadow: 0 4px 18px rgba(79, 90, 80, 0.12);
   transform: none !important;
 }
@@ -623,9 +623,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: #fdf0ef;
-  color: var(--danger);
-  border: 1px solid #f5c2be;
+  background-color: var(--surface-danger);
+  color: var(--text-danger);
+  border: 1px solid var(--border-danger);
   border-radius: var(--radius-xs);
   padding: 2px 7px;
   font-size: 11px;
@@ -636,9 +636,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: #f4f6f4;
-  color: var(--accent-forest);
-  border: 1px solid #d5ded6;
+  background-color: var(--surface-success);
+  color: var(--text-success);
+  border: 1px solid var(--border-success);
   border-radius: var(--radius-xs);
   padding: 2px 7px;
   font-size: 11px;
@@ -733,20 +733,20 @@
 }
 
 .hsw-status-select.hsw-status-preparing {
-  background-color: #fef8ec;
-  color: #92580a;
-  border-color: #f6d89b;
+  background-color: var(--surface-warning);
+  color: var(--text-warning);
+  border-color: var(--border-warning);
 }
 
 .hsw-status-select.hsw-status-ready {
-  background-color: #eef8f2;
-  color: #176536;
-  border-color: #a3d9b5;
+  background-color: var(--surface-success);
+  color: var(--text-success);
+  border-color: var(--border-success);
 }
 
 .hsw-status-select.hsw-status-delivered {
-  background-color: #f1f4f8;
-  color: #3b5066;
-  border-color: #cad5e2;
+  background-color: var(--surface-info);
+  color: var(--text-info);
+  border-color: var(--border-info);
 }
 

@@ -3,6 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCustomer } from '../../context/CustomerContext';
 import { LanguageSwitcher } from '../common/LanguageSwitcher';
+import { ThemeToggle } from '../common/ThemeToggle';
+import { CursorEffectToggle } from '../common/CursorEffectToggle';
+import { HeavenStayLogo } from '../common/HeavenStayLogo';
 import {
   Sparkles,
   Calendar,
@@ -77,12 +80,8 @@ export const CustomerNavbar: React.FC = () => {
       <div className="hsw-customer-navbar-inner">
         {/* Zone 1: Brand Area (Protected, flex-shrink: 0) */}
         <div className="hsw-customer-brand-zone">
-          <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Home">
-            <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
-            <div className="hsw-brand-text">
-              <span className="hsw-brand-name">HEAVENSTAY</span>
-              <span className="hsw-customer-portal-tag">{t('customer.nav.portalTitle', 'CUSTOMER PORTAL')}</span>
-            </div>
+          <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Cổng Khách Hàng">
+            <HeavenStayLogo variant="customer" />
           </Link>
         </div>
 
@@ -261,11 +260,13 @@ export const CustomerNavbar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Right Controls: Language & Profile Zones (Protected, flex-shrink: 0) */}
+        {/* Right Controls: Global Preferences (Language | Theme | Cursor FX) & Profile */}
         <div className="hsw-customer-actions">
-          {/* Zone 3: Language Selector */}
-          <div className="hsw-customer-lang-zone">
+          {/* Zone 3: Global Preferences */}
+          <div className="hsw-customer-lang-zone" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <LanguageSwitcher />
+            <ThemeToggle />
+            <CursorEffectToggle />
           </div>
 
           {/* Zone 4: Customer Profile */}

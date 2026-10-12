@@ -15,7 +15,7 @@
   left: 0;
   right: 0;
   z-index: 500;
-  background-color: rgba(250, 249, 246, 0.96);
+  background-color: var(--navbar-bg);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-subtle);
   transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
@@ -69,14 +69,35 @@
   align-items: center;
   gap: var(--space-2);
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   color: var(--accent-forest);
   text-transform: uppercase;
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.hsw-brand-logo-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.hsw-brand-emblem {
+  flex-shrink: 0;
+  color: var(--accent-sand);
+  transition: transform var(--transition-fast), color var(--transition-normal);
+  pointer-events: none;
+}
+
+.hsw-brand-logo:hover .hsw-brand-emblem {
+  transform: scale(1.04);
 }
 
 .hsw-brand-text {
@@ -85,16 +106,73 @@
 }
 
 .hsw-brand-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   line-height: 1.1;
+  color: var(--accent-forest);
+  transition: color var(--transition-normal);
 }
 
 .hsw-brand-tagline {
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.20em;
   color: var(--accent-olive);
-  margin-top: 2px;
+  margin-top: 3px;
+  transition: color var(--transition-normal);
+}
+
+.hsw-brand-tagline.is-customer-portal {
+  letter-spacing: 0.14em;
+}
+
+/* Hero Mode (Transparent Header) */
+.hsw-public-navbar.is-hero-mode:not(.is-scrolled) .hsw-brand-logo-root.is-hero-active .hsw-brand-name {
+  color: #ffffff;
+}
+
+.hsw-public-navbar.is-hero-mode:not(.is-scrolled) .hsw-brand-logo-root.is-hero-active .hsw-brand-emblem {
+  color: var(--accent-sand);
+}
+
+.hsw-public-navbar.is-hero-mode:not(.is-scrolled) .hsw-brand-logo-root.is-hero-active .hsw-brand-tagline {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Dark Theme Brand Identity */
+[data-theme="dark"] .hsw-brand-name {
+  color: var(--text-primary); /* warm ivory #f4f1ea */
+}
+
+[data-theme="dark"] .hsw-brand-emblem {
+  color: var(--accent-sand); /* champagne/sand #d8c7ae */
+}
+
+[data-theme="dark"] .hsw-brand-tagline,
+[data-theme="dark"] .hsw-customer-portal-tag {
+  color: var(--text-secondary); /* soft warm-neutral #aba79f */
+}
+
+/* Blush Theme Brand Identity */
+[data-theme="blush"] .hsw-brand-name {
+  color: var(--text-primary); /* warm charcoal #382c2d */
+}
+
+[data-theme="blush"] .hsw-brand-emblem {
+  color: var(--accent-forest); /* dusty rose #9b6b70 */
+}
+
+[data-theme="blush"] .hsw-brand-emblem .hsw-emblem-fill-accent,
+[data-theme="blush"] .hsw-brand-emblem .hsw-emblem-stroke-accent {
+  color: #c49a6c; /* warm champagne accent */
+}
+
+[data-theme="blush"] .hsw-brand-tagline,
+[data-theme="blush"] .hsw-customer-portal-tag {
+  color: var(--text-secondary); /* muted mauve #6b595c */
 }
 
 .hsw-navbar-actions {
@@ -115,12 +193,38 @@
   font-weight: 500;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
-  transition: color var(--transition-fast);
+  transition: color 180ms ease;
+  position: relative;
+  padding: 4px 0;
+}
+
+.hsw-public-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1.5px;
+  background-color: var(--accent-forest);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 200ms ease;
+  border-radius: 1px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hsw-public-nav-link:hover::after {
+    transform: scaleX(0.7);
+  }
 }
 
 .hsw-public-nav-link:hover,
 .hsw-public-nav-link.active {
   color: var(--accent-forest);
+}
+
+.hsw-public-nav-link.active::after {
+  transform: scaleX(1);
 }
 
 /* ==========================================================================
@@ -263,7 +367,7 @@
   top: calc(100% + 10px);
   left: 0;
   min-width: 210px;
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
@@ -305,7 +409,7 @@
 }
 
 .hsw-nav-dropdown-item.active {
-  background-color: #EBF3ED;
+  background-color: var(--accent-sand-soft);
   color: var(--accent-forest);
   font-weight: 600;
 }
@@ -410,11 +514,15 @@
 .hsw-customer-user-badge {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-1) var(--space-3);
+  gap: var(--space-2);
+  min-height: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 var(--space-3) 0 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--bg-soft);
-  border: 1px solid var(--border-subtle);
+  background-color: var(--control-bg, var(--surface));
+  border: 1px solid var(--control-border, var(--border-subtle));
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
 button.hsw-profile-btn {
@@ -423,29 +531,50 @@ button.hsw-profile-btn {
   line-height: inherit;
   cursor: pointer;
   outline: none;
-  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
-button.hsw-profile-btn:hover {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .hsw-customer-user-badge:hover,
+  button.hsw-profile-btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent-sand);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+    background-color: var(--control-hover, var(--bg-soft));
+  }
+
+  .hsw-customer-user-badge:active,
+  button.hsw-profile-btn:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
 }
 
 button.hsw-profile-btn:focus-visible {
-  outline: 2px solid var(--accent-sand);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--accent-forest);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .hsw-avatar-circle {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background-color: var(--accent-forest);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-xs);
+  font-size: 11px;
   font-weight: 600;
+  flex-shrink: 0;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.hsw-customer-user-badge:hover .hsw-avatar-circle,
+button.hsw-profile-btn:hover .hsw-avatar-circle {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px var(--accent-sand-soft);
 }
 
 /* ==========================================================================
@@ -806,26 +935,18 @@ button.hsw-profile-btn:focus-visible {
   z-index: 1;
   width: 100%;
   max-width: 460px;
-  background: linear-gradient(180deg, #ffffff 0%, #faf8f5 100%);
-  border: 1px solid rgba(229, 226, 220, 0.95);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  box-shadow: 
-    0 2px 4px rgba(30, 30, 30, 0.02),
-    0 10px 26px -2px rgba(30, 30, 30, 0.06),
-    0 24px 52px -4px rgba(79, 90, 80, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.95) inset;
+  box-shadow: var(--shadow-modal);
   padding: var(--space-8);
-  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), background-color var(--transition-normal);
   animation: hsw-auth-card-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .hsw-auth-card:hover {
-  border-color: rgba(216, 199, 174, 0.85);
-  box-shadow: 
-    0 4px 8px rgba(30, 30, 30, 0.03),
-    0 14px 34px -2px rgba(30, 30, 30, 0.08),
-    0 28px 60px -4px rgba(79, 90, 80, 0.11),
-    0 0 0 1px rgba(255, 255, 255, 1) inset;
+  border-color: var(--accent-sand);
+  box-shadow: var(--shadow-card-hover);
 }
 
 @keyframes hsw-auth-card-enter {
@@ -850,7 +971,7 @@ button.hsw-profile-btn:focus-visible {
    Footer
    ========================================================================== */
 .hsw-footer {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border-top: 1px solid var(--border-subtle);
   padding: var(--space-12) 0 var(--space-6);
   margin-top: auto;
@@ -890,7 +1011,7 @@ button.hsw-profile-btn:focus-visible {
 }
 
 .hsw-public-navbar.is-scrolled {
-  background-color: rgba(250, 249, 246, 0.98);
+  background-color: var(--navbar-bg);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
@@ -935,7 +1056,7 @@ button.hsw-profile-btn:focus-visible {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--bg-canvas);
+  background-color: var(--drawer-bg);
   border-top: 1px solid var(--border-subtle);
   box-shadow: 0 16px 48px rgba(23, 29, 21, 0.16);
   padding: var(--space-6) var(--space-6) max(var(--space-6), env(safe-area-inset-bottom, 24px));
