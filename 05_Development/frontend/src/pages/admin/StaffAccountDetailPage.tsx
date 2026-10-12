@@ -48,7 +48,7 @@ export const StaffAccountDetailPage: React.FC = () => {
       case 'admin':
         return {
           title: t('operations.staffDetail.scopeAdminTitle', 'Thẩm Quyền Quản Trị Hệ Thống & Quản Trị Dữ Liệu'),
-          desc: t('operations.staffDetail.scopeAdminDesc', 'Toàn quyền quản lý dữ liệu gốc, cấu hình tham số nghiệp vụ, duy trì ma trận RBAC và kiểm tra nhật ký truy cập dữ liệu nhạy cảm.'),
+          desc: t('operations.staffDetail.scopeAdminDesc', 'Toàn quyền quản lý dữ liệu danh mục gốc (Master Data), cấu hình tham số kinh doanh & vận hành, phân quyền ma trận RBAC, ủy quyền điều hành và giám sát nhật ký kiểm toán bảo mật nhạy cảm.'),
           minimization: t('operations.staffDetail.scopeAdminMin', 'Quyền quản trị hệ thống không bao gồm quyền truy cập vào hồ sơ bệnh án thô hoặc thông tin thẻ thanh toán của khách hàng.')
         };
       case 'manager':
@@ -227,6 +227,21 @@ export const StaffAccountDetailPage: React.FC = () => {
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
               {scopeInfo.desc}
             </p>
+            {staff.role === 'admin' && (
+              <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--border-subtle)' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent-forest)', display: 'block', marginBottom: '6px' }}>
+                  {t('operations.staffDetail.adminClearanceListTitle', 'Các Phân Hệ Quyền Hạn Quản Trị Trực Thuộc:')}
+                </span>
+                <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  <li><strong>Dữ Liệu Gốc (Master Data):</strong> Quản lý danh mục Biệt thự, Dịch vụ Spa và Thực đơn F&B.</li>
+                  <li><strong>Tài Khoản Nhân Sự:</strong> Quản lý danh sách, phân vai trò và kiểm soát vòng đời truy cập nhân viên.</li>
+                  <li><strong>Tham Số Vận Hành:</strong> Thiết lập chính sách cọc, hạn hủy, giờ bếp và chốt chặn trả phòng BR-02.</li>
+                  <li><strong>Phân Quyền Ma Trận RBAC:</strong> Kiểm soát ranh giới năng lực và chính sách tối thiểu hóa dữ liệu BR-03.</li>
+                  <li><strong>Ủy Quyền Hành Chính:</strong> Thiết lập ủy quyền tạm thời có thời hạn cho Quản lý Khu nghỉ dưỡng.</li>
+                  <li><strong>Kiểm Toán Bảo Mật:</strong> Giám sát nhật ký kiểm toán (Audit Log) truy cập thông tin nhạy cảm.</li>
+                </ul>
+              </div>
+            )}
           </div>
 
           <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf5f3', borderRadius: 'var(--radius-sm)', border: '1px solid #f0ded6' }}>

@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    HSWRMS Module 6 — Governance, Permissions, Administration & Monitoring
    Operational quiet-luxury density: data-first, restrained accents, low motion
    ========================================================================== */
@@ -563,4 +563,256 @@
     max-width: 95vw;
     margin: var(--space-4);
   }
+}
+
+
+/* ==========================================================================
+   Enhanced Soft Pastel Dashboard Metric Themes (Gam mau nhe, sang trong, de nhin)
+   ========================================================================== */
+
+.hsw-gov-card {
+  background-color: #ffffff;
+  border: 1px solid #e8e5df;
+  border-radius: 12px;
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 6px 16px -6px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.hsw-gov-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(135deg, #f2f7f4 0%, #eaf4ed 100%);
+  border: 1px solid #d2e5d7;
+  border-left: 4px solid #3d684c;
+  border-radius: 10px;
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+  color: #3b5844;
+  box-shadow: 0 1px 3px rgba(45, 106, 79, 0.03);
+}
+
+.hsw-gov-kpi {
+  border-radius: 10px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.hsw-gov-kpi:hover,
+.hsw-overview-subcard:hover {
+  transform: translateY(-2px);
+}
+
+/* 1. Dang luu tru (Soft Emerald Sage) */
+.hsw-kpi-occupied {
+  background: linear-gradient(145deg, #f2f8f4 0%, #e5f3ea 100%) !important;
+  border: 1px solid #cce5d4 !important;
+  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.04);
+}
+.hsw-kpi-occupied:hover {
+  border-color: #b3d9be !important;
+  box-shadow: 0 6px 14px rgba(46, 125, 50, 0.08);
+}
+.hsw-kpi-occupied .hsw-gov-kpi-label {
+  color: #2e6240 !important;
+}
+.hsw-kpi-occupied .hsw-gov-kpi-val {
+  color: #1b4d2e !important;
+}
+.hsw-kpi-occupied .hsw-gov-kpi-sub {
+  color: #437355 !important;
+}
+
+/* 2. San sang don khach (Soft Mint Aqua) */
+.hsw-kpi-ready {
+  background: linear-gradient(145deg, #f0f9fa 0%, #e3f5f6 100%) !important;
+  border: 1px solid #c4e7ea !important;
+  box-shadow: 0 2px 6px rgba(0, 137, 123, 0.04);
+}
+.hsw-kpi-ready:hover {
+  border-color: #aadae0 !important;
+  box-shadow: 0 6px 14px rgba(0, 137, 123, 0.08);
+}
+.hsw-kpi-ready .hsw-gov-kpi-label {
+  color: #166865 !important;
+}
+.hsw-kpi-ready .hsw-gov-kpi-val {
+  color: #0c504d !important;
+}
+.hsw-kpi-ready .hsw-gov-kpi-sub {
+  color: #317b78 !important;
+}
+
+/* 3. Dang don dep (Warm Honey Cream) */
+.hsw-kpi-cleaning {
+  background: linear-gradient(145deg, #fffcf4 0%, #fef5e2 100%) !important;
+  border: 1px solid #f8e3ba !important;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.04);
+}
+.hsw-kpi-cleaning:hover {
+  border-color: #f3d49b !important;
+  box-shadow: 0 6px 14px rgba(217, 119, 6, 0.08);
+}
+.hsw-kpi-cleaning .hsw-gov-kpi-label {
+  color: #945f18 !important;
+}
+.hsw-kpi-cleaning .hsw-gov-kpi-val {
+  color: #824d08 !important;
+}
+.hsw-kpi-cleaning .hsw-gov-kpi-sub {
+  color: #9e6f30 !important;
+}
+
+/* 4. Bao tri dinh ky (Soft Slate Gray) */
+.hsw-kpi-maintenance {
+  background: linear-gradient(145deg, #f7f8fa 0%, #edf1f6 100%) !important;
+  border: 1px solid #d9dfe8 !important;
+  box-shadow: 0 2px 6px rgba(100, 116, 139, 0.04);
+}
+.hsw-kpi-maintenance:hover {
+  border-color: #c7cfdc !important;
+  box-shadow: 0 6px 14px rgba(100, 116, 139, 0.08);
+}
+.hsw-kpi-maintenance .hsw-gov-kpi-label {
+  color: #4b586d !important;
+}
+.hsw-kpi-maintenance .hsw-gov-kpi-val {
+  color: #334155 !important;
+}
+.hsw-kpi-maintenance .hsw-gov-kpi-sub {
+  color: #64748b !important;
+}
+
+/* Subcard base & typography */
+.hsw-overview-subcard {
+  padding: var(--space-4);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.hsw-overview-subcard .subcard-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.hsw-overview-subcard .subcard-val {
+  font-size: var(--text-xl);
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 4px 0 2px 0;
+}
+
+.hsw-overview-subcard .subcard-sub {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Spa Sessions (Soft Lavender Lilac) */
+.hsw-card-spa-sessions {
+  background: linear-gradient(145deg, #fcf8ff 0%, #f4ebfd 100%) !important;
+  border: 1px solid #e4d4f6 !important;
+  box-shadow: 0 2px 6px rgba(138, 75, 175, 0.04);
+}
+.hsw-card-spa-sessions:hover {
+  border-color: #d6beee !important;
+  box-shadow: 0 6px 14px rgba(138, 75, 175, 0.08);
+}
+.hsw-card-spa-sessions .subcard-label {
+  color: #6b498f !important;
+}
+.hsw-card-spa-sessions .subcard-val {
+  color: #4c2573 !important;
+}
+.hsw-card-spa-sessions .subcard-sub {
+  color: #7d59a2 !important;
+}
+
+/* Spa Duration (Soft Rose Petal) */
+.hsw-card-spa-time {
+  background: linear-gradient(145deg, #fff8f9 0%, #fcecf1 100%) !important;
+  border: 1px solid #f3d2dd !important;
+  box-shadow: 0 2px 6px rgba(190, 60, 95, 0.04);
+}
+.hsw-card-spa-time:hover {
+  border-color: #ebbecd !important;
+  box-shadow: 0 6px 14px rgba(190, 60, 95, 0.08);
+}
+.hsw-card-spa-time .subcard-label {
+  color: #8f4663 !important;
+}
+.hsw-card-spa-time .subcard-val {
+  color: #712440 !important;
+}
+.hsw-card-spa-time .subcard-sub {
+  color: #9f5b77 !important;
+}
+
+/* Revenue (Soft Sage Emerald) */
+.hsw-card-revenue {
+  background: linear-gradient(145deg, #f2f8f4 0%, #e5f3e7 100%) !important;
+  border: 1px solid #c9e4cf !important;
+  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.04);
+}
+.hsw-card-revenue:hover {
+  border-color: #b0d8b8 !important;
+  box-shadow: 0 6px 14px rgba(46, 125, 50, 0.08);
+}
+.hsw-card-revenue .subcard-label {
+  color: #2a5c37 !important;
+}
+.hsw-card-revenue .subcard-val {
+  color: #174b24 !important;
+}
+.hsw-card-revenue .subcard-sub {
+  color: #467652 !important;
+}
+
+/* Check-out Guard (Soft Ice Blue Steel) */
+.hsw-card-guard {
+  background: linear-gradient(145deg, #f1f7fc 0%, #e3effa 100%) !important;
+  border: 1px solid #c6def5 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.04);
+}
+.hsw-card-guard:hover {
+  border-color: #abd0f0 !important;
+  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.08);
+}
+.hsw-card-guard .subcard-label {
+  color: #205b91 !important;
+}
+.hsw-card-guard .subcard-val {
+  color: #124370 !important;
+}
+.hsw-card-guard .subcard-sub {
+  color: #4477a4 !important;
+}
+
+/* Police Compliance Container */
+.hsw-compliance-box {
+  background: linear-gradient(145deg, #faf8f5 0%, #f4efe7 100%);
+  border: 1px solid #e7ded2;
+  border-left: 3px solid #8c8270;
+  border-radius: 8px;
+  padding: var(--space-4) var(--space-5);
+}
+
+.hsw-audit-pill.ready {
+  background-color: #e5f6ed;
+  color: #1c683c;
+  border: 1px solid #bce4cd;
 }

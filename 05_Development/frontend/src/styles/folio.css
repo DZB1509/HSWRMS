@@ -245,6 +245,12 @@
   border: 1px solid rgba(217, 119, 6, 0.25);
 }
 
+.hsw-status-pill.ready {
+  background-color: #00FF99;
+  color: #004d26;
+  border: 1px solid #00e68a;
+}
+
 .hsw-status-pill.settled {
   background-color: rgba(44, 76, 56, 0.1);
   color: var(--accent-forest);

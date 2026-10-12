@@ -547,7 +547,7 @@ export const PERMISSION_RULES: PermissionRule[] = [
     categoryKey: 'governance.permissions.categories.governance',
     defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
     nameKey: 'governance.permissions.manageFlags.name',
-    defaultName: 'Quản Lý Cờ Tính Năng Hệ Thống',
+    defaultName: 'Cấu Hình Quy Trình Vận Hành Tự Động',
     descriptionKey: 'governance.permissions.manageFlags.desc',
     defaultDescription: 'Bật tắt các mô-đun tùy chọn và quy trình tự động hóa tuân thủ.',
     grants: {
@@ -773,7 +773,7 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     targetRef: 'enable_online_extra_spa_booking',
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.featureFlagToggled',
-    detailsFallback: 'Cập nhật trạng thái cờ tính năng sang BẬT với phạm vi khách hàng toàn cầu.'
+    detailsFallback: 'Cập nhật cấu hình tham số vận hành sang BẬT trên phạm vi toàn hệ thống.'
   }
 ];
 

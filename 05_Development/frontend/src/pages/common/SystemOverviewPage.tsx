@@ -54,9 +54,9 @@ export const SystemOverviewPage: React.FC = () => {
 
       {/* Honest Operational Status Banner */}
       <div className="hsw-gov-banner">
-        <ShieldCheck size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
+        <ShieldCheck size={18} style={{ color: '#2d6a4f', flexShrink: 0, marginTop: '2px' }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>
+          <strong style={{ color: '#1b4332' }}>
             {t('operations.systemOverview.statusHonestyTitle', 'Tình Trạng Sức Khỏe Vận Hành Ứng Dụng')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
@@ -78,25 +78,25 @@ export const SystemOverviewPage: React.FC = () => {
         </div>
 
         <div className="hsw-gov-grid" style={{ marginBottom: 0 }}>
-          <div className="hsw-gov-kpi">
+          <div className="hsw-gov-kpi hsw-kpi-occupied">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.occupied', 'Đang có khách')}</span>
             <span className="hsw-gov-kpi-val" style={{ color: 'var(--accent-forest)' }}>{occupancy.occupiedCount}</span>
             <span className="hsw-gov-kpi-sub">{occupancy.occupancyRate}% {t('manager.occupancy.rate', 'công suất')}</span>
           </div>
 
-          <div className="hsw-gov-kpi">
+          <div className="hsw-gov-kpi hsw-kpi-ready">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.available', 'Sẵn sàng đón khách')}</span>
             <span className="hsw-gov-kpi-val">{occupancy.readyCount}</span>
             <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.inspectedReady', 'Đã dọn dẹp & kiểm tra')}</span>
           </div>
 
-          <div className="hsw-gov-kpi">
+          <div className="hsw-gov-kpi hsw-kpi-cleaning">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.cleaning', 'Đang dọn dẹp')}</span>
             <span className="hsw-gov-kpi-val" style={{ color: 'var(--warning)' }}>{occupancy.cleaningCount}</span>
             <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.turnoverQueue', 'Hàng đợi buồng phòng')}</span>
           </div>
 
-          <div className="hsw-gov-kpi">
+          <div className="hsw-gov-kpi hsw-kpi-maintenance">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.maintenance', 'Bảo trì')}</span>
             <span className="hsw-gov-kpi-val" style={{ color: 'var(--text-muted)' }}>{occupancy.maintenanceCount}</span>
             <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.outOfOrder', 'Bảo trì theo lịch')}</span>
@@ -116,22 +116,22 @@ export const SystemOverviewPage: React.FC = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('manager.therapists.totalSessions', 'Lịch Hẹn Đã Đặt')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
+            <div className="hsw-overview-subcard hsw-card-spa-sessions">
+              <div className="subcard-label">{t('manager.therapists.totalSessions', 'Lịch Hẹn Đã Đặt')}</div>
+              <div className="subcard-val">
                 {therapists.totalScheduledSessions}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div className="subcard-sub">
                 {therapists.completedSessions} hoàn thành · {therapists.noShowSessions} vắng mặt
               </div>
             </div>
 
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('manager.therapists.totalMinutes', 'Thời Lượng Trị Liệu Đã Đặt')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
+            <div className="hsw-overview-subcard hsw-card-spa-time">
+              <div className="subcard-label">{t('manager.therapists.totalMinutes', 'Thời Lượng Trị Liệu Đã Đặt')}</div>
+              <div className="subcard-val">
                 {therapists.totalBookedMinutes} phút
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div className="subcard-sub">
                 {therapists.totalBookedHours} giờ chăm sóc trực tiếp
               </div>
             </div>
@@ -148,22 +148,22 @@ export const SystemOverviewPage: React.FC = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--accent-forest)', marginTop: '2px' }}>
+            <div className="hsw-overview-subcard hsw-card-revenue">
+              <div className="subcard-label">{t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}</div>
+              <div className="subcard-val">
                 {formatVND(revenue.totalRevenue, i18n.language)}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div className="subcard-sub">
                 Doanh thu đã quyết toán tổng hợp
               </div>
             </div>
 
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('operations.systemOverview.unsettledGuard', 'Kiểm Soát Trả Phòng')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--accent-forest)', marginTop: '2px' }}>
+            <div className="hsw-overview-subcard hsw-card-guard">
+              <div className="subcard-label">{t('operations.systemOverview.unsettledGuard', 'Kiểm Soát Trả Phòng')}</div>
+              <div className="subcard-val">
                 {t('operations.systemOverview.guardActive', 'Đang Bật')}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div className="subcard-sub">
                 Quy tắc BR-02 chặn check-out khi còn phí chưa thanh toán đang bật
               </div>
             </div>
@@ -180,13 +180,13 @@ export const SystemOverviewPage: React.FC = () => {
               {t('operations.systemOverview.policeComplianceTitle', 'Tuân Thủ Khai Báo Tạm Trú Với Cơ Quan Công An')}
             </h2>
           </div>
-          <span className={`hsw-audit-pill ${policeExportSummary.status === 'SUBMITTED' ? 'success' : 'denied'}`} style={{ fontSize: '11px' }}>
+          <span className={`hsw-audit-pill ${policeExportSummary.status === 'SUBMITTED' ? 'success' : policeExportSummary.status === 'READY' ? 'ready' : 'denied'}`} style={{ fontSize: '11px' }}>
             {policeExportSummary.status === 'READY' ? 'SẴN SÀNG' : policeExportSummary.status === 'SUBMITTED' ? 'ĐÃ NỘP' : 'CHỜ XỬ LÝ'}
           </span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div style={{ flex: '1 1 100%' }}>
+          <div className="hsw-compliance-box" style={{ flex: '1 1 100%' }}>
             <p style={{ margin: '0 0 var(--space-2) 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               {t('operations.systemOverview.policeComplianceDesc', 'Các biện pháp bảo vệ vận hành theo Luật Cư trú 2020 và Nghị định 13/2023/NĐ-CP. HSWRMS tự động tổng hợp danh sách tạm trú hàng ngày cho khách nội địa và quốc tế được đăng ký khi làm thủ tục check-in.')}
             </p>

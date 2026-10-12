@@ -994,7 +994,7 @@
     "reactivateAccount": "アカウントを再開",
     "clearanceSectionTitle": "RBAC権限スコープおよびデータ最小化制御",
     "scopeAdminTitle": "完全なシステム管理者権限",
-    "scopeAdminDesc": "ビジネスパラメータ、機能フラグ、RBACマトリクス、委任、監査ログの管理が許可されています。",
+    "scopeAdminDesc": "マスターデータ、ビジネス・運用パラメータ、RBACマトリクス、管理者委任、機密セキュリティ監査ログの管理が許可されています。",
     "scopeAdminMin": "顧客の生体診断データや決済シークレットは直接閲覧できません。",
     "scopeManagerTitle": "業務管理および分析レポート権限",
     "scopeManagerDesc": "売上分析、ヴィラ稼働統計、セラピスト稼働率、システム健全性の閲覧が許可されています。",
@@ -1010,7 +1010,8 @@
     "scopeFbMin": "厨房スタッフは食品アレルゲンタグのみ確認可能で、全般的な病歴は一切非公開です（BR-03）。",
     "suspendSuccess": "スタッフアカウントが正常に停止されました。",
     "reactivateSuccess": "スタッフアカウントが再開されました。",
-    "notFound": "スタッフアカウントが見つかりません。"
+    "notFound": "スタッフアカウントが見つかりません。",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "マスターデータ管理",
