@@ -96,7 +96,7 @@ export const BookingDetailPage: React.FC = () => {
             {/* 1. Sanctuary Villa Card */}
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
@@ -192,7 +192,7 @@ export const BookingDetailPage: React.FC = () => {
             {/* Transaction Verification Info */}
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 padding: 'var(--space-5)',
@@ -239,7 +239,7 @@ export const BookingDetailPage: React.FC = () => {
             {/* Cross-Module Integration Actions (M3 & M4 Placeholders) */}
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 padding: 'var(--space-5)',

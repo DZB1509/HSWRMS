@@ -24,7 +24,7 @@ export const PaymentSummary: React.FC<PaymentSummaryProps> = ({
     <div
       className="hsw-payment-summary"
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--surface)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-md)',
         padding: 'var(--space-6)',

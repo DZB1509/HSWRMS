@@ -112,7 +112,7 @@ export const RetreatBookingPage: React.FC = () => {
               {/* 1. Selected Retreat Package Selector */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',
@@ -137,7 +137,8 @@ export const RetreatBookingPage: React.FC = () => {
                       border: '1px solid var(--border-subtle)',
                       fontSize: 'var(--text-sm)',
                       fontWeight: 600,
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--control-bg, var(--surface))',
+                      color: 'var(--text-primary)',
                     }}
                   >
                     {MOCK_RETREAT_PACKAGES.map((pkg) => (
@@ -178,7 +179,7 @@ export const RetreatBookingPage: React.FC = () => {
               {/* 2. Dates & Duration Section */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',
@@ -243,7 +244,7 @@ export const RetreatBookingPage: React.FC = () => {
               {/* 3. Primary Customer Info (Pre-filled) */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',
@@ -328,7 +329,8 @@ export const RetreatBookingPage: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: 'var(--text-sm)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--control-bg, var(--surface))',
+                        color: 'var(--text-primary)',
                       }}
                     >
                       <option value={1}>1 Adult (Private Sanctuary)</option>
@@ -346,20 +348,20 @@ export const RetreatBookingPage: React.FC = () => {
                   justifyContent: 'space-between',
                   gap: 'var(--space-4)',
                   padding: 'var(--space-4) var(--space-5)',
-                  backgroundColor: wellnessProfile.isComplete ? '#eef5ec' : '#fffbeb',
-                  border: `1px solid ${wellnessProfile.isComplete ? '#c7e2be' : '#fde68a'}`,
+                  backgroundColor: wellnessProfile.isComplete ? 'var(--surface-success)' : 'var(--surface-warning)',
+                  border: `1px solid ${wellnessProfile.isComplete ? 'var(--border-success)' : 'var(--border-warning)'}`,
                   borderRadius: 'var(--radius-md)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <ShieldCheck size={22} style={{ color: wellnessProfile.isComplete ? '#2d5a27' : '#b45309' }} />
+                  <ShieldCheck size={22} style={{ color: wellnessProfile.isComplete ? 'var(--text-success)' : 'var(--text-warning)' }} />
                   <div>
-                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: wellnessProfile.isComplete ? '#2d5a27' : '#92400e' }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: wellnessProfile.isComplete ? 'var(--text-success)' : 'var(--text-warning)' }}>
                       {wellnessProfile.isComplete
                         ? t('customer.bookingForm.wellnessComplete', 'Health & Dietary Profile is Complete')
                         : t('customer.bookingForm.wellnessIncomplete', 'Health Profile Recommended')}
                     </div>
-                    <div style={{ fontSize: '11px', color: wellnessProfile.isComplete ? '#2d5a27' : '#78350f' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                       Allergy precautions and therapist notes are ready for your stay.
                     </div>
                   </div>
@@ -370,7 +372,7 @@ export const RetreatBookingPage: React.FC = () => {
                   style={{
                     fontSize: 'var(--text-xs)',
                     fontWeight: 600,
-                    color: wellnessProfile.isComplete ? '#2d5a27' : '#92400e',
+                    color: wellnessProfile.isComplete ? 'var(--text-success)' : 'var(--text-warning)',
                     textDecoration: 'underline',
                     whiteSpace: 'nowrap',
                   }}
@@ -382,7 +384,7 @@ export const RetreatBookingPage: React.FC = () => {
               {/* 5. Personalized Preferences */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',

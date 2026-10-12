@@ -84,7 +84,7 @@
 }
 
 .hsw-folio-kpi-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
@@ -134,7 +134,7 @@
 
 /* ── Grouped Line Items ───────────────────────────────────────────── */
 .hsw-folio-section {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -179,7 +179,7 @@
 
 .hsw-folio-table th {
   padding: var(--space-3) var(--space-6);
-  background-color: #fbfbfa;
+  background-color: var(--surface-muted);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -200,13 +200,13 @@
 }
 
 .hsw-folio-table tr:hover td {
-  background-color: rgba(245, 243, 239, 0.4);
+  background-color: var(--surface-interactive);
 }
 
 .hsw-source-badge {
   display: inline-block;
   padding: 2px 6px;
-  background-color: #f0ede6;
+  background-color: var(--surface-alt);
   border-radius: 4px;
   font-size: 10px;
   font-family: monospace;
@@ -253,7 +253,7 @@
 
 /* ── Action Sticky Bar ────────────────────────────────────────────── */
 .hsw-folio-action-bar {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-5) var(--space-6);
@@ -293,7 +293,7 @@
 }
 
 .hsw-payment-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -338,12 +338,12 @@
 }
 
 .hsw-payment-disclaimer {
-  background-color: #fefce8;
-  border: 1px solid #fef08a;
+  background-color: var(--surface-warning);
+  border: 1px solid var(--border-warning);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-xs);
-  color: #854d0e;
+  color: var(--text-warning);
   line-height: 1.5;
   margin-bottom: var(--space-6);
   display: flex;
@@ -353,7 +353,7 @@
 
 /* ── Screen 43: Payment Result ────────────────────────────────────── */
 .hsw-result-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   overflow: hidden;
@@ -408,8 +408,8 @@
 
 /* ── Screen 44: Checkout Confirmation & Blockers ─────────────────── */
 .hsw-blocker-panel {
-  background-color: #fff1f2;
-  border: 1.5px solid #fecdd3;
+  background-color: var(--surface-danger);
+  border: 1.5px solid var(--border-danger);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   margin-bottom: var(--space-8);
@@ -419,7 +419,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  color: #be123c;
+  color: var(--text-danger);
   margin-bottom: var(--space-3);
 }
 
@@ -436,8 +436,8 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  background-color: #ffffff;
-  border: 1px solid #fecdd3;
+  background-color: var(--surface);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   color: var(--text-primary);
@@ -514,7 +514,7 @@
 }
 
 .hsw-manager-kpi-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
@@ -522,7 +522,7 @@
 }
 
 .hsw-manager-chart-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-6);
