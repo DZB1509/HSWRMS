@@ -167,20 +167,20 @@ export const SpaBookingPage: React.FC = () => {
       {/* Reschedule Active Notice */}
       {rescheduleSessionId && (
         <div className="spa-reschedule-notice" style={{
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
+          backgroundColor: 'var(--surface-info)',
+          border: '1px solid var(--border-info)',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '20px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          color: '#1e40af'
+          color: 'var(--text-info)'
         }}>
           <RotateCcw size={20} />
           <div>
             <strong>{t('spa.rescheduleNoticeTitle', 'Rescheduling Session')} #{rescheduleSessionId}</strong>
-            <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#3b82f6' }}>
+            <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-info)', opacity: 0.85 }}>
               {t('spa.rescheduleNoticeDesc', 'Your existing session remains completely safe and valid while you browse candidates. It will only be updated upon final confirmation.')}
             </p>
           </div>
@@ -189,12 +189,12 @@ export const SpaBookingPage: React.FC = () => {
 
       {searchError && (
         <div className="spa-error-alert" style={{
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
+          backgroundColor: 'var(--surface-danger)',
+          border: '1px solid var(--border-danger)',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '20px',
-          color: '#b91c1c',
+          color: 'var(--text-danger)',
           display: 'flex',
           alignItems: 'center',
           gap: '10px'
@@ -312,7 +312,7 @@ export const SpaBookingPage: React.FC = () => {
                   <Sparkles size={16} />
                   <strong>{t('spa.rangeAny', 'Any Time')}</strong>
                 </div>
-                <span style={{ fontSize: '11px', color: '#666' }}>08:00 – 20:00</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>08:00 – 20:00</span>
               </button>
 
               <button
@@ -325,7 +325,7 @@ export const SpaBookingPage: React.FC = () => {
                   <Sun size={16} />
                   <strong>{t('spa.rangeMorning', 'Morning')}</strong>
                 </div>
-                <span style={{ fontSize: '11px', color: '#666' }}>08:00 – 12:00</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>08:00 – 12:00</span>
               </button>
 
               <button
@@ -338,7 +338,7 @@ export const SpaBookingPage: React.FC = () => {
                   <Sunset size={16} />
                   <strong>{t('spa.rangeAfternoon', 'Afternoon')}</strong>
                 </div>
-                <span style={{ fontSize: '11px', color: '#666' }}>12:00 – 17:00</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>12:00 – 17:00</span>
               </button>
 
               <button
@@ -351,7 +351,7 @@ export const SpaBookingPage: React.FC = () => {
                   <Moon size={16} />
                   <strong>{t('spa.rangeEvening', 'Evening')}</strong>
                 </div>
-                <span style={{ fontSize: '11px', color: '#666' }}>17:00 – 20:00</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>17:00 – 20:00</span>
               </button>
             </div>
           </div>
@@ -433,7 +433,7 @@ export const SpaBookingPage: React.FC = () => {
               </span>
             </div>
 
-            <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '6px', fontSize: '12px', color: '#64748b', marginTop: '12px' }}>
+            <div style={{ backgroundColor: 'var(--surface-muted)', border: '1px solid var(--border-subtle)', padding: '10px 12px', borderRadius: 'var(--radius-sm, 6px)', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px' }}>
               <Info size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
               {t('spa.candidateBundleNotice', 'System matches qualified practitioners and compatible treatment rooms into indivisible candidates.')}
             </div>

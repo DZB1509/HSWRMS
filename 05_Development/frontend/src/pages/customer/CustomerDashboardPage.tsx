@@ -122,7 +122,7 @@ export const CustomerDashboardPage: React.FC = () => {
           <div
             className="hsw-upcoming-retreat-card"
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-card)',
@@ -246,7 +246,7 @@ export const CustomerDashboardPage: React.FC = () => {
           <div
             style={{
               padding: 'var(--space-8)',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               textAlign: 'center',
@@ -294,7 +294,7 @@ export const CustomerDashboardPage: React.FC = () => {
           {/* Card 1: Health & Dietary Profile Readiness (Safe Summary - No Sensitive Exposure) */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-subtle)',
               padding: 'var(--space-6)',
@@ -316,8 +316,9 @@ export const CustomerDashboardPage: React.FC = () => {
                   style={{
                     fontSize: '11px',
                     fontWeight: 700,
-                    color: wellnessProfile.isComplete ? '#2d5a27' : '#b45309',
-                    backgroundColor: wellnessProfile.isComplete ? '#eef5ec' : '#fef3c7',
+                    color: wellnessProfile.isComplete ? 'var(--text-success)' : 'var(--text-warning)',
+                    backgroundColor: wellnessProfile.isComplete ? 'var(--surface-success)' : 'var(--surface-warning)',
+                    border: `1px solid ${wellnessProfile.isComplete ? 'var(--border-success)' : 'var(--border-warning)'}`,
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-pill)',
                   }}
@@ -346,7 +347,7 @@ export const CustomerDashboardPage: React.FC = () => {
           {/* Card 2: Spa & Therapy Preview */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-subtle)',
               padding: 'var(--space-6)',
@@ -381,7 +382,7 @@ export const CustomerDashboardPage: React.FC = () => {
           {/* Card 3: Dining & Nutrition Preview */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-subtle)',
               padding: 'var(--space-6)',
@@ -393,7 +394,7 @@ export const CustomerDashboardPage: React.FC = () => {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
-                <Utensils size={18} style={{ color: '#b45309' }} />
+                <Utensils size={18} style={{ color: 'var(--text-warning)' }} />
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                   {t('customer.dashboard.wellnessJourney.diningPreview', 'Tailored Organic Nutrition')}
                 </span>
@@ -451,7 +452,7 @@ export const CustomerDashboardPage: React.FC = () => {
           <Link to="/customer/bookings" style={{ textDecoration: 'none' }}>
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
                 padding: 'var(--space-4)',
@@ -471,7 +472,7 @@ export const CustomerDashboardPage: React.FC = () => {
           <Link to="/customer/health-profile" style={{ textDecoration: 'none' }}>
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
                 padding: 'var(--space-4)',
@@ -491,7 +492,7 @@ export const CustomerDashboardPage: React.FC = () => {
           <Link to="/customer/account" style={{ textDecoration: 'none' }}>
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
                 padding: 'var(--space-4)',
@@ -511,7 +512,7 @@ export const CustomerDashboardPage: React.FC = () => {
           <Link to="/retreats" style={{ textDecoration: 'none' }}>
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
                 padding: 'var(--space-4)',

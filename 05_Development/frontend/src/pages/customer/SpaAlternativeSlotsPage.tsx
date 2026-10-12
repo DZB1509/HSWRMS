@@ -242,19 +242,19 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
               /* No Availability for requested criteria */
               <div
                 style={{
-                  backgroundColor: '#fffbeb',
-                  border: '1px solid #fef3c7',
+                  backgroundColor: 'var(--surface-warning)',
+                  border: '1px solid var(--border-warning)',
                   borderRadius: '10px',
                   padding: '24px',
                   textAlign: 'center',
                   marginBottom: '24px',
                 }}
               >
-                <AlertCircle size={36} style={{ color: '#d97706', margin: '0 auto 12px' }} />
-                <h3 style={{ margin: '0 0 6px', color: '#92400e', fontSize: '18px' }}>
+                <AlertCircle size={36} style={{ color: 'var(--text-warning)', margin: '0 auto 12px' }} />
+                <h3 style={{ margin: '0 0 6px', color: 'var(--text-warning)', fontSize: '18px' }}>
                   {t('spa.noSlotsTitle', 'No Matching Candidates for Requested Time Window')}
                 </h3>
-                <p style={{ margin: '0 0 16px', color: '#b45309', fontSize: '14px', maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
+                <p style={{ margin: '0 0 16px', color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
                   {t(
                     'spa.noSlotsDesc',
                     'All qualified therapists and treatment rooms are fully reserved for this window. Please consider the verified alternative slots below or adjust your date.'
@@ -338,7 +338,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
 
           {/* Sidebar / Bottom Action Drawer */}
           <div className="spa-alt-sidebar" style={{ minWidth: '280px', marginTop: '20px' }}>
-            <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', position: 'sticky', top: '20px' }}>
+            <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px', position: 'sticky', top: '20px' }}>
               <h3 style={{ margin: '0 0 14px', fontSize: '16px' }}>{t('spa.selectedCandidateBundle', 'Selected Candidate')}</h3>
 
               {selectedCandidate ? (

@@ -246,11 +246,11 @@ export const MySpaSessions: React.FC = () => {
                   className="spa-session-card"
                   id={`spa-session-${session.spaSessionId}`}
                   style={{
-                    backgroundColor: '#fff',
+                    backgroundColor: 'var(--surface)',
                     borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--border-subtle)',
                     padding: '20px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    boxShadow: 'var(--shadow-card)',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
