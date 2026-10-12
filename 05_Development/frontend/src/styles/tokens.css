@@ -11,8 +11,9 @@
   initial-value: 0deg;
 }
 
-:root {
-  /* Brand & Core Palette (DESIGN.md §3.1) */
+:root,
+[data-theme="light"] {
+  /* Brand & Core Palette (DESIGN.md §3.1) — Light Theme (Default) */
   --bg-canvas: #faf9f6;
   --bg-soft: #f5f3ef;
   --surface: #ffffff;
@@ -29,6 +30,10 @@
   --accent-olive: #6d7466;
   --accent-sand: #d8c7ae;
   --accent-sand-soft: #f2ede5;
+
+  /* Surfaces & Overlays */
+  --navbar-bg: rgba(250, 249, 246, 0.96);
+  --drawer-bg: rgba(250, 249, 246, 0.98);
   
   /* Status Colors */
   --success: #4e7259;
@@ -40,6 +45,43 @@
   --info: #527086;
   --info-bg: #eef4f8;
   --overlay: rgba(0, 0, 0, 0.4);
+
+  /* Semantic Alert Surfaces & Text */
+  --surface-warning: #fdf6ec;
+  --border-warning: #eed6b3;
+  --text-warning: #8d5b1e;
+  --surface-danger: #fcf0ef;
+  --border-danger: #f1c3be;
+  --text-danger: #8a342c;
+  --surface-success: #edf4ef;
+  --border-success: #bfdcce;
+  --text-success: #375941;
+  --surface-info: #eef4f8;
+  --border-info: #c0d8ea;
+  --text-info: #3d596e;
+
+  /* Semantic Layered Surfaces */
+  --surface-elevated: #ffffff;
+  --surface-muted: #f5f3ef;
+  --surface-interactive: #f0ede6;
+
+  /* Controls */
+  --control-bg: #ffffff;
+  --control-hover: #f5f3ef;
+  --control-active: #ece9e2;
+  --control-border: #e5e2dc;
+  --control-height: 36px;
+  --focus-ring: rgba(79, 90, 80, 0.25);
+
+  /* Component Aliases */
+  --bg-card: var(--surface);
+  --bg-surface: var(--surface);
+  --border-color: var(--border-subtle);
+  --border-medium: var(--border-strong);
+  --border-accent: var(--accent-sand);
+  --text-muted: var(--text-tertiary);
+  --text-inverse: #ffffff;
+  --accent-terracotta: #a24b43;
 
   /* Actor Badge / Conventional Indicator Colors (DESIGN.md §3.2) */
   --actor-public: #e0e0e0;
@@ -55,6 +97,12 @@
   --actor-manager-text: #004d40;
   --actor-admin: #bbdefb;
   --actor-admin-text: #0d47a1;
+
+  /* Cursor Bead Colors */
+  --cursor-bead-1: #e3d2b8;
+  --cursor-bead-2: #6f7f72;
+  --cursor-bead-3: rgba(191, 160, 122, 0.45);
+  --cursor-bead-3-border: rgba(191, 160, 122, 0.65);
 
   /* Typography */
   --font-display: 'Cormorant Garamond', Georgia, serif;
@@ -106,6 +154,7 @@
   --shadow-card-hover: 0 8px 28px rgba(30, 30, 30, 0.09);
   --shadow-lift: 0 8px 24px rgba(43, 43, 43, 0.08);
   --shadow-lift-subtle: 0 4px 16px rgba(43, 43, 43, 0.05);
+  --shadow-story-active: 0 10px 30px rgba(30, 30, 30, 0.12), 0 3px 10px rgba(216, 199, 174, 0.28);
   --shadow-text-rest: 0 1px 2px rgba(24, 32, 26, 0.06);
   --shadow-text-hover: 0 2px 4px rgba(24, 32, 26, 0.28), 0 5px 12px rgba(24, 32, 26, 0.32);
   --shadow-text-hover-rich: 0 2.5px 4px rgba(24, 32, 26, 0.34), 0 6px 15px rgba(24, 32, 26, 0.38);
@@ -113,12 +162,294 @@
   --shadow-text-desc-rest: 0 1px 2px rgba(24, 32, 26, 0.04);
   --shadow-text-desc-hover: 0 1.5px 2.5px rgba(24, 32, 26, 0.30), 0 4px 9px rgba(24, 32, 26, 0.32);
   --shadow-text-desc-hover-rich: 0 2px 3.5px rgba(24, 32, 26, 0.34), 0 5px 11px rgba(24, 32, 26, 0.36);
+  --shadow-story-text-title: 0 1px 2px rgba(30, 30, 30, 0.22), 0 3px 7px rgba(30, 30, 30, 0.12);
+  --shadow-story-text-desc: 0 1px 2px rgba(30, 30, 30, 0.15), 0 2px 5px rgba(30, 30, 30, 0.07);
+  --shadow-story-text-number: 0 1px 2px rgba(30, 30, 30, 0.22), 0 3px 7px rgba(30, 30, 30, 0.12);
   --shadow-modal: 0 12px 40px rgba(30, 30, 30, 0.12);
   --shadow-drawer: -4px 0 24px rgba(30, 30, 30, 0.08);
+  --shadow-dropdown: 0 4px 16px rgba(30, 30, 30, 0.10);
 
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-lift: 260ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Dark Theme (Luxury Resort at Night — Warm Deep Charcoal, Sage & Sand)
+   ========================================================================== */
+[data-theme="dark"] {
+  --bg-canvas: #161815;
+  --bg-soft: #1e221d;
+  --surface: #242923;
+  --surface-alt: #2b312a;
+  --surface-elevated: #313830;
+  --surface-muted: #1e221d;
+  --surface-interactive: #363e35;
+  --border-subtle: #333a32;
+  --border-strong: #4a5448;
+  --border-accent: #7e9482;
+  
+  --text-primary: #f4f1ea;
+  --text-secondary: #aba79f;
+  --text-tertiary: #7d7972;
+  
+  /* Brand Accents */
+  --accent-forest: #7e9482;
+  --accent-forest-hover: #96ab9a;
+  --accent-olive: #9ea89a;
+  --accent-sand: #d8c7ae;
+  --accent-sand-soft: #2e2922;
+
+  /* Surfaces & Overlays */
+  --navbar-bg: rgba(22, 24, 21, 0.96);
+  --drawer-bg: rgba(22, 24, 21, 0.98);
+  --overlay: rgba(14, 15, 13, 0.75);
+
+  /* Status Colors */
+  --success: #6e9b7b;
+  --success-bg: #17261b;
+  --warning: #cfa061;
+  --warning-bg: #281e13;
+  --danger: #c46d65;
+  --danger-bg: #291717;
+  --info: #7294ab;
+  --info-bg: #17222a;
+
+  /* Semantic Alert Surfaces & Text */
+  --surface-warning: #281e13;
+  --border-warning: #543e23;
+  --text-warning: #e2b376;
+  --surface-danger: #291717;
+  --border-danger: #5a2c2a;
+  --text-danger: #df7e77;
+  --surface-success: #17261b;
+  --border-success: #2e4d36;
+  --text-success: #82b38f;
+  --surface-info: #17222a;
+  --border-info: #2c4455;
+  --text-info: #85a9c2;
+
+  /* Controls */
+  --control-bg: #1e221d;
+  --control-hover: #262c25;
+  --control-active: #2f362e;
+  --control-border: #3c443b;
+  --control-height: 36px;
+  --focus-ring: rgba(216, 199, 174, 0.35);
+
+  /* Component Aliases */
+  --bg-card: var(--surface);
+  --bg-surface: var(--surface);
+  --border-color: var(--border-subtle);
+  --border-medium: var(--border-strong);
+  --text-muted: var(--text-tertiary);
+  --text-inverse: #161815;
+  --accent-terracotta: #c46d65;
+
+  /* Actor Badges */
+  --actor-public: #2a2d29;
+  --actor-customer: #1f3622;
+  --actor-customer-text: #a5d6a7;
+  --actor-receptionist: #3b3416;
+  --actor-receptionist-text: #fff59d;
+  --actor-therapist: #2d233d;
+  --actor-therapist-text: #d1c4e9;
+  --actor-fb: #3b2a18;
+  --actor-fb-text: #ffe0b2;
+  --actor-manager: #183330;
+  --actor-manager-text: #80cbc4;
+  --actor-admin: #172b3e;
+  --actor-admin-text: #90caf9;
+
+  /* Cursor Bead Tokens */
+  --cursor-bead-1: #d8c7ae;
+  --cursor-bead-2: #7e9482;
+  --cursor-bead-3: rgba(216, 199, 174, 0.40);
+  --cursor-bead-3-border: rgba(216, 199, 174, 0.60);
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.40);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.50);
+  --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.65);
+  --shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.60);
+  --shadow-lift-subtle: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-story-active: 0 12px 34px rgba(0, 0, 0, 0.72), 0 0 16px rgba(216, 199, 174, 0.14);
+  --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.75);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.60);
+  --shadow-dropdown: 0 6px 20px rgba(0, 0, 0, 0.55);
+
+  /* Text Shadows (Calibrated for Dark Theme Readability on Image & Surface Hovers) */
+  --shadow-text-rest: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-text-hover: 0 2px 5px rgba(0, 0, 0, 0.70), 0 5px 14px rgba(0, 0, 0, 0.65);
+  --shadow-text-hover-rich: 0 2.5px 6px rgba(0, 0, 0, 0.75), 0 6px 16px rgba(0, 0, 0, 0.70);
+  --shadow-text-subtle: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-text-desc-rest: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-text-desc-hover: 0 1.5px 3.5px rgba(0, 0, 0, 0.65), 0 4px 10px rgba(0, 0, 0, 0.55);
+  --shadow-text-desc-hover-rich: 0 2px 4px rgba(0, 0, 0, 0.70), 0 5px 12px rgba(0, 0, 0, 0.60);
+  --shadow-story-text-title: 0 1px 3px rgba(0, 0, 0, 0.82), 0 3px 9px rgba(0, 0, 0, 0.52);
+  --shadow-story-text-desc: 0 1px 3px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.30);
+  --shadow-story-text-number: 0 1px 3px rgba(0, 0, 0, 0.82), 0 3px 9px rgba(0, 0, 0, 0.52);
+}
+
+/* ==========================================================================
+   Blush Theme (Soft Wellness / Spa Sanctuary — Warm Ivory-Rose & Dusty Rose)
+   ========================================================================== */
+[data-theme="blush"] {
+  --bg-canvas: #f8efea;
+  --bg-soft: #f1e2dc;
+  --surface: #fffdfc;
+  --surface-alt: #f6e8e2;
+  --surface-elevated: #ffffff;
+  --surface-muted: #efe0d9;
+  --surface-interactive: #ebdcd5;
+  --border-subtle: #e4d1cb;
+  --border-strong: #ceb5af;
+  --border-accent: #9b6b70;
+
+  --text-primary: #382c2d;
+  --text-secondary: #6b595c;
+  --text-tertiary: #968386;
+
+  /* Brand Accents */
+  --accent-forest: #9b6b70;
+  --accent-forest-hover: #82575c;
+  --accent-olive: #8a686e;
+  --accent-sand: #c9a27e;
+  --accent-sand-soft: #f5e6de;
+
+  /* Surfaces & Overlays */
+  --navbar-bg: rgba(248, 239, 234, 0.96);
+  --drawer-bg: rgba(248, 239, 234, 0.98);
+  --overlay: rgba(56, 44, 45, 0.45);
+
+  /* Status Colors */
+  --success: #4e785b;
+  --success-bg: #ecf4ee;
+  --warning: #b37d42;
+  --warning-bg: #fbf3e8;
+  --danger: #a8494b;
+  --danger-bg: #faebec;
+  --info: #567287;
+  --info-bg: #eef3f7;
+
+  /* Semantic Alert Surfaces & Text */
+  --surface-warning: #fbf3e8;
+  --border-warning: #edd3b4;
+  --text-warning: #946124;
+  --surface-danger: #faebec;
+  --border-danger: #edbcbe;
+  --text-danger: #96383b;
+  --surface-success: #ecf4ee;
+  --border-success: #badbbe;
+  --text-success: #3d6948;
+  --surface-info: #eef3f7;
+  --border-info: #bed4e5;
+  --text-info: #40627b;
+
+  /* Controls */
+  --control-bg: #fffdfc;
+  --control-hover: #f7ede8;
+  --control-active: #f0dfd8;
+  --control-border: #e4d1cb;
+  --control-height: 36px;
+  --focus-ring: rgba(155, 107, 112, 0.35);
+
+  /* Component Aliases */
+  --bg-card: var(--surface);
+  --bg-surface: var(--surface);
+  --border-color: var(--border-subtle);
+  --border-medium: var(--border-strong);
+  --text-muted: var(--text-tertiary);
+  --text-inverse: #ffffff;
+  --accent-terracotta: #9b6b70;
+
+  /* Actor Badges */
+  --actor-public: #eee4e2;
+  --actor-customer: #e8dfdf;
+  --actor-customer-text: #4e383b;
+  --actor-receptionist: #faeedb;
+  --actor-receptionist-text: #6b522d;
+  --actor-therapist: #ede1eb;
+  --actor-therapist-text: #53364f;
+  --actor-fb: #fbe6db;
+  --actor-fb-text: #6e3d2a;
+  --actor-manager: #e0ece7;
+  --actor-manager-text: #24493e;
+  --actor-admin: #e2e8f0;
+  --actor-admin-text: #2c425d;
+
+  /* Cursor Bead Tokens */
+  --cursor-bead-1: #c9a27e;
+  --cursor-bead-2: #9b6b70;
+  --cursor-bead-3: rgba(201, 162, 126, 0.45);
+  --cursor-bead-3-border: rgba(201, 162, 126, 0.65);
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(63, 52, 53, 0.04);
+  --shadow-card: 0 4px 20px rgba(63, 52, 53, 0.06);
+  --shadow-card-hover: 0 8px 28px rgba(63, 52, 53, 0.09);
+  --shadow-lift: 0 8px 24px rgba(63, 52, 53, 0.08);
+  --shadow-lift-subtle: 0 4px 16px rgba(63, 52, 53, 0.05);
+  --shadow-story-active: 0 10px 30px rgba(63, 52, 53, 0.14), 0 3px 12px rgba(216, 199, 174, 0.28);
+  --shadow-modal: 0 12px 40px rgba(63, 52, 53, 0.12);
+  --shadow-drawer: -4px 0 24px rgba(63, 52, 53, 0.08);
+  --shadow-dropdown: 0 4px 16px rgba(63, 52, 53, 0.08);
+
+  /* Text Shadows (Calibrated for Blush Theme Warmth and Readability) */
+  --shadow-text-rest: 0 1px 2px rgba(56, 44, 45, 0.08);
+  --shadow-text-hover: 0 2px 4px rgba(56, 44, 45, 0.22), 0 5px 12px rgba(56, 44, 45, 0.24);
+  --shadow-text-hover-rich: 0 2.5px 4px rgba(56, 44, 45, 0.26), 0 6px 14px rgba(56, 44, 45, 0.28);
+  --shadow-text-subtle: 0 1.5px 3px rgba(56, 44, 45, 0.10);
+  --shadow-text-desc-rest: 0 1px 2px rgba(56, 44, 45, 0.05);
+  --shadow-text-desc-hover: 0 1.5px 2.5px rgba(56, 44, 45, 0.20), 0 4px 9px rgba(56, 44, 45, 0.22);
+  --shadow-text-desc-hover-rich: 0 2px 3.5px rgba(56, 44, 45, 0.22), 0 5px 10px rgba(56, 44, 45, 0.24);
+  --shadow-story-text-title: 0 1px 2px rgba(63, 52, 53, 0.24), 0 3px 7px rgba(63, 52, 53, 0.12);
+  --shadow-story-text-desc: 0 1px 2px rgba(63, 52, 53, 0.16), 0 2px 5px rgba(63, 52, 53, 0.08);
+  --shadow-story-text-number: 0 1px 2px rgba(63, 52, 53, 0.24), 0 3px 7px rgba(63, 52, 53, 0.12);
+}
+
+/* ==========================================================================
+   Controlled Theme Transitions (150–250ms)
+   ========================================================================== */
+body,
+header,
+nav,
+footer,
+aside,
+main,
+section,
+.hsw-public-navbar,
+.hsw-customer-navbar,
+.hsw-operational-topbar,
+.hsw-sidebar,
+.surface-card,
+.surface-soft,
+.soft-card,
+.soft-control,
+.soft-option,
+.customer-booking-card,
+.hsw-card,
+.ops-card,
+.ops-table,
+.hsw-btn,
+.hsw-filter-input,
+.hsw-filter-select,
+.hsw-modal-box,
+.hsw-customer-user-badge,
+.hsw-profile-btn,
+.hsw-nav-dropdown,
+.hsw-nav-dropdown-item,
+.hsw-lang-trigger,
+.hsw-lang-dropdown,
+.hsw-theme-trigger,
+.hsw-theme-dropdown,
+.hsw-cursor-toggle,
+.hsw-input,
+.hsw-select,
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
