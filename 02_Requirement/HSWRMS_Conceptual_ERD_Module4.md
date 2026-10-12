@@ -59,7 +59,7 @@ Mô hình ERD Module 4 bao gồm **07 Thực thể Cốt lõi (Core Entities)** 
 |                                | (1:N)                     | (1:N)                |
 |                                v                           v                      |
 |                      +-------------------+       +-------------------+            |
-|                      |INGREDIENT_USAGE_LOG|      | MENU_ITEM_RECIPE  |            |
+|                      |INGREDIENT_USAGE_LOG|      |MENU_ITEM_INGREDIENT|           |
 |                      +---------+---------+       +---------+---------+            |
 |                                ^                           |                      |
 |                                | (N:1)                     | (N:1)                |
@@ -108,7 +108,6 @@ Mô hình ERD Module 4 bao gồm **07 Thực thể Cốt lõi (Core Entities)** 
 | **`Quantity`** | `INT` | NOT NULL (>=1) | Số lượng suất ăn. |
 | **`UnitPrice`** | `DECIMAL(12,2)` | NOT NULL | Đơn giá món ăn tại thời điểm đặt (0 VND nếu bao gồm trong gói). |
 | **`Subtotal`** | `DECIMAL(12,2)` | NOT NULL | Thành tiền = `Quantity * UnitPrice`. |
-| **`AllergyWarning`** | `TEXT` | NULL | **[BR-03/BR-07]** Chuỗi cảnh báo dị ứng tự động tạo khi `FoodAllergies` khớp với `MENU_ITEM.AllergenTags`. |
 | **`PreparationStatus`** | `ENUM` | NOT NULL | Trạng thái chế biến: `'PENDING'`, `'PREPARING'`, `'READY'`, `'DELIVERED'`. |
 | **`Notes`** | `VARCHAR(255)`| NULL | Yêu cầu chế biến riêng cho từng món. |
 
@@ -167,18 +166,17 @@ Mô hình ERD Module 4 bao gồm **07 Thực thể Cốt lõi (Core Entities)** 
 
 ---
 
-#### 6. `MENU_ITEM_RECIPE` (Công Thức Món Ăn / Định Mức Nguyên Liệu)
+#### 6. `MENU_ITEM_INGREDIENT` (Công Thức Món Ăn / Định Mức Nguyên Liệu)
 - **Mục đích:** Quy định định mức tiêu hao nguyên liệu cho mỗi suất món ăn, phục vụ trừ kho và kiểm tra tồn kho.
-- **Bảng CSDL đề xuất:** `MENU_ITEM_RECIPE`
+- **Bảng CSDL:** `MENU_ITEM_INGREDIENT`, quan hệ M:N giữa `MENU_ITEM` và `INGREDIENT`.
+- **Tính nhu cầu:** `quantity_per_serving × ordered_servings`.
 
 | Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
 | :--- | :--- | :--- | :--- |
-| **`RecipeID`** | `INT` | **PK**, Auto Inc | Định danh dòng công thức. |
-| **`MenuItemID`** | `INT` | **FK**, NOT NULL | Món ăn áp dụng công thức (`MENU_ITEM`). |
-| **`IngredientID`** | `INT` | **FK**, NOT NULL | Nguyên liệu thành phần (`INGREDIENT`). |
-| **`RequiredQuantity`** | `DECIMAL(10,2)` | NOT NULL | Số lượng nguyên liệu cần cho 01 suất ăn. |
+| **`MenuItemID`** | `INT` | **PK, FK**, NOT NULL | Món ăn áp dụng công thức (`MENU_ITEM`). |
+| **`IngredientID`** | `INT` | **PK, FK**, NOT NULL | Nguyên liệu thành phần (`INGREDIENT`). |
+| **`quantity_per_serving`** | `DECIMAL(18,3)` | NOT NULL, > 0 | Số lượng nguyên liệu cần cho 01 suất ăn. |
 | **`Unit`** | `VARCHAR(30)` | NOT NULL | Đơn vị tính định mức. |
-| **`IsMandatory`** | `BOOLEAN` | DEFAULT TRUE | `TRUE`: Thành phần bắt buộc; `FALSE`: Thành phần tùy chọn. |
 
 ---
 
@@ -223,26 +221,21 @@ Mô hình ERD Module 4 bao gồm **07 Thực thể Cốt lõi (Core Entities)** 
 | `ROOM_BOOKING` | `MEAL_ORDER` | 1 - N | `1 : 0..*` | Một đơn phòng lưu trú có thể có 0 hoặc nhiều đơn đặt bữa ăn. |
 | `MEAL_ORDER` | `MEAL_ORDER_LINE` | 1 - N | `1 : 1..*` | Một đơn đặt bữa ăn chứa 1 hoặc nhiều dòng món ăn chi tiết. |
 | `MENU_ITEM` | `MEAL_ORDER_LINE` | 1 - N | `1 : 0..*` | Một món ăn có thể xuất hiện trong 0 hoặc nhiều dòng đơn ăn. |
-| `MENU_ITEM` | `MENU_ITEM_RECIPE` | 1 - N | `1 : 1..*` | Một món ăn được định nghĩa bởi 1 hoặc nhiều định mức nguyên liệu. |
-| `INGREDIENT` | `MENU_ITEM_RECIPE` | 1 - N | `1 : 0..*` | Một loại nguyên liệu có thể dùng trong công thức của nhiều món ăn. |
+| `MENU_ITEM` | `MENU_ITEM_INGREDIENT` | 1 - N | `1 : 0..*` | Món ăn có thể dùng nhiều nguyên liệu; bridge lưu quantity per serving. |
+| `INGREDIENT` | `MENU_ITEM_INGREDIENT` | 1 - N | `1 : 0..*` | Nguyên liệu có thể dùng trong công thức của nhiều món ăn. |
 | `INGREDIENT` | `INGREDIENT_BATCH` | 1 - N | `1 : 0..*` | Một loại nguyên liệu được nhập về qua nhiều lô hàng khác nhau. |
 | `MEAL_ORDER_LINE` | `INGREDIENT_USAGE_LOG` | 1 - N | `1 : 0..*` | Chế biến một suất ăn ghi nhận trừ kho qua 1 hoặc nhiều nhật ký lô. |
 | `INGREDIENT_BATCH` | `INGREDIENT_USAGE_LOG` | 1 - N | `1 : 0..*` | Một lô nguyên liệu bị trừ dần qua nhiều nhật ký chế biến. |
 | `STAFF_ACCOUNT` | `INGREDIENT_USAGE_LOG` | 1 - N | `1 : 0..*` | Một Chef/F&B Staff thực hiện ghi nhận nhiều nhật ký xuất kho. |
-| `GUEST_HEALTH_PROFILE`| `MEAL_ORDER_LINE` | Tương tác Logic | `1 - - - *` | **[BR-03]** `FoodAllergies` sinh chuỗi `AllergyWarning` tự động. |
 | `MEAL_ORDER` | `FOLIO_CHARGE_ITEM` | Tương tác Logic | `1 - - - 0..1` | **[BR-04]** Đơn a-la-carte sinh tự động khoản phí `EXTRA_FB` vào Folio. |
 
 ---
 
 ## 5. QUY TẮC NGHIỆP VỤ & CƠ CHẾ RÀNG BUỘC (BUSINESS RULES ENFORCEMENT)
 
-### 5.1. BR-03 & BR-07: Tối Thiểu Hóa Dữ Liệu Sức Khỏe & Cảnh Báo Dị Ứng (RBAC Data Minimization)
-- **Quy tắc:** Bếp / F&B Staff chỉ có quyền xem dị ứng thực phẩm (`FoodAllergies`) và chế độ ăn kiêng (`DietaryPreferences`). Tất cả thông tin tiền sử bệnh lý (`MedicalConditions`) và hạn chế thể chất (`PhysicalLimitations`) đều bị **MASKED / MÃ HÓA KHÔNG CHO PHÉP TRUY CẬP**.
-- **Cơ chế thực thi trên ERD:**
-  - Hệ thống tự động so khớp chuỗi `GUEST_HEALTH_PROFILE.FoodAllergies` với `MENU_ITEM.AllergenTags` khi Khách hàng chọn món.
-  - Nếu có sự trùng lặp (ví dụ: Khách dị ứng `"PEANUT"`, món ăn chứa tag `"PEANUT"`), hệ thống sẽ:
-    1. Hiển thị cảnh báo trực quan cho Khách hàng trên giao diện đặt món.
-    2. Tự động ghi chép thông điệp cảnh báo vào thuộc tính `MEAL_ORDER_LINE.AllergyWarning` để Bếp nhận diện ngay lập tức trên Meal Prep Dashboard (UC17).
+### 5.1. BR-FNB-01 & BR-FNB-02: Lọc Menu Dị Ứng và Tối Thiểu Hóa Dữ Liệu
+- **Quy tắc:** Trước khi menu đến Customer, hệ thống phải ẩn mọi món có allergen trùng với dị ứng đã khai báo và lọc món theo chế độ ăn. API phải kiểm tra lại món gửi lên và từ chối món xung đột. Chef / F&B Staff chỉ được xem dị ứng và chế độ ăn cần thiết; `MedicalConditions` và `PhysicalLimitations` bị ẩn.
+- **Cơ chế thực thi:** Menu service lọc trước khi trả danh sách; meal-order service xác minh lại lựa chọn trước khi ghi dữ liệu. Dashboard bếp lấy projection dinh dưỡng tối thiểu từ Module 1; cảnh báo bếp không được lưu trên `MEAL_ORDER_LINE`.
 
 ### 5.2. BR-04 & BR-08: Tự Động Hạch Toán Phụ Thu A-la-carte Vào Folio (Folio Accounting)
 - **Quy tắc:**
@@ -253,7 +246,7 @@ Mô hình ERD Module 4 bao gồm **07 Thực thể Cốt lõi (Core Entities)** 
   - Phụ thu này sẽ được gộp tự động vào Hóa đơn thanh toán cuối cùng tại thời điểm Checkout (Module 5), chặn Checkout nếu chưa hoàn tất nghĩa vụ thanh toán (BR-09).
 
 ### 5.3. UC16: Tự Động Tính Toán Khả Năng Phục Vụ Của Thực Đơn (Batch Stock & Expiry Logic)
-- **Quy tắc:** Món ăn chỉ hiển thị ở trạng thái sẵn sàng (`MENU_ITEM.IsAvailable = TRUE`) khi tất cả các nguyên liệu bắt buộc (`IsMandatory = TRUE`) trong công thức `MENU_ITEM_RECIPE` còn tồn kho khả dụng (`RemainingQuantity > 0`) ở các lô chưa hết hạn (`ConditionStatus IN ('FRESH', 'GOOD', 'NEAR_EXPIRY')` và `ExpiryDate >= CURRENT_DATE`).
+- **Quy tắc:** Menu availability phải tính từ tồn lượng còn lại của các lô chưa hết hạn và có stock condition sử dụng được. Lô hết hạn, hold hoặc discarded không được tính là available.
 - **Cơ chế thực thi trên ERD:**
   - Khi Bếp nhập lô mới hoặc khi Bếp ghi nhận xuất kho (`INGREDIENT_USAGE_LOG`), hệ thống tự động chạy hàm recalculate lại cột `MENU_ITEM.IsAvailable`.
 
@@ -326,7 +319,6 @@ entity "MEAL_ORDER_LINE" as MEAL_ORDER_LINE <<Module4>> {
     * Quantity : INT
     * UnitPrice : DECIMAL(12,2)
     * Subtotal : DECIMAL(12,2)
-    AllergyWarning : TEXT <<BR-03 Auto Alert>>
     * PreparationStatus : ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED')
     Notes : VARCHAR(255)
 }
@@ -369,14 +361,11 @@ entity "INGREDIENT_BATCH" as INGREDIENT_BATCH <<Module4>> {
     SupplierName : VARCHAR(150)
 }
 
-entity "MENU_ITEM_RECIPE" as MENU_ITEM_RECIPE <<Module4>> {
-    * **RecipeID** : INT <<PK>>
-    --
-    * **MenuItemID** : INT <<FK>>
-    * **IngredientID** : INT <<FK>>
-    * RequiredQuantity : DECIMAL(10,2)
+entity "MENU_ITEM_INGREDIENT" as MENU_ITEM_INGREDIENT <<Module4>> {
+    * **MenuItemID** : INT <<PK, FK>>
+    * **IngredientID** : INT <<PK, FK>>
+    * quantity_per_serving : DECIMAL(18,3)
     * Unit : VARCHAR(30)
-    * IsMandatory : BOOLEAN
 }
 
 entity "INGREDIENT_USAGE_LOG" as INGREDIENT_USAGE_LOG <<Module4>> {
@@ -443,15 +432,14 @@ entity "FOLIO_CHARGE_ITEM" as FOLIO_CHARGE_ITEM <<Context>> {
 ROOM_BOOKING ||--o{ MEAL_ORDER : "1 : N (places / receives meal orders)"
 MEAL_ORDER ||--|{ MEAL_ORDER_LINE : "1 : N (contains order lines)"
 MENU_ITEM ||--o{ MEAL_ORDER_LINE : "1 : N (selected in)"
-MENU_ITEM ||--|{ MENU_ITEM_RECIPE : "1 : N (defined by)"
-INGREDIENT ||--o{ MENU_ITEM_RECIPE : "1 : N (used in recipe)"
+MENU_ITEM ||--o{ MENU_ITEM_INGREDIENT : "1 : N (recipe lines)"
+INGREDIENT ||--o{ MENU_ITEM_INGREDIENT : "1 : N (recipe lines)"
 INGREDIENT ||--o{ INGREDIENT_BATCH : "1 : N (received in batches)"
 MEAL_ORDER_LINE ||--o{ INGREDIENT_USAGE_LOG : "1 : N (consumes stock)"
 INGREDIENT_BATCH ||--o{ INGREDIENT_USAGE_LOG : "1 : N (deducted from)"
 STAFF_ACCOUNT ||--o{ INGREDIENT_USAGE_LOG : "1 : N (logs ingredient usage)"
 
 ' Business Logic & Data Flow Integrations (Dashed Lines)
-GUEST_HEALTH_PROFILE ..> MEAL_ORDER_LINE : "BR-03 / BR-07: FoodAllergies drives AllergyWarning"
 MEAL_ORDER ..> FOLIO_CHARGE_ITEM : "BR-04 / BR-08: IsALaCarte=TRUE auto-posts EXTRA_FB charge"
 INGREDIENT_BATCH ..> MENU_ITEM : "UC16: Expiry & Stock status recalculates IsAvailable"
 STAFF_ACCOUNT ..> MEAL_ORDER : "UC19: Chef / F&B Staff updates OrderStatus"

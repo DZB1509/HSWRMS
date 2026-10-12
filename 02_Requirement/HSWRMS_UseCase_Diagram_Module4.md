@@ -131,7 +131,7 @@ Module 4 chịu trách nhiệm quản lý toàn bộ chuỗi cung ứng ẩm th�
 1. Đầu bếp/Nhân viên F&B truy cập màn hình "Daily Meal Prep List / Meal Order Detail" trên F&B Dashboard.
 2. Hệ thống hiển thị danh sách các đơn ăn cần chế biến theo khung giờ.
 3. Hệ thống kích hoạt Use Case con `View Allergy & Dietary Alerts`.
-4. Hệ thống hiển thị nổi bật các thông điệp cảnh báo dị ứng thực phẩm (`MEAL_ORDER_LINE.AllergyWarning`) của từng khách hàng (tuân thủ **BR-03**).
+4. Hệ thống hiển thị dị ứng thực phẩm và chế độ ăn cần thiết từ projection tối thiểu của hồ sơ khách hàng; dữ liệu y tế khác bị ẩn (tuân thủ **BR-FNB-02**).
 5. Đầu bếp chuyển trạng thái đơn sang `PREPARING` và tiến hành chế biến món ăn.
 6. Khi hoàn tất chế biến, Đầu bếp cập nhật trạng thái đơn sang `READY` và hệ thống kích hoạt Use Case con `Log Ingredient Batch Usage`.
 7. Hệ thống tự động tính toán số lượng nguyên liệu tiêu hao theo định mức `MENU_ITEM_RECIPE`, trừ vào `RemainingQuantity` của `INGREDIENT_BATCH` tương ứng và lưu nhật ký `INGREDIENT_USAGE_LOG`.

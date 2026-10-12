@@ -78,7 +78,7 @@ BE --> UI : Notify: "Menu availability updated"
 
 note over Customer, HealthDB
   **UC17: Select Personalized Daily Meals**
-  BR-FNB-02: MENU_ITEM.AllergenTags ∩ GUEST_HEALTH_PROFILE.FoodAllergies → Filter/Flag
+  BR-FNB-01: MENU_ITEM.AllergenTags ∩ GUEST_HEALTH_PROFILE.FoodAllergies → Exclude from customer menu
   BR-FNB-03 (UC20): Only FoodAllergies & DietaryPreferences visible to F&B Staff
   MedicalConditions & PhysicalLimitations MASKED / HIDDEN
 end note
@@ -89,8 +89,8 @@ BE -> HealthDB : Fetch FoodAllergies & DietaryPreferences\n🔒 MASKED: MedicalC
 HealthDB --> BE : Return {FoodAllergies, DietaryPreferences}
 BE -> DB : SELECT MENU_ITEM WHERE IsAvailable = TRUE
 DB --> BE : Return available MENU_ITEM records
-BE -> BE : Cross-check AllergenTags vs FoodAllergies\n→ Tag conflicting items with ⚠ AllergyWarning
-BE --> UI : Return filtered menu:\n• Allergen-matched items: FLAGGED / BLOCKED\n• Dietary type filter applied (VEGAN, KETO, HALAL...)
+BE -> BE : Cross-check AllergenTags vs FoodAllergies\n→ Exclude every conflicting item
+BE --> UI : Return only available, profile-compatible items\n(Dietary type filter applied: VEGAN, KETO, HALAL...)
 
 Customer -> UI : Select meals for Breakfast, Lunch, Dinner
 Customer -> UI : Optionally add SpecialNotes
@@ -98,7 +98,7 @@ Customer -> UI : Confirm daily meal selection
 
 UI -> BE : POST: Submit meal selection
 BE -> DB : INSERT MEAL_ORDER\n(RoomBookingID, AccountID, OrderDate, MealType, IsALaCarte=FALSE)
-BE -> DB : INSERT MEAL_ORDER_LINE\n(MenuItemID, Quantity, UnitPrice=0, AllergyWarning)
+BE -> DB : INSERT MEAL_ORDER_LINE\n(MenuItemID, Quantity, UnitPrice=0)
 DB --> BE : OK - Meal order created
 BE --> UI : Show confirmation: "Your meals are pre-selected"
 UI --> Customer : Display "My Meal Plan" with selected items
@@ -113,8 +113,9 @@ end note
 Customer -> UI : Open "Extra A-la-carte Order" screen
 UI -> BE : GET: Load a-la-carte menu (all available extras with prices)
 BE -> DB : SELECT MENU_ITEM WHERE Price > 0 AND IsAvailable = TRUE
-DB --> BE : Return a-la-carte items with prices
-BE --> UI : Display a-la-carte catalog with prices
+DB --> BE : Return available a-la-carte items
+BE -> BE : Exclude items matching declared FoodAllergies
+BE --> UI : Display safe a-la-carte catalog with prices
 
 Customer -> UI : Select extra items & quantities
 UI -> BE : Subtotal preview = SUM(Quantity × UnitPrice)
@@ -123,7 +124,7 @@ BE --> UI : Confirm preview amount in VND
 Customer -> UI : Confirm order\n(Agree to post charge to Folio)
 UI -> BE : POST: Submit a-la-carte order
 BE -> DB : INSERT MEAL_ORDER\n(IsALaCarte=TRUE, TotalAmount=SUM)
-BE -> DB : INSERT MEAL_ORDER_LINE\n(Quantity, UnitPrice, AllergyWarning if applicable)
+BE -> DB : INSERT MEAL_ORDER_LINE\n(Quantity, UnitPrice)
 
 BE -> Folio : POST: Create FOLIO_CHARGE_ITEM\n(ChargeType='EXTRA_FB', Amount=TotalAmount,\nPaymentStatus='PENDING', MealOrderID)
 Folio --> BE : ChargeItemID confirmed
@@ -136,7 +137,7 @@ UI --> Customer : Show order confirmation with folio reference
 note over Chef, DB
   **UC19: Fulfill Meal Orders**
   **UC20: Enforce F&B Health-Data Minimization (RBAC)**
-  BR-FNB-03: Chef sees ONLY FoodAllergies in AllergyWarning field.
+  BR-FNB-02: Chef sees only the minimal FoodAllergies and DietaryPreferences projection.
   All MedicalConditions, PhysicalLimitations → STRICTLY HIDDEN.
 end note
 
@@ -146,9 +147,9 @@ BE -> DB : SELECT MEAL_ORDER JOIN MEAL_ORDER_LINE\nWHERE OrderDate = TODAY AND O
 DB --> BE : Return active meal orders with order lines
 
 note over BE
-  **RBAC Enforcement (BR-FNB-03 / UC20):**
+  **RBAC Enforcement (BR-FNB-02 / UC20):**
   Output includes ONLY:
-  ✅ AllergyWarning (food allergy flags)
+  ✅ FoodAllergies (food allergy flags)
   ✅ DietaryPreferences (VEGAN, HALAL, etc.)
   🔒 BLOCKED: MedicalConditions
   🔒 BLOCKED: PhysicalLimitations

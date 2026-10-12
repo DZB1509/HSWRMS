@@ -68,7 +68,6 @@ entity "MEAL_ORDER_LINE" as MEAL_ORDER_LINE <<Module4>> {
     * Quantity : INT
     * UnitPrice : DECIMAL(12,2)
     * Subtotal : DECIMAL(12,2)
-    AllergyWarning : TEXT <<BR-03 Auto Alert>>
     * PreparationStatus : ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED')
     Notes : VARCHAR(255)
 }
@@ -193,7 +192,6 @@ INGREDIENT_BATCH ||--o{ INGREDIENT_USAGE_LOG : "1 : N (deducted from)"
 STAFF_ACCOUNT ||--o{ INGREDIENT_USAGE_LOG : "1 : N (logs ingredient usage)"
 
 ' Business Rules & Data Flow Integrations (Dashed Lines)
-GUEST_HEALTH_PROFILE ..> MEAL_ORDER_LINE : "BR-03 / BR-07: FoodAllergies drives AllergyWarning"
 MEAL_ORDER ..> FOLIO_CHARGE_ITEM : "BR-04 / BR-08: IsALaCarte=TRUE auto-posts EXTRA_FB charge"
 INGREDIENT_BATCH ..> MENU_ITEM : "UC16: Expiry & Stock status recalculates IsAvailable"
 STAFF_ACCOUNT ..> MEAL_ORDER : "UC19: Chef / F&B Staff updates OrderStatus"

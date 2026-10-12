@@ -81,7 +81,7 @@ This document outlines the authoritative set of Business Rules (BR) governing th
 
 ### 3.4. Module 4: Dietary F&B Management (Core 2)
 - **BR-FNB-01 (Allergy-Safe Menu Filtering):**
-  - When a guest views the daily meal prep menu, items containing declared allergens (e.g., peanuts, shellfish, gluten, dairy) or conflicting with dietary regimes (e.g., non-vegan items for vegan profiles) must be either hidden or flagged with high-visibility red warning badges.
+  - Before a Customer sees a menu, the system must hide every item containing an allergen declared in that Customer's food profile. Allergen-conflicting items must not be selectable or orderable through the API. The menu must also be filtered according to the Customer's dietary preferences so only items compatible with those preferences are shown.
 - **BR-FNB-02 (Kitchen Display Masking):**
   - The Chef's Daily Meal Prep Dashboard must display: Villa Number, Guest First Name, Meal Selection, and **Specific Food Allergens only**.
   - The chef must NOT see any underlying medical diagnoses, therapies, or general health notes (Strict Data Minimization).
