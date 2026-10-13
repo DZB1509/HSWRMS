@@ -10,24 +10,55 @@ import { Button } from '../../components/common/Button';
 import { GoogleIcon, FacebookIcon } from '../../components/common/BrandIcons';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
+import { loginRequest } from '../../api/auth/authApi';
+import { setAuthToken } from '../../api/client/apiClient';
+import { AppApiError } from '../../api/errors/apiError';
+import type { Role } from '../../types/auth';
+
+const DASHBOARD_BY_ROLE: Record<Role, string> = {
+  customer: '/customer/dashboard',
+  receptionist: '/receptionist/dashboard',
+  therapist: '/therapist/dashboard',
+  fb_staff: '/fb/dashboard',
+  manager: '/manager/dashboard',
+  admin: '/admin/dashboard',
+};
 
 export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { loginAs } = useAuth();
+  const { loginAs, loginWithCredentials } = useAuth();
   const { showToast } = useToast();
 
   const [email, setEmail] = useState('eleanor.vance@example.com');
-  const [password, setPassword] = useState('••••••••');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const redirectUrl = searchParams.get('redirect') || '/customer/dashboard';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resolvePostLoginTarget = (resolvedRole: Role): string => {
+    if (searchParams.get('redirect')) return redirectUrl;
+    return DASHBOARD_BY_ROLE[resolvedRole];
+  };
+
+  const toUserMessage = (error: unknown): string => {
+    if (error instanceof AppApiError) {
+      if (error.code === 'EMAIL_NOT_VERIFIED') return t('auth.alerts.emailNotVerified');
+      if (error.code === 'ACCOUNT_NOT_ACTIVE') return t('auth.alerts.accountNotActive');
+      if (error.code === 'UNAUTHORIZED' || error.status === 401) return t('auth.alerts.invalidCredentials');
+      if (error.code === 'NETWORK_ERROR') return t('auth.alerts.networkError');
+      return error.message || t('auth.alerts.loginFailed');
+    }
+    return t('auth.alerts.loginFailed');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     const newErrors: Record<string, string> = {};
 
     if (!email.trim()) newErrors.email = t('auth.alerts.emailRequired');
@@ -38,14 +69,31 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    setErrors({});
+    setFormError(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      loginAs('customer');
+    try {
+      const response = await loginRequest({ email: email.trim(), password });
+      setAuthToken(response.data.token, rememberMe);
+      const resolvedRole = loginWithCredentials({
+        userId: response.data.userId,
+        email: response.data.email,
+        fullName: response.data.fullName,
+        roles: response.data.roles,
+        accountStatus: response.data.accountStatus,
+        tokenType: response.data.tokenType,
+        expiresInMs: response.data.expiresInMs,
+      });
       showToast(t('auth.alerts.loginSuccess'), 'success');
-      navigate(redirectUrl);
-    }, 600);
+      navigate(resolvePostLoginTarget(resolvedRole), { replace: true });
+    } catch (error) {
+      const message = toUserMessage(error);
+      setFormError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSimulatedSSO = (provider: 'Google' | 'Facebook') => {
@@ -73,7 +121,22 @@ export const LoginPage: React.FC = () => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }} aria-busy={isLoading}>
+        {formError ? (
+          <div
+            role="alert"
+            style={{
+              padding: 'var(--space-3)',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--danger-bg)',
+              color: 'var(--danger)',
+              fontSize: 'var(--text-sm)',
+              lineHeight: 1.5,
+            }}
+          >
+            {formError}
+          </div>
+        ) : null}
         <FormField label={t('auth.login.emailLabel')} required error={errors.email} id="login-email">
           <TextInput
             id="login-email"

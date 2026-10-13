@@ -143,6 +143,8 @@ export interface RetreatBooking {
 export interface CustomerContextType {
   profile: CustomerProfile;
   updateProfile: (updated: Partial<CustomerProfile>) => void;
+  refreshServerProfile: () => Promise<CustomerProfile | null>;
+  isProfileLoading: boolean;
   wellnessProfile: WellnessProfile;
   updateWellnessProfile: (updated: Partial<WellnessProfile>) => void;
   deletionRequest: HealthDataDeletionRequest | null;

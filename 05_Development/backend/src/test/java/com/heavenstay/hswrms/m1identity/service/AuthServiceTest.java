@@ -9,6 +9,8 @@ import static org.mockito.Mockito.*;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m1identity.dto.LoginRequest;
+import com.heavenstay.hswrms.m1identity.dto.LoginResponse;
 import com.heavenstay.hswrms.m1identity.dto.RegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
@@ -25,6 +27,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.domain.Limit;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.BadCredentialsException;
+import com.heavenstay.hswrms.security.JwtTokenProvider;
+import java.util.List;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -42,6 +47,7 @@ public class AuthServiceTest {
     @Mock private EmailOtpRepository emailOtpRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailDeliveryAdapter emailDeliveryAdapter;
+    @Mock private JwtTokenProvider jwtTokenProvider;
 
     @InjectMocks
     private AuthService authService;
@@ -254,4 +260,116 @@ public class AuthServiceTest {
         assertTrue(response.isEmailVerified());
         assertEquals("LOCKED", response.getAccountStatus());
         assertTrue(otp.isConsumed());
-    }}
+    }
+
+    @Test
+    void testVerifyEmail_LockedOtpLookup_RequestsAtMostOneRow() {
+        User user = pendingUser();
+        EmailOtp otp = liveOtp(user);
+        when(userRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(user));
+        when(emailOtpRepository.findLatestUnconsumedOtpForUpdate(eq(205), eq("EMAIL_VERIFICATION"), any())).thenReturn(Optional.of(otp));
+        when(passwordEncoder.matches("123456", "enc_123456")).thenReturn(true);
+
+        authService.verifyEmail(verifyRequest("jane@example.com", "123456"));
+
+        // Query-limit contract: the production call site must request at most one row.
+        ArgumentCaptor<Limit> limitCaptor = ArgumentCaptor.forClass(Limit.class);
+        verify(emailOtpRepository).findLatestUnconsumedOtpForUpdate(eq(205), eq("EMAIL_VERIFICATION"), limitCaptor.capture());
+        assertEquals(1, limitCaptor.getValue().max(), "Locked OTP lookup must request a maximum of one row (Limit.of(1))");
+    }
+
+    private LoginRequest loginRequest(String email, String password) {
+        LoginRequest r = new LoginRequest();
+        r.setEmail(email);
+        r.setPassword(password);
+        return r;
+    }
+
+    private User activeVerifiedUserWithCustomerRole() {
+        User u = new User("Jane Doe", "jane@example.com", "enc_securepass");
+        u.setUserId(205);
+        u.setAccountStatus("ACTIVE");
+        u.setEmailVerified(true);
+        Role role = new Role("Customer", "Canonical resort customer role");
+        role.setRoleId(1);
+        u.getUserRoles().add(new UserRole(u, role));
+        return u;
+    }
+
+    @Test
+    void testLogin_Success_IssuesTokenWithNormalizedEmailAndRoles() {
+        User user = activeVerifiedUserWithCustomerRole();
+        when(userRepository.findByEmailWithRoles("jane@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("securepass", "enc_securepass")).thenReturn(true);
+        when(jwtTokenProvider.generateToken(eq(205), eq("jane@example.com"), eq("Jane Doe"), eq(List.of("Customer")))).thenReturn("signed.jwt.token");
+        when(jwtTokenProvider.getExpirationMs()).thenReturn(86400000L);
+
+        // Input deliberately messy: whitespace + mixed case must be normalized like register does.
+        LoginResponse response = authService.login(loginRequest("  Jane@Example.COM  ", "securepass"));
+
+        assertNotNull(response);
+        assertEquals("signed.jwt.token", response.getToken());
+        assertEquals("Bearer", response.getTokenType());
+        assertEquals(86400000L, response.getExpiresInMs());
+        assertEquals(205, response.getUserId());
+        assertEquals("jane@example.com", response.getEmail());
+        assertEquals("Jane Doe", response.getFullName());
+        assertEquals(List.of("Customer"), response.getRoles());
+        assertEquals("ACTIVE", response.getAccountStatus());
+        verify(jwtTokenProvider).generateToken(eq(205), eq("jane@example.com"), eq("Jane Doe"), eq(List.of("Customer")));
+    }
+
+    @Test
+    void testLogin_UnknownEmail_ThrowsSameGenericBadCredentials() {
+        when(userRepository.findByEmailWithRoles("ghost@example.com")).thenReturn(Optional.empty());
+
+        BadCredentialsException ex = assertThrows(BadCredentialsException.class,
+                () -> authService.login(loginRequest("Ghost@Example.com", "whatever")));
+
+        assertEquals("Invalid email or password.", ex.getMessage());
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verifyNoInteractions(jwtTokenProvider);
+    }
+
+    @Test
+    void testLogin_WrongPassword_ThrowsSameGenericBadCredentials() {
+        User user = activeVerifiedUserWithCustomerRole();
+        when(userRepository.findByEmailWithRoles("jane@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong-password", "enc_securepass")).thenReturn(false);
+
+        BadCredentialsException ex = assertThrows(BadCredentialsException.class,
+                () -> authService.login(loginRequest("jane@example.com", "wrong-password")));
+
+        assertEquals("Invalid email or password.", ex.getMessage());
+        verifyNoInteractions(jwtTokenProvider);
+    }
+
+    @Test
+    void testLogin_CorrectPasswordUnverifiedEmail_ThrowsEmailNotVerified() {
+        User user = activeVerifiedUserWithCustomerRole();
+        user.setEmailVerified(false);
+        user.setAccountStatus("PENDING");
+        when(userRepository.findByEmailWithRoles("jane@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("securepass", "enc_securepass")).thenReturn(true);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> authService.login(loginRequest("jane@example.com", "securepass")));
+
+        assertEquals("EMAIL_NOT_VERIFIED", ex.getErrorCode());
+        verifyNoInteractions(jwtTokenProvider);
+    }
+
+    @Test
+    void testLogin_CorrectPasswordNonActiveAccount_ThrowsAccountNotActive() {
+        User user = activeVerifiedUserWithCustomerRole();
+        user.setAccountStatus("LOCKED");
+        when(userRepository.findByEmailWithRoles("jane@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("securepass", "enc_securepass")).thenReturn(true);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> authService.login(loginRequest("jane@example.com", "securepass")));
+
+        assertEquals("ACCOUNT_NOT_ACTIVE", ex.getErrorCode());
+        verifyNoInteractions(jwtTokenProvider);
+    }
+}

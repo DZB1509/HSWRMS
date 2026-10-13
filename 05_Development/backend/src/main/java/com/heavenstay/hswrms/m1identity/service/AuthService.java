@@ -3,13 +3,17 @@ package com.heavenstay.hswrms.m1identity.service;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m1identity.dto.LoginRequest;
+import com.heavenstay.hswrms.m1identity.dto.LoginResponse;
 import com.heavenstay.hswrms.m1identity.dto.RegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailResponse;
 import com.heavenstay.hswrms.m1identity.entity.*;
 import com.heavenstay.hswrms.m1identity.repository.*;
+import com.heavenstay.hswrms.security.JwtTokenProvider;
 import org.springframework.data.domain.Limit;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 public class AuthService {
@@ -28,6 +34,7 @@ public class AuthService {
     private final EmailOtpRepository emailOtpRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailDeliveryAdapter emailDeliveryAdapter;
+    private final JwtTokenProvider jwtTokenProvider;
 
     private static final String EMAIL_VERIFICATION_PURPOSE = "EMAIL_VERIFICATION";
     private static final int MAX_OTP_ATTEMPTS = 5;
@@ -37,7 +44,7 @@ public class AuthService {
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        UserRoleRepository userRoleRepository, CustomerProfileRepository customerProfileRepository,
                        EmailOtpRepository emailOtpRepository, PasswordEncoder passwordEncoder,
-                       EmailDeliveryAdapter emailDeliveryAdapter) {
+                       EmailDeliveryAdapter emailDeliveryAdapter, JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
@@ -45,6 +52,7 @@ public class AuthService {
         this.emailOtpRepository = emailOtpRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailDeliveryAdapter = emailDeliveryAdapter;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Transactional
@@ -89,6 +97,48 @@ public class AuthService {
 
         return new RegisterResponse(user.getUserId(), user.getEmail(), "Registration successful. OTP dispatched.");
     }
+    /**
+     * Email/password login issuing a JWT on success.
+     * Contract: unknown email and wrong password both yield the same generic
+     * BadCredentialsException (mapped by GlobalExceptionHandler to 401 UNAUTHORIZED).
+     * Correct password but unverified email -> 400 EMAIL_NOT_VERIFIED.
+     * Correct password but non-ACTIVE account -> 400 ACCOUNT_NOT_ACTIVE.
+     */
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+
+        User user = userRepository.findByEmailWithRoles(email)
+                .orElseThrow(() -> new BadCredentialsException("Invalid email or password."));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException("Invalid email or password.");
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new BusinessRuleException("EMAIL_NOT_VERIFIED",
+                    "Email address has not been verified. Please verify your email before logging in.");
+        }
+
+        if (!"ACTIVE".equals(user.getAccountStatus())) {
+            throw new BusinessRuleException("ACCOUNT_NOT_ACTIVE",
+                    "Account is not active. Please contact resort support.");
+        }
+
+        List<String> roles = user.getUserRoles().stream()
+                .map(UserRole::getRole)
+                .filter(Objects::nonNull)
+                .map(Role::getRoleName)
+                .filter(Objects::nonNull)
+                .toList();
+
+        String token = jwtTokenProvider.generateToken(
+                user.getUserId(), user.getEmail(), user.getFullName(), roles);
+
+        return new LoginResponse(token, "Bearer", jwtTokenProvider.getExpirationMs(),
+                user.getUserId(), user.getEmail(), user.getFullName(), roles, user.getAccountStatus());
+    }
+
     @Transactional(noRollbackFor = BusinessRuleException.class)
     public VerifyEmailResponse verifyEmail(VerifyEmailRequest request) {
         String email = request.getEmail().trim().toLowerCase();

@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.m1identity.controller;
 
 import com.heavenstay.hswrms.common.api.ApiResponse;
+import com.heavenstay.hswrms.m1identity.dto.LoginRequest;
+import com.heavenstay.hswrms.m1identity.dto.LoginResponse;
 import com.heavenstay.hswrms.m1identity.dto.RegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
@@ -32,5 +34,11 @@ public class AuthController {
     public ResponseEntity<ApiResponse<VerifyEmailResponse>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         VerifyEmailResponse response = authService.verifyEmail(request);
         return ResponseEntity.ok(ApiResponse.ok("Email verified successfully.", response));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.ok("Login successful.", response));
     }
 }

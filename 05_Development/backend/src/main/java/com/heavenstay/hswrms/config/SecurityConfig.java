@@ -56,6 +56,7 @@ public class SecurityConfig {
                         // CHANGED: Narrowed from wildcard to exact public registration endpoint
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/verify-email").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         
                         .requestMatchers("/api/v1/packages/**").permitAll()
                         .anyRequest().authenticated()
