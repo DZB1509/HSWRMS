@@ -21,8 +21,10 @@ public class MealOrderMapper {
                     menuItem == null ? "Menu item unavailable" : menuItem.getItemName(),
                     line.getQuantity(), line.getUnitPrice(), lineTotal, line.getPreparationStatus());
         }).toList();
-        BigDecimal subtotal = lines.stream().map(MealOrderLineResponse::lineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (MealOrderLineResponse line : lines) {
+            subtotal = subtotal.add(line.lineTotal());
+        }
         return new MealOrderResponse(order.getId(), order.getRetreatBookingId(), order.getOrderDate(),
                 order.getMealType(), order.getOrderType(), order.getOrderStatus(), order.getSpecialNotes(), order.getCreatedAt(),
                 subtotal, lines);
