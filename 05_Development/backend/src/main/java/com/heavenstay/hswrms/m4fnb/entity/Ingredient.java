@@ -18,17 +18,12 @@ public class Ingredient {
     @Column(name = "ingredient_name", nullable = false, length = 150)
     private String ingredientName;
 
-    @Column(name = "unit_of_measure", nullable = false, length = 30)
-    private String unitOfMeasure;
-
     protected Ingredient() { }
 
-    public Ingredient(String ingredientName, String unitOfMeasure) {
+    public Ingredient(String ingredientName) {
         this.ingredientName = ingredientName;
-        this.unitOfMeasure = unitOfMeasure;
     }
     public Integer getId() { return id; }
     public String getIngredientName() { return ingredientName; }
     public void setIngredientName(String ingredientName) { this.ingredientName = ingredientName; }
-    public String getUnitOfMeasure() { return unitOfMeasure; }
 }

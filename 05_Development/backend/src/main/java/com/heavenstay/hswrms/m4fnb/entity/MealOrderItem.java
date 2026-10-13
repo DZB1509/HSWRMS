@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import java.math.BigDecimal;
 
 @Entity
@@ -28,6 +30,10 @@ public class MealOrderItem {
     @Column(name = "unit_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitPrice;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preparation_status", nullable = false, length = 20)
+    private MealOrderItemPreparationStatus preparationStatus = MealOrderItemPreparationStatus.PENDING;
+
     protected MealOrderItem() { }
 
     public MealOrderItem(Integer mealOrderId, Integer menuItemId, Integer quantity, BigDecimal unitPrice) {
@@ -37,9 +43,20 @@ public class MealOrderItem {
         this.unitPrice = unitPrice;
     }
 
+    public MealOrderItem(Integer mealOrderId, Integer menuItemId, Integer quantity, BigDecimal unitPrice,
+                         MealOrderItemPreparationStatus preparationStatus) {
+        this(mealOrderId, menuItemId, quantity, unitPrice);
+        this.preparationStatus = preparationStatus;
+    }
+
     public Integer getId() { return id; }
     public Integer getMealOrderId() { return mealOrderId; }
     public Integer getMenuItemId() { return menuItemId; }
     public Integer getQuantity() { return quantity; }
     public BigDecimal getUnitPrice() { return unitPrice; }
+    public String getPreparationStatus() { return preparationStatus.name(); }
+    public MealOrderItemPreparationStatus getPreparationStatusValue() { return preparationStatus; }
+    public void setPreparationStatus(MealOrderItemPreparationStatus preparationStatus) {
+        this.preparationStatus = preparationStatus;
+    }
 }

@@ -19,7 +19,7 @@ public class MenuItemIngredient {
     @Column(name = "ingredient_id", nullable = false)
     private Integer ingredientId;
 
-    @Column(name = "required_quantity", nullable = false, precision = 18, scale = 3)
+    @Column(name = "required_quantity", precision = 18, scale = 3)
     private BigDecimal requiredQuantity;
 
     protected MenuItemIngredient() {
