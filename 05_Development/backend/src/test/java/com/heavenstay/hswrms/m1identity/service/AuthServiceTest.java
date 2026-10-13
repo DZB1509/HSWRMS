@@ -44,6 +44,7 @@ public class AuthServiceTest {
     @Mock private RoleRepository roleRepository;
     @Mock private UserRoleRepository userRoleRepository;
     @Mock private CustomerProfileRepository customerProfileRepository;
+    @Mock private ConsentRecordRepository consentRecordRepository;
     @Mock private EmailOtpRepository emailOtpRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailDeliveryAdapter emailDeliveryAdapter;
@@ -112,6 +113,38 @@ public class AuthServiceTest {
         // 3. Verify association saves
         verify(userRoleRepository).save(any(UserRole.class));
         verify(customerProfileRepository).save(any(CustomerProfile.class));
+    }
+
+    @Test
+    void testRegister_Success_PersistsToServiceConsentRecord() {
+        when(userRepository.existsByEmail("jane@example.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenAnswer(invocation -> "enc_" + invocation.getArgument(0));
+
+        Role role = new Role("Customer", "Desc");
+        role.setRoleId(1);
+        when(roleRepository.findByRoleNameIgnoreCase("Customer")).thenReturn(Optional.of(role));
+
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setUserId(205);
+            return u;
+        });
+
+        authService.registerGuest(validRequest);
+
+        // Registration must persist a Terms-of-Service consent record (R9-B).
+        ArgumentCaptor<ConsentRecord> consentCaptor = ArgumentCaptor.forClass(ConsentRecord.class);
+        verify(consentRecordRepository).save(consentCaptor.capture());
+        ConsentRecord savedConsent = consentCaptor.getValue();
+
+        assertEquals("TO_SERVICE", savedConsent.getConsentType());
+        assertEquals("v1.0", savedConsent.getPolicyVersion());
+        assertEquals("GRANTED", savedConsent.getConsentStatus());
+
+        // The consent must reference the exact user created by this registration.
+        assertNotNull(savedConsent.getUser());
+        assertEquals(205, savedConsent.getUser().getUserId());
+        assertEquals("jane@example.com", savedConsent.getUser().getEmail());
     }
 
     @Test

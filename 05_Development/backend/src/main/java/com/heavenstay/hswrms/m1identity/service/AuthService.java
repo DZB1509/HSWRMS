@@ -31,6 +31,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final CustomerProfileRepository customerProfileRepository;
+    private final ConsentRecordRepository consentRecordRepository;
     private final EmailOtpRepository emailOtpRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailDeliveryAdapter emailDeliveryAdapter;
@@ -39,16 +40,22 @@ public class AuthService {
     private static final String EMAIL_VERIFICATION_PURPOSE = "EMAIL_VERIFICATION";
     private static final int MAX_OTP_ATTEMPTS = 5;
 
+    /** Provisional ToS policy version persisted at registration (R9-B). */
+    static final String TOS_CONSENT_TYPE = "TO_SERVICE";
+    static final String TOS_POLICY_VERSION = "v1.0";
+
     private final SecureRandom secureRandom = new SecureRandom();
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        UserRoleRepository userRoleRepository, CustomerProfileRepository customerProfileRepository,
+                       ConsentRecordRepository consentRecordRepository,
                        EmailOtpRepository emailOtpRepository, PasswordEncoder passwordEncoder,
                        EmailDeliveryAdapter emailDeliveryAdapter, JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.customerProfileRepository = customerProfileRepository;
+        this.consentRecordRepository = consentRecordRepository;
         this.emailOtpRepository = emailOtpRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailDeliveryAdapter = emailDeliveryAdapter;
@@ -84,7 +91,11 @@ public class AuthService {
         CustomerProfile profile = new CustomerProfile(user);
         customerProfileRepository.save(profile);
 
-        // 4. Generate & Store OTP Securely
+        // 4. Persist Terms-of-Service consent (R9-B: registration persists TO_SERVICE consent)
+        ConsentRecord tosConsent = new ConsentRecord(user, TOS_CONSENT_TYPE, TOS_POLICY_VERSION);
+        consentRecordRepository.save(tosConsent);
+
+        // 5. Generate & Store OTP Securely
         String rawOtp = String.format("%06d", secureRandom.nextInt(1000000));
         String otpHash = passwordEncoder.encode(rawOtp);
         Instant expiresAt = Instant.now().plus(10, ChronoUnit.MINUTES);
