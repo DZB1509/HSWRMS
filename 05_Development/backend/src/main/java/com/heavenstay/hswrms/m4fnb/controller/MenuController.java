@@ -53,13 +53,13 @@ public class MenuController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<MenuItemResponse>> createMenuItem(@Valid @RequestBody CreateMenuItemRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("MENU_ITEM_CREATED", menuService.createMenuItem(request)));
     }
 
     @PutMapping("/{menuItemId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<MenuItemResponse>> updateMenuItem(@PathVariable Integer menuItemId,
             @Valid @RequestBody CreateMenuItemRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("MENU_ITEM_UPDATED", menuService.updateMenuItem(menuItemId, request)));
@@ -72,7 +72,7 @@ public class MenuController {
     }
 
     @PutMapping("/{menuItemId}/recipe")
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<List<RecipeLineResponse>>> replaceRecipe(@PathVariable Integer menuItemId,
             @Valid @RequestBody ReplaceRecipeRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("RECIPE_UPDATED", menuService.replaceRecipe(menuItemId, request)));

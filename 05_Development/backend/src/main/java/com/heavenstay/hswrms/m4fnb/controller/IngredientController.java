@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/fnb")
-@PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+@PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
 public class IngredientController {
     private final IngredientService ingredientService;
     private final InventoryService inventoryService;
@@ -36,6 +36,7 @@ public class IngredientController {
     }
 
     @GetMapping("/ingredients")
+    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients() {
         return ResponseEntity.ok(ApiResponse.ok(ingredientService.listIngredients()));
     }
@@ -47,6 +48,7 @@ public class IngredientController {
     }
 
     @GetMapping("/inventory/batches")
+    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<IngredientBatchResponse>>> getBatches(
             @RequestParam(required = false) Integer ingredientId,
             @RequestParam(required = false) LocalDate asOfDate) {
