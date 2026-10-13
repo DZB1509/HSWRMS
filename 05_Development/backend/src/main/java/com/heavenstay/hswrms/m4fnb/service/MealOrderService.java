@@ -7,7 +7,6 @@ import com.heavenstay.hswrms.m4fnb.dto.request.CreateMealOrderLineRequest;
 import com.heavenstay.hswrms.m4fnb.dto.request.CreateMealOrderRequest;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderLineResponse;
-import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderLineResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderStatus;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderType;
@@ -33,7 +32,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -87,12 +85,14 @@ public class MealOrderService {
             CreateMealOrderRequest request) {
         MealOrder order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
-        if (order.getOrderTypeValue() != FnbOrderType.DAILY_MEAL || order.getOrderStatusValue() != FnbOrderStatus.PENDING) {
+        if (order.getOrderTypeValue() != FnbOrderType.DAILY_MEAL
+                || order.getOrderStatusValue() != FnbOrderStatus.PENDING) {
             throw new ConflictException("MEAL_SELECTION_LOCKED",
                     "Only pending daily meal selections can be changed.");
         }
         if (!order.getRetreatBookingId().equals(request.bookingId())
                 || !order.getOrderDate().equals(request.orderDate())
+                || order.getMealType() == null
                 || !order.getMealType().equalsIgnoreCase(request.mealType())) {
             throw new BusinessRuleException("MEAL_SELECTION_SCOPE_CHANGED",
                     "A selection update must keep the same booking, date, and meal period.");
@@ -108,10 +108,11 @@ public class MealOrderService {
         for (int index = 0; index < request.items().size(); index++) {
             CreateMealOrderLineRequest requestedLine = request.items().get(index);
             MenuItem menuItem = selectedItems.get(index);
-            replacementLines.add(new MealOrderItem(orderId, menuItem.getId(), requestedLine.quantity(), BigDecimal.ZERO));
+            replacementLines
+                    .add(new MealOrderItem(orderId, menuItem.getId(), requestedLine.quantity(), BigDecimal.ZERO));
         }
         List<MealOrderItem> savedLines = orderItemRepository.saveAll(replacementLines);
-        Map<Integer, MenuItem> itemMap = selectedItems.stream().collect(Collectors.toMap(MenuItem::getId, item -> item));
+        Map<Integer, MenuItem> itemMap = indexMenuItems(selectedItems);
         return mealOrderMapper.toResponse(order, savedLines, itemMap);
     }
 
@@ -137,7 +138,8 @@ public class MealOrderService {
                     ? orderRepository.saveAndFlush(unsavedOrder)
                     : orderRepository.save(unsavedOrder);
         } catch (DataIntegrityViolationException exception) {
-            if (orderType != FnbOrderType.DAILY_MEAL) throw exception;
+            if (orderType != FnbOrderType.DAILY_MEAL)
+                throw exception;
             throw new ConflictException("DAILY_MEAL_ALREADY_SELECTED",
                     "A daily meal selection already exists for this booking, date, and meal period.");
         }
@@ -149,7 +151,7 @@ public class MealOrderService {
             orderLines.add(new MealOrderItem(order.getId(), menuItem.getId(), requestedLine.quantity(), capturedPrice));
         }
         List<MealOrderItem> savedLines = orderItemRepository.saveAll(orderLines);
-        Map<Integer, MenuItem> itemMap = selectedItems.stream().collect(Collectors.toMap(MenuItem::getId, item -> item));
+        Map<Integer, MenuItem> itemMap = indexMenuItems(selectedItems);
         MealOrderResponse response = mealOrderMapper.toResponse(order, savedLines, itemMap);
         if (orderType == FnbOrderType.A_LA_CARTE) {
             eventPublisher.publishEvent(new AlaCarteOrderPlacedEvent(order.getId(), order.getRetreatBookingId(),
@@ -163,11 +165,15 @@ public class MealOrderService {
         Set<Integer> uniqueMenuIds = new HashSet<>();
         List<MenuItem> selectedItems = new ArrayList<>();
         for (CreateMealOrderLineRequest requestedLine : request.items()) {
-            if (!uniqueMenuIds.add(requestedLine.menuItemId())) {
+            Integer menuItemId = requestedLine.menuItemId();
+            if (menuItemId == null) {
+                throw new BusinessRuleException("INVALID_ORDER_ITEM", "Each order line must reference a menu item.");
+            }
+            if (!uniqueMenuIds.add(menuItemId)) {
                 throw new BusinessRuleException("DUPLICATE_ORDER_ITEM", "An order may include a menu item only once.");
             }
-            MenuItem menuItem = menuItemRepository.findById(requestedLine.menuItemId())
-                    .orElseThrow(() -> new ResourceNotFoundException("MenuItem", "id", requestedLine.menuItemId()));
+            MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                    .orElseThrow(() -> new ResourceNotFoundException("MenuItem", "id", menuItemId));
             if (menuService.conflictsWithFoodProfile(menuItem, profile)) {
                 throw new BusinessRuleException("PERSONALIZED_MENU_CONFLICT",
                         "The order contains a menu item excluded by the customer's allergy or dietary profile.");
@@ -200,7 +206,8 @@ public class MealOrderService {
     }
 
     public List<KitchenOrderResponse> listKitchenOrders(LocalDate orderDate) {
-        List<MealOrder> orders = orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtAsc(orderDate, "CANCELLED");
+        List<MealOrder> orders = orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtAsc(orderDate,
+                "CANCELLED");
         return mapKitchenOrders(orders);
     }
 
@@ -210,6 +217,9 @@ public class MealOrderService {
 
     @Transactional
     public KitchenOrderResponse updateStatus(Integer orderId, String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank()) {
+            throw new BusinessRuleException("INVALID_ORDER_STATUS", "Order status is required.");
+        }
         FnbOrderStatus requestedStatus;
         try {
             requestedStatus = FnbOrderStatus.valueOf(rawStatus.trim().toUpperCase());
@@ -219,7 +229,8 @@ public class MealOrderService {
         MealOrder order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
         FnbOrderStatus currentStatus = order.getOrderStatusValue();
-        if (currentStatus == requestedStatus) return mapKitchenOrders(List.of(order)).get(0);
+        if (currentStatus == requestedStatus)
+            return mapKitchenOrders(List.of(order)).get(0);
         if (!isAllowedTransition(currentStatus, requestedStatus)) {
             throw new ConflictException("INVALID_ORDER_TRANSITION",
                     "Order status cannot transition from " + currentStatus + " to " + requestedStatus + ".");
@@ -231,6 +242,9 @@ public class MealOrderService {
 
     @Transactional
     public KitchenOrderResponse updateItemPreparationStatus(Integer orderId, Integer orderLineId, String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank()) {
+            throw new BusinessRuleException("INVALID_PREPARATION_STATUS", "Preparation status is required.");
+        }
         MealOrderItemPreparationStatus requestedStatus;
         try {
             requestedStatus = MealOrderItemPreparationStatus.valueOf(rawStatus.trim().toUpperCase());
@@ -244,12 +258,16 @@ public class MealOrderService {
                 || order.getOrderStatusValue() == FnbOrderStatus.DELIVERED) {
             throw new ConflictException("ORDER_NOT_PREPARABLE", "Cancelled or delivered orders cannot be prepared.");
         }
+        if (orderLineId == null) {
+            throw new ResourceNotFoundException("MealOrderItem", "id", null);
+        }
         MealOrderItem orderLine = orderItemRepository.findById(orderLineId)
-                .filter(line -> line.getMealOrderId().equals(orderId))
+                .filter(line -> orderId.equals(line.getMealOrderId()))
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrderItem", "id", orderLineId));
 
         MealOrderItemPreparationStatus current = orderLine.getPreparationStatusValue();
-        if (current == requestedStatus) return mapKitchenOrders(List.of(order)).get(0);
+        if (current == requestedStatus)
+            return mapKitchenOrders(List.of(order)).get(0);
         boolean startPreparation = current == MealOrderItemPreparationStatus.PENDING
                 && requestedStatus == MealOrderItemPreparationStatus.PREPARING;
         boolean markReady = current == MealOrderItemPreparationStatus.PREPARING
@@ -261,14 +279,22 @@ public class MealOrderService {
 
         ensureKitchenDietaryProjection(order.getRetreatBookingId());
         if (markReady) {
-            // Deduction and line status update share this service transaction; retrying READY is idempotent.
+            // Deduction and line status update share this service transaction; retrying
+            // READY is idempotent.
             inventoryService.consumeForOrderItem(orderLine.getId(), LocalDate.now());
         }
         orderLine.setPreparationStatus(requestedStatus);
         orderItemRepository.save(orderLine);
 
         List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
-        if (orderLines.stream().allMatch(line -> line.getPreparationStatusValue() == MealOrderItemPreparationStatus.READY)) {
+        boolean allReady = !orderLines.isEmpty();
+        for (MealOrderItem line : orderLines) {
+            if (line.getPreparationStatusValue() != MealOrderItemPreparationStatus.READY) {
+                allReady = false;
+                break;
+            }
+        }
+        if (allReady) {
             order.setOrderStatus(FnbOrderStatus.READY);
         } else {
             order.setOrderStatus(FnbOrderStatus.PREPARING);
@@ -287,51 +313,108 @@ public class MealOrderService {
     }
 
     private MealOrder findOrder(Integer orderId) {
-        return orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
+        if (orderId == null) {
+            throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order ID is required.");
+        }
+        Integer safeOrderId = orderId;
+        return orderRepository.findById(safeOrderId)
+                .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", safeOrderId));
     }
 
     private List<MealOrderResponse> mapOrders(List<MealOrder> orders) {
-        if (orders.isEmpty()) return List.of();
-        List<Integer> orderIds = orders.stream().map(MealOrder::getId).toList();
+        if (orders.isEmpty())
+            return List.of();
+        List<Integer> orderIds = new ArrayList<>(orders.size());
+        for (MealOrder order : orders) {
+            Integer persistedOrderId = order.getId();
+            if (persistedOrderId == null) {
+                throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order must have a persisted ID.");
+            }
+            orderIds.add(persistedOrderId);
+        }
         List<MealOrderItem> lines = orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(orderIds);
-        Map<Integer, List<MealOrderItem>> linesByOrder = lines.stream()
-                .collect(Collectors.groupingBy(MealOrderItem::getMealOrderId, LinkedHashMap::new, Collectors.toList()));
+        Map<Integer, List<MealOrderItem>> linesByOrder = new LinkedHashMap<>();
+        for (MealOrderItem line : lines) {
+            Integer mealOrderId = line.getMealOrderId();
+            if (mealOrderId == null) {
+                throw new BusinessRuleException("INVALID_MEAL_ORDER_LINE", "Meal order line has no order ID.");
+            }
+            List<MealOrderItem> orderLines = linesByOrder.get(mealOrderId);
+            if (orderLines == null) {
+                orderLines = new ArrayList<>();
+                linesByOrder.put(mealOrderId, orderLines);
+            }
+            orderLines.add(line);
+        }
         Map<Integer, MenuItem> menuItems = loadMenuItems(lines);
-        return orders.stream().map(order -> mealOrderMapper.toResponse(order,
-                linesByOrder.getOrDefault(order.getId(), List.of()), menuItems)).toList();
+        List<MealOrderResponse> responses = new ArrayList<>(orders.size());
+        for (MealOrder order : orders) {
+            Integer persistedOrderId = order.getId();
+            if (persistedOrderId == null) {
+                throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order must have a persisted ID.");
+            }
+            responses.add(mealOrderMapper.toResponse(order,
+                    linesByOrder.getOrDefault(persistedOrderId, List.of()), menuItems));
+        }
+        return responses;
     }
 
     private List<KitchenOrderResponse> mapKitchenOrders(List<MealOrder> orders) {
-        if (orders.isEmpty()) return List.of();
+        if (orders.isEmpty())
+            return List.of();
         List<MealOrderResponse> baseOrders = mapOrders(orders);
-        BookingContextPort bookingPort = bookingContextPortProvider.getIfAvailable();
-        DietaryProfilePort dietaryPort = dietaryProfilePortProvider.getIfAvailable();
+        BookingContextPort bookingPort = requireBookingPort();
         List<KitchenOrderResponse> result = new ArrayList<>();
         for (MealOrderResponse order : baseOrders) {
-            BookingContextPort.FnbBookingContext booking = bookingPort == null ? null
-                    : bookingPort.getKitchenBookingContext(order.bookingId());
-            DietaryProfilePort.FoodProfileProjection profile = booking == null || dietaryPort == null ? null
-                    : dietaryPort.getFoodProfileForUser(booking.customerUserId());
-            List<KitchenOrderLineResponse> kitchenLines = order.items().stream()
-                    .map(line -> new KitchenOrderLineResponse(line.id(), line.menuItemId(), line.itemName(),
-                            line.quantity(), line.preparationStatus()))
-                    .toList();
+            BookingContextPort.FnbBookingContext booking = bookingPort.getKitchenBookingContext(order.bookingId());
+            if (booking == null || booking.customerUserId() == null) {
+                throw new BusinessRuleException("M2_KITCHEN_CONTEXT_UNAVAILABLE",
+                        "Kitchen order details require the minimal M2 booking context.");
+            }
+            DietaryProfilePort.FoodProfileProjection profile = requireFoodProfile(booking.customerUserId());
+            List<KitchenOrderLineResponse> kitchenLines = new ArrayList<>(order.items().size());
+            for (var line : order.items()) {
+                kitchenLines.add(new KitchenOrderLineResponse(line.id(), line.menuItemId(), line.itemName(),
+                        line.quantity(), line.preparationStatus()));
+            }
             result.add(new KitchenOrderResponse(order.id(), order.bookingId(),
-                    booking == null ? null : booking.guestFirstName(),
-                    booking == null ? null : booking.villaNumber(), order.orderDate(), order.mealType(),
-                    order.orderType(), order.status(), order.specialNotes(), profile != null,
-                    profile == null ? List.of() : profile.foodAllergies(),
-                    profile == null ? List.of() : profile.dietaryPreferences(), kitchenLines));
+                    booking.guestFirstName(), booking.villaNumber(), order.orderDate(), order.mealType(),
+                    order.orderType(), order.status(), order.specialNotes(), true,
+                    profile.foodAllergies(), profile.dietaryPreferences(), kitchenLines));
         }
         return result;
     }
 
     private Map<Integer, MenuItem> loadMenuItems(List<MealOrderItem> lines) {
         Map<Integer, MenuItem> result = new HashMap<>();
-        menuItemRepository.findAllById(lines.stream().map(MealOrderItem::getMenuItemId).distinct().toList())
-                .forEach(item -> result.put(item.getId(), item));
+        Set<Integer> menuItemIds = new HashSet<>();
+        for (MealOrderItem line : lines) {
+            Integer menuItemId = line.getMenuItemId();
+            if (menuItemId == null) {
+                throw new BusinessRuleException("INVALID_MEAL_ORDER_LINE", "Meal order line has no menu item ID.");
+            }
+            menuItemIds.add(menuItemId);
+        }
+        for (MenuItem item : menuItemRepository.findAllById(new ArrayList<>(menuItemIds))) {
+            Integer menuItemId = item.getId();
+            if (menuItemId == null) {
+                throw new BusinessRuleException("INVALID_MENU_ITEM_ID", "Menu item must have a persisted ID.");
+            }
+            result.put(menuItemId, item);
+        }
         return result;
+    }
+
+    private Map<Integer, MenuItem> indexMenuItems(List<MenuItem> items) {
+        Map<Integer, MenuItem> indexedItems = new HashMap<>();
+        for (MenuItem item : items) {
+            Integer menuItemId = item.getId();
+            if (menuItemId == null) {
+                throw new BusinessRuleException("INVALID_MENU_ITEM_ID", "Menu item must have a persisted ID.");
+            }
+            indexedItems.put(menuItemId, item);
+        }
+        return indexedItems;
     }
 
     private String normalizeNotes(String notes) {

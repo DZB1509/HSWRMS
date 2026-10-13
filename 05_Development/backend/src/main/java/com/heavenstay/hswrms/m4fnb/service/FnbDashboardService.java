@@ -1,5 +1,7 @@
 package com.heavenstay.hswrms.m4fnb.service;
 
+import com.heavenstay.hswrms.common.exception.BusinessRuleException;
+import com.heavenstay.hswrms.m4fnb.config.IngredientUnitRegistry;
 import com.heavenstay.hswrms.m4fnb.dto.response.FnbDashboardResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.IngredientDemandResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
@@ -19,6 +21,16 @@ import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// ============================================================================
+// [TRACEABILITY HEADER - ISO/IEC 25010 MAINTAINABILITY & TRACEABILITY STANDARD]
+// ----------------------------------------------------------------------------
+// Requirements Ref   : UC19 / UC20 / BF-04 (Fulfill Meal Orders & Dietary F&B Management)
+// Business Rule Ref  : BR-FNB-02 (Kitchen Preparation & Allergy Minimization)
+// Database Entity    : INGREDIENT, INGREDIENT_BATCH, MENU_ITEM_INGREDIENT, MEAL_ORDER
+// Compliance Standard: Nghị định 13/2023/NĐ-CP & 356/2025/NĐ-CP (Personal Data Protection PII)
+// Architecture Layer : SERVICE LAYER -> Business Logic & Demand Calculation
+// International Standard: Oracle Java Code Conventions & Google Java Style Guide
+// ============================================================================
 @Service
 @Transactional(readOnly = true)
 public class FnbDashboardService {
@@ -27,15 +39,17 @@ public class FnbDashboardService {
     private final IngredientRepository ingredientRepository;
     private final InventoryService inventoryService;
     private final MenuService menuService;
+    private final IngredientUnitRegistry unitRegistry;
 
     public FnbDashboardService(MealOrderService mealOrderService,
             MenuItemIngredientRepository recipeRepository, IngredientRepository ingredientRepository,
-            InventoryService inventoryService, MenuService menuService) {
+            InventoryService inventoryService, MenuService menuService, IngredientUnitRegistry unitRegistry) {
         this.mealOrderService = mealOrderService;
         this.recipeRepository = recipeRepository;
         this.ingredientRepository = ingredientRepository;
         this.inventoryService = inventoryService;
         this.menuService = menuService;
+        this.unitRegistry = unitRegistry;
     }
 
     public FnbDashboardResponse getDashboard(LocalDate businessDate) {
@@ -63,14 +77,36 @@ public class FnbDashboardService {
             Map<Integer, List<MenuItemIngredient>> recipeByItem = new HashMap<>();
             recipeRepository.findByMenuItemIdIn(menuItemIds).forEach(recipe ->
                     recipeByItem.computeIfAbsent(recipe.getMenuItemId(), ignored -> new ArrayList<>()).add(recipe));
-            order.items().forEach(orderLine -> recipeByItem.getOrDefault(orderLine.menuItemId(), List.of())
-                    .forEach(recipe -> requiredByIngredient.merge(recipe.getIngredientId(),
-                            recipe.getQuantityPerServing().multiply(BigDecimal.valueOf(orderLine.quantity())), BigDecimal::add)));
+            order.items().stream()
+                    .filter(orderLine -> "PENDING".equals(orderLine.preparationStatus())
+                            || "PREPARING".equals(orderLine.preparationStatus()))
+                    .forEach(orderLine -> recipeByItem.getOrDefault(orderLine.menuItemId(), List.of())
+                            .forEach(recipe -> {
+                        Integer ingredientId = recipe.getIngredientId();
+                        if (ingredientId == null || recipe.getRequiredQuantity() == null
+                                || recipe.getRequiredQuantity().signum() <= 0
+                                || orderLine.quantity() == null || orderLine.quantity() <= 0) {
+                            throw new BusinessRuleException("INVALID_MEAL_ORDER_DEMAND",
+                                    "Meal order recipe demand is incomplete or invalid.");
+                        }
+                        BigDecimal lineDemand = recipe.getRequiredQuantity()
+                                .multiply(BigDecimal.valueOf(orderLine.quantity()));
+                        BigDecimal currentDemand = requiredByIngredient.get(ingredientId);
+                        requiredByIngredient.put(ingredientId, currentDemand == null
+                                ? lineDemand : currentDemand.add(lineDemand));
+                    }));
         }
         if (requiredByIngredient.isEmpty()) return List.of();
 
         Map<Integer, Ingredient> ingredients = new LinkedHashMap<>();
-        ingredientRepository.findAllById(requiredByIngredient.keySet())
+        List<Integer> ingredientIds = new ArrayList<>(requiredByIngredient.size());
+        for (Integer ingredientId : requiredByIngredient.keySet()) {
+            if (ingredientId == null) {
+                throw new IllegalStateException("Ingredient demand cannot contain a null ingredient ID.");
+            }
+            ingredientIds.add(ingredientId);
+        }
+        ingredientRepository.findAllById(ingredientIds)
                 .forEach(ingredient -> ingredients.put(ingredient.getId(), ingredient));
         List<IngredientDemandResponse> result = new ArrayList<>();
         requiredByIngredient.forEach((ingredientId, required) -> {
@@ -79,7 +115,7 @@ public class FnbDashboardService {
             Ingredient ingredient = ingredients.get(ingredientId);
             result.add(new IngredientDemandResponse(ingredientId,
                     ingredient == null ? "Unknown ingredient" : ingredient.getIngredientName(),
-                    ingredient == null ? null : ingredient.getUnitOfMeasure(),
+                    ingredient == null ? null : unitRegistry.unitFor(ingredient),
                     required, usable, shortfall, shortfall.signum() > 0 ? "SHORTAGE" : "COVERED"));
         });
         return result;

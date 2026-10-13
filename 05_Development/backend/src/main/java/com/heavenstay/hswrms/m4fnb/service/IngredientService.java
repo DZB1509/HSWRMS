@@ -3,6 +3,7 @@ package com.heavenstay.hswrms.m4fnb.service;
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.m4fnb.dto.request.CreateIngredientRequest;
 import com.heavenstay.hswrms.m4fnb.dto.response.IngredientResponse;
+import com.heavenstay.hswrms.m4fnb.config.IngredientUnitRegistry;
 import com.heavenstay.hswrms.m4fnb.entity.Ingredient;
 import com.heavenstay.hswrms.m4fnb.repository.IngredientRepository;
 import java.util.List;
@@ -13,15 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class IngredientService {
     private final IngredientRepository ingredientRepository;
+    private final IngredientUnitRegistry unitRegistry;
 
-    public IngredientService(IngredientRepository ingredientRepository) {
+    public IngredientService(IngredientRepository ingredientRepository, IngredientUnitRegistry unitRegistry) {
         this.ingredientRepository = ingredientRepository;
+        this.unitRegistry = unitRegistry;
     }
 
     public List<IngredientResponse> listIngredients() {
         return ingredientRepository.findAllByOrderByIngredientNameAsc().stream()
                 .map(ingredient -> new IngredientResponse(ingredient.getId(), ingredient.getIngredientName(),
-                        ingredient.getUnitOfMeasure())).toList();
+                        unitRegistry.unitFor(ingredient))).toList();
     }
 
     @Transactional
@@ -30,7 +33,8 @@ public class IngredientService {
         if (ingredientRepository.existsByIngredientNameIgnoreCase(name)) {
             throw new ConflictException("INGREDIENT_NAME_EXISTS", "An ingredient with this name already exists.");
         }
-        Ingredient saved = ingredientRepository.save(new Ingredient(name, request.unitOfMeasure().trim()));
-        return new IngredientResponse(saved.getId(), saved.getIngredientName(), saved.getUnitOfMeasure());
+        unitRegistry.unitForName(name);
+        Ingredient saved = ingredientRepository.save(new Ingredient(name));
+        return new IngredientResponse(saved.getId(), saved.getIngredientName(), unitRegistry.unitFor(saved));
     }
 }
