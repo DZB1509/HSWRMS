@@ -19,18 +19,27 @@ public class MenuItemIngredient {
     @Column(name = "ingredient_id", nullable = false)
     private Integer ingredientId;
 
-    @Column(name = "quantity_per_serving", nullable = false, precision = 18, scale = 3)
-    private BigDecimal quantityPerServing;
+    @Column(name = "required_quantity", nullable = false, precision = 18, scale = 3)
+    private BigDecimal requiredQuantity;
 
-    protected MenuItemIngredient() { }
-
-    public MenuItemIngredient(Integer menuItemId, Integer ingredientId, BigDecimal quantityPerServing) {
-        this.menuItemId = menuItemId;
-        this.ingredientId = ingredientId;
-        this.quantityPerServing = quantityPerServing;
+    protected MenuItemIngredient() {
     }
 
-    public Integer getMenuItemId() { return menuItemId; }
-    public Integer getIngredientId() { return ingredientId; }
-    public BigDecimal getQuantityPerServing() { return quantityPerServing; }
+    public MenuItemIngredient(Integer menuItemId, Integer ingredientId, BigDecimal requiredQuantity) {
+        this.menuItemId = menuItemId;
+        this.ingredientId = ingredientId;
+        this.requiredQuantity = requiredQuantity;
+    }
+
+    public Integer getMenuItemId() {
+        return menuItemId;
+    }
+
+    public Integer getIngredientId() {
+        return ingredientId;
+    }
+
+    public BigDecimal getRequiredQuantity() {
+        return requiredQuantity;
+    }
 }
