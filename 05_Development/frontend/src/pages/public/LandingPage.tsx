@@ -33,6 +33,7 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     if (location.hash) {
       const id = location.hash.replace('#', '');
+      if (id === 'spa' || id === 'dining') return; // Handled authoritatively by ExperiencesStickyStory
       const timer = setTimeout(() => {
         const elem = document.getElementById(id);
         if (elem) {
@@ -133,35 +134,20 @@ export const LandingPage: React.FC = () => {
         >
           <img
             ref={heroBgRef}
-            src="https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=2400&q=85"
-            alt="HeavenStay — Secluded coastal bay surrounded by ancient cliffs and lush jungle canopy"
+            src="/images/hero-resort-cliff.jpg"
+            alt="HeavenStay — Secluded tropical cliffside wellness resort with infinity pool overlooking calm ocean"
             className="hsw-hero-bg-image"
             style={{
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              objectPosition: 'center 35%',
-              opacity: 0.6,
+              objectPosition: 'center 42%',
+              opacity: 0.74,
             }}
           />
-          {/* Layered gradient: bottom-heavy vignette + radial center softening */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'linear-gradient(to bottom, rgba(23, 29, 21, 0.5) 0%, rgba(23, 29, 21, 0.15) 30%, rgba(23, 29, 21, 0.3) 60%, rgba(23, 29, 21, 0.85) 100%)',
-            }}
-          />
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(23, 29, 21, 0.4) 100%)',
-            }}
-          />
+          {/* Theme-aware layered gradient: bottom-heavy vignette + radial center softening */}
+          <div className="hsw-landing-hero-overlay" />
+          <div aria-hidden="true" className="hsw-landing-hero-vignette" />
         </div>
 
         <Container size="standard" style={{ position: 'relative', zIndex: 3, textAlign: 'center' }}>
@@ -383,7 +369,7 @@ export const LandingPage: React.FC = () => {
       <section
         style={{
           padding: 'var(--space-16) 0',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg-soft)',
           borderBottom: '1px solid var(--border-subtle)',
         }}
       >
@@ -504,7 +490,7 @@ export const LandingPage: React.FC = () => {
         id="villas"
         style={{
           padding: 'var(--space-16) 0',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg-soft)',
           borderBottom: '1px solid var(--border-subtle)',
           scrollMarginTop: '80px',
         }}
@@ -519,8 +505,8 @@ export const LandingPage: React.FC = () => {
             }}
           >
             <ImageReveal
-              src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80"
-              alt="HeavenStay Sanctuary Villa"
+              src="/images/resort-ocean-sunrise.jpg"
+              alt="HeavenStay Sanctuary Villa & Coastal Sunrise Pavilions"
               aspectRatio="16 / 11"
             />
 
@@ -750,6 +736,7 @@ export const LandingPage: React.FC = () => {
           H. Final Transformation CTA
           ==================================================================== */}
       <section
+        className="hsw-landing-final-cta"
         style={{
           padding: 'var(--space-16) 0',
           backgroundColor: 'var(--accent-forest)',
@@ -808,12 +795,8 @@ export const LandingPage: React.FC = () => {
                 <Button
                   variant="primary"
                   size="lg"
+                  className="hsw-btn-landing-cta"
                   icon={<ArrowRight size={16} />}
-                  style={{
-                    backgroundColor: 'var(--accent-sand)',
-                    color: 'var(--accent-forest)',
-                    fontWeight: 600,
-                  }}
                 >
                   {t('landing.cta.button')}
                 </Button>

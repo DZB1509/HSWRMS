@@ -51,7 +51,7 @@ export const DepositPaymentResultPage: React.FC = () => {
       <Container size="narrow">
         <div
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--surface)',
             border: `1.5px solid ${isSuccess ? 'rgba(44, 76, 56, 0.25)' : 'rgba(185, 28, 28, 0.25)'}`,
             borderRadius: 'var(--radius-lg)',
             boxShadow: 'var(--shadow-card)',
@@ -297,7 +297,7 @@ export const DepositPaymentResultPage: React.FC = () => {
                         fontWeight: 600,
                         color: 'var(--text-secondary)',
                         textDecoration: 'none',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--surface)',
                       }}
                     >
                       <FileText size={14} />
@@ -318,7 +318,7 @@ export const DepositPaymentResultPage: React.FC = () => {
                         fontWeight: 600,
                         color: 'var(--text-secondary)',
                         textDecoration: 'none',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--surface)',
                       }}
                     >
                       <LayoutDashboard size={14} />
@@ -357,7 +357,7 @@ export const DepositPaymentResultPage: React.FC = () => {
                       fontWeight: 600,
                       color: 'var(--text-secondary)',
                       textDecoration: 'none',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--surface)',
                     }}
                   >
                     <LayoutDashboard size={14} />

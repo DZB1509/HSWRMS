@@ -24,6 +24,7 @@ export const RetreatCard: React.FC<RetreatCardProps> = ({
 
   return (
     <Link to={`${basePath}/${retreat.slug}`} className="hsw-retreat-card" data-cursor="view">
+      <span className="hsw-retreat-rim" aria-hidden="true" />
       <div className="hsw-retreat-card-media">
         <img
           src={retreat.heroImage}

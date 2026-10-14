@@ -17,7 +17,7 @@ export const TimelineItinerary: React.FC<TimelineItineraryProps> = ({ days }) =>
         style={{
           padding: 'var(--space-8)',
           textAlign: 'center',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--surface)',
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--border-subtle)',
           color: 'var(--text-secondary)',
@@ -52,7 +52,7 @@ export const TimelineItinerary: React.FC<TimelineItineraryProps> = ({ days }) =>
           <div
             key={dayPlan.day}
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-6)',

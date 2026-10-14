@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Shield, Heart, MapPin, Phone, Mail } from 'lucide-react';
+import { Shield, Heart, MapPin, Phone, Mail } from 'lucide-react';
+import { HeavenStayLogo } from '../common/HeavenStayLogo';
 
 export const Footer: React.FC = () => {
   const { t } = useTranslation();
@@ -11,11 +12,7 @@ export const Footer: React.FC = () => {
       <div className="hsw-footer-inner">
         <div>
           <div className="hsw-brand-logo" style={{ marginBottom: 'var(--space-3)' }}>
-            <Sparkles size={20} style={{ color: 'var(--accent-sand)' }} />
-            <div>
-              HEAVENSTAY
-              <span>WELLNESS RESORT</span>
-            </div>
+            <HeavenStayLogo variant="public" />
           </div>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: '320px', lineHeight: 1.6 }}>
             {t('footer.tagline')}

@@ -1,149 +1,221 @@
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import gsap from 'gsap';
 import { useCursor, type CursorState } from './CursorProvider';
 
 export const CustomCursor: React.FC = () => {
   const { t } = useTranslation();
-  const { cursorState, setCursorState, customText, cursorMode } = useCursor();
+  const { customText, cursorMode } = useCursor();
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const bead1Ref = useRef<HTMLDivElement>(null);
   const bead2Ref = useRef<HTMLDivElement>(null);
   const bead3Ref = useRef<HTMLDivElement>(null);
-  const isVisibleRef = useRef<boolean>(false);
+  const labelRef = useRef<HTMLSpanElement>(null);
 
-  // GSAP quickTo setters for 3 trailing beads
-  const x1To = useRef<gsap.QuickToFunc | null>(null);
-  const y1To = useRef<gsap.QuickToFunc | null>(null);
-  const x2To = useRef<gsap.QuickToFunc | null>(null);
-  const y2To = useRef<gsap.QuickToFunc | null>(null);
-  const x3To = useRef<gsap.QuickToFunc | null>(null);
-  const y3To = useRef<gsap.QuickToFunc | null>(null);
+  const isVisibleRef = useRef<boolean>(false);
+  const isTouchingRef = useRef<boolean>(false);
+  const currentStateRef = useRef<CursorState>('default');
+
+  const target = useRef({ x: -100, y: -100 });
+  const pos1 = useRef({ x: -100, y: -100 });
+  const pos2 = useRef({ x: -100, y: -100 });
+  const pos3 = useRef({ x: -100, y: -100 });
 
   const isOperational = cursorMode === 'operational';
 
+  // Helper to sync container className directly without React rerenders
+  const updateContainerClass = (state: CursorState, visible: boolean) => {
+    if (!containerRef.current) return;
+    containerRef.current.className = `hsw-cursor-wrap state-${state} ${
+      isOperational ? 'is-operational' : ''
+    } ${state === 'hidden' ? 'is-hidden' : ''} ${visible ? 'is-visible' : ''}`;
+  };
+
+  const setVisible = (visible: boolean) => {
+    isVisibleRef.current = visible;
+    updateContainerClass(currentStateRef.current, visible);
+  };
+
+  const updateState = (state: CursorState) => {
+    if (currentStateRef.current === state) return;
+    currentStateRef.current = state;
+    updateContainerClass(state, isVisibleRef.current);
+
+    if (labelRef.current) {
+      let text = '';
+      if (!isOperational) {
+        if (customText) {
+          text = customText;
+        } else if (state === 'view') {
+          text = t('motion.view', 'View');
+        } else if (state === 'explore') {
+          text = t('motion.explore', 'Explore');
+        } else if (state === 'drag') {
+          text = t('motion.drag', 'Drag');
+        }
+      }
+      labelRef.current.textContent = text;
+    }
+  };
+
   useEffect(() => {
-    if (!bead1Ref.current || !bead2Ref.current || !bead3Ref.current) return;
+    let rafId: number;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    // Operational mode has faster, crisper trailing physics; Public has gentle wellness flow
-    const d1 = isOperational ? 0.05 : 0.08;
-    const d2 = isOperational ? 0.14 : 0.22;
-    const d3 = isOperational ? 0.24 : 0.38;
+    const animate = () => {
+      const reducedMotion = motionQuery.matches;
 
-    // Bead 1: Leading bead
-    x1To.current = gsap.quickTo(bead1Ref.current, 'x', { duration: d1, ease: 'power2.out' });
-    y1To.current = gsap.quickTo(bead1Ref.current, 'y', { duration: d1, ease: 'power2.out' });
+      // Physics factors:
+      // Reduced motion: instantaneous snapping (factor 1.0)
+      // Operational: crisper, faster trailing
+      // Public: refined organic wellness flow
+      const f1 = reducedMotion ? 1.0 : isOperational ? 0.48 : 0.35;
+      const f2 = reducedMotion ? 1.0 : isOperational ? 0.26 : 0.18;
+      const f3 = reducedMotion ? 1.0 : isOperational ? 0.16 : 0.10;
 
-    // Bead 2: Middle bead
-    x2To.current = gsap.quickTo(bead2Ref.current, 'x', { duration: d2, ease: 'power2.out' });
-    y2To.current = gsap.quickTo(bead2Ref.current, 'y', { duration: d2, ease: 'power2.out' });
+      pos1.current.x += (target.current.x - pos1.current.x) * f1;
+      pos1.current.y += (target.current.y - pos1.current.y) * f1;
 
-    // Bead 3: Trailing bead
-    x3To.current = gsap.quickTo(bead3Ref.current, 'x', { duration: d3, ease: 'power3.out' });
-    y3To.current = gsap.quickTo(bead3Ref.current, 'y', { duration: d3, ease: 'power3.out' });
+      pos2.current.x += (target.current.x - pos2.current.x) * f2;
+      pos2.current.y += (target.current.y - pos2.current.y) * f2;
 
-    const handlePointerMove = (e: PointerEvent) => {
-      const { clientX, clientY } = e;
+      pos3.current.x += (target.current.x - pos3.current.x) * f3;
+      pos3.current.y += (target.current.y - pos3.current.y) * f3;
 
-      if (!isVisibleRef.current) {
-        isVisibleRef.current = true;
-        gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 1, duration: 0.2 });
+      if (bead1Ref.current) {
+        bead1Ref.current.style.transform = `translate3d(${pos1.current.x}px, ${pos1.current.y}px, 0)`;
+      }
+      if (bead2Ref.current) {
+        bead2Ref.current.style.transform = `translate3d(${pos2.current.x}px, ${pos2.current.y}px, 0)`;
+      }
+      if (bead3Ref.current) {
+        bead3Ref.current.style.transform = `translate3d(${pos3.current.x}px, ${pos3.current.y}px, 0)`;
       }
 
-      x1To.current?.(clientX);
-      y1To.current?.(clientY);
-      x2To.current?.(clientX);
-      y2To.current?.(clientY);
-      x3To.current?.(clientX);
-      y3To.current?.(clientY);
+      rafId = requestAnimationFrame(animate);
+    };
 
-      // Contextual detection from DOM under cursor
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
+    rafId = requestAnimationFrame(animate);
 
-      // Hide custom cursor over text inputs for clean native text selection / caret
-      if (target.closest('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"]')) {
-        setCursorState('hidden');
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        isTouchingRef.current = true;
+        target.current = { x: e.clientX, y: e.clientY };
+        pos1.current = { x: e.clientX, y: e.clientY };
+        pos2.current = { x: e.clientX, y: e.clientY };
+        pos3.current = { x: e.clientX, y: e.clientY };
+        setVisible(true);
+      }
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      target.current = { x: e.clientX, y: e.clientY };
+
+      if (e.pointerType !== 'touch') {
+        if (!isVisibleRef.current) {
+          pos1.current = { x: e.clientX, y: e.clientY };
+          pos2.current = { x: e.clientX, y: e.clientY };
+          pos3.current = { x: e.clientX, y: e.clientY };
+          setVisible(true);
+        }
+      }
+
+      const targetEl = e.target as HTMLElement | null;
+      if (!targetEl) return;
+
+      // Preserve native text cursor/caret over editable fields
+      if (
+        targetEl.closest(
+          'input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"]'
+        )
+      ) {
+        updateState('hidden');
         return;
       }
 
-      // Check explicit data-cursor attribute (only in public mode)
+      // Check contextual data-cursor
       if (!isOperational) {
-        const cursorTarget = target.closest('[data-cursor]') as HTMLElement | null;
+        const cursorTarget = targetEl.closest('[data-cursor]') as HTMLElement | null;
         if (cursorTarget) {
           const state = cursorTarget.getAttribute('data-cursor') as CursorState;
           if (state) {
-            setCursorState(state);
+            updateState(state);
             return;
           }
         }
       }
 
-      // Check clickable interactive elements (includes operational buttons, cards, table rows, pagination)
+      // Check clickable interactive targets
       if (
-        target.closest(
+        targetEl.closest(
           'a, button, [role="button"], .hsw-clickable, .ops-interactive-card, .ops-card, .ops-table tr, .ops-clickable, .ops-table-tr, .ops-pagination-btn, .ops-filter-pill, .ops-tab-btn, [data-cursor]'
         )
       ) {
-        setCursorState('link');
+        updateState('link');
         return;
       }
 
-      // Default state
-      setCursorState('default');
+      updateState('default');
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        isTouchingRef.current = false;
+        setVisible(false);
+      }
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        isTouchingRef.current = false;
+        setVisible(false);
+      }
     };
 
     const handleMouseLeave = () => {
-      isVisibleRef.current = false;
-      gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 0, duration: 0.2 });
+      if (!isTouchingRef.current) {
+        setVisible(false);
+      }
     };
 
     const handleMouseEnter = () => {
-      isVisibleRef.current = true;
-      gsap.to([bead1Ref.current, bead2Ref.current, bead3Ref.current], { opacity: 1, duration: 0.2 });
+      if (!isTouchingRef.current) {
+        setVisible(true);
+      }
     };
 
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
-    document.addEventListener('mouseleave', handleMouseLeave);
-    document.addEventListener('mouseenter', handleMouseEnter);
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerCancel, { passive: true });
+    document.documentElement.addEventListener('mouseleave', handleMouseLeave);
+    document.documentElement.addEventListener('mouseenter', handleMouseEnter);
 
     return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
-      document.removeEventListener('mouseleave', handleMouseLeave);
-      document.removeEventListener('mouseenter', handleMouseEnter);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
+      document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
+      document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [setCursorState, isOperational]);
-
-  // Determine badge text (no large text badges in operational mode)
-  let labelText: string | null = null;
-  if (!isOperational) {
-    if (customText) {
-      labelText = customText;
-    } else if (cursorState === 'view') {
-      labelText = t('motion.view');
-    } else if (cursorState === 'explore') {
-      labelText = t('motion.explore');
-    } else if (cursorState === 'drag') {
-      labelText = t('motion.drag');
-    }
-  }
-
-  const isHidden = cursorState === 'hidden';
+  }, [isOperational, t, customText]);
 
   return (
     <div
-      className={`hsw-cursor-wrap state-${cursorState} ${isOperational ? 'is-operational' : ''} ${isHidden ? 'is-hidden' : ''}`}
+      ref={containerRef}
+      className={`hsw-cursor-wrap state-default ${isOperational ? 'is-operational' : ''}`}
       aria-hidden="true"
     >
-      {/* Bead 3: Trailing bead (Soft Gold / Bronze #BFA07A) */}
+      {/* Bead 3: Trailing bead */}
       <div ref={bead3Ref} className="hsw-cursor-bead bead-3" />
-      {/* Bead 2: Middle bead (Muted Sage / Forest #6F7F72) */}
+      {/* Bead 2: Middle bead */}
       <div ref={bead2Ref} className="hsw-cursor-bead bead-2" />
-      {/* Bead 1: Leading bead (Warm Sand / Champagne #E3D2B8) -> expands into badge on contextual targets */}
+      {/* Bead 1: Leading bead -> expands into badge on contextual targets */}
       <div ref={bead1Ref} className="hsw-cursor-bead bead-1">
-        {labelText && <span className="hsw-cursor-label">{labelText}</span>}
+        <span ref={labelRef} className="hsw-cursor-label" />
       </div>
     </div>
   );
 };
-

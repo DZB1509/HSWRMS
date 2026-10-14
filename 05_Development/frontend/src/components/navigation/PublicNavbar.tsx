@@ -2,8 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../common/Button';
+import { HeavenStayLogo } from '../common/HeavenStayLogo';
 import { LanguageSwitcher } from '../common/LanguageSwitcher';
-import { Sparkles, Menu, X, ArrowRight, LayoutDashboard, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { ThemeToggle } from '../common/ThemeToggle';
+import { CursorEffectToggle } from '../common/CursorEffectToggle';
+import { Menu, X, ArrowRight, LayoutDashboard, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useCustomer } from '../../context/CustomerContext';
 
@@ -108,18 +111,36 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
 
   const handleNavClick = (e: React.MouseEvent, item: NavItem) => {
     if (item.hash) {
+      const targetId = item.hash.replace('#', '');
+      const targetExp = targetId === 'spa' ? 0 : targetId === 'dining' ? 2 : null;
+
       if (location.pathname === '/') {
         e.preventDefault();
-        const targetId = item.hash.replace('#', '');
-        const elem = document.getElementById(targetId);
-        if (elem) {
-          elem.scrollIntoView({ behavior: 'smooth' });
-          navigate({ pathname: '/', hash: item.hash }, { replace: true });
-          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        navigate({ pathname: '/', hash: item.hash }, { replace: true });
+
+        if (targetExp !== null) {
+          if (typeof window !== 'undefined' && (window as any).__hswScrollToExperience) {
+            (window as any).__hswScrollToExperience(targetExp, true);
+          } else {
+            window.dispatchEvent(
+              new CustomEvent('hsw:scroll-experience', { detail: { index: targetExp, smooth: true } })
+            );
+          }
+        } else {
+          const elem = document.getElementById(targetId);
+          if (elem) {
+            elem.scrollIntoView({ behavior: 'smooth' });
+          }
         }
       } else {
+        // Cross-route navigation (e.g. from /retreats):
         e.preventDefault();
-        navigate({ pathname: '/', hash: item.hash });
+        if (targetExp !== null) {
+          // Transport target intent via navigation state first; avoid raw hash to prevent native jump race
+          navigate('/', { state: { landingExperienceTarget: targetExp } });
+        } else {
+          navigate({ pathname: '/', hash: item.hash });
+        }
       }
       setMobileMenuOpen(false);
     } else {
@@ -132,7 +153,14 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
 
   const isItemActive = (item: NavItem) => {
     if (item.hash) {
-      return location.pathname === '/' && location.hash === item.hash;
+      if (location.pathname === '/') {
+        const targetExp = item.hash === '#spa' ? 0 : item.hash === '#dining' ? 2 : null;
+        if (location.state && (location.state as any).landingExperienceTarget !== undefined) {
+          return (location.state as any).landingExperienceTarget === targetExp;
+        }
+        return location.hash === item.hash || (typeof window !== 'undefined' && window.location.hash === item.hash);
+      }
+      return false;
     }
     return location.pathname === item.path && !location.hash;
   };
@@ -148,12 +176,8 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
   return (
     <header className={classNames}>
       <div className="hsw-public-navbar-inner">
-        <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Home">
-          <Sparkles size={20} className="hsw-brand-icon" style={{ color: heroActive ? '#ffffff' : 'var(--accent-sand)', flexShrink: 0 }} />
-          <div className="hsw-brand-text">
-            <span className="hsw-brand-name">HEAVENSTAY</span>
-            <span className="hsw-brand-tagline" style={heroActive ? { color: 'rgba(255,255,255,0.7)' } : undefined}>WELLNESS RESORT</span>
-          </div>
+        <Link to="/" className="hsw-brand-logo" aria-label="HeavenStay Wellness Resort">
+          <HeavenStayLogo variant="public" isHeroActive={heroActive} />
         </Link>
 
         {/* Desktop Navigation */}
@@ -170,9 +194,11 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
           ))}
         </nav>
 
-        {/* Action Controls & Language Switcher */}
+        {/* Action Controls & Global Preferences: Language | Theme | Cursor FX | Profile */}
         <div className="hsw-navbar-actions">
-          <LanguageSwitcher variant={heroActive ? 'light' : 'dark'} />
+          <LanguageSwitcher variant={heroActive ? 'light' : 'dark'} className="hide-on-mobile" />
+          <ThemeToggle variant={heroActive ? 'light' : 'dark'} className="hide-on-mobile" />
+          <CursorEffectToggle variant={heroActive ? 'light' : 'dark'} className="hide-on-mobile" />
 
           {isCustomer ? (
             <div
@@ -383,6 +409,25 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
                 </Link>
               ))}
             </nav>
+
+            {/* Mobile Preferences Section */}
+            <div className="hsw-mobile-preferences">
+              <div className="hsw-mobile-pref-title">
+                {t('common:preferences.title', 'Preferences')}
+              </div>
+              <div className="hsw-mobile-pref-row">
+                <span className="hsw-mobile-pref-label">{t('common:preferences.language', 'Language')}</span>
+                <LanguageSwitcher />
+              </div>
+              <div className="hsw-mobile-pref-row">
+                <span className="hsw-mobile-pref-label">{t('common:preferences.theme', 'Theme')}</span>
+                <ThemeToggle />
+              </div>
+              <div className="hsw-mobile-pref-row">
+                <span className="hsw-mobile-pref-label">{t('common:preferences.cursor', 'Cursor Effect')}</span>
+                <CursorEffectToggle />
+              </div>
+            </div>
           </div>
 
           <div className="hsw-mobile-nav-actions">

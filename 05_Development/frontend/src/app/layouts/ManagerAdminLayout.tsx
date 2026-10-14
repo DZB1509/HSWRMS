@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { OperationalSidebar } from '../../components/navigation/OperationalSidebar';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
+import { CursorEffectToggle } from '../../components/common/CursorEffectToggle';
 import { useAuth } from '../../hooks/useAuth';
 import { ShieldAlert, Download, Filter, Menu, X } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -66,8 +68,10 @@ export const ManagerAdminLayout: React.FC = () => {
               </span>
             </div>
 
-            {/* 2. Language Selector (Shared for Manager & future Admin) */}
+            {/* 2. Global Preferences: Language | Theme | Cursor FX */}
             <LanguageSwitcher />
+            <ThemeToggle />
+            <CursorEffectToggle />
 
             {/* 3. Filter Scope */}
             <Button variant="secondary" size="sm" icon={<Filter size={13} />}>
