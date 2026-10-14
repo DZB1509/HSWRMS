@@ -25,6 +25,30 @@ PRINT 'Starting M1 Identity & Health Profile Schema Upgrade...';
 GO
 
 /* ============================================================================
+   0. PRE-MIGRATION VALIDATION
+   Prevent partial migration if legacy insecure OTP column exists.
+   ============================================================================ */
+
+IF OBJECT_ID('dbo.EmailOtp', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.EmailOtp', 'otp_code') IS NOT NULL
+   AND COL_LENGTH('dbo.EmailOtp', 'otp_hash') IS NULL
+BEGIN
+    PRINT '================================================================================';
+    PRINT 'CRITICAL ERROR: Legacy dbo.EmailOtp table detected with plaintext otp_code!';
+    PRINT 'Renaming plaintext OTPs to otp_hash is insecure and unsupported.';
+    PRINT '';
+    PRINT 'REMEDIATION STEPS REQUIRED BEFORE RERUNNING:';
+    PRINT '1. Invalidate legacy active OTP sessions.';
+    PRINT '2. Inspect target database dependencies (e.g., sys.foreign_keys, custom views/triggers).';
+    PRINT '3. Obtain explicit DBA/team approval, then execute: DROP TABLE dbo.EmailOtp;';
+    PRINT '4. Re-run this migration script.';
+    PRINT '================================================================================';
+
+    THROW 51000, N'Migration halted: Legacy column dbo.EmailOtp.otp_code detected without otp_hash. Manual schema remediation required.', 1;
+END
+GO
+
+/* ============================================================================
    1. UPGRADE dbo.CustomerProfile
    Add missing structured fields required by Screen 7 & Law on Residence 2020
    ============================================================================ */
@@ -107,12 +131,6 @@ BEGIN
             CHECK (purpose IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET'))
     );
     PRINT 'Created table dbo.EmailOtp';
-END
-ELSE IF COL_LENGTH('dbo.EmailOtp', 'otp_code') IS NOT NULL AND COL_LENGTH('dbo.EmailOtp', 'otp_hash') IS NULL
-BEGIN
-    EXEC sp_rename 'dbo.EmailOtp.otp_code', 'otp_hash', 'COLUMN';
-    ALTER TABLE dbo.EmailOtp ALTER COLUMN otp_hash VARCHAR(255) NOT NULL;
-    PRINT 'Renamed column dbo.EmailOtp.otp_code to otp_hash and resized to VARCHAR(255)';
 END
 GO
 

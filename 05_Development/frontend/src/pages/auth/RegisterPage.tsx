@@ -8,6 +8,8 @@ import { PasswordInput } from '../../components/common/PasswordInput';
 import { Checkbox } from '../../components/common/Checkbox';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../hooks/useToast';
+import { registerRequest } from '../../api/auth/authApi';
+import { AppApiError } from '../../api/errors/apiError';
 
 export const RegisterPage: React.FC = () => {
   const { t } = useTranslation();
@@ -21,10 +23,25 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toUserMessage = (error: unknown): string => {
+    if (error instanceof AppApiError) {
+      if (error.code === 'EMAIL_EXISTS') return t('auth.alerts.emailAlreadyRegistered');
+      if (error.code === 'VALIDATION_ERROR' && error.validationErrors?.length) {
+        return error.validationErrors.map((e) => e.message).join(' ');
+      }
+      if (error.code === 'NETWORK_ERROR') return t('auth.alerts.networkError');
+      if (error.status === 500) return t('auth.alerts.serverError');
+      return error.message || t('auth.alerts.registrationFailed');
+    }
+    return t('auth.alerts.registrationFailed');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     const newErrors: Record<string, string> = {};
 
     if (!fullName.trim()) newErrors.fullName = t('auth.alerts.fullNameRequired');
@@ -39,15 +56,28 @@ export const RegisterPage: React.FC = () => {
     }
 
     setErrors({});
+    setFormError(null);
     setIsLoading(true);
 
-    // Simulate OTP dispatch
-    setTimeout(() => {
-      setIsLoading(false);
-      sessionStorage.setItem('hswrms_pending_verification_email', email);
+    try {
+      await registerRequest({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        password,
+        confirmPassword,
+        consent,
+      });
+      sessionStorage.setItem('hswrms_pending_verification_email', email.trim());
       showToast(t('auth.alerts.otpDispatched'), 'success');
       navigate('/register/verify');
-    }, 800);
+    } catch (error) {
+      const message = toUserMessage(error);
+      setFormError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -65,7 +95,23 @@ export const RegisterPage: React.FC = () => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }} aria-busy={isLoading}>
+        {formError ? (
+          <div
+            role="alert"
+            style={{
+              padding: 'var(--space-3)',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--danger-bg)',
+              color: 'var(--danger)',
+              fontSize: 'var(--text-sm)',
+              lineHeight: 1.5,
+            }}
+          >
+            {formError}
+          </div>
+        ) : null}
+
         <FormField label={t('auth.register.fullNameLabel')} required error={errors.fullName} id="reg-fullname">
           <TextInput
             id="reg-fullname"
@@ -147,3 +193,4 @@ export const RegisterPage: React.FC = () => {
     </div>
   );
 };
+

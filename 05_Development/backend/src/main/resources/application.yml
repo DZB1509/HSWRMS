@@ -27,6 +27,21 @@ spring:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: false
 
+  # Spring Mail configuration for SMTP delivery (used when smtp profile is active).
+  # All values are externalized via environment variables. Never hardcode credentials.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
+          from: ${MAIL_FROM:${MAIL_USERNAME:noreply@heavenstay.com}}
+
 app:
   jwt:
     secret: ${JWT_SECRET:defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong}

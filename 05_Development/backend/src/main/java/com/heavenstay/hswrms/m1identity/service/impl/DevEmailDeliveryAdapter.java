@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Service
-@Profile("dev")
+@Profile({"dev & !smtp"})
 public class DevEmailDeliveryAdapter implements EmailDeliveryAdapter {
     private static final Logger log = LoggerFactory.getLogger(DevEmailDeliveryAdapter.class);
 

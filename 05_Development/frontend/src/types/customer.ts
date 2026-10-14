@@ -43,7 +43,6 @@ export interface HealthNotes {
   currentMedications: string;
   stressLevel: 'mild' | 'moderate' | 'high';
   treatmentPreferences: string[];
-  therapistNotes: string;
 }
 
 export interface DietaryProfile {
