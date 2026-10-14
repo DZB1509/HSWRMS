@@ -1,5 +1,5 @@
-﻿/* ==========================================================================
-   HSWRMS Module 6 — Governance, Permissions, Administration & Monitoring
+/* ==========================================================================
+   HSWRMS Module 6 � Governance, Permissions, Administration & Monitoring
    Operational quiet-luxury density: data-first, restrained accents, low motion
    ========================================================================== */
 
@@ -266,13 +266,13 @@
 }
 
 .hsw-perm-badge.granted {
-  background-color: #BBDEFB;
-  color: #0d47a1;
+  background-color: #00FF99;
+  color: #052e16;
 }
 
 .hsw-perm-badge.denied {
-  background-color: #ffcdd2;
-  color: #b71c1c;
+  background-color: #FA8072;
+  color: #4a0e0e;
 }
 
 .hsw-perm-badge.delegable {
@@ -369,8 +369,8 @@
 }
 
 .hsw-audit-pill.success {
-  background-color: #98FB98;
-  color: #1b5e20;
+  background-color: #00FF99;
+  color: #052e16;
 }
 
 .hsw-audit-pill.denied {

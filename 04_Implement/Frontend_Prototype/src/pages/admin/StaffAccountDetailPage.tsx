@@ -32,6 +32,7 @@ export const StaffAccountDetailPage: React.FC = () => {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
 
   const toggleStatus = () => {
+    if (staff.role === 'admin') return;
     const nextStatus: StaffStatus = staff.status === 'active' ? 'suspended' : 'active';
     setStaff((prev) => ({ ...prev, status: nextStatus }));
     setStatusModalOpen(false);
@@ -148,7 +149,7 @@ export const StaffAccountDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          {staff.role !== 'admin' && (<div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <Button
               variant={staff.status === 'active' ? 'destructive' : 'primary'}
               size="sm"
@@ -159,7 +160,7 @@ export const StaffAccountDetailPage: React.FC = () => {
                 ? t('operations.staffDetail.suspendBtn', 'Suspend Account Access')
                 : t('operations.staffDetail.activateBtn', 'Restore Account Access')}
             </Button>
-          </div>
+          </div>)}
         </div>
       </div>
 
@@ -266,7 +267,7 @@ export const StaffAccountDetailPage: React.FC = () => {
       </div>
 
       {/* Confirmation Modal for Status Toggle */}
-      {statusModalOpen && (
+      {statusModalOpen && staff.role !== 'admin' && (
         <div className="hsw-gov-modal-backdrop" onClick={() => setStatusModalOpen(false)}>
           <div className="hsw-gov-modal" onClick={(e) => e.stopPropagation()}>
             <div className="hsw-gov-modal-header">

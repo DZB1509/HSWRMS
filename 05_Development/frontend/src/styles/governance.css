@@ -267,13 +267,13 @@
 }
 
 .hsw-perm-badge.granted {
-  background-color: var(--surface-success);
-  color: var(--text-success);
+  background-color: #00FF99;
+  color: #052e16;
 }
 
 .hsw-perm-badge.denied {
-  background-color: var(--bg-soft);
-  color: var(--text-secondary);
+  background-color: #fc6e5e;
+  color: #4a0e0e;
 }
 
 .hsw-perm-badge.delegable {
@@ -318,8 +318,13 @@
 }
 
 @keyframes hswModalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes hswModalSlideUp {
@@ -327,6 +332,7 @@
     opacity: 0;
     transform: translateY(12px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -370,8 +376,8 @@
 }
 
 .hsw-audit-pill.success {
-  background-color: var(--surface-success);
-  color: var(--text-success);
+  background-color: #00FF99;
+  color: #052e16;
 }
 
 .hsw-audit-pill.denied {
@@ -618,16 +624,20 @@
   border: 1px solid #cce5d4 !important;
   box-shadow: 0 2px 6px rgba(46, 125, 50, 0.04);
 }
+
 .hsw-kpi-occupied:hover {
   border-color: #b3d9be !important;
   box-shadow: 0 6px 14px rgba(46, 125, 50, 0.08);
 }
+
 .hsw-kpi-occupied .hsw-gov-kpi-label {
   color: #2e6240 !important;
 }
+
 .hsw-kpi-occupied .hsw-gov-kpi-val {
   color: #1b4d2e !important;
 }
+
 .hsw-kpi-occupied .hsw-gov-kpi-sub {
   color: #437355 !important;
 }
@@ -638,16 +648,20 @@
   border: 1px solid #c4e7ea !important;
   box-shadow: 0 2px 6px rgba(0, 137, 123, 0.04);
 }
+
 .hsw-kpi-ready:hover {
   border-color: #aadae0 !important;
   box-shadow: 0 6px 14px rgba(0, 137, 123, 0.08);
 }
+
 .hsw-kpi-ready .hsw-gov-kpi-label {
   color: #166865 !important;
 }
+
 .hsw-kpi-ready .hsw-gov-kpi-val {
   color: #0c504d !important;
 }
+
 .hsw-kpi-ready .hsw-gov-kpi-sub {
   color: #317b78 !important;
 }
@@ -658,16 +672,20 @@
   border: 1px solid #f8e3ba !important;
   box-shadow: 0 2px 6px rgba(217, 119, 6, 0.04);
 }
+
 .hsw-kpi-cleaning:hover {
   border-color: #f3d49b !important;
   box-shadow: 0 6px 14px rgba(217, 119, 6, 0.08);
 }
+
 .hsw-kpi-cleaning .hsw-gov-kpi-label {
   color: #945f18 !important;
 }
+
 .hsw-kpi-cleaning .hsw-gov-kpi-val {
   color: #824d08 !important;
 }
+
 .hsw-kpi-cleaning .hsw-gov-kpi-sub {
   color: #9e6f30 !important;
 }
@@ -678,16 +696,20 @@
   border: 1px solid #d9dfe8 !important;
   box-shadow: 0 2px 6px rgba(100, 116, 139, 0.04);
 }
+
 .hsw-kpi-maintenance:hover {
   border-color: #c7cfdc !important;
   box-shadow: 0 6px 14px rgba(100, 116, 139, 0.08);
 }
+
 .hsw-kpi-maintenance .hsw-gov-kpi-label {
   color: #4b586d !important;
 }
+
 .hsw-kpi-maintenance .hsw-gov-kpi-val {
   color: #334155 !important;
 }
+
 .hsw-kpi-maintenance .hsw-gov-kpi-sub {
   color: #64748b !important;
 }
@@ -729,16 +751,20 @@
   border: 1px solid #e4d4f6 !important;
   box-shadow: 0 2px 6px rgba(138, 75, 175, 0.04);
 }
+
 .hsw-card-spa-sessions:hover {
   border-color: #d6beee !important;
   box-shadow: 0 6px 14px rgba(138, 75, 175, 0.08);
 }
+
 .hsw-card-spa-sessions .subcard-label {
   color: #6b498f !important;
 }
+
 .hsw-card-spa-sessions .subcard-val {
   color: #4c2573 !important;
 }
+
 .hsw-card-spa-sessions .subcard-sub {
   color: #7d59a2 !important;
 }
@@ -749,16 +775,20 @@
   border: 1px solid #f3d2dd !important;
   box-shadow: 0 2px 6px rgba(190, 60, 95, 0.04);
 }
+
 .hsw-card-spa-time:hover {
   border-color: #ebbecd !important;
   box-shadow: 0 6px 14px rgba(190, 60, 95, 0.08);
 }
+
 .hsw-card-spa-time .subcard-label {
   color: #8f4663 !important;
 }
+
 .hsw-card-spa-time .subcard-val {
   color: #712440 !important;
 }
+
 .hsw-card-spa-time .subcard-sub {
   color: #9f5b77 !important;
 }
@@ -769,16 +799,20 @@
   border: 1px solid #c9e4cf !important;
   box-shadow: 0 2px 6px rgba(46, 125, 50, 0.04);
 }
+
 .hsw-card-revenue:hover {
   border-color: #b0d8b8 !important;
   box-shadow: 0 6px 14px rgba(46, 125, 50, 0.08);
 }
+
 .hsw-card-revenue .subcard-label {
   color: #2a5c37 !important;
 }
+
 .hsw-card-revenue .subcard-val {
   color: #174b24 !important;
 }
+
 .hsw-card-revenue .subcard-sub {
   color: #467652 !important;
 }
@@ -789,16 +823,20 @@
   border: 1px solid #c6def5 !important;
   box-shadow: 0 2px 6px rgba(2, 132, 199, 0.04);
 }
+
 .hsw-card-guard:hover {
   border-color: #abd0f0 !important;
   box-shadow: 0 6px 14px rgba(2, 132, 199, 0.08);
 }
+
 .hsw-card-guard .subcard-label {
   color: #205b91 !important;
 }
+
 .hsw-card-guard .subcard-val {
   color: #124370 !important;
 }
+
 .hsw-card-guard .subcard-sub {
   color: #4477a4 !important;
 }
