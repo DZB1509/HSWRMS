@@ -1,4 +1,4 @@
-﻿/*
+/*
 ================================================================================
 HSWRMS - HeavenStay Wellness Resort Management System
 SQL Server Database Schema
@@ -201,15 +201,43 @@ CREATE TABLE dbo.RetreatPackage (
 );
 GO
 
+CREATE TABLE dbo.ResortZone (
+    zone_id                 INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_ResortZone PRIMARY KEY,
+    zone_name               NVARCHAR(100) NOT NULL,
+    landscape_description   NVARCHAR(500) NULL,
+    villa_count             INT NOT NULL
+        CONSTRAINT DF_ResortZone_VillaCount DEFAULT (0),
+    villa_category_name     NVARCHAR(120) NULL,
+    relative_price_tier     NVARCHAR(50) NULL,
+    operational_advantages  NVARCHAR(500) NULL,
+    created_at              DATETIME2(0) NOT NULL
+        CONSTRAINT DF_ResortZone_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_ResortZone_Name UNIQUE (zone_name)
+);
+GO
+
 CREATE TABLE dbo.VillaCategory (
-    villa_category_id   INT IDENTITY(1,1) NOT NULL
+    villa_category_id       INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_VillaCategory PRIMARY KEY,
-    category_name       NVARCHAR(120) NOT NULL,
-    max_occupancy       INT NOT NULL,
-    price_modifier      DECIMAL(18,2) NOT NULL
+    category_name           NVARCHAR(120) NOT NULL,
+    max_occupancy           INT NOT NULL,
+    price_modifier          DECIMAL(18,2) NOT NULL
         CONSTRAINT DF_VillaCategory_PriceModifier DEFAULT (0),
-    category_status     VARCHAR(20) NOT NULL
+    category_status         VARCHAR(20) NOT NULL
         CONSTRAINT DF_VillaCategory_Status DEFAULT ('ACTIVE'),
+    inventory_count         INT NOT NULL
+        CONSTRAINT DF_VillaCategory_InventoryCount DEFAULT (0),
+    bedroom_count           INT NOT NULL
+        CONSTRAINT DF_VillaCategory_BedroomCount DEFAULT (1),
+    bedroom_description     NVARCHAR(100) NULL,
+    area_description        NVARCHAR(50) NULL,
+    has_private_pool        BIT NOT NULL
+        CONSTRAINT DF_VillaCategory_HasPrivatePool DEFAULT (0),
+    pool_description        NVARCHAR(100) NULL,
+    features_and_amenities  NVARCHAR(500) NULL,
+    eligible_packages       NVARCHAR(250) NULL,
 
     CONSTRAINT UQ_VillaCategory_Name UNIQUE (category_name),
     CONSTRAINT CK_VillaCategory_Occupancy CHECK (max_occupancy > 0),
@@ -235,13 +263,22 @@ CREATE TABLE dbo.RetreatPackageVillaCategory (
 GO
 
 CREATE TABLE dbo.PhysicalVilla (
-    villa_id            INT IDENTITY(1,1) NOT NULL
+    villa_id                    INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_PhysicalVilla PRIMARY KEY,
-    villa_category_id   INT NOT NULL,
-    villa_number        NVARCHAR(30) NOT NULL,
-    floor               NVARCHAR(30) NULL,
-    villa_status        VARCHAR(30) NOT NULL
+    villa_category_id           INT NOT NULL,
+    villa_number                NVARCHAR(30) NOT NULL,
+    floor                       NVARCHAR(30) NULL,
+    villa_status                VARCHAR(30) NOT NULL
         CONSTRAINT DF_PhysicalVilla_Status DEFAULT ('AVAILABLE'),
+    zone_name                   NVARCHAR(100) NULL,
+    bedroom_info                NVARCHAR(100) NULL,
+    max_occupancy               INT NOT NULL
+        CONSTRAINT DF_PhysicalVilla_MaxOccupancy DEFAULT (3),
+    area_sqm                    DECIMAL(10,2) NULL,
+    has_private_pool            BIT NOT NULL
+        CONSTRAINT DF_PhysicalVilla_HasPrivatePool DEFAULT (0),
+    pool_info                   NVARCHAR(100) NULL,
+    view_and_operational_notes  NVARCHAR(500) NULL,
 
     CONSTRAINT UQ_PhysicalVilla_Number UNIQUE (villa_number),
     CONSTRAINT FK_PhysicalVilla_Category
@@ -251,6 +288,34 @@ CREATE TABLE dbo.PhysicalVilla (
         CHECK (villa_status IN
             ('AVAILABLE','OCCUPIED','MAINTENANCE','NEEDS_CLEANING','INACTIVE'))
 );
+GO
+
+CREATE TABLE dbo.VillaFunctionalArea (
+    functional_area_id          INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_VillaFunctionalArea PRIMARY KEY,
+    space_group                 NVARCHAR(100) NOT NULL,
+    room_name                   NVARCHAR(150) NOT NULL,
+    area_range_sqm              NVARCHAR(50) NULL,
+    quantity_in_1br             NVARCHAR(50) NULL,
+    quantity_in_2_3br           NVARCHAR(50) NULL,
+    quantity_in_estate_4_6br    NVARCHAR(50) NULL,
+    key_furnishing              NVARCHAR(500) NULL,
+    operational_purpose         NVARCHAR(500) NULL,
+    created_at                  DATETIME2(0) NOT NULL
+        CONSTRAINT DF_VillaFunctionalArea_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_VillaFunctionalArea_Room UNIQUE (room_name)
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_PhysicalVilla_Status_Category
+    ON dbo.PhysicalVilla(villa_status, villa_category_id)
+    INCLUDE (villa_number, zone_name, floor, max_occupancy, has_private_pool);
+GO
+
+CREATE NONCLUSTERED INDEX IX_PhysicalVilla_Zone
+    ON dbo.PhysicalVilla(zone_name)
+    INCLUDE (villa_number, villa_status);
 GO
 
 CREATE TABLE dbo.RetreatBooking (

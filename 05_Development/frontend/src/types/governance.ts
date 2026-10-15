@@ -56,11 +56,18 @@ export type CapabilityKey =
   | 'view_meal_prep_queue'
   | 'view_dietary_allergy_warnings'
   | 'update_meal_order_status'
-  // Management Reporting
+  // Management Reporting & Facility
   | 'view_revenue_reports'
   | 'view_occupancy_reports'
   | 'view_therapist_utilization_reports'
   | 'view_manager_dashboard'
+  | 'view_villa_inventory'
+  | 'manage_villa_inventory'
+  | 'view_villa_categories'
+  | 'manage_villa_categories'
+  | 'view_functional_areas'
+  | 'manage_functional_areas'
+  | 'manage_villa_maintenance'
   // Governance & Administration
   | 'export_police_residence_declaration'
   | 'configure_business_parameters'

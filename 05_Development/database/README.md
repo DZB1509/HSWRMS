@@ -10,7 +10,10 @@ This directory contains the working database schema and migrations for the Heave
 ## Directory Structure
 - `schema.sql`: Authoritative development DDL baseline (derived from `03_Design/Database/HSWRMS_SQLServer_Database.sql`).
 - `seed/`: Master catalog seeds, reference data, and development accounts.
+  - `seed/V1_2__seed_villa_inventory.sql`: 27 physical villas, 6 categories, 6 zones, and 16 functional spaces from `02_Requirement/Screen_Inventory/HSWRMS_Villa_Inventory (1).xlsx`.
 - `migrations/`: Future incremental migration scripts.
+  - `migrations/V1_1__m6_schema_enhancements.sql`: M6 Admin & Audit logs.
+  - `migrations/V1_2__villa_inventory.sql`: Schema enhancements for Villa Inventory & Resort Physical Layout.
 
 ## Database Initialization
 1. Ensure your local or containerized Microsoft SQL Server instance is running.
@@ -19,6 +22,17 @@ This directory contains the working database schema and migrations for the Heave
    ```bash
    sqlcmd -S localhost -U sa -P "YourStrong@Password" -i schema.sql
    ```
+4. Execute seed data:
+   ```bash
+   sqlcmd -S localhost -U sa -P "YourStrong@Password" -i seed/V1_2__seed_villa_inventory.sql
+   ```
+
+## Incremental Migration (For Existing DB)
+If upgrading an existing HSWRMS database:
+```bash
+sqlcmd -S localhost -U sa -P "YourStrong@Password" -i migrations/V1_2__villa_inventory.sql
+sqlcmd -S localhost -U sa -P "YourStrong@Password" -i seed/V1_2__seed_villa_inventory.sql
+```
 
 ## Development Schema Evolution Rules
 - **Design vs. Development Rule:** The file in `03_Design/Database/` is the read-only conceptual/design baseline. All implementation adjustments, index optimizations, and approved business model fixes live here under `05_Development/database/`.

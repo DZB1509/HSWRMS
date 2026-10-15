@@ -638,6 +638,141 @@ export const PERMISSION_RULES: PermissionRule[] = [
       admin: 'granted'
     },
     isImmutableBoundary: false
+  },
+
+  // 7. Quản trị Biệt thự & Cơ sở Lưu trú (Villa & Facility Governance)
+  {
+    capability: 'view_villa_inventory',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.viewVillaInventory.name',
+    defaultName: 'Xem Danh Sách & Bản Đồ Biệt Thự Vật Lý',
+    descriptionKey: 'governance.permissions.viewVillaInventory.desc',
+    defaultDescription: 'Truy cập sơ đồ 27 căn biệt thự, phân khu cảnh quan, trạng thái dọn dẹp và bảo dưỡng buồng phòng.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'granted',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'granted',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: false
+  },
+  {
+    capability: 'manage_villa_inventory',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.manageVillaInventory.name',
+    defaultName: 'Quản Lý Cấu Hình & Thông Số Biệt Thự Vật Lý',
+    descriptionKey: 'governance.permissions.manageVillaInventory.desc',
+    defaultDescription: 'Chỉnh sửa diện tích, giường ngủ, phân bổ phân khu, tiện nghi và ghi chú vận hành cho 27 căn villa.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'denied',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'denied',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: true
+  },
+  {
+    capability: 'view_villa_categories',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.viewVillaCategories.name',
+    defaultName: 'Xem Cơ Cấu Hạng Biệt Thự & Khung Sản Phẩm',
+    descriptionKey: 'governance.permissions.viewVillaCategories.desc',
+    defaultDescription: 'Xem định dạng 6 hạng villa chuẩn resort, sức chứa, đặc quyền và các gói retreat tương thích.',
+    grants: {
+      customer: 'granted',
+      receptionist: 'granted',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'granted',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: false
+  },
+  {
+    capability: 'manage_villa_categories',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.manageVillaCategories.name',
+    defaultName: 'Quản Lý Hạng Biệt Thự & Phụ Thu Khung Sản Phẩm',
+    descriptionKey: 'governance.permissions.manageVillaCategories.desc',
+    defaultDescription: 'Điều chỉnh giá phụ thu nâng hạng (price modifier), tiện ích đặc quyền và liên kết gói nghỉ dưỡng retreat.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'denied',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'denied',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: true
+  },
+  {
+    capability: 'view_functional_areas',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.viewFunctionalAreas.name',
+    defaultName: 'Xem Danh Mục Phòng Chức Năng & Tiện Nghi',
+    descriptionKey: 'governance.permissions.viewFunctionalAreas.desc',
+    defaultDescription: 'Xem định mức 16 không gian phòng chức năng (nghỉ ngơi, sinh hoạt chung, ngoại thất, tiện ích cao cấp).',
+    grants: {
+      customer: 'denied',
+      receptionist: 'granted',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'granted',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: false
+  },
+  {
+    capability: 'manage_functional_areas',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.manageFunctionalAreas.name',
+    defaultName: 'Quản Lý Định Mức Phòng Chức Năng & Trang Thiết Bị',
+    descriptionKey: 'governance.permissions.manageFunctionalAreas.desc',
+    defaultDescription: 'Cấu hình tiêu chuẩn diện tích, trang thiết bị nội thất chủ đạo và quy chuẩn phục vụ của từng phòng chức năng.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'denied',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'denied',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: true
+  },
+  {
+    capability: 'manage_villa_maintenance',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.manageVillaMaintenance.name',
+    defaultName: 'Quyết Định Niêm Phong & Bảo Trì Biệt Thự',
+    descriptionKey: 'governance.permissions.manageVillaMaintenance.desc',
+    defaultDescription: 'Đưa biệt thự vào chế độ bảo trì dài hạn, tạm ngừng đón khách hoặc phê duyệt kế hoạch tân trang.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'denied',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'denied',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: true
   }
 ];
 
@@ -647,12 +782,16 @@ export const INITIAL_DELEGATIONS: AdminDelegation[] = [
     delegateUserId: 'usr-mgr-01',
     delegateName: 'Sarah Jenkins',
     delegateRole: 'manager',
-    capabilities: ['configure_business_parameters'],
+    capabilities: [
+      'configure_business_parameters',
+      'manage_villa_inventory',
+      'manage_villa_maintenance'
+    ],
     startsAt: '2026-09-27 08:00',
-    expiresAt: '2026-09-28 18:00',
+    expiresAt: '2026-11-30 23:59',
     status: 'active',
     grantedBy: 'Alexander Wright (Quản trị viên)',
-    reason: 'Cấp quyền tạm thời điều chỉnh thời hạn hủy phòng do thông báo thời tiết bờ biển.',
+    reason: 'Ủy quyền tác nghiệp quản lý danh mục 27 biệt thự, chuyển trạng thái dọn dẹp/bảo trì và cấu hình tham số thời vụ.',
     createdAt: '2026-09-27 07:45'
   },
   {

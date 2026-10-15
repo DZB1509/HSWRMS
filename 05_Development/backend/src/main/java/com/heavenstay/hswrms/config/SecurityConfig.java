@@ -56,6 +56,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // Public Retreat Packages Catalog (Phase 3 extension)
                         .requestMatchers("/api/v1/packages/**").permitAll()
+                        // Villa Inventory & Catalog Endpoints (Screen 1, 13, 14, 15, 20, 23, 24)
+                        .requestMatchers("/api/v1/villas/**", "/api/v1/villa-categories/**", "/api/v1/resort-zones/**", "/api/v1/villa-functional-areas/**").permitAll()
                         // Any other request requires valid authentication
                         .anyRequest().authenticated()
                 )
