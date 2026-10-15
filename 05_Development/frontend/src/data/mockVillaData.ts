@@ -90,12 +90,17 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   {
     id: 1,
     categoryName: '1-Bedroom Garden Villa',
+    categoryCode: 'CAT-GARDEN-1BR',
     inventoryCount: 8,
     bedroomCount: 1,
+    bedType: '1 King Bed (1.8m x 2.0m)',
     bedroomDescription: '1 PN (King Bed)',
+    maxAdults: 2,
+    maxChildren: 1,
     maxOccupancy: 3,
     standardOccupancy: 2,
     areaRange: '80 - 120 m²',
+    basePrice: 4500000,
     priceModifier: 0,
     hasPrivatePool: false,
     poolDescription: 'Không (Vườn xanh riêng biệt lập)',
@@ -107,12 +112,17 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   {
     id: 2,
     categoryName: '1-Bedroom Beachfront Pool Villa',
+    categoryCode: 'CAT-BEACH-POOL-1BR',
     inventoryCount: 6,
     bedroomCount: 1,
+    bedType: '1 Super King Bed (2.0m x 2.2m)',
     bedroomDescription: '1 PN (King Bed)',
+    maxAdults: 2,
+    maxChildren: 1,
     maxOccupancy: 3,
     standardOccupancy: 2,
     areaRange: '120 - 180 m²',
+    basePrice: 7200000,
     priceModifier: 2500000,
     hasPrivatePool: true,
     poolDescription: 'Có (Hồ bơi riêng 25 - 40m²)',
@@ -124,12 +134,17 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   {
     id: 3,
     categoryName: '2-Bedroom Pool Villa',
+    categoryCode: 'CAT-LAGOON-POOL-2BR',
     inventoryCount: 6,
     bedroomCount: 2,
+    bedType: '1 King Bed + 2 Twin Beds',
     bedroomDescription: '2 PN (1 King + 1 Twin)',
+    maxAdults: 4,
+    maxChildren: 2,
     maxOccupancy: 6,
     standardOccupancy: 4,
     areaRange: '180 - 250 m²',
+    basePrice: 9500000,
     priceModifier: 4500000,
     hasPrivatePool: true,
     poolDescription: 'Có (Hồ bơi riêng 30 - 50m²)',
@@ -141,12 +156,17 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   {
     id: 4,
     categoryName: '3-Bedroom Ocean View Villa',
+    categoryCode: 'CAT-OCEAN-VIEW-3BR',
     inventoryCount: 4,
     bedroomCount: 3,
+    bedType: '2 King Beds + 2 Twin Beds',
     bedroomDescription: '3 PN (2 King + 1 Twin)',
+    maxAdults: 6,
+    maxChildren: 3,
     maxOccupancy: 9,
     standardOccupancy: 6,
     areaRange: '280 - 400 m²',
+    basePrice: 12800000,
     priceModifier: 7000000,
     hasPrivatePool: true,
     poolDescription: 'Có (Hồ bơi riêng 45 - 70m²)',
@@ -158,12 +178,17 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   {
     id: 5,
     categoryName: '4-5 Bedroom Family Estate',
+    categoryCode: 'CAT-HILLSIDE-ESTATE',
     inventoryCount: 2,
     bedroomCount: 5,
+    bedType: '3 King Beds + 4 Twin Beds',
     bedroomDescription: '4 - 5 PN linh hoạt (3 King + 2 Twin)',
+    maxAdults: 10,
+    maxChildren: 2,
     maxOccupancy: 12,
     standardOccupancy: 10,
     areaRange: '450 - 700 m²',
+    basePrice: 18500000,
     priceModifier: 12000000,
     hasPrivatePool: true,
     poolDescription: 'Có (Hồ bơi tràn bờ 60 - 100m²)',
@@ -175,12 +200,17 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   {
     id: 6,
     categoryName: 'Presidential Royal Residence',
+    categoryCode: 'CAT-ROYAL-SANCTUARY',
     inventoryCount: 1,
     bedroomCount: 6,
+    bedType: '4 Master Kings + 4 Queen Beds',
     bedroomDescription: '6 PN Master Suites',
+    maxAdults: 12,
+    maxChildren: 4,
     maxOccupancy: 16,
     standardOccupancy: 12,
     areaRange: '800 - 1500+ m²',
+    basePrice: 35000000,
     priceModifier: 25000000,
     hasPrivatePool: true,
     poolDescription: 'Có (Hồ bơi vô cực 150m²)',
@@ -191,7 +221,7 @@ export const VILLA_CATEGORIES: VillaCategoryItem[] = [
   }
 ];
 
-export const PHYSICAL_VILLAS: PhysicalVillaItem[] = [
+const RAW_PHYSICAL_VILLAS: PhysicalVillaItem[] = [
   // V101 - V108 (Garden Zone)
   {
     id: 'V101',
@@ -690,6 +720,21 @@ export const PHYSICAL_VILLAS: PhysicalVillaItem[] = [
     amenities: ['Hồ bơi vô cực 150m²', 'Quản gia riêng 24/7', 'Rạp chiếu phim Dolby Atmos', 'Xe Buggy riêng', 'Khu Spa & Sauna đôi']
   }
 ];
+
+export const PHYSICAL_VILLAS: PhysicalVillaItem[] = RAW_PHYSICAL_VILLAS.map((v) => {
+  let rate = 4500000;
+  if (v.categoryId === 1) rate = 4500000;
+  else if (v.categoryId === 2) rate = 7200000;
+  else if (v.categoryId === 3) rate = 9500000;
+  else if (v.categoryId === 4) rate = 12800000;
+  else if (v.categoryId === 5) rate = 18500000;
+  else if (v.categoryId === 6) rate = 35000000;
+
+  return {
+    ...v,
+    nightlyRate: v.nightlyRate ?? rate
+  };
+});
 
 export const VILLA_FUNCTIONAL_AREAS: VillaFunctionalAreaItem[] = [
   // 1. Khu Vực Nghỉ Ngơi (Private)

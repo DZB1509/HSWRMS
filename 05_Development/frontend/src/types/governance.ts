@@ -68,6 +68,7 @@ export type CapabilityKey =
   | 'view_functional_areas'
   | 'manage_functional_areas'
   | 'manage_villa_maintenance'
+  | 'manage_pricing'
   // Governance & Administration
   | 'export_police_residence_declaration'
   | 'configure_business_parameters'

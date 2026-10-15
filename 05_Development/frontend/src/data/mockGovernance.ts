@@ -773,6 +773,25 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: false,
     isDelegableToManager: true
+  },
+  {
+    capability: 'manage_pricing',
+    categoryKey: 'governance.permissions.categories.facility',
+    defaultCategory: 'Quản Trị Biệt Thự & Cơ Sở Lưu Trú',
+    nameKey: 'governance.permissions.managePricing.name',
+    defaultName: 'Quản Lý & Điều Chỉnh Giá Tiền (Biệt Thự & Gói Nghỉ Dưỡng)',
+    descriptionKey: 'governance.permissions.managePricing.desc',
+    defaultDescription: 'Ủy quyền cho Quản lý điều chỉnh giá thuê đêm từng căn villa, giá phụ thu hạng phòng và đơn giá các gói Retreat.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'denied',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'denied',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: true
   }
 ];
 

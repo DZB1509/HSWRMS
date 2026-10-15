@@ -52,6 +52,18 @@ public class PhysicalVilla {
     @Column(name = "area_sqm", precision = 10, scale = 2)
     private BigDecimal areaSqm;
 
+    @Column(name = "nightly_rate", precision = 18, scale = 2)
+    private BigDecimal nightlyRate;
+
+    @Column(name = "bed_type", length = 100)
+    private String bedType;
+
+    @Column(name = "max_adults")
+    private Integer maxAdults = 2;
+
+    @Column(name = "max_children")
+    private Integer maxChildren = 1;
+
     @Column(name = "has_private_pool", nullable = false)
     private boolean hasPrivatePool;
 
@@ -60,6 +72,12 @@ public class PhysicalVilla {
 
     @Column(name = "view_and_operational_notes", length = 500)
     private String viewAndOperationalNotes;
+
+    @Column(name = "image", length = 500)
+    private String image;
+
+    @Column(name = "amenities", length = 1000)
+    private String amenities;
 
     public PhysicalVilla() {}
 
@@ -96,10 +114,22 @@ public class PhysicalVilla {
     public void setMaxOccupancy(int maxOccupancy) { this.maxOccupancy = maxOccupancy; }
     public BigDecimal getAreaSqm() { return areaSqm; }
     public void setAreaSqm(BigDecimal areaSqm) { this.areaSqm = areaSqm; }
+    public BigDecimal getNightlyRate() { return nightlyRate; }
+    public void setNightlyRate(BigDecimal nightlyRate) { this.nightlyRate = nightlyRate; }
+    public String getBedType() { return bedType; }
+    public void setBedType(String bedType) { this.bedType = bedType; }
+    public Integer getMaxAdults() { return maxAdults; }
+    public void setMaxAdults(Integer maxAdults) { this.maxAdults = maxAdults; }
+    public Integer getMaxChildren() { return maxChildren; }
+    public void setMaxChildren(Integer maxChildren) { this.maxChildren = maxChildren; }
     public boolean isHasPrivatePool() { return hasPrivatePool; }
     public void setHasPrivatePool(boolean hasPrivatePool) { this.hasPrivatePool = hasPrivatePool; }
     public String getPoolInfo() { return poolInfo; }
     public void setPoolInfo(String poolInfo) { this.poolInfo = poolInfo; }
     public String getViewAndOperationalNotes() { return viewAndOperationalNotes; }
     public void setViewAndOperationalNotes(String viewAndOperationalNotes) { this.viewAndOperationalNotes = viewAndOperationalNotes; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+    public String getAmenities() { return amenities; }
+    public void setAmenities(String amenities) { this.amenities = amenities; }
 }

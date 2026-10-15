@@ -8,7 +8,11 @@ import {
   Clock,
   Edit2,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Plus,
+  Bed,
+  Users,
+  Baby
 } from 'lucide-react';
 import {
   INITIAL_PACKAGES_MASTER,
@@ -16,9 +20,13 @@ import {
   INITIAL_VILLAS_MASTER
 } from '../../data/mockMasterData';
 import type { MasterDataCategory, RetreatPackageMaster, SpaServiceMaster, VillaCategoryMaster } from '../../types/masterData';
+import type { VillaCategoryItem } from '../../types/villaManagement';
 import { formatVND } from '../../i18n';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
+import { AddRetreatPackageModal } from '../../components/operations/AddRetreatPackageModal';
+import { AddSpaTreatmentModal } from '../../components/operations/AddSpaTreatmentModal';
+import { AddVillaCategoryModal } from '../../components/operations/AddVillaCategoryModal';
 
 export const MasterDataPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'common']);
@@ -32,6 +40,11 @@ export const MasterDataPage: React.FC = () => {
   const [spaServices, setSpaServices] = useState<SpaServiceMaster[]>(INITIAL_SPA_SERVICES_MASTER);
   const [villas, setVillas] = useState<VillaCategoryMaster[]>(INITIAL_VILLAS_MASTER);
 
+  // Add modals state
+  const [isAddPackageOpen, setIsAddPackageOpen] = useState(false);
+  const [isAddSpaOpen, setIsAddSpaOpen] = useState(false);
+  const [isAddVillaCatOpen, setIsAddVillaCatOpen] = useState(false);
+
   // Edit item modal state
   const [editingItem, setEditingItem] = useState<{
     category: MasterDataCategory;
@@ -40,6 +53,38 @@ export const MasterDataPage: React.FC = () => {
     price: number;
     status: 'active' | 'archived';
   } | null>(null);
+
+  const handleAddPackage = (newPkg: RetreatPackageMaster) => {
+    setPackages((prev) => [newPkg, ...prev]);
+    showToast(`Đã thêm gói nghỉ dưỡng "${newPkg.name}" thành công!`, 'success');
+  };
+
+  const handleAddSpaService = (newSrv: SpaServiceMaster) => {
+    setSpaServices((prev) => [newSrv, ...prev]);
+    showToast(`Đã thêm liệu trình trị liệu "${newSrv.name}" thành công!`, 'success');
+  };
+
+  const handleAddVillaCategory = (newCat: VillaCategoryItem) => {
+    const masterCat: VillaCategoryMaster = {
+      id: `VIL-${Date.now().toString().slice(-4)}`,
+      code: newCat.categoryCode || `CAT-${Date.now().toString().slice(-4)}`,
+      name: newCat.categoryName,
+      bedroomCount: newCat.bedroomCount,
+      bedType: newCat.bedType,
+      maxAdults: newCat.maxAdults,
+      maxChildren: newCat.maxChildren,
+      maxOccupancy: newCat.maxOccupancy,
+      areaRange: newCat.areaRange,
+      hasPrivatePool: newCat.hasPrivatePool,
+      hasTreatmentPavilion: newCat.highlights?.includes('Chòi trị liệu riêng') || false,
+      totalVillasCount: newCat.inventoryCount || 0,
+      baseNightlyRate: newCat.priceModifier || 5000000,
+      status: 'active',
+      description: newCat.featuresAndAmenities || 'Hạng biệt thự nghỉ dưỡng sang trọng'
+    };
+    setVillas((prev) => [masterCat, ...prev]);
+    showToast(`Đã thêm hạng biệt thự "${newCat.categoryName}" thành công!`, 'success');
+  };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,7 +228,7 @@ export const MasterDataPage: React.FC = () => {
 
       {/* Search Toolbar */}
       <div className="hsw-gov-card" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)' }}>
-        <div className="hsw-filter-toolbar" style={{ margin: 0, justifyContent: 'space-between' }}>
+        <div className="hsw-filter-toolbar" style={{ margin: 0, justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -193,8 +238,37 @@ export const MasterDataPage: React.FC = () => {
               className="hsw-filter-input"
             />
           </div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {t('operations.masterData.authorityNotice', 'Thay đổi quản trị cập nhật danh mục dữ liệu gốc mô phỏng giao diện.')}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {activeTab === 'packages' && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => setIsAddPackageOpen(true)}
+              >
+                Thêm Gói Nghỉ Dưỡng Mới
+              </Button>
+            )}
+            {activeTab === 'spa' && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => setIsAddSpaOpen(true)}
+              >
+                Thêm Liệu Trình Spa Mới
+              </Button>
+            )}
+            {activeTab === 'villas' && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => setIsAddVillaCatOpen(true)}
+              >
+                Thêm Phân Hạng Biệt Thự
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -389,7 +463,7 @@ export const MasterDataPage: React.FC = () => {
             <thead>
               <tr>
                 <th>{t('operations.masterData.colVillaCat', 'Phân Hạng Biệt Thự')}</th>
-                <th>{t('operations.masterData.colOccupancy', 'Sức Chứa Tối Đa')}</th>
+                <th>Cấu Hình Giường & Sức Chứa</th>
                 <th>{t('operations.masterData.colFeatures', 'Tiện Ích Sức Khỏe')}</th>
                 <th>{t('operations.masterData.colCount', 'Số Lượng Biệt Thự')}</th>
                 <th>{t('operations.masterData.colRate', 'Giá Chuẩn / Đêm (VND)')}</th>
@@ -408,10 +482,31 @@ export const MasterDataPage: React.FC = () => {
                         <code style={{ background: '#f5f4f0', padding: '1px 6px', borderRadius: '4px', border: '1px solid #e5e2dc', color: 'var(--accent-forest)' }}>{vil.code}</code>
                         <span>·</span>
                         <span>{vil.id}</span>
+                        {vil.areaRange && (
+                          <>
+                            <span>·</span>
+                            <span>{vil.areaRange}</span>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                      {vil.maxOccupancy} {t('operations.masterData.customersUnit', 'Khách hàng')}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <Bed size={13} style={{ color: 'var(--accent-forest)' }} />
+                        {vil.bedType || `${vil.bedroomCount || 1} PN King Bed`}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Users size={11} style={{ color: 'var(--accent-forest)' }} />
+                          {vil.maxAdults || 2} Lớn
+                        </span>
+                        <span>+</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Baby size={11} style={{ color: '#0284c7' }} />
+                          {vil.maxChildren !== undefined ? vil.maxChildren : 1} Trẻ
+                        </span>
+                        <span>(Tối đa: {vil.maxOccupancy} khách)</span>
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -576,6 +671,50 @@ export const MasterDataPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Add Retreat Package Modal */}
+      <AddRetreatPackageModal
+        isOpen={isAddPackageOpen}
+        onClose={() => setIsAddPackageOpen(false)}
+        existingPackages={packages}
+        onAddPackage={handleAddPackage}
+      />
+
+      {/* Add Spa Treatment Modal */}
+      <AddSpaTreatmentModal
+        isOpen={isAddSpaOpen}
+        onClose={() => setIsAddSpaOpen(false)}
+        existingServices={spaServices}
+        onAddService={handleAddSpaService}
+      />
+
+      {/* Add Villa Category Modal */}
+      <AddVillaCategoryModal
+        isOpen={isAddVillaCatOpen}
+        onClose={() => setIsAddVillaCatOpen(false)}
+        existingCategories={villas.map((v) => ({
+          id: Number(v.id.replace(/\D/g, '')) || Date.now(),
+          categoryName: v.name,
+          categoryCode: v.code,
+          inventoryCount: v.totalVillasCount,
+          bedroomCount: v.bedroomCount || 1,
+          bedType: v.bedType,
+          bedroomDescription: `${v.bedroomCount || 1} PN (${v.bedType || 'King Bed'})`,
+          maxAdults: v.maxAdults,
+          maxChildren: v.maxChildren,
+          maxOccupancy: v.maxOccupancy,
+          standardOccupancy: v.maxAdults || 2,
+          areaRange: v.areaRange || '100 - 150 m²',
+          priceModifier: v.baseNightlyRate,
+          hasPrivatePool: v.hasPrivatePool,
+          poolDescription: v.hasPrivatePool ? 'Hồ bơi riêng' : 'Không',
+          featuresAndAmenities: v.description,
+          eligiblePackages: ['Detox', 'Stress Relief'],
+          image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
+          highlights: ['Tiêu chuẩn quốc tế']
+        }))}
+        onAddCategory={handleAddVillaCategory}
+      />
     </div>
   );
 };

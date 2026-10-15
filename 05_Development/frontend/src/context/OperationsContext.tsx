@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type {
   Villa,
   VillaStatus,
@@ -128,6 +128,59 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [alerts, setAlerts] = useState<OperationalAlert[]>(INITIAL_OPERATIONAL_ALERTS);
   const todayDate = 'Thursday, 24 Sep 2026';
+
+  // Synchronize villa inventory directly with backend REST API (SQL Server / DB)
+  const refreshDbVillas = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/villas');
+      if (res.ok) {
+        const json = await res.json();
+        const apiData = Array.isArray(json) ? json : json.data;
+        if (Array.isArray(apiData) && apiData.length > 0) {
+          const mapped: Villa[] = apiData.map((v: any) => {
+            const num: string = v.villaNumber || `V${v.villaId}`;
+            const code: string = num.replace(/^V/, '');
+            let st: VillaStatus = 'ready';
+            if (v.villaStatus === 'OCCUPIED') st = 'occupied';
+            else if (v.villaStatus === 'NEEDS_CLEANING' || v.villaStatus === 'CLEANING') st = 'cleaning';
+            else if (v.villaStatus === 'MAINTENANCE') st = 'maintenance';
+            else if (v.villaStatus === 'RESERVED') st = 'reserved';
+
+            let hk: HousekeepingStatus = 'clean';
+            if (st === 'cleaning') hk = 'in_progress';
+            else if (st === 'maintenance') hk = 'dirty';
+
+            return {
+              id: num,
+              code: code,
+              name: {
+                vi: `${num} - ${v.villaCategory?.categoryName || 'Biệt Thự'}`,
+                en: `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
+                'zh-CN': `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
+                ja: `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
+                fr: `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
+              },
+              category: v.villaCategory?.categoryName || 'Garden Villa',
+              capacity: v.maxOccupancy || 2,
+              bedType: v.bedType || v.bedroomInfo || '1 King Bed',
+              status: st,
+              housekeeping: hk,
+              currentBookingRef: st === 'occupied' ? `BK-2026-${code}8` : undefined,
+              currentCustomerName: st === 'occupied' ? `Customer ${num}` : undefined,
+              features: v.amenities ? v.amenities.split(',').map((s: string) => s.trim()) : [],
+            };
+          });
+          setVillas(mapped);
+        }
+      }
+    } catch {
+      // Backend unavailable, fallback to existing local storage
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshDbVillas();
+  }, [refreshDbVillas]);
 
   // Persistence to localStorage: Villas operational state
   useEffect(() => {
@@ -495,6 +548,7 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         completeCheckIn,
         submitDailyResidenceDeclarations,
         markResidenceDeclaration,
+        refreshDbVillas,
       }}
     >
       {children}

@@ -57,6 +57,24 @@ public class VillaCategory {
     @Column(name = "eligible_packages", length = 250)
     private String eligiblePackages;
 
+    @Column(name = "base_price", precision = 18, scale = 2)
+    private BigDecimal basePrice = BigDecimal.valueOf(3500000);
+
+    @Column(name = "bed_type", length = 100)
+    private String bedType = "1 Giường King";
+
+    @Column(name = "max_adults")
+    private Integer maxAdults = 2;
+
+    @Column(name = "max_children")
+    private Integer maxChildren = 1;
+
+    @Column(name = "image", length = 500)
+    private String image;
+
+    @Column(name = "highlights", length = 500)
+    private String highlights;
+
     public VillaCategory() {}
 
     public VillaCategory(String categoryName, int maxOccupancy, BigDecimal priceModifier, String categoryStatus,
@@ -101,4 +119,16 @@ public class VillaCategory {
     public void setFeaturesAndAmenities(String featuresAndAmenities) { this.featuresAndAmenities = featuresAndAmenities; }
     public String getEligiblePackages() { return eligiblePackages; }
     public void setEligiblePackages(String eligiblePackages) { this.eligiblePackages = eligiblePackages; }
+    public BigDecimal getBasePrice() { return basePrice; }
+    public void setBasePrice(BigDecimal basePrice) { this.basePrice = basePrice; }
+    public String getBedType() { return bedType; }
+    public void setBedType(String bedType) { this.bedType = bedType; }
+    public Integer getMaxAdults() { return maxAdults; }
+    public void setMaxAdults(Integer maxAdults) { this.maxAdults = maxAdults; }
+    public Integer getMaxChildren() { return maxChildren; }
+    public void setMaxChildren(Integer maxChildren) { this.maxChildren = maxChildren; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+    public String getHighlights() { return highlights; }
+    public void setHighlights(String highlights) { this.highlights = highlights; }
 }

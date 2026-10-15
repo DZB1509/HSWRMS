@@ -34,28 +34,50 @@ public class VillaInventoryDataInitializer implements ApplicationRunner {
     private final VillaCategoryRepository categoryRepo;
     private final PhysicalVillaRepository villaRepo;
     private final VillaFunctionalAreaRepository areaRepo;
+    private final com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository packageRepo;
 
     public VillaInventoryDataInitializer(ResortZoneRepository zoneRepo,
                                          VillaCategoryRepository categoryRepo,
                                          PhysicalVillaRepository villaRepo,
-                                         VillaFunctionalAreaRepository areaRepo) {
+                                         VillaFunctionalAreaRepository areaRepo,
+                                         com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository packageRepo) {
         this.zoneRepo = zoneRepo;
         this.categoryRepo = categoryRepo;
         this.villaRepo = villaRepo;
         this.areaRepo = areaRepo;
+        this.packageRepo = packageRepo;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        log.info("Initializing HSWRMS Villa Inventory Master Data (27 Villas, 6 Categories, 6 Zones)...");
+        log.info("Initializing HSWRMS Villa Inventory Master Data (27 Villas, 6 Categories, 6 Zones, Packages)...");
 
         initZones();
         Map<String, VillaCategory> categoryMap = initCategories();
         initPhysicalVillas(categoryMap);
         initFunctionalAreas();
+        initRetreatPackages();
 
         log.info("HSWRMS Villa Inventory Master Data Initialized successfully.");
+    }
+
+    private void initRetreatPackages() {
+        Object[][] pkgs = {
+                {"Detox & Thanh Lọc Toàn Diện", "Thanh lọc cơ thể, giải độc tế bào, phục hồi năng lượng tự nhiên", 3, new BigDecimal("18500000"), "ACTIVE"},
+                {"Stress Relief & Phục Hồi Thần Trí", "Giải tỏa căng thẳng, cải thiện giấc ngủ sâu, tái tạo tinh thần", 5, new BigDecimal("29800000"), "ACTIVE"},
+                {"Couple Rejuvenation Hạnh Phúc", "Gắn kết tình cảm, thư giãn đôi lứa ven biển cùng liệu trình khoáng nóng", 4, new BigDecimal("38500000"), "ACTIVE"},
+                {"Longevity & Trẻ Hóa Tế Bào", "Kéo dài tuổi thọ sinh học, cải thiện thể lực và sức khỏe toàn diện", 7, new BigDecimal("56000000"), "ACTIVE"}
+        };
+
+        for (Object[] p : pkgs) {
+            String name = (String) p[0];
+            packageRepo.findByPackageName(name).orElseGet(() -> packageRepo.save(
+                    new com.heavenstay.hswrms.m2booking.entity.RetreatPackage(
+                            name, (String) p[1], (Integer) p[2], (BigDecimal) p[3], (String) p[4]
+                    )
+            ));
+        }
     }
 
     private void initZones() {
@@ -80,21 +102,40 @@ public class VillaInventoryDataInitializer implements ApplicationRunner {
         Map<String, VillaCategory> map = new HashMap<>();
 
         Object[][] categories = {
-                {"1-Bedroom Garden Villa", 3, new BigDecimal("0.00"), "ACTIVE", 8, 1, "1 PN (King Bed)", "80 - 120 m²", false, "Không (Vườn xanh riêng)", "Thiền tịnh, yên tĩnh, bồn tắm nằm thảo dược, sân vườn biệt lập", "Detox, Stress Relief, Mindful Living"},
-                {"1-Bedroom Beachfront Pool Villa", 3, new BigDecimal("2500000.00"), "ACTIVE", 6, 1, "1 PN (King Bed)", "120 - 180 m²", true, "Có (Hồ bơi 25 - 40m²)", "Sát bãi biển, bước chân ra cát trắng, hiên tắm nắng ngắm bình minh", "Couple Rejuvenation, Longevity, Stress Relief"},
-                {"2-Bedroom Pool Villa", 6, new BigDecimal("4500000.00"), "ACTIVE", 6, 2, "2 PN (1 King + 1 Twin)", "180 - 250 m²", true, "Có (Hồ bơi 30 - 50m²)", "Bếp ăn gia đình mở, phòng khách rộng, hiên tiệc cocktail hồ bơi", "Family Wellness, Holistic Rebalance"},
-                {"3-Bedroom Ocean View Villa", 9, new BigDecimal("7000000.00"), "ACTIVE", 4, 3, "3 PN (2 King + 1 Twin)", "280 - 400 m²", true, "Có (Hồ bơi 45 - 70m²)", "View biển bao quát từ trên đồi, sân vườn nướng BBQ, ban công lộng gió", "Family Wellness, Active Longevity Group"},
-                {"4-5 Bedroom Family Estate", 12, new BigDecimal("12000000.00"), "ACTIVE", 2, 5, "4 - 5 PN linh hoạt (3 King + 2 Twin)", "450 - 700 m²", true, "Có (Hồ bơi tràn 60 - 100m²)", "Biệt lập tuyệt đối, sảnh lounge tầng 2, phòng xông hơi riêng", "Corporate Executive Retreat, Multi-Gen Estate"},
-                {"Presidential Royal Residence", 16, new BigDecimal("25000000.00"), "ACTIVE", 1, 6, "6 PN Master Suites", "800 - 1500+ m²", true, "Có (Hồ bơi vô cực 150m²)", "Dinh thự độc bản, Quản gia riêng 24/7, rạp chiếu phim, Spa riêng, xe Buggy riêng", "Ultra-Luxury VIP, Royal Wellness Celebration"}
+                {"1-Bedroom Garden Villa", 3, new BigDecimal("0.00"), "ACTIVE", 8, 1, "1 PN (King Bed)", "80 - 120 m²", false, "Không (Vườn xanh riêng)", "Thiền tịnh, yên tĩnh, bồn tắm nằm thảo dược, sân vườn biệt lập", "Detox, Stress Relief, Mindful Living", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80", "Vườn thiền riêng biệt lập | Bồn tắm khoáng thảo mộc | Gần Spa Pavilion"},
+                {"1-Bedroom Beachfront Pool Villa", 3, new BigDecimal("2500000.00"), "ACTIVE", 6, 1, "1 PN (King Bed)", "120 - 180 m²", true, "Có (Hồ bơi 25 - 40m²)", "Sát bãi biển, bước chân ra cát trắng, hiên tắm nắng ngắm bình minh", "Couple Rejuvenation, Longevity, Stress Relief", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80", "Hồ bơi 30m² sát biển | View biển 180 độ | Lối đi thẳng ra bờ cát trắng"},
+                {"2-Bedroom Pool Villa", 6, new BigDecimal("4500000.00"), "ACTIVE", 6, 2, "2 PN (1 King + 1 Twin)", "180 - 250 m²", true, "Có (Hồ bơi 30 - 50m²)", "Bếp ăn gia đình mở, phòng khách rộng, hiên tiệc cocktail hồ bơi", "Family Wellness, Holistic Rebalance", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1200&q=80", "Hồ bơi 40-45m² | Bếp mở & phòng khách lớn | 2 phòng ngủ khép kín hoàn toàn"},
+                {"3-Bedroom Ocean View Villa", 9, new BigDecimal("7000000.00"), "ACTIVE", 4, 3, "3 PN (2 King + 1 Twin)", "280 - 400 m²", true, "Có (Hồ bơi 45 - 70m²)", "View biển bao quát từ trên đồi, sân vườn nướng BBQ, ban công lộng gió", "Family Wellness, Active Longevity Group", new BigDecimal("12800000"), "2 King Beds + 2 Twin Beds", 6, 3, "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80", "Hồ bơi chân mây 55m² | Tầm nhìn đỉnh cao vịnh biển | Sân nướng BBQ ngoài trời"},
+                {"4-5 Bedroom Family Estate", 12, new BigDecimal("12000000.00"), "ACTIVE", 2, 5, "4 - 5 PN linh hoạt (3 King + 2 Twin)", "450 - 700 m²", true, "Có (Hồ bơi tràn 60 - 100m²)", "Biệt lập tuyệt đối, sảnh lounge tầng 2, phòng xông hơi riêng", "Corporate Executive Retreat, Multi-Gen Estate", new BigDecimal("18500000"), "3 King Beds + 4 Twin Beds", 10, 2, "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80", "Hồ bơi tràn 80m² | Phòng Sauna đá muối riêng | Biệt lập 100% giữa thiên nhiên"},
+                {"Presidential Royal Residence", 16, new BigDecimal("25000000.00"), "ACTIVE", 1, 6, "6 PN Master Suites", "800 - 1500+ m²", true, "Có (Hồ bơi vô cực 150m²)", "Dinh thự độc bản, Quản gia riêng 24/7, rạp chiếu phim, Spa riêng, xe Buggy riêng", "Ultra-Luxury VIP, Royal Wellness Celebration", new BigDecimal("35000000"), "4 Master Kings + 4 Queen Beds", 12, 4, "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80", "Hồ bơi vô cực 150m² | Quản gia Butler phục vụ 24/7 | Rạp chiếu phim & Private Spa riêng"}
         };
 
         for (Object[] cat : categories) {
             String name = (String) cat[0];
-            VillaCategory entity = categoryRepo.findByCategoryName(name).orElseGet(() -> categoryRepo.save(new VillaCategory(
-                    name, (Integer) cat[1], (BigDecimal) cat[2], (String) cat[3], (Integer) cat[4],
-                    (Integer) cat[5], (String) cat[6], (String) cat[7], (Boolean) cat[8], (String) cat[9],
-                    (String) cat[10], (String) cat[11]
-            )));
+            VillaCategory entity = categoryRepo.findByCategoryName(name).orElseGet(() -> {
+                VillaCategory newCat = new VillaCategory(
+                        name, (Integer) cat[1], (BigDecimal) cat[2], (String) cat[3], (Integer) cat[4],
+                        (Integer) cat[5], (String) cat[6], (String) cat[7], (Boolean) cat[8], (String) cat[9],
+                        (String) cat[10], (String) cat[11]
+                );
+                newCat.setBasePrice((BigDecimal) cat[12]);
+                newCat.setBedType((String) cat[13]);
+                newCat.setMaxAdults((Integer) cat[14]);
+                newCat.setMaxChildren((Integer) cat[15]);
+                newCat.setImage((String) cat[16]);
+                newCat.setHighlights((String) cat[17]);
+                return categoryRepo.save(newCat);
+            });
+            // Update prices if needed
+            if (entity.getBasePrice() == null) {
+                entity.setBasePrice((BigDecimal) cat[12]);
+                entity.setBedType((String) cat[13]);
+                entity.setMaxAdults((Integer) cat[14]);
+                entity.setMaxChildren((Integer) cat[15]);
+                entity.setImage((String) cat[16]);
+                entity.setHighlights((String) cat[17]);
+                entity = categoryRepo.save(entity);
+            }
             map.put(name, entity);
         }
 
@@ -104,43 +145,43 @@ public class VillaInventoryDataInitializer implements ApplicationRunner {
     private void initPhysicalVillas(Map<String, VillaCategory> catMap) {
         Object[][] villas = {
                 // V101 - V108 (Garden)
-                {"1-Bedroom Garden Villa", "V101", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Hướng vườn sinh thái, gần Wellness Pavilion & Spa"},
-                {"1-Bedroom Garden Villa", "V102", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Không gian thiền tịnh, rặng dừa xanh mướt"},
-                {"1-Bedroom Garden Villa", "V103", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Gần lối dạo bộ thiền hành (Zen Garden)"},
-                {"1-Bedroom Garden Villa", "V104", "Tầng 1 (Ground)", "OCCUPIED", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Phù hợp khách Detox cá nhân hoặc cặp đôi"},
-                {"1-Bedroom Garden Villa", "V105", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Khuôn viên biệt lập có thảm cỏ riêng"},
-                {"1-Bedroom Garden Villa", "V106", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Hiên thưởng trà ngoài trời thoáng mát"},
-                {"1-Bedroom Garden Villa", "V107", "Tầng 1 (Ground)", "NEEDS_CLEANING", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Chuẩn bị dọn phòng sau phiên Checkout"},
-                {"1-Bedroom Garden Villa", "V108", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Gần phân khu F&B Organic Kitchen"},
+                {"1-Bedroom Garden Villa", "V101", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Hướng vườn sinh thái, gần Wellness Pavilion & Spa", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80", "Vườn thiền riêng, Bồn tắm thảo dược, Wi-Fi 6 tốc độ cao, Hiên trà ngoài trời"},
+                {"1-Bedroom Garden Villa", "V102", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Không gian thiền tịnh, rặng dừa xanh mướt", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80", "Vườn chuối cảnh quan, Bồn ngâm khoáng, Sofa đọc sách, Máy lọc không khí"},
+                {"1-Bedroom Garden Villa", "V103", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Gần lối dạo bộ thiền hành (Zen Garden)", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=800&q=80", "Đường dạo sỏi trắng thiền, Bồn tắm ngoài trời kín đáo, Trà thảo dược Welcome"},
+                {"1-Bedroom Garden Villa", "V104", "Tầng 1 (Ground)", "OCCUPIED", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Phù hợp khách Detox cá nhân hoặc cặp đôi", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=800&q=80", "Thảm tập Yoga định tuyến, Loa thiền chuông xoay, Đèn tinh dầu trầm hương"},
+                {"1-Bedroom Garden Villa", "V105", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Khuôn viên biệt lập có thảm cỏ riêng", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=800&q=80", "Sân cỏ tự nhiên riêng, Ghế lười thư giãn, Bồn tắm đá mài tự nhiên"},
+                {"1-Bedroom Garden Villa", "V106", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Hiên thưởng trà ngoài trời thoáng mát", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=800&q=80", "Bộ bàn trà đạo tử sa, Góc đọc sách ngắm hoa, Giường nệm cao su non"},
+                {"1-Bedroom Garden Villa", "V107", "Tầng 1 (Ground)", "NEEDS_CLEANING", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Chuẩn bị dọn phòng sau phiên Checkout", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=800&q=80", "Gần khu dịch vụ dọn phòng, Bồn tắm sục, Tinh dầu sả chanh khử khuẩn"},
+                {"1-Bedroom Garden Villa", "V108", "Tầng 1 (Ground)", "AVAILABLE", "Khu Vườn Nhiệt Đới (Garden Zone)", "1 King Bed", 3, new BigDecimal("105.00"), false, "Không (Vườn riêng)", "Gần phân khu F&B Organic Kitchen", new BigDecimal("4500000"), "1 King Bed (1.8m x 2.0m)", 2, 1, "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80", "Thuận tiện gọi thực đơn Detox nóng, Vườn thảo mộc cạnh hiên, TV 4K"},
 
                 // V201 - V206 (Beachfront)
-                {"1-Bedroom Beachfront Pool Villa", "V201", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Sát bãi cát trắng, hồ bơi riêng ngắm bình minh"},
-                {"1-Bedroom Beachfront Pool Villa", "V202", "Tầng 1 (Ground)", "OCCUPIED", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "View biển 180 độ, phòng tắm lộ thiên giếng trời"},
-                {"1-Bedroom Beachfront Pool Villa", "V203", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Lối đi thẳng ra bờ biển, hiên tắm nắng riêng"},
-                {"1-Bedroom Beachfront Pool Villa", "V204", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Trang bị bồn ngâm thủy lực thảo dược ngoài trời"},
-                {"1-Bedroom Beachfront Pool Villa", "V205", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Vị trí ngắm hoàng hôn tuyệt đẹp trên biển"},
-                {"1-Bedroom Beachfront Pool Villa", "V206", "Tầng 1 (Ground)", "MAINTENANCE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Bảo dưỡng định kỳ hệ thống lọc hồ bơi"},
+                {"1-Bedroom Beachfront Pool Villa", "V201", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Sát bãi cát trắng, hồ bơi riêng ngắm bình minh", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80", "Hồ bơi sát cát trắng, Giường phơi nắng đôi, Lối đi riêng ra biển, Bồn tắm view biển"},
+                {"1-Bedroom Beachfront Pool Villa", "V202", "Tầng 1 (Ground)", "OCCUPIED", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "View biển 180 độ, phòng tắm lộ thiên giếng trời", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80", "Phòng tắm thiên nhiên lộ thiên, Bể ngâm nước ấm, Rượu vang đón tiếp, Dịch vụ hoa tươi"},
+                {"1-Bedroom Beachfront Pool Villa", "V203", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Lối đi thẳng ra bờ biển, hiên tắm nắng riêng", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=80", "Hiên tắm nắng gỗ Teak, Ghế dù bãi biển, Ống nhòm ngắm hải âu, Hệ thống loa Bluetooth"},
+                {"1-Bedroom Beachfront Pool Villa", "V204", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Trang bị bồn ngâm thủy lực thảo dược ngoài trời", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80", "Bồn Jacuzzi ngoài trời, Liệu trình muối biển tẩy da chết tại villa, Máy pha cafe Nespresso"},
+                {"1-Bedroom Beachfront Pool Villa", "V205", "Tầng 1 (Ground)", "AVAILABLE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Vị trí ngắm hoàng hôn tuyệt đẹp trên biển", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=800&q=80", "Góc ngắm hoàng hôn triệu đô, Đèn chiếu sáng hồ bơi đổi màu, Thực đơn BBQ bãi biển"},
+                {"1-Bedroom Beachfront Pool Villa", "V206", "Tầng 1 (Ground)", "MAINTENANCE", "Phân Khu Sát Biển (Beachfront)", "1 King Bed", 3, new BigDecimal("150.00"), true, "Có (Hồ bơi 30m²)", "Bảo dưỡng định kỳ hệ thống lọc hồ bơi", new BigDecimal("7200000"), "1 Super King Bed (2.0m x 2.2m)", 2, 1, "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80", "Đang căn chỉnh điện phân muối hồ bơi, Khử khoáng đường ống nước biển"},
 
                 // V301 - V306 (Lagoon)
-                {"2-Bedroom Pool Villa", "V301", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Phù hợp gia đình nhỏ, bếp nấu mở & phòng khách lớn"},
-                {"2-Bedroom Pool Villa", "V302", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Mặt nước tĩnh lặng, cầu gỗ dạo bộ ven hồ"},
-                {"2-Bedroom Pool Villa", "V303", "2 Tầng (Duplex)", "OCCUPIED", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("240.00"), true, "Có (Hồ bơi 45m²)", "Phòng Master tầng 2 có ban công ngắm toàn cảnh"},
-                {"2-Bedroom Pool Villa", "V304", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("240.00"), true, "Có (Hồ bơi 45m²)", "Khu vực bàn ăn gia đình 6 chỗ kết nối hiên hồ bơi"},
-                {"2-Bedroom Pool Villa", "V305", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Hai phòng ngủ khép kín độc lập, bảo đảm riêng tư"},
-                {"2-Bedroom Pool Villa", "V306", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Sân vườn bên hiên tích hợp tiểu cảnh nước tĩnh"},
+                {"2-Bedroom Pool Villa", "V301", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Phù hợp gia đình nhỏ, bếp nấu mở & phòng khách lớn", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80", "Bếp gia đình tiện nghi, Bàn ăn 6 chỗ, Hồ bơi trẻ em nông, Phòng khách thông thoáng"},
+                {"2-Bedroom Pool Villa", "V302", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Mặt nước tĩnh lặng, cầu gỗ dạo bộ ven hồ", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80", "Cầu gỗ câu cá thư giãn, Hồ sen sinh thái cạnh hồ bơi, Set trà thảo dược cho gia đình"},
+                {"2-Bedroom Pool Villa", "V303", "2 Tầng (Duplex)", "OCCUPIED", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("240.00"), true, "Có (Hồ bơi 45m²)", "Phòng Master tầng 2 có ban công ngắm toàn cảnh", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80", "Thiết kế Duplex hiện đại, Cầu thang gỗ kính sang trọng, Ban công ngắm đầm sen"},
+                {"2-Bedroom Pool Villa", "V304", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("240.00"), true, "Có (Hồ bơi 45m²)", "Khu vực bàn ăn gia đình 6 chỗ kết nối hiên hồ bơi", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80", "Bàn tiệc kết nối hồ bơi, Duplex 2 tầng, Tủ rượu gia đình, Bồn tắm nằm thảo dược"},
+                {"2-Bedroom Pool Villa", "V305", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Hai phòng ngủ khép kín độc lập, bảo đảm riêng tư", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80", "2 phòng ngủ độc lập, Hồ bơi 40m², Sân vườn nhiệt đới, Mini bar miễn phí"},
+                {"2-Bedroom Pool Villa", "V306", "Tầng 1 (Ground)", "AVAILABLE", "Khu Đầm Phá & Vườn (Lagoon/Garden)", "2 PN (1 King + 1 Twin)", 6, new BigDecimal("220.00"), true, "Có (Hồ bơi 40m²)", "Sân vườn bên hiên tích hợp tiểu cảnh nước tĩnh", new BigDecimal("9500000"), "1 King Bed + 2 Twin Beds", 4, 2, "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80", "Tiểu cảnh nước phong thủy, Hồ bơi muối điện phân, Phòng khách mở, Smart Home"},
 
                 // V401 - V404 (Ocean Hill)
-                {"3-Bedroom Ocean View Villa", "V401", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Tầm nhìn biển bao quát từ đồi cao, sân nướng BBQ"},
-                {"3-Bedroom Ocean View Villa", "V402", "2 Tầng (Duplex)", "OCCUPIED", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Phù hợp gia đình đa thế hệ, 3 phòng tắm khép kín"},
-                {"3-Bedroom Ocean View Villa", "V403", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Ban công đón gió biển lộng gió, phòng khách rộng"},
-                {"3-Bedroom Ocean View Villa", "V404", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Hồ bơi chân mây hướng trực diện hoàng hôn biển"},
+                {"3-Bedroom Ocean View Villa", "V401", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Tầm nhìn biển bao quát từ đồi cao, sân nướng BBQ", new BigDecimal("12800000"), "2 King Beds + 2 Twin Beds", 6, 3, "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80", "Bếp BBQ sân thượng, Hồ bơi vô cực nhìn ra vịnh, Dịch vụ đầu bếp tại chỗ, Ghế tắm nắng đôi"},
+                {"3-Bedroom Ocean View Villa", "V402", "2 Tầng (Duplex)", "OCCUPIED", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Phù hợp gia đình đa thế hệ, 3 phòng tắm khép kín", new BigDecimal("12800000"), "2 King Beds + 2 Twin Beds", 6, 3, "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=800&q=80", "3 phòng tắm bồn sục jacuzzi riêng, Phòng sinh hoạt gia đình lớn, Sofa chữ L cao cấp"},
+                {"3-Bedroom Ocean View Villa", "V403", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Ban công đón gió biển lộng gió, phòng khách rộng", new BigDecimal("12800000"), "2 King Beds + 2 Twin Beds", 6, 3, "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80", "Ban công panorama 270 độ, Bàn tiệc rượu ngoài trời, Hệ thống đèn rọi nghệ thuật"},
+                {"3-Bedroom Ocean View Villa", "V404", "2 Tầng (Duplex)", "AVAILABLE", "Khu Đồi Hướng Biển (Ocean Hill)", "3 PN (2 King + 1 Twin)", 9, new BigDecimal("350.00"), true, "Có (Hồ bơi 55m²)", "Hồ bơi chân mây hướng trực diện hoàng hôn biển", new BigDecimal("12800000"), "2 King Beds + 2 Twin Beds", 6, 3, "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80", "Hồ bơi kính viền chân mây, Dịch vụ trà chiều hoàng hôn, Xe điện Buggy phục vụ riêng"},
 
                 // V501 - V502 (Hillside Cliff)
-                {"4-5 Bedroom Family Estate", "V501", "2 Tầng (Estate)", "AVAILABLE", "Đỉnh Đồi Biệt Lập (Hillside Cliff)", "5 PN (3 King + 2 Twin)", 12, new BigDecimal("580.00"), true, "Có (Hồ bơi tràn 80m²)", "Biệt thự đại gia đình, phòng xông hơi riêng, bếp lớn"},
-                {"4-5 Bedroom Family Estate", "V502", "2 Tầng (Estate)", "OCCUPIED", "Đỉnh Đồi Biệt Lập (Hillside Cliff)", "5 PN (3 King + 2 Twin)", 12, new BigDecimal("580.00"), true, "Có (Hồ bơi tràn 80m²)", "Phục vụ kỳ nghỉ doanh nghiệp cấp cao, sân tiệc riêng"},
+                {"4-5 Bedroom Family Estate", "V501", "2 Tầng (Estate)", "AVAILABLE", "Đỉnh Đồi Biệt Lập (Hillside Cliff)", "5 PN (3 King + 2 Twin)", 12, new BigDecimal("580.00"), true, "Có (Hồ bơi tràn 80m²)", "Biệt thự đại gia đình, phòng xông hơi riêng, bếp lớn", new BigDecimal("18500000"), "3 King Beds + 4 Twin Beds", 10, 2, "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80", "Hồ bơi tràn 80m², Phòng Sauna đá muối riêng, Bếp đảo bếp trưởng, Sân vườn 300m²"},
+                {"4-5 Bedroom Family Estate", "V502", "2 Tầng (Estate)", "OCCUPIED", "Đỉnh Đồi Biệt Lập (Hillside Cliff)", "5 PN (3 King + 2 Twin)", 12, new BigDecimal("580.00"), true, "Có (Hồ bơi tràn 80m²)", "Phục vụ kỳ nghỉ doanh nghiệp cấp cao, sân tiệc riêng", new BigDecimal("18500000"), "3 King Beds + 4 Twin Beds", 10, 2, "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80", "Sảnh tiệc riêng 16 người, Sauna khô & ướt, Hồ bơi 80m², Phòng quản gia riêng"},
 
                 // V601 (Cliffside Sanctuary)
-                {"Presidential Royal Residence", "V601", "2 Tầng (Palatial)", "AVAILABLE", "Mũi Vách Đá Biển (Cliffside Sanctuary)", "6 PN Master Suites", 16, new BigDecimal("1200.00"), true, "Có (Hồ bơi vô cực 150m²)", "Dinh thự Tổng thống độc bản: Rạp chiếu phim, Spa riêng, Butler 24/7"}
+                {"Presidential Royal Residence", "V601", "2 Tầng (Palatial)", "AVAILABLE", "Mũi Vách Đá Biển (Cliffside Sanctuary)", "6 PN Master Suites", 16, new BigDecimal("1200.00"), true, "Có (Hồ bơi vô cực 150m²)", "Dinh thự Tổng thống độc bản: Rạp chiếu phim, Spa riêng, Butler 24/7", new BigDecimal("35000000"), "4 Master Kings + 4 Queen Beds", 12, 4, "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80", "Hồ bơi vô cực 150m², Quản gia riêng 24/7, Rạp chiếu phim Dolby Atmos, Xe Buggy riêng, Khu Spa & Sauna đôi"}
         };
 
         for (Object[] row : villas) {
@@ -149,10 +190,18 @@ public class VillaInventoryDataInitializer implements ApplicationRunner {
             VillaCategory cat = catMap.get(catName);
             if (cat == null) continue;
 
-            villaRepo.findByVillaNumber(num).orElseGet(() -> villaRepo.save(new PhysicalVilla(
+            PhysicalVilla v = villaRepo.findByVillaNumber(num).orElseGet(() -> new PhysicalVilla(
                     cat, num, (String) row[2], (String) row[3], (String) row[4], (String) row[5],
                     (Integer) row[6], (BigDecimal) row[7], (Boolean) row[8], (String) row[9], (String) row[10]
-            )));
+            ));
+
+            v.setNightlyRate((BigDecimal) row[11]);
+            v.setBedType((String) row[12]);
+            v.setMaxAdults((Integer) row[13]);
+            v.setMaxChildren((Integer) row[14]);
+            v.setImage((String) row[15]);
+            v.setAmenities((String) row[16]);
+            villaRepo.save(v);
         }
     }
 

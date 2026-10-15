@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Home,
   Layers,
@@ -20,7 +20,14 @@ import {
   Crown,
   Trees,
   Mountain,
-  Droplets
+  Droplets,
+  Plus,
+  DollarSign,
+  Package,
+  Lock,
+  Database,
+  RefreshCw,
+  Ban
 } from 'lucide-react';
 import {
   PHYSICAL_VILLAS,
@@ -28,6 +35,7 @@ import {
   RESORT_ZONES,
   VILLA_FUNCTIONAL_AREAS
 } from '../../data/mockVillaData';
+import { INITIAL_PACKAGES_MASTER } from '../../data/mockMasterData';
 import type {
   PhysicalVillaItem,
   VillaCategoryItem,
@@ -35,13 +43,20 @@ import type {
   VillaFunctionalAreaItem,
   VillaOperationalStatus
 } from '../../types/villaManagement';
+import type { RetreatPackageMaster } from '../../types/masterData';
 import { useAuth } from '../../hooks/useAuth';
 import { useGovernance } from '../../hooks/useGovernance';
 import { useToast } from '../../components/common/Toast';
 import { formatVND } from '../../i18n';
 import { Button } from '../../components/common/Button';
+import { AddVillaModal } from '../../components/operations/AddVillaModal';
+import { AddVillaCategoryModal } from '../../components/operations/AddVillaCategoryModal';
+import { AddRetreatPackageModal } from '../../components/operations/AddRetreatPackageModal';
+import { EditVillaPriceModal } from '../../components/operations/EditVillaPriceModal';
+import { EditPackagePriceModal } from '../../components/operations/EditPackagePriceModal';
+import { EditCategoryPriceModal } from '../../components/operations/EditCategoryPriceModal';
 
-type TabKey = 'villas' | 'categories' | 'zones' | 'functional_areas';
+type TabKey = 'villas' | 'categories' | 'packages' | 'zones' | 'functional_areas';
 
 export const VillaManagementPage: React.FC = () => {
   const { role } = useAuth();
@@ -51,11 +66,162 @@ export const VillaManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('villas');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
-  // Master local state for villas to allow live status updates
+  // Master state for villas, categories, packages, zones, functional areas
   const [villas, setVillas] = useState<PhysicalVillaItem[]>(PHYSICAL_VILLAS);
-  const [categories] = useState<VillaCategoryItem[]>(VILLA_CATEGORIES);
-  const [zones] = useState<ResortZoneItem[]>(RESORT_ZONES);
-  const [functionalAreas] = useState<VillaFunctionalAreaItem[]>(VILLA_FUNCTIONAL_AREAS);
+  const [categories, setCategories] = useState<VillaCategoryItem[]>(VILLA_CATEGORIES);
+  const [packages, setPackages] = useState<RetreatPackageMaster[]>(INITIAL_PACKAGES_MASTER);
+  const [zones, setZones] = useState<ResortZoneItem[]>(RESORT_ZONES);
+  const [functionalAreas, setFunctionalAreas] = useState<VillaFunctionalAreaItem[]>(VILLA_FUNCTIONAL_AREAS);
+
+  // Database sync indicator state
+  const [isDbSynced, setIsDbSynced] = useState<boolean>(false);
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(false);
+
+  // Fetch all inventory directly from backend Database on mount
+  const fetchAllFromDatabase = async () => {
+    setIsLoadingDb(true);
+    try {
+      const [villasRes, catsRes, pkgsRes, zonesRes, areasRes] = await Promise.all([
+        fetch('http://localhost:8080/api/v1/villas').then((r) => r.ok ? r.json() : null),
+        fetch('http://localhost:8080/api/v1/villa-categories').then((r) => r.ok ? r.json() : null),
+        fetch('http://localhost:8080/api/v1/retreat-packages').then((r) => r.ok ? r.json() : null),
+        fetch('http://localhost:8080/api/v1/resort-zones').then((r) => r.ok ? r.json() : null),
+        fetch('http://localhost:8080/api/v1/villa-functional-areas').then((r) => r.ok ? r.json() : null)
+      ]);
+
+      if (villasRes?.data && Array.isArray(villasRes.data) && villasRes.data.length > 0) {
+        const loadedVillas: PhysicalVillaItem[] = villasRes.data.map((item: any) => ({
+          id: item.villaNumber,
+          villaNumber: item.villaNumber,
+          categoryId: item.villaCategory?.villaCategoryId || 1,
+          categoryName: item.villaCategory?.categoryName || 'Villa',
+          zoneName: item.zoneName || 'Garden Zone',
+          floor: item.floor || 'Tầng 1 (Ground)',
+          bedroomCount: item.villaCategory?.bedroomCount || 1,
+          bedroomInfo: item.bedroomInfo || item.villaCategory?.bedroomDescription || '1 King Bed',
+          bedType: item.bedType || item.villaCategory?.bedType || '1 King Bed (1.8m x 2.0m)',
+          maxAdults: item.maxAdults ?? item.villaCategory?.maxAdults ?? 2,
+          maxChildren: item.maxChildren ?? item.villaCategory?.maxChildren ?? 1,
+          maxOccupancy: item.maxOccupancy ?? item.villaCategory?.maxOccupancy ?? 3,
+          areaSqm: typeof item.areaSqm === 'number' ? item.areaSqm : Number(item.areaSqm) || 100,
+          nightlyRate: typeof item.nightlyRate === 'number' ? item.nightlyRate : (Number(item.nightlyRate) || 4500000),
+          hasPrivatePool: Boolean(item.hasPrivatePool),
+          poolInfo: item.poolInfo || (item.hasPrivatePool ? 'Có hồ bơi riêng' : 'Không có hồ bơi'),
+          status: (item.villaStatus || 'AVAILABLE') as VillaOperationalStatus,
+          viewAndOperationalNotes: item.viewAndOperationalNotes || '',
+          image: item.image || item.villaCategory?.image || 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80',
+          amenities: typeof item.amenities === 'string'
+            ? item.amenities.split(',').map((s: string) => s.trim())
+            : (item.amenities || ['Vườn thiền riêng', 'Bồn tắm thảo dược', 'Wi-Fi 6 tốc độ cao', 'Hiên trà ngoài trời'])
+        }));
+        setVillas(loadedVillas);
+        setIsDbSynced(true);
+      }
+
+      if (catsRes?.data && Array.isArray(catsRes.data) && catsRes.data.length > 0) {
+        const loadedCats: VillaCategoryItem[] = catsRes.data.map((item: any) => ({
+          id: item.villaCategoryId,
+          categoryName: item.categoryName,
+          categoryCode: `CAT-${item.villaCategoryId}`,
+          inventoryCount: item.inventoryCount,
+          bedroomCount: item.bedroomCount,
+          bedType: item.bedType || '1 King Bed (1.8m x 2.0m)',
+          bedroomDescription: item.bedroomDescription || `${item.bedroomCount} PN`,
+          maxAdults: item.maxAdults ?? 2,
+          maxChildren: item.maxChildren ?? 1,
+          maxOccupancy: item.maxOccupancy,
+          standardOccupancy: item.maxAdults ?? 2,
+          areaRange: item.areaDescription || '100 m²',
+          basePrice: typeof item.basePrice === 'number' ? item.basePrice : (Number(item.basePrice) || 4500000),
+          priceModifier: typeof item.priceModifier === 'number' ? item.priceModifier : (Number(item.priceModifier) || 0),
+          hasPrivatePool: Boolean(item.hasPrivatePool),
+          poolDescription: item.poolDescription || '',
+          featuresAndAmenities: item.featuresAndAmenities || '',
+          eligiblePackages: typeof item.eligiblePackages === 'string'
+            ? item.eligiblePackages.split(',').map((s: string) => s.trim())
+            : (item.eligiblePackages || []),
+          image: item.image || 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
+          highlights: item.highlights ? item.highlights.split('|').map((h: string) => h.trim()) : ['Biệt lập thiên nhiên', 'Bồn tắm thảo mộc', 'Gần Spa Pavilion']
+        }));
+        setCategories(loadedCats);
+      }
+
+      if (pkgsRes?.data && Array.isArray(pkgsRes.data) && pkgsRes.data.length > 0) {
+        const loadedPkgs: RetreatPackageMaster[] = pkgsRes.data.map((item: any) => ({
+          id: `PKG-${item.retreatPackageId}`,
+          packageName: item.packageName,
+          wellnessGoal: item.wellnessGoal || 'Thư giãn & Phục hồi Thân Tâm',
+          durationNights: item.durationNights || 3,
+          basePrice: typeof item.basePrice === 'number' ? item.basePrice : (Number(item.basePrice) || 18500000),
+          packageStatus: item.packageStatus === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+          includedTreatmentsCount: 4,
+          mealsPerDay: 3,
+          applicableCategories: ['1-Bedroom Garden Villa', '1-Bedroom Beachfront Pool Villa', '2-Bedroom Pool Villa']
+        }));
+        setPackages(loadedPkgs);
+      }
+
+      if (zonesRes?.data && Array.isArray(zonesRes.data) && zonesRes.data.length > 0) {
+        const loadedZones: ResortZoneItem[] = zonesRes.data.map((item: any, idx: number) => ({
+          id: item.zoneId || idx + 1,
+          zoneName: item.zoneName,
+          zoneCode: `ZONE-${item.zoneId || idx + 1}`,
+          landscapeDescription: item.landscapeDescription || '',
+          villaCount: item.villaCount || 0,
+          villaNumbers: item.zoneName.includes('Garden')
+            ? ['V101', 'V102', 'V103', 'V104', 'V105', 'V106', 'V107', 'V108']
+            : item.zoneName.includes('Beachfront')
+            ? ['V201', 'V202', 'V203', 'V204', 'V205', 'V206']
+            : item.zoneName.includes('Lagoon')
+            ? ['V301', 'V302', 'V303', 'V304', 'V305', 'V306']
+            : item.zoneName.includes('Ocean')
+            ? ['V401', 'V402', 'V403', 'V404']
+            : item.zoneName.includes('Hillside')
+            ? ['V501', 'V502']
+            : ['V601'],
+          applicableCategory: item.applicableCategory || '',
+          relativePriceTier: item.relativePriceTier || 'Tiêu chuẩn',
+          operationalAdvantages: item.operationalAdvantages || '',
+          iconName: item.zoneName.includes('Beach') ? 'Waves' : item.zoneName.includes('Ocean') ? 'Mountain' : 'Trees',
+          gradient: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)'
+        }));
+        setZones(loadedZones);
+      }
+
+      if (areasRes?.data && Array.isArray(areasRes.data) && areasRes.data.length > 0) {
+        const loadedAreas: VillaFunctionalAreaItem[] = areasRes.data.map((item: any) => ({
+          id: item.areaId,
+          spaceGroup: item.spaceGroup,
+          roomName: item.roomName,
+          areaRangeSqm: item.areaRangeSqm,
+          quantityIn1Br: item.quantityIn1Br,
+          quantityIn23Br: item.quantityIn23Br,
+          quantityInEstate46Br: item.quantityInEstate46Br,
+          keyFurnishing: item.keyFurnishing,
+          operationalPurpose: item.operationalPurpose
+        }));
+        setFunctionalAreas(loadedAreas);
+      }
+    } catch (err) {
+      console.warn('Backend API connection warning, using local baseline data:', err);
+    } finally {
+      setIsLoadingDb(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllFromDatabase();
+  }, []);
+
+  // Add modals state
+  const [isAddVillaModalOpen, setIsAddVillaModalOpen] = useState(false);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [isAddPackageModalOpen, setIsAddPackageModalOpen] = useState(false);
+
+  // Edit price modals state
+  const [editingPriceVilla, setEditingPriceVilla] = useState<PhysicalVillaItem | null>(null);
+  const [editingPricePackage, setEditingPricePackage] = useState<RetreatPackageMaster | null>(null);
+  const [editingPriceCategory, setEditingPriceCategory] = useState<VillaCategoryItem | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,11 +238,12 @@ export const VillaManagementPage: React.FC = () => {
   const [statusReason, setStatusReason] = useState('');
 
   // Permission Checks:
-  // Admin has full rights; Manager has rights if delegated
+  // Admin has full rights; Manager has rights only if explicitly delegated
   const isAdmin = role === 'admin';
   const canManageInventory = isAdmin || hasCapability('manager', 'manage_villa_inventory') || managerDelegatedCapabilities.includes('manage_villa_inventory');
   const canManageMaintenance = isAdmin || hasCapability('manager', 'manage_villa_maintenance') || managerDelegatedCapabilities.includes('manage_villa_maintenance');
   const canManageCategories = isAdmin || hasCapability('manager', 'manage_villa_categories') || managerDelegatedCapabilities.includes('manage_villa_categories');
+  const canManagePricing = isAdmin || hasCapability('manager', 'manage_pricing') || managerDelegatedCapabilities.includes('manage_pricing');
 
   // Filtered Villas
   const filteredVillas = useMemo(() => {
@@ -103,10 +270,11 @@ export const VillaManagementPage: React.FC = () => {
     const occupied = villas.filter((v) => v.status === 'OCCUPIED').length;
     const cleaning = villas.filter((v) => v.status === 'NEEDS_CLEANING').length;
     const maintenance = villas.filter((v) => v.status === 'MAINTENANCE').length;
+    const inactive = villas.filter((v) => v.status === 'INACTIVE').length;
     const withPool = villas.filter((v) => v.hasPrivatePool).length;
     const occupancyRate = total > 0 ? Math.round((occupied / total) * 100) : 0;
 
-    return { total, available, occupied, cleaning, maintenance, withPool, occupancyRate };
+    return { total, available, occupied, cleaning, maintenance, inactive, withPool, occupancyRate };
   }, [villas]);
 
   const handleOpenVillaDetail = (villa: PhysicalVillaItem) => {
@@ -136,6 +304,13 @@ export const VillaManagementPage: React.FC = () => {
       )
     );
 
+    // Sync status change directly to backend Database
+    fetch(`http://localhost:8080/api/v1/villas/${selectedVilla.villaNumber}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: pendingStatus })
+    }).catch((err) => console.warn('Failed to sync villa status to DB:', err));
+
     logAuditEvent({
       actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
       actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
@@ -150,6 +325,237 @@ export const VillaManagementPage: React.FC = () => {
 
     showToast(`Đã cập nhật trạng thái biệt thự ${selectedVilla.villaNumber} thành công!`, 'success');
     setSelectedVilla(null);
+  };
+
+  const handleAddVilla = async (newVilla: PhysicalVillaItem) => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/villas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          villaNumber: newVilla.villaNumber,
+          villaCategoryId: newVilla.categoryId,
+          zoneName: newVilla.zoneName,
+          floor: newVilla.floor,
+          bedroomInfo: newVilla.bedroomInfo,
+          bedType: newVilla.bedType,
+          maxAdults: newVilla.maxAdults,
+          maxChildren: newVilla.maxChildren,
+          maxOccupancy: newVilla.maxOccupancy,
+          areaSqm: newVilla.areaSqm,
+          nightlyRate: newVilla.nightlyRate,
+          hasPrivatePool: newVilla.hasPrivatePool,
+          poolInfo: newVilla.poolInfo,
+          viewAndOperationalNotes: newVilla.viewAndOperationalNotes,
+          villaStatus: newVilla.status,
+          image: newVilla.image,
+          amenities: Array.isArray(newVilla.amenities) ? newVilla.amenities.join(', ') : newVilla.amenities
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || `Lỗi máy chủ (${res.status})`);
+      }
+
+      // Reload all state directly from database to ensure complete consistency
+      await fetchAllFromDatabase();
+
+      logAuditEvent({
+        actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+        actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+        actorRole: role || 'manager',
+        action: 'CREATE',
+        dataCategory: 'SECURITY_GOVERNANCE',
+        targetRef: `VILLA-${newVilla.villaNumber}`,
+        result: 'SUCCESS',
+        detailsKey: 'operations.audit.villaCreated',
+        detailsFallback: `Đã khởi tạo biệt thự vật lý mới ${newVilla.villaNumber} (${newVilla.categoryName}, ${newVilla.bedroomInfo}, Tối đa: ${newVilla.maxOccupancy} khách) vào CSDL SQL Server`
+      });
+
+      showToast(`Đã thêm thành công biệt thự ${newVilla.villaNumber} vào CSDL SQL Server!`, 'success');
+    } catch (err: any) {
+      console.error('Lỗi lưu biệt thự vào CSDL:', err);
+      showToast(`Không thể lưu biệt thự vào CSDL: ${err.message}`, 'error');
+    }
+  };
+
+  const handleAddCategory = async (newCategory: VillaCategoryItem) => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/villa-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryName: newCategory.categoryName,
+          maxOccupancy: newCategory.maxOccupancy,
+          maxAdults: newCategory.maxAdults,
+          maxChildren: newCategory.maxChildren,
+          bedType: newCategory.bedType,
+          priceModifier: newCategory.priceModifier,
+          inventoryCount: newCategory.inventoryCount,
+          bedroomCount: newCategory.bedroomCount,
+          bedroomDescription: newCategory.bedroomDescription,
+          areaDescription: newCategory.areaRange,
+          hasPrivatePool: newCategory.hasPrivatePool,
+          poolDescription: newCategory.poolDescription,
+          featuresAndAmenities: newCategory.featuresAndAmenities,
+          eligiblePackages: Array.isArray(newCategory.eligiblePackages) ? newCategory.eligiblePackages.join(', ') : newCategory.eligiblePackages
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || `Lỗi máy chủ (${res.status})`);
+      }
+
+      await fetchAllFromDatabase();
+
+      logAuditEvent({
+        actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+        actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+        actorRole: role || 'manager',
+        action: 'CREATE',
+        dataCategory: 'SECURITY_GOVERNANCE',
+        targetRef: `CATEGORY-${newCategory.categoryName}`,
+        result: 'SUCCESS',
+        detailsKey: 'operations.audit.villaCategoryCreated',
+        detailsFallback: `Đã ban hành hạng biệt thự mới ${newCategory.categoryName} (${newCategory.bedroomCount} PN, ${newCategory.bedType}, Tối đa: ${newCategory.maxAdults} Lớn + ${newCategory.maxChildren} Trẻ) vào CSDL`
+      });
+
+      showToast(`Đã ban hành hạng biệt thự mới "${newCategory.categoryName}" vào CSDL thành công!`, 'success');
+    } catch (err: any) {
+      console.error('Lỗi ban hành hạng biệt thự:', err);
+      showToast(`Không thể lưu hạng biệt thự vào CSDL: ${err.message}`, 'error');
+    }
+  };
+
+  const handleSaveVillaPrice = (villaId: string, newRate: number, reason: string) => {
+    setVillas((prev) =>
+      prev.map((v) => (v.id === villaId ? { ...v, nightlyRate: newRate } : v))
+    );
+    if (selectedVilla && selectedVilla.id === villaId) {
+      setSelectedVilla((prev) => (prev ? { ...prev, nightlyRate: newRate } : null));
+    }
+
+    // Persist to Database via backend API
+    fetch(`http://localhost:8080/api/v1/villas/${villaId}/price`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nightlyRate: newRate })
+    }).catch((err) => console.warn('Failed to persist villa price to DB:', err));
+
+    logAuditEvent({
+      actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
+      action: 'UPDATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: `VILLA-${villaId}`,
+      result: 'SUCCESS',
+      detailsKey: 'operations.audit.villaPriceUpdated',
+      detailsFallback: `Đã cập nhật giá thuê đêm biệt thự ${villaId} thành ${formatVND(newRate)}/đêm. Lý do: ${reason}`
+    });
+
+    showToast(`Đã lưu giá thuê biệt thự ${villaId} vào cơ sở dữ liệu thành công (${formatVND(newRate)}/đêm)!`, 'success');
+  };
+
+  const handleSavePackagePrice = (pkgId: string, newBasePrice: number, reason: string) => {
+    setPackages((prev) =>
+      prev.map((p) => (p.id === pkgId ? { ...p, basePrice: newBasePrice } : p))
+    );
+
+    // Extract numeric ID if pkgId is PKG-1 or similar
+    const numId = pkgId.replace(/\D/g, '');
+    if (numId) {
+      fetch(`http://localhost:8080/api/v1/retreat-packages/${numId}/price`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ basePrice: newBasePrice })
+      }).catch((err) => console.warn('Failed to persist package price to DB:', err));
+    }
+
+    logAuditEvent({
+      actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
+      action: 'UPDATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: `PACKAGE-${pkgId}`,
+      result: 'SUCCESS',
+      detailsKey: 'operations.audit.packagePriceUpdated',
+      detailsFallback: `Đã cập nhật đơn giá gói ${pkgId} thành ${formatVND(newBasePrice)}. Lý do: ${reason}`
+    });
+
+    showToast(`Đã lưu đơn giá gói nghỉ dưỡng vào cơ sở dữ liệu thành công!`, 'success');
+  };
+
+  const handleSaveCategoryPrice = (
+    categoryId: number,
+    newBasePrice: number,
+    newModifier: number,
+    reason: string
+  ) => {
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === categoryId
+          ? { ...c, basePrice: newBasePrice, priceModifier: newModifier }
+          : c
+      )
+    );
+
+    // Persist to Database via backend API
+    fetch(`http://localhost:8080/api/v1/villa-categories/${categoryId}/price`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ basePrice: newBasePrice, priceModifier: newModifier })
+    }).catch((err) => console.warn('Failed to persist category price to DB:', err));
+
+    logAuditEvent({
+      actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
+      action: 'UPDATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: `CATEGORY-${categoryId}`,
+      result: 'SUCCESS',
+      detailsKey: 'operations.audit.categoryPriceUpdated',
+      detailsFallback: `Đã điều chỉnh biểu giá hạng phòng ID ${categoryId}: Giá chuẩn ${formatVND(newBasePrice)}/đêm, Phụ thu ${formatVND(newModifier)}. Lý do: ${reason}`
+    });
+
+    showToast(`Đã lưu biểu giá và phụ thu hạng biệt thự vào cơ sở dữ liệu thành công!`, 'success');
+  };
+
+  const handleAddPackage = (newPkg: RetreatPackageMaster) => {
+    setPackages((prev) => [newPkg, ...prev]);
+
+    fetch('http://localhost:8080/api/v1/retreat-packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: newPkg.code,
+        name: newPkg.name,
+        durationDays: newPkg.durationDays,
+        durationNights: newPkg.durationNights,
+        goal: newPkg.goal,
+        includedSpaSessions: newPkg.includedSpaSessions,
+        basePrice: newPkg.basePrice,
+        description: newPkg.description
+      })
+    }).catch(() => {});
+
+    logAuditEvent({
+      actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
+      action: 'CREATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: `PACKAGE-${newPkg.code}`,
+      result: 'SUCCESS',
+      detailsKey: 'operations.audit.packageCreated',
+      detailsFallback: `Đã ban hành gói nghỉ dưỡng mới ${newPkg.name} (${newPkg.code}, Đơn giá: ${formatVND(newPkg.basePrice)})`
+    });
+
+    showToast(`Đã ban hành gói nghỉ dưỡng "${newPkg.name}" thành công!`, 'success');
   };
 
   const getStatusBadge = (status: VillaOperationalStatus) => {
@@ -181,10 +587,18 @@ export const VillaManagementPage: React.FC = () => {
       case 'MAINTENANCE':
         return {
           label: 'Đang Bảo Trì Kỹ Thuật',
+          bg: '#fff7ed',
+          text: '#c2410c',
+          border: '#fed7aa',
+          icon: <Wrench size={12} />
+        };
+      case 'INACTIVE':
+        return {
+          label: 'Ngừng',
           bg: '#fee2e2',
           text: '#991b1b',
-          border: '#fca5a5',
-          icon: <Wrench size={12} />
+          border: '#f87171',
+          icon: <Ban size={12} />
         };
       default:
         return {
@@ -227,7 +641,7 @@ export const VillaManagementPage: React.FC = () => {
               Quản Trị Cơ Sở Lưu Trú Resort (Module 6)
             </span>
 
-            {/* Delegation Clearance Pill */}
+            {/* Inventory Delegation Clearance Pill */}
             {canManageInventory ? (
               <span style={{
                 display: 'inline-flex',
@@ -242,7 +656,7 @@ export const VillaManagementPage: React.FC = () => {
                 border: '1px solid #b6ebd0'
               }}>
                 <ShieldCheck size={12} />
-                {isAdmin ? 'Thẩm Quyền Admin Toàn Phần' : 'Được Admin Ủy Quyền Tác Nghiệp'}
+                {isAdmin ? 'Thẩm Quyền Admin Toàn Phần' : 'Được Admin Cấp Quyền Kho Biệt Thự'}
               </span>
             ) : (
               <span style={{
@@ -258,9 +672,82 @@ export const VillaManagementPage: React.FC = () => {
                 border: '1px solid #e5e7eb'
               }}>
                 <ShieldAlert size={12} />
-                Chế Độ Giám Sát Chỉ Đọc (Read-Only)
+                Giám Sát Kho Chỉ Đọc
               </span>
             )}
+
+            {/* Pricing Authority Clearance Pill */}
+            {canManagePricing ? (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: '#ecfdf5',
+                color: '#047857',
+                fontSize: '11px',
+                fontWeight: 600,
+                border: '1px solid #a7f3d0'
+              }}>
+                <DollarSign size={12} />
+                {isAdmin ? 'Toàn Quyền Cấu Hình Giá' : 'Được Ủy Quyền Sửa Giá (manage_pricing)'}
+              </span>
+            ) : (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: '#fffbeb',
+                color: '#b45309',
+                fontSize: '11px',
+                fontWeight: 600,
+                border: '1px solid #fde68a'
+              }}>
+                <Lock size={12} />
+                Chỉ Xem Giá (Cần Admin Ủy Quyền)
+              </span>
+            )}
+
+            {/* Database Live Sync Pill */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: isDbSynced ? '#eff6ff' : '#fef2f2',
+              color: isDbSynced ? '#1d4ed8' : '#b91c1c',
+              fontSize: '11px',
+              fontWeight: 600,
+              border: `1px solid ${isDbSynced ? '#bfdbfe' : '#fecaca'}`
+            }}>
+              <Database size={12} />
+              {isDbSynced ? `CSDL Trực Tuyến: Đã Tải ${villas.length} Biệt Thự` : 'Chưa Kết Nối DB (Dùng Dữ Liệu Cục Bộ)'}
+            </span>
+
+            {/* Refresh DB button */}
+            <button
+              onClick={fetchAllFromDatabase}
+              title="Đồng bộ lại từ Database"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={11} className={isLoadingDb ? 'animate-spin' : ''} />
+              {isLoadingDb ? 'Đang tải...' : 'Làm mới'}
+            </button>
           </div>
 
           <h1 style={{
@@ -381,7 +868,25 @@ export const VillaManagementPage: React.FC = () => {
           <div style={{ fontSize: '11px', color: '#854d0e', marginTop: '4px' }}>Housekeeping đang xử lý</div>
         </div>
 
-        {/* KPI 5 */}
+        {/* KPI 5 - Maintenance */}
+        <div style={{
+          padding: '16px',
+          backgroundColor: 'var(--bg-card, #ffffff)',
+          borderRadius: '12px',
+          border: '1px solid #fed7aa',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '12px', color: '#c2410c', fontWeight: 600 }}>Bảo Trì Kỹ Thuật</span>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c' }}>
+              <Wrench size={15} />
+            </div>
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#ea580c' }}>{stats.maintenance}</div>
+          <div style={{ fontSize: '11px', color: '#c2410c', marginTop: '4px' }}>Bảo trì kỹ thuật định kỳ</div>
+        </div>
+
+        {/* KPI 6 - Ngừng */}
         <div style={{
           padding: '16px',
           backgroundColor: 'var(--bg-card, #ffffff)',
@@ -390,13 +895,13 @@ export const VillaManagementPage: React.FC = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#991b1b', fontWeight: 600 }}>Bảo Trì Kỹ Thuật</span>
+            <span style={{ fontSize: '12px', color: '#991b1b', fontWeight: 600 }}>Ngừng Hoạt Động</span>
             <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b91c1c' }}>
-              <Wrench size={15} />
+              <Ban size={15} />
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#b91c1c' }}>{stats.maintenance}</div>
-          <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '4px' }}>Tạm ngừng nhận khách</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#b91c1c' }}>{stats.inactive}</div>
+          <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '4px' }}>Biệt thự tạm ngừng khai thác</div>
         </div>
 
         {/* KPI 6 */}
@@ -470,6 +975,29 @@ export const VillaManagementPage: React.FC = () => {
         >
           <Layers size={16} />
           Hạng Villa & Khung Sản Phẩm ({categories.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('packages')}
+          style={{
+            padding: '12px 18px',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'packages' ? '2.5px solid var(--accent-forest, #2d4a3e)' : '2.5px solid transparent',
+            color: activeTab === 'packages' ? 'var(--accent-forest, #2d4a3e)' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'packages' ? 700 : 500,
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Package size={16} />
+          Gói Nghỉ Dưỡng & Đơn Giá ({packages.length})
         </button>
 
         <button
@@ -623,6 +1151,7 @@ export const VillaManagementPage: React.FC = () => {
                 <option value="OCCUPIED">Đang có khách (Occupied)</option>
                 <option value="NEEDS_CLEANING">Cần dọn dẹp (Cleaning)</option>
                 <option value="MAINTENANCE">Bảo trì (Maintenance)</option>
+                <option value="INACTIVE">Ngừng</option>
               </select>
 
               {/* Pool Toggle */}
@@ -680,6 +1209,18 @@ export const VillaManagementPage: React.FC = () => {
                   Bảng Dữ Liệu
                 </button>
               </div>
+
+              {/* Add Villa Button */}
+              {canManageInventory && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Plus size={14} />}
+                  onClick={() => setIsAddVillaModalOpen(true)}
+                >
+                  Thêm Biệt Thự Mới
+                </Button>
+              )}
             </div>
           </div>
 
@@ -812,11 +1353,13 @@ export const VillaManagementPage: React.FC = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <Users size={12} color="var(--accent-forest, #2d4a3e)" />
-                          <span>Tối đa: <strong>{villa.maxOccupancy} khách</strong></span>
+                          <span>Tối đa: <strong>{villa.maxAdults || 2} Lớn {villa.maxChildren !== undefined ? `+ ${villa.maxChildren} Trẻ` : ''} ({villa.maxOccupancy}K)</strong></span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <Bed size={12} color="var(--accent-forest, #2d4a3e)" />
-                          <span>{villa.bedroomInfo}</span>
+                          <span title={villa.bedType || villa.bedroomInfo} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {villa.bedType || villa.bedroomInfo}
+                          </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <Waves size={12} color={villa.hasPrivatePool ? '#0284c7' : 'var(--text-muted)'} />
@@ -824,6 +1367,52 @@ export const VillaManagementPage: React.FC = () => {
                             {villa.hasPrivatePool ? 'Hồ bơi riêng' : 'Vườn thiền'}
                           </span>
                         </div>
+                      </div>
+
+                      {/* Nightly Price Row */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        marginBottom: '10px'
+                      }}>
+                        <div>
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Giá Thuê Đêm
+                          </span>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-forest, #2d4a3e)' }}>
+                            {formatVND(villa.nightlyRate || 4500000)} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>/ đêm</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPriceVilla(villa);
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            borderRadius: '6px',
+                            border: canManagePricing ? '1px solid var(--accent-forest, #2d4a3e)' : '1px solid #cbd5e1',
+                            backgroundColor: canManagePricing ? '#ffffff' : '#f1f5f9',
+                            color: canManagePricing ? 'var(--accent-forest, #2d4a3e)' : '#94a3b8',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title={canManagePricing ? 'Chỉnh sửa giá thuê đêm căn villa này' : 'Cần Admin ủy quyền quyền manage_pricing để sửa giá'}
+                        >
+                          {canManagePricing ? <DollarSign size={12} /> : <Lock size={12} />}
+                          {canManagePricing ? 'Sửa Giá' : 'Khóa'}
+                        </button>
                       </div>
 
                       {/* Amenities Pills */}
@@ -868,6 +1457,7 @@ export const VillaManagementPage: React.FC = () => {
                     <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Hạng Villa</th>
                     <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Phân Khu & Tầng</th>
                     <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Thông Số Căn</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Giá Thuê / Đêm</th>
                     <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Hồ Bơi Riêng</th>
                     <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Trạng Thái Vận Hành</th>
                     <th style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-primary)' }}>Ghi Chú Vận Hành & View</th>
@@ -892,8 +1482,35 @@ export const VillaManagementPage: React.FC = () => {
                           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{villa.floor}</div>
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                          <div>{villa.areaSqm} m² · {villa.maxOccupancy} khách</div>
-                          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{villa.bedroomInfo}</div>
+                          <div>{villa.areaSqm} m² · <strong>{villa.maxAdults || 2} Lớn {villa.maxChildren !== undefined ? `+ ${villa.maxChildren} Trẻ` : ''}</strong></div>
+                          <div style={{ fontSize: '10px', color: 'var(--accent-forest, #2d4a3e)', fontWeight: 600 }}>{villa.bedType || villa.bedroomInfo}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--accent-forest, #2d4a3e)', fontSize: '13px' }}>
+                              {formatVND(villa.nightlyRate || 4500000)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingPriceVilla(villa);
+                              }}
+                              style={{
+                                padding: '3px 6px',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                borderRadius: '4px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor: canManagePricing ? '#ffffff' : '#f1f5f9',
+                                cursor: 'pointer',
+                                color: canManagePricing ? 'var(--accent-forest, #2d4a3e)' : '#94a3b8'
+                              }}
+                              title={canManagePricing ? 'Chỉnh sửa giá' : 'Cần ủy quyền Admin'}
+                            >
+                              {canManagePricing ? 'Sửa' : <Lock size={10} />}
+                            </button>
+                          </div>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           {villa.hasPrivatePool ? (
@@ -962,11 +1579,23 @@ export const VillaManagementPage: React.FC = () => {
                 Định mức số phòng ngủ, phụ thu nâng hạng (Price Modifier) và các gói chăm sóc sức khỏe Retreat tương thích.
               </p>
             </div>
-            {canManageCategories && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: '#059669', backgroundColor: '#ecfdf5', padding: '4px 10px', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
-                Được ủy quyền điều chỉnh giá phụ thu & cấu hình sản phẩm
-              </span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {canManageCategories && (
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#059669', backgroundColor: '#ecfdf5', padding: '4px 10px', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
+                  Được ủy quyền cấu hình sản phẩm
+                </span>
+              )}
+              {canManageCategories && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Plus size={14} />}
+                  onClick={() => setIsAddCategoryModalOpen(true)}
+                >
+                  Thêm Hạng Phòng Mới
+                </Button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: 'var(--space-5)' }}>
@@ -1035,15 +1664,15 @@ export const VillaManagementPage: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Sức Chứa Chuẩn</div>
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
-                        {cat.standardOccupancy} Khách Lớn
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Cấu Hình Giường</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={cat.bedType || cat.bedroomDescription}>
+                        {cat.bedType || cat.bedroomDescription}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Tối Đa (Max)</div>
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#b45309', marginTop: '2px' }}>
-                        {cat.maxOccupancy} Khách
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Tối Đa (Lớn + Trẻ)</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#b45309', marginTop: '2px' }}>
+                        {cat.maxAdults || cat.standardOccupancy} Lớn + {cat.maxChildren !== undefined ? cat.maxChildren : 1} Trẻ <span style={{ fontSize: '10px', fontWeight: 500 }}>({cat.maxOccupancy}K)</span>
                       </div>
                     </div>
                   </div>
@@ -1082,6 +1711,37 @@ export const VillaManagementPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Category Pricing Bar */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-canvas, #faf9f6)',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-subtle, #e5e2dc)',
+                    marginTop: '12px',
+                    marginBottom: '8px'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                        Giá Chuẩn & Phụ Thu Hạng:
+                      </span>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {formatVND(cat.basePrice || 4500000)}/đêm · <span style={{ color: 'var(--accent-forest, #2d4a3e)' }}>+{formatVND(cat.priceModifier)}</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon={canManagePricing ? <DollarSign size={13} /> : <Lock size={13} />}
+                      onClick={() => setEditingPriceCategory(cat)}
+                    >
+                      {canManagePricing ? 'Sửa Giá & Phụ Thu' : 'Khóa Giá'}
+                    </Button>
+                  </div>
+
                   {/* Amenities text */}
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 'auto', borderTop: '1px dashed var(--border-subtle, #e5e2dc)', paddingTop: '10px' }}>
                     {cat.featuresAndAmenities}
@@ -1094,7 +1754,179 @@ export const VillaManagementPage: React.FC = () => {
       )}
 
       {/* ====================================================================
-          TAB 3: RESORT ZONES & ROOM GROUPS
+          TAB 3: RETREAT PACKAGES & PRICING
+          ==================================================================== */}
+      {activeTab === 'packages' && (
+        <div>
+          {/* Header Bar */}
+          <div style={{
+            padding: '16px 20px',
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-subtle, #e5e2dc)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                Bảng Giá & Danh Mục Các Gói Nghỉ Dưỡng Trọn Gói (Retreat Packages Master)
+              </h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                Cấu hình đơn giá trọn gói, số buổi spa trị liệu, thời lượng lưu trú và liệu trình sức khỏe. Quản lý có thể cập nhật giá khi được Admin ủy quyền (manage_pricing).
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {canManagePricing ? (
+                <span style={{ fontSize: '11px', color: '#166534', backgroundColor: '#dcfce7', padding: '4px 10px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={13} /> Quyền sửa giá gói: Đang hiệu lực
+                </span>
+              ) : (
+                <span style={{ fontSize: '11px', color: '#991b1b', backgroundColor: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldAlert size={13} /> Sửa giá gói: Cần ủy quyền Admin
+                </span>
+              )}
+
+              {canManageInventory && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Plus size={14} />}
+                  onClick={() => setIsAddPackageModalOpen(true)}
+                >
+                  Thêm Gói Nghỉ Dưỡng Mới
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Packages Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--space-4)' }}>
+            {packages.map((pkg) => (
+              <div
+                key={pkg.id}
+                style={{
+                  backgroundColor: 'var(--bg-card, #ffffff)',
+                  borderRadius: '14px',
+                  border: '1px solid var(--border-subtle, #e5e2dc)',
+                  padding: '20px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                      color: '#d97706',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-forest, #2d4a3e)', textTransform: 'uppercase' }}>
+                        {pkg.code}
+                      </div>
+                      <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: '2px 0 0 0' }}>
+                        {pkg.name}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    padding: '2px 8px',
+                    borderRadius: '20px',
+                    backgroundColor: pkg.status === 'active' ? '#dcfce7' : '#f3f4f6',
+                    color: pkg.status === 'active' ? '#166534' : '#64748b'
+                  }}>
+                    {pkg.status === 'active' ? 'Đang mở bán' : 'Lưu trữ'}
+                  </span>
+                </div>
+
+                {/* Specs */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  backgroundColor: 'var(--bg-canvas, #faf9f6)',
+                  borderRadius: '8px',
+                  fontSize: '11px',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '12px'
+                }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Thời lượng:</span>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+                      {pkg.durationDays} Ngày {pkg.durationNights} Đêm
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Spa trị liệu:</span>
+                    <div style={{ fontWeight: 700, color: 'var(--accent-forest, #2d4a3e)', marginTop: '2px' }}>
+                      {pkg.includedSpaSessions} Buổi tiêu chuẩn
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5, flex: 1 }}>
+                  <strong>Mục tiêu:</strong> {pkg.goal}
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {pkg.description}
+                  </div>
+                </div>
+
+                {/* Price Bar & Edit Button */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  marginTop: 'auto'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Đơn Giá Gói Trọn Gói
+                    </span>
+                    <div style={{ fontSize: '17px', fontWeight: 700, color: '#15803d' }}>
+                      {formatVND(pkg.basePrice)}
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant={canManagePricing ? 'primary' : 'secondary'}
+                    icon={canManagePricing ? <DollarSign size={13} /> : <Lock size={13} />}
+                    onClick={() => setEditingPricePackage(pkg)}
+                  >
+                    {canManagePricing ? 'Sửa Giá Gói' : 'Xem Giá (Khóa)'}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          TAB 4: RESORT ZONES & ROOM GROUPS
           ==================================================================== */}
       {activeTab === 'zones' && (
         <div>
@@ -1422,6 +2254,55 @@ export const VillaManagementPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Villa Nightly Rate Card & Delegation Gate */}
+              <div style={{
+                padding: '14px 16px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--bg-canvas, #faf9f6)',
+                border: '1px solid var(--border-subtle, #e5e2dc)',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <DollarSign size={16} color="var(--accent-forest, #2d4a3e)" />
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Giá Thuê Đêm Từng Căn (Nightly Rate)
+                    </span>
+                  </div>
+
+                  {canManagePricing ? (
+                    <span style={{ fontSize: '11px', color: '#166534', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <ShieldCheck size={12} /> Đã ủy quyền sửa giá
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: '#991b1b', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <ShieldAlert size={12} /> Khóa (Cần Admin ủy quyền)
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Giá niêm yết hiện tại:</span>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent-forest, #2d4a3e)' }}>
+                      {formatVND(selectedVilla.nightlyRate || 4500000)} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-secondary)' }}>/ đêm</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={canManagePricing ? 'primary' : 'secondary'}
+                    icon={canManagePricing ? <DollarSign size={13} /> : <Lock size={13} />}
+                    onClick={() => {
+                      setEditingPriceVilla(selectedVilla);
+                    }}
+                  >
+                    {canManagePricing ? 'Chỉnh Sửa Giá Biệt Thự' : 'Xem Chi Tiết Giá (Khóa)'}
+                  </Button>
+                </div>
+              </div>
+
               {/* Operational Status Update Form */}
               <form onSubmit={handleUpdateVillaStatus} style={{ borderTop: '1px solid var(--border-subtle, #e5e2dc)', paddingTop: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -1436,9 +2317,10 @@ export const VillaManagementPage: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '14px' }}>
-                  {(['AVAILABLE', 'OCCUPIED', 'NEEDS_CLEANING', 'MAINTENANCE'] as VillaOperationalStatus[]).map((st) => {
+                  {(['AVAILABLE', 'OCCUPIED', 'NEEDS_CLEANING', 'MAINTENANCE', 'INACTIVE'] as VillaOperationalStatus[]).map((st) => {
                     const isChecked = pendingStatus === st;
                     const stBadge = getStatusBadge(st);
+                    const isInactive = st === 'INACTIVE';
                     return (
                       <label
                         key={st}
@@ -1448,10 +2330,20 @@ export const VillaManagementPage: React.FC = () => {
                           gap: '8px',
                           padding: '10px 12px',
                           borderRadius: '8px',
-                          border: isChecked ? `1.5px solid ${stBadge.border}` : '1px solid var(--border-subtle, #e5e2dc)',
-                          backgroundColor: isChecked ? stBadge.bg : '#ffffff',
+                          border: isChecked
+                            ? `1.5px solid ${isInactive ? '#dc2626' : stBadge.border}`
+                            : isInactive
+                              ? '1px solid #fca5a5'
+                              : '1px solid var(--border-subtle, #e5e2dc)',
+                          backgroundColor: isChecked
+                            ? (isInactive ? '#fee2e2' : stBadge.bg)
+                            : isInactive
+                              ? '#fef2f2'
+                              : '#ffffff',
                           cursor: canManageInventory ? 'pointer' : 'not-allowed',
-                          opacity: canManageInventory ? 1 : 0.65
+                          opacity: canManageInventory ? 1 : 0.65,
+                          gridColumn: isInactive ? 'span 2' : undefined,
+                          transition: 'all 0.15s ease'
                         }}
                       >
                         <input
@@ -1461,9 +2353,10 @@ export const VillaManagementPage: React.FC = () => {
                           checked={isChecked}
                           disabled={!canManageInventory}
                           onChange={() => setPendingStatus(st)}
-                          style={{ accentColor: 'var(--accent-forest, #2d4a3e)' }}
+                          style={{ accentColor: isInactive ? '#dc2626' : 'var(--accent-forest, #2d4a3e)' }}
                         />
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: stBadge.text }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: stBadge.text, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          {isInactive && <Ban size={13} style={{ color: '#b91c1c' }} />}
                           {stBadge.label}
                         </span>
                       </label>
@@ -1514,6 +2407,59 @@ export const VillaManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Add Physical Villa Modal */}
+      <AddVillaModal
+        isOpen={isAddVillaModalOpen}
+        onClose={() => setIsAddVillaModalOpen(false)}
+        categories={categories}
+        zones={zones}
+        existingVillaNumbers={villas.map((v) => v.villaNumber)}
+        onAddVilla={handleAddVilla}
+      />
+
+      {/* Add Villa Category Modal */}
+      <AddVillaCategoryModal
+        isOpen={isAddCategoryModalOpen}
+        onClose={() => setIsAddCategoryModalOpen(false)}
+        existingCategories={categories}
+        onAddCategory={handleAddCategory}
+      />
+
+      {/* Edit Villa Price Modal */}
+      <EditVillaPriceModal
+        isOpen={!!editingPriceVilla}
+        onClose={() => setEditingPriceVilla(null)}
+        villa={editingPriceVilla}
+        canManagePricing={canManagePricing}
+        onSavePrice={handleSaveVillaPrice}
+      />
+
+      {/* Edit Package Price Modal */}
+      <EditPackagePriceModal
+        isOpen={!!editingPricePackage}
+        onClose={() => setEditingPricePackage(null)}
+        pkg={editingPricePackage}
+        canManagePricing={canManagePricing}
+        onSavePrice={handleSavePackagePrice}
+      />
+
+      {/* Edit Category Price Modal */}
+      <EditCategoryPriceModal
+        isOpen={!!editingPriceCategory}
+        onClose={() => setEditingPriceCategory(null)}
+        category={editingPriceCategory}
+        canManagePricing={canManagePricing}
+        onSavePrice={handleSaveCategoryPrice}
+      />
+
+      {/* Add Retreat Package Modal */}
+      <AddRetreatPackageModal
+        isOpen={isAddPackageModalOpen}
+        onClose={() => setIsAddPackageModalOpen(false)}
+        existingPackages={packages}
+        onAddPackage={handleAddPackage}
+      />
     </div>
   );
 };

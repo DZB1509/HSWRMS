@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
   Home,
   ShieldCheck,
+  RefreshCw,
+  Search,
+  Filter,
+  Layers,
+  Bed,
+  Users,
+  Waves,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Wrench,
+  Sparkles,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -13,148 +25,520 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { useFolio } from '../../context/FolioContext';
+import { useOperations } from '../../context/OperationsContext';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
+
+interface DbVilla {
+  villaId: number;
+  villaNumber: string;
+  floor?: string;
+  villaStatus: string;
+  zoneName?: string;
+  bedroomInfo?: string;
+  maxOccupancy?: number;
+  areaSqm?: number;
+  nightlyRate?: number;
+  bedType?: string;
+  maxAdults?: number;
+  maxChildren?: number;
+  hasPrivatePool?: boolean;
+  poolInfo?: string;
+  viewAndOperationalNotes?: string;
+  image?: string;
+  amenities?: string;
+  villaCategory?: {
+    villaCategoryId: number;
+    categoryName: string;
+    bedroomCount: number;
+    basePrice: number;
+    highlights?: string;
+  };
+}
 
 export const OccupancyReportPage: React.FC = () => {
   const { t } = useTranslation();
-  const { getOccupancyAnalytics } = useFolio();
+  const { refreshDbVillas } = useOperations();
 
-  const analytics = getOccupancyAnalytics();
+  const [dbVillas, setDbVillas] = useState<DbVilla[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [lastSynced, setLastSynced] = useState<Date>(new Date());
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  // Status Filter & Pagination
+  // Filters & Pagination
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [filterZone, setFilterZone] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 10;
 
-  const filteredVillas = analytics.villaDetails.filter((v) => {
-    if (filterStatus === 'all') return true;
-    return v.status === filterStatus;
-  });
+  // Notification / Toast
+  const [actionMessage, setActionMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const totalItems = filteredVillas.length;
-  const paginatedVillas = filteredVillas.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  // Fetch villas from REST API
+  const fetchVillas = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setSyncError(null);
 
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/villas');
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      const list: DbVilla[] = Array.isArray(result) ? result : result.data || [];
+      setDbVillas(list);
+      setLastSynced(new Date());
+
+      // Also trigger operations context synchronization
+      if (refreshDbVillas) {
+        refreshDbVillas();
+      }
+    } catch (err: any) {
+      console.error('Lỗi nạp dữ liệu biệt thự:', err);
+      setSyncError(err.message || 'Không thể kết nối đến máy chủ CSDL.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [refreshDbVillas]);
+
+  useEffect(() => {
+    fetchVillas();
+  }, [fetchVillas]);
+
+  // Update villa status via PATCH API
+  const handleUpdateStatus = async (villaNumber: string, newStatus: string) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/villas/${villaNumber}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Cập nhật trạng thái thất bại (${response.status})`);
+      }
+
+      setActionMessage({
+        text: `Đã cập nhật Villa ${villaNumber} sang trạng thái "${getStatusLabel(newStatus)}"!`,
+        type: 'success',
+      });
+      setTimeout(() => setActionMessage(null), 4000);
+
+      // Refresh list
+      fetchVillas(true);
+    } catch (err: any) {
+      setActionMessage({
+        text: err.message || 'Lỗi khi cập nhật trạng thái.',
+        type: 'error',
+      });
+      setTimeout(() => setActionMessage(null), 4000);
+    }
+  };
+
+  // Status mapping
+  const normalizeStatus = (status: string): string => {
+    switch (status?.toUpperCase()) {
+      case 'OCCUPIED':
+        return 'occupied';
+      case 'AVAILABLE':
+        return 'ready';
+      case 'NEEDS_CLEANING':
+      case 'CLEANING':
+        return 'cleaning';
+      case 'MAINTENANCE':
+        return 'maintenance';
+      case 'RESERVED':
+        return 'reserved';
+      default:
+        return 'ready';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const s = normalizeStatus(status);
+    switch (s) {
+      case 'occupied':
+        return t('manager.occupancy.occupied', 'Đang Có Khách');
+      case 'reserved':
+        return t('manager.occupancy.reserved', 'Đã Đặt Trước');
+      case 'ready':
+        return t('manager.occupancy.available', 'Sẵn Sàng Đón Khách');
+      case 'cleaning':
+        return t('manager.occupancy.cleaning', 'Đang Dọn Dẹp / Khử Khuẩn');
+      case 'maintenance':
+        return t('manager.occupancy.maintenance', 'Đang Bảo Trì Kỹ Thuật');
+      default:
+        return status;
+    }
+  };
+
+  const getStatusBadgeStyle = (status: string) => {
+    const s = normalizeStatus(status);
+    switch (s) {
+      case 'occupied':
+        return { backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' };
+      case 'ready':
+        return { backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
+      case 'cleaning':
+        return { backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' };
+      case 'maintenance':
+        return { backgroundColor: '#f3f4f6', color: '#4b5563', border: '1px solid #d1d5db' };
+      case 'reserved':
+        return { backgroundColor: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' };
+      default:
+        return { backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb' };
+    }
+  };
+
+  // Operational metrics calculated strictly from live database data
+  const totalVillas = dbVillas.length;
+  const occupiedCount = dbVillas.filter((v) => normalizeStatus(v.villaStatus) === 'occupied').length;
+  const readyCount = dbVillas.filter((v) => normalizeStatus(v.villaStatus) === 'ready').length;
+  const cleaningCount = dbVillas.filter((v) => normalizeStatus(v.villaStatus) === 'cleaning').length;
+  const maintenanceCount = dbVillas.filter((v) => normalizeStatus(v.villaStatus) === 'maintenance').length;
+  const reservedCount = dbVillas.filter((v) => normalizeStatus(v.villaStatus) === 'reserved').length;
+  const occupancyRate = totalVillas > 0 ? (occupiedCount / totalVillas) * 100 : 0;
+
+  // Chart data
   const pieData = [
-    { name: t('manager.occupancy.occupied', 'Đang Có Khách'), value: analytics.occupiedCount, color: '#3b82f6' },
-    { name: t('manager.occupancy.reserved', 'Đã Đặt Trước'), value: analytics.reservedCount, color: '#8b5cf6' },
-    { name: t('manager.occupancy.available', 'Sẵn Sàng / Trống'), value: analytics.readyCount, color: '#10b981' },
-    { name: t('manager.occupancy.cleaning', 'Đang Dọn Dẹp / Khử Khuẩn'), value: analytics.cleaningCount, color: '#f59e0b' },
-    { name: t('manager.occupancy.maintenance', 'Đang Bảo Trì'), value: analytics.maintenanceCount, color: '#6b7280' },
+    { name: t('manager.occupancy.occupied', 'Đang Có Khách'), value: occupiedCount, color: '#3b82f6' },
+    { name: t('manager.occupancy.available', 'Sẵn Sàng Đón Khách'), value: readyCount, color: '#10b981' },
+    { name: t('manager.occupancy.cleaning', 'Đang Dọn Dẹp / Khử Khuẩn'), value: cleaningCount, color: '#f59e0b' },
+    { name: t('manager.occupancy.maintenance', 'Đang Bảo Trì'), value: maintenanceCount, color: '#6b7280' },
+    { name: t('manager.occupancy.reserved', 'Đã Đặt Trước'), value: reservedCount, color: '#8b5cf6' },
   ].filter((d) => d.value > 0);
 
-  const getVillaStatusLabel = (status: string) => {
-    switch (status) {
-      case 'occupied': return t('status.occupied', t('common.status.occupied', 'Đang Có Khách'));
-      case 'reserved': return t('status.reserved', t('common.status.reserved', 'Đã Đặt Trước'));
-      case 'ready': return t('status.ready', t('common.status.ready', 'Sẵn Sàng / Trống'));
-      case 'cleaning': return t('status.cleaning', t('common.status.cleaning', 'Đang Dọn Dẹp'));
-      case 'maintenance': return t('status.maintenance', t('common.status.maintenance', 'Đang Bảo Trì'));
-      default: return status.toUpperCase();
-    }
-  };
+  // Unique Zones for filter
+  const uniqueZones = useMemo(() => {
+    const set = new Set<string>();
+    dbVillas.forEach((v) => {
+      if (v.zoneName) set.add(v.zoneName);
+    });
+    return Array.from(set);
+  }, [dbVillas]);
 
-  const getStatusPillClass = (status: string) => {
-    switch (status) {
-      case 'occupied': return 'deposit_paid';
-      case 'reserved': return 'included';
-      case 'ready': return 'ready';
-      case 'cleaning': return 'pending_settlement';
-      case 'maintenance': return 'refunded';
-      default: return 'settled';
-    }
-  };
+  // Zone Breakdown metrics
+  const zoneBreakdown = useMemo(() => {
+    const map: Record<string, { total: number; occupied: number }> = {};
+    dbVillas.forEach((v) => {
+      const z = v.zoneName || 'Khác';
+      if (!map[z]) map[z] = { total: 0, occupied: 0 };
+      map[z].total += 1;
+      if (normalizeStatus(v.villaStatus) === 'occupied') {
+        map[z].occupied += 1;
+      }
+    });
+    return Object.entries(map).map(([zone, stat]) => ({
+      zone,
+      total: stat.total,
+      occupied: stat.occupied,
+      rate: stat.total > 0 ? (stat.occupied / stat.total) * 100 : 0,
+    }));
+  }, [dbVillas]);
+
+  // Filtered Villas
+  const filteredVillas = useMemo(() => {
+    return dbVillas.filter((v) => {
+      const s = normalizeStatus(v.villaStatus);
+      if (filterStatus !== 'all' && s !== filterStatus) return false;
+      if (filterZone !== 'all' && v.zoneName !== filterZone) return false;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const num = (v.villaNumber || '').toLowerCase();
+        const cat = (v.villaCategory?.categoryName || '').toLowerCase();
+        const zone = (v.zoneName || '').toLowerCase();
+        if (!num.includes(query) && !cat.includes(query) && !zone.includes(query)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [dbVillas, filterStatus, filterZone, searchQuery]);
+
+  const totalItems = filteredVillas.length;
+  const paginatedVillas = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVillas.slice(start, start + pageSize);
+  }, [filteredVillas, currentPage, pageSize]);
 
   return (
-    <div className="hsw-manager-page" style={{ padding: 'var(--space-6)' }}>
+    <div className="hsw-manager-page" style={{ padding: 'var(--space-6)', maxWidth: 1400, margin: '0 auto' }}>
+      {/* Toast Alert */}
+      {actionMessage && (
+        <div
+          style={{
+            marginBottom: 'var(--space-4)',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: actionMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+            color: actionMessage.type === 'success' ? '#065f46' : '#991b1b',
+            border: `1px solid ${actionMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 600,
+            fontSize: 'var(--text-sm)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {actionMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          <span>{actionMessage.text}</span>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="hsw-manager-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
+      <div className="hsw-manager-header" style={{ marginBottom: 'var(--space-6)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 'var(--space-4)',
+            marginBottom: 'var(--space-2)',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <TrendingUp size={24} style={{ color: 'var(--actor-manager)' }} />
-            <h1 style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {t('manager.occupancy.title', 'Báo Cáo Công Suất & Trạng Thái Villa')}
-            </h1>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <TrendingUp size={24} style={{ color: 'var(--actor-manager, #2563eb)' }} />
+            </div>
+            <div>
+              <h1
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 'var(--text-2xl)',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                }}
+              >
+                {t('manager.occupancy.title', 'Báo Cáo Công Suất & Trạng Thái Biệt Thự')}
+              </h1>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                Đồng bộ quỹ <strong>{totalVillas} biệt thự</strong> trực tiếp từ cơ sở dữ liệu nghỉ dưỡng (HSWRMS Live Database)
+              </p>
+            </div>
           </div>
 
-          <div className="hsw-manager-privacy-notice">
-            <ShieldCheck size={14} />
-            <span>{t('manager.occupancy.privacyNotice', 'Thẩm Quyền Quản Lý · Chỉ Xem Phân Bổ Villa · Ẩn Dữ Liệu Định Danh Cá Nhân')}</span>
+          {/* Top Actions: DB Sync Badge & Refresh */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '9999px',
+                backgroundColor: syncError ? '#fef2f2' : '#f0fdf4',
+                border: `1px solid ${syncError ? '#fecaca' : '#bbf7d0'}`,
+                color: syncError ? '#991b1b' : '#15803d',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: syncError ? '#ef4444' : '#22c55e',
+                  display: 'inline-block',
+                }}
+              />
+              <span>
+                {syncError
+                  ? 'Lỗi kết nối CSDL'
+                  : `CSDL Đã Đồng Bộ: ${totalVillas} Biệt Thự (${lastSynced.toLocaleTimeString('vi-VN')})`}
+              </span>
+            </div>
+
+            <button
+              onClick={() => fetchVillas(true)}
+              disabled={refreshing || loading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#ffffff',
+                border: '1px solid var(--border-subtle, #e5e7eb)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: refreshing ? 'not-allowed' : 'pointer',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.2s ease',
+              }}
+              title="Tải lại dữ liệu mới nhất từ CSDL"
+            >
+              <RefreshCw
+                size={14}
+                style={{
+                  animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                }}
+              />
+              <span>{refreshing ? 'Đang Tải...' : 'Làm Mới CSDL'}</span>
+            </button>
+
+            <div className="hsw-manager-privacy-notice" style={{ margin: 0 }}>
+              <ShieldCheck size={14} />
+              <span>{t('manager.occupancy.privacyNotice', 'Thẩm Quyền Quản Lý · Phân Bổ Vận Hành · Ẩn Dữ Liệu Nhạy Cảm')}</span>
+            </div>
           </div>
         </div>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-          {t(
-            'manager.occupancy.subtitle',
-            'Trạng thái quỹ phòng theo thời gian thực, tỷ lệ luân chuyển phòng và phân tích độ sẵn sàng của villa.'
-          )}
-        </p>
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="hsw-manager-kpi-grid">
+      {/* KPI Cards Grid */}
+      <div
+        className="hsw-manager-kpi-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: 'var(--space-4)',
+          marginBottom: 'var(--space-6)',
+        }}
+      >
         {/* Total Villas */}
-        <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid var(--accent-forest)' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.occupancy.totalVillas', 'Tổng Số Villa Khu Nghỉ Dưỡng')}
+        <div
+          className="hsw-manager-kpi-card"
+          style={{
+            borderLeft: '4px solid #059669',
+            backgroundColor: '#ffffff',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t('manager.occupancy.totalVillas', 'Tổng Quỹ Biệt Thự')}
+            </span>
+            <Home size={18} style={{ color: '#059669' }} />
           </div>
-          <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
-            {analytics.totalVillas}
+          <div style={{ fontSize: 'var(--text-3xl, 28px)', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
+            {loading ? '...' : totalVillas}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('manager.occupancy.activeInventory', 'Toàn bộ danh mục phòng đã đăng ký trong vận hành')}
+            Toàn bộ biệt thự đã kích hoạt trong CSDL
           </div>
         </div>
 
-        {/* Occupied Villas */}
-        <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid #3b82f6' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.occupancy.occupiedCount', 'Hiện Đang Có Khách')}
+        {/* Occupied */}
+        <div
+          className="hsw-manager-kpi-card"
+          style={{
+            borderLeft: '4px solid #2563eb',
+            backgroundColor: '#ffffff',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t('manager.occupancy.occupiedCount', 'Hiện Đang Có Khách')}
+            </span>
+            <Users size={18} style={{ color: '#2563eb' }} />
           </div>
-          <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#1d4ed8' }}>
-            {analytics.occupiedCount}
+          <div style={{ fontSize: 'var(--text-3xl, 28px)', fontWeight: 800, color: '#1d4ed8', marginTop: '6px' }}>
+            {loading ? '...' : occupiedCount}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('manager.occupancy.inHouseGuests', 'Khách đang lưu trú tại resort')}
+            {totalVillas > 0 ? ((occupiedCount / totalVillas) * 100).toFixed(1) : 0}% tổng công suất phòng
           </div>
         </div>
 
-        {/* Ready / Available */}
-        <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid #10b981' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.occupancy.readyCount', 'Sẵn Sàng Đón Khách')}
+        {/* Available / Ready */}
+        <div
+          className="hsw-manager-kpi-card"
+          style={{
+            borderLeft: '4px solid #10b981',
+            backgroundColor: '#ffffff',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t('manager.occupancy.readyCount', 'Sẵn Sàng Đón Khách')}
+            </span>
+            <CheckCircle2 size={18} style={{ color: '#10b981' }} />
           </div>
-          <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#047857' }}>
-            {analytics.readyCount}
+          <div style={{ fontSize: 'var(--text-3xl, 28px)', fontWeight: 800, color: '#047857', marginTop: '6px' }}>
+            {loading ? '...' : readyCount}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('manager.occupancy.inspectedReady', 'Đã vệ sinh & kiểm tra đạt chuẩn')}
+            Đã khử khuẩn & kiểm tra chất lượng đạt chuẩn
           </div>
         </div>
 
         {/* Occupancy Rate */}
-        <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid #d97706' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            {t('manager.occupancy.rate', 'Công Suất Phòng')}
+        <div
+          className="hsw-manager-kpi-card"
+          style={{
+            borderLeft: '4px solid #d97706',
+            backgroundColor: '#ffffff',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {t('manager.occupancy.rate', 'Tỷ Lệ Lấp Đầy')}
+            </span>
+            <Sparkles size={18} style={{ color: '#d97706' }} />
           </div>
-          <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#b45309' }}>
-            {analytics.occupancyRate.toFixed(1)}%
+          <div style={{ fontSize: 'var(--text-3xl, 28px)', fontWeight: 800, color: '#b45309', marginTop: '6px' }}>
+            {loading ? '...' : `${occupancyRate.toFixed(1)}%`}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {analytics.reservedCount} {t('manager.occupancy.inReserved', 'đặt trước')} · {analytics.cleaningCount} {t('manager.occupancy.inCleaning', 'đang dọn')} · {analytics.maintenanceCount} {t('manager.occupancy.inMaintenance', 'bảo trì')}
+            {cleaningCount} đang dọn · {maintenanceCount} bảo trì · {reservedCount} đặt trước
           </div>
         </div>
       </div>
 
-      {/* Chart + Distribution Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
-        <div className="hsw-manager-chart-card">
-          <div className="hsw-manager-chart-title">
-            <span>{t('manager.occupancy.chartTitle', 'Tỷ Lệ Trạng Thái Vận Hành Của Villa')}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{analytics.totalVillas} Villa</span>
+      {/* Analytics & Zone Breakdown Row */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+          gap: 'var(--space-6)',
+          marginBottom: 'var(--space-6)',
+        }}
+      >
+        {/* Pie Chart Card */}
+        <div
+          className="hsw-manager-chart-card"
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-5)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div className="hsw-manager-chart-title" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+            <span style={{ fontWeight: 700, fontSize: 'var(--text-base)' }}>
+              {t('manager.occupancy.chartTitle', 'Tỷ Lệ Trạng Thái Vận Hành Biệt Thự')}
+            </span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{totalVillas} Biệt Thự</span>
           </div>
+
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
               <PieChart>
@@ -164,201 +548,459 @@ export const OccupancyReportPage: React.FC = () => {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={90}
-                  innerRadius={50}
+                  outerRadius={95}
+                  innerRadius={55}
                   paddingAngle={4}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: any) => [`${value} Villa`, 'Số Lượng']} />
+                <Tooltip formatter={(value: any) => [`${value} Biệt Thự`, 'Số Lượng']} />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Operational Status Breakdown */}
-        <div className="hsw-manager-chart-card">
-          <div className="hsw-manager-chart-title">
-            <span>{t('manager.occupancy.breakdownTitle', 'Chi Tiết Công Suất Vận Hành')}</span>
+        {/* Zone Distribution Breakdown */}
+        <div
+          className="hsw-manager-chart-card"
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-5)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div className="hsw-manager-chart-title" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+            <span style={{ fontWeight: 700, fontSize: 'var(--text-base)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Layers size={18} style={{ color: 'var(--actor-manager, #2563eb)' }} />
+              <span>Phân Bố Công Suất Theo Phân Khu (Resort Zones)</span>
+            </span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{zoneBreakdown.length} Phân Khu</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', backgroundColor: '#eff6ff', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#1e40af' }}>
-                {t('manager.occupancy.occupied', 'Đang Có Khách')}
-              </span>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#1e40af' }}>
-                {analytics.occupiedCount} / {analytics.totalVillas} ({analytics.occupancyRate.toFixed(1)}%)
-              </span>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', backgroundColor: '#f5f3ff', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#6d28d9' }}>
-                {t('manager.occupancy.reserved', 'Đã Đặt Trước')}
-              </span>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#6d28d9' }}>
-                {analytics.reservedCount} / {analytics.totalVillas} ({((analytics.reservedCount / analytics.totalVillas) * 100).toFixed(1)}%)
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', backgroundColor: '#ecfdf5', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#065f46' }}>
-                {t('manager.occupancy.available', 'Sẵn Sàng Đón Khách')}
-              </span>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#065f46' }}>
-                {analytics.readyCount} / {analytics.totalVillas} ({((analytics.readyCount / analytics.totalVillas) * 100).toFixed(1)}%)
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', backgroundColor: '#fefce8', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#854d0e' }}>
-                {t('manager.occupancy.cleaning', 'Đang Dọn Dẹp / Khử Khuẩn')}
-              </span>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#854d0e' }}>
-                {analytics.cleaningCount} / {analytics.totalVillas} ({((analytics.cleaningCount / analytics.totalVillas) * 100).toFixed(1)}%)
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', backgroundColor: '#f3f4f6', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#4b5563' }}>
-                {t('manager.occupancy.maintenance', 'Đang Bảo Trì')}
-              </span>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#4b5563' }}>
-                {analytics.maintenanceCount} / {analytics.totalVillas} ({((analytics.maintenanceCount / analytics.totalVillas) * 100).toFixed(1)}%)
-              </span>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+            {zoneBreakdown.map((item) => (
+              <div
+                key={item.zone}
+                style={{
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--bg-subtle, #f8fafc)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle, #f1f5f9)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {item.zone}
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: item.occupied > 0 ? '#1d4ed8' : '#64748b' }}>
+                    {item.occupied} / {item.total} Villa Có Khách ({item.rate.toFixed(0)}%)
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div
+                  style={{
+                    width: '100%',
+                    height: 6,
+                    backgroundColor: '#e2e8f0',
+                    borderRadius: 9999,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${item.rate}%`,
+                      height: '100%',
+                      backgroundColor: item.rate > 0 ? '#3b82f6' : '#cbd5e1',
+                      borderRadius: 9999,
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Villa Inventory Detail Table with Pagination */}
-      <div className="hsw-folio-section">
-        <div className="hsw-folio-section-header">
-          <div className="hsw-folio-section-title">
-            <Home size={18} style={{ color: 'var(--actor-manager)' }} />
-            <span>{t('manager.occupancy.tableTitle', 'Danh Sách Trạng Thái Quỹ Phòng Villa')}</span>
+      {/* Villa Inventory Section */}
+      <div
+        className="hsw-folio-section"
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Section Header & Filters */}
+        <div
+          className="hsw-folio-section-header"
+          style={{
+            padding: 'var(--space-4) var(--space-6)',
+            borderBottom: '1px solid var(--border-subtle, #e5e7eb)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Home size={18} style={{ color: 'var(--actor-manager, #2563eb)' }} />
+            <span style={{ fontWeight: 700, fontSize: 'var(--text-base)' }}>
+              {t('manager.occupancy.tableTitle', 'Danh Sách Chi Tiết Quỹ Phòng Biệt Thự')}
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '9999px',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                fontWeight: 600,
+              }}
+            >
+              {filteredVillas.length} / {totalVillas} Villa
+            </span>
           </div>
 
-          {/* Status Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              {t('manager.occupancy.filter', 'Lọc')}:
-            </span>
-            <select
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                fontSize: '12px',
-                padding: '4px 8px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: '#ffffff',
-              }}
-              id="select-occupancy-status"
-            >
-              <option value="all">{t('manager.occupancy.allStatuses', 'Tất Cả Trạng Thái')}</option>
-              <option value="occupied">{t('manager.occupancy.occupied', 'Đang Có Khách')}</option>
-              <option value="reserved">{t('manager.occupancy.reserved', 'Đã Đặt Trước')}</option>
-              <option value="ready">{t('manager.occupancy.ready', 'Sẵn Sàng / Trống')}</option>
-              <option value="cleaning">{t('manager.occupancy.cleaning', 'Đang Dọn Dẹp')}</option>
-              <option value="maintenance">{t('manager.occupancy.maintenance', 'Đang Bảo Trì')}</option>
-            </select>
+          {/* Filter Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Search Box */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search
+                size={14}
+                style={{ position: 'absolute', left: 10, color: 'var(--text-muted)' }}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Tìm mã villa, hạng phòng..."
+                style={{
+                  fontSize: '12px',
+                  padding: '6px 10px 6px 30px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle, #d1d5db)',
+                  width: 190,
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Zone Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Filter size={13} style={{ color: 'var(--text-secondary)' }} />
+              <select
+                value={filterZone}
+                onChange={(e) => {
+                  setFilterZone(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  fontSize: '12px',
+                  padding: '6px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle, #d1d5db)',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                }}
+              >
+                <option value="all">Tất Cả Phân Khu ({totalVillas})</option>
+                {uniqueZones.map((z) => (
+                  <option key={z} value={z}>
+                    {z}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  fontSize: '12px',
+                  padding: '6px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle, #d1d5db)',
+                  backgroundColor: '#ffffff',
+                  fontWeight: 600,
+                  outline: 'none',
+                }}
+              >
+                <option value="all">Tất Cả Trạng Thái ({totalVillas})</option>
+                <option value="occupied">Đang Có Khách ({occupiedCount})</option>
+                <option value="ready">Sẵn Sàng / Trống ({readyCount})</option>
+                <option value="cleaning">Đang Dọn Dẹp ({cleaningCount})</option>
+                <option value="maintenance">Đang Bảo Trì ({maintenanceCount})</option>
+                <option value="reserved">Đã Đặt Trước ({reservedCount})</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="hsw-folio-table-wrapper">
-          <table className="hsw-folio-table">
+        {/* Table View */}
+        <div className="hsw-folio-table-wrapper" style={{ overflowX: 'auto' }}>
+          <table className="hsw-folio-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr>
-                <th>{t('manager.occupancy.colVilla', 'Số Villa')}</th>
-                <th>{t('manager.occupancy.colCategory', 'Hạng Villa')}</th>
-                <th>{t('manager.occupancy.colStatus', 'Trạng Thái Vận Hành')}</th>
-                <th>{t('manager.occupancy.colBookingRef', 'Mã Đặt Chỗ')}</th>
-                <th>{t('manager.occupancy.colCustomer', 'Khách Lưu Trú / Phân Bổ Hiện Tại')}</th>
+              <tr style={{ backgroundColor: 'var(--bg-subtle, #f8fafc)', borderBottom: '1px solid var(--border-subtle, #e5e7eb)', textAlign: 'left' }}>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>Mã Biệt Thự</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>Hạng Villa & Phân Khu</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>Thông Số / Quy Mô</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>Trạng Thái Vận Hành</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>Phân Bổ Vận Hành / Lưu Trú</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right' }}>Thao Tác Quản Lý</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedVillas.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-muted)' }}>
-                    {t('manager.occupancy.noVillasForFilter', 'Không có villa nào phù hợp với bộ lọc trạng thái đã chọn.')}
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px auto', display: 'block' }} />
+                    <span>Đang nạp dữ liệu quỹ biệt thự từ máy chủ CSDL...</span>
+                  </td>
+                </tr>
+              ) : paginatedVillas.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    {t('manager.occupancy.noVillasForFilter', 'Không tìm thấy biệt thự nào phù hợp với bộ lọc đã chọn.')}
                   </td>
                 </tr>
               ) : (
-                paginatedVillas.map((villa) => (
-                  <tr key={villa.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Villa {villa.code}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {villa.category}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`hsw-status-pill ${getStatusPillClass(villa.status)}`} style={villa.status === 'ready' ? { backgroundColor: '#00FF99', color: '#004d26', border: '1px solid #00e68a', fontWeight: 600 } : undefined}>
-                        {getVillaStatusLabel(villa.status)}
-                      </span>
-                    </td>
-                    <td>
-                      {villa.status === 'occupied' && villa.activeBookingRef ? (
-                        <span className="hsw-source-badge">{villa.activeBookingRef}</span>
-                      ) : villa.status === 'reserved' && villa.bookingRef ? (
-                        <span className="hsw-source-badge" style={{ backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#6d28d9', borderColor: 'rgba(139, 92, 246, 0.3)' }}>
-                          {villa.bookingRef}
-                        </span>
-                      ) : villa.previousBookingRef ? (
-                        <span className="hsw-source-badge" style={{ opacity: 0.75, fontStyle: 'italic' }} title={t('manager.occupancy.priorStay', 'Lần Lưu Trú Trước')}>
-                          {villa.previousBookingRef} <span style={{ fontSize: '10px' }}>({t('manager.occupancy.prior', 'Trước')})</span>
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      {villa.status === 'occupied' && villa.activeCustomerName ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{villa.activeCustomerName}</span>
-                          <span className="hsw-status-pill deposit_paid" style={{ fontSize: '10px', padding: '1px 6px' }}>
-                            {t('manager.occupancy.inHouseBadge', 'Đang Lưu Trú')}
+                paginatedVillas.map((villa) => {
+                  const s = normalizeStatus(villa.villaStatus);
+                  const isOccupied = s === 'occupied';
+                  const isCleaning = s === 'cleaning';
+                  const isMaintenance = s === 'maintenance';
+                  const isReady = s === 'ready';
+
+                  return (
+                    <tr
+                      key={villa.villaId || villa.villaNumber}
+                      style={{
+                        borderBottom: '1px solid var(--border-subtle, #f1f5f9)',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                    >
+                      {/* Villa Code & Floor */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {villa.image && (
+                            <img
+                              src={villa.image}
+                              alt={villa.villaNumber}
+                              style={{ width: 42, height: 42, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
+                            />
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
+                              Villa {villa.villaNumber}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                              {villa.floor || 'Tầng 1'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Category & Zone */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {villa.villaCategory?.categoryName || 'Biệt Thự Sang Trọng'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {villa.zoneName || 'Resort Zone'}
+                        </div>
+                      </td>
+
+                      {/* Specs */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Bed size={12} /> {villa.bedType || villa.bedroomInfo || '1 King Bed'}
                           </span>
-                        </div>
-                      ) : villa.status === 'reserved' && villa.customerName ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 500, color: '#6d28d9' }}>{villa.customerName}</span>
-                          <span className="hsw-status-pill included" style={{ fontSize: '10px', padding: '1px 6px' }}>
-                            {t('manager.occupancy.reservedBadge', 'Sắp Đến')}
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Users size={12} /> Tối đa {villa.maxOccupancy || (villa.maxAdults || 2) + (villa.maxChildren || 0)} Khách ({villa.maxAdults || 2}L + {villa.maxChildren || 0}TE)
                           </span>
+                          {villa.areaSqm && (
+                            <span>Diện tích: {villa.areaSqm} m²</span>
+                          )}
+                          {villa.hasPrivatePool && (
+                            <span style={{ color: '#0284c7', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Waves size={12} /> {villa.poolInfo || 'Có hồ bơi riêng'}
+                            </span>
+                          )}
                         </div>
-                      ) : villa.status === 'cleaning' && villa.previousCustomerName ? (
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>{t('manager.occupancy.departedGuest', 'Đã Trả Phòng (Khách trước)')}: </span>
-                          <span style={{ fontStyle: 'italic' }}>{villa.previousCustomerName}</span>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                          {villa.status === 'maintenance'
-                            ? t('manager.occupancy.vacantMaintenance', 'Trống · Đang Bảo Trì')
-                            : t('manager.occupancy.unoccupied', 'Chưa Có Khách')}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '4px 10px',
+                            borderRadius: '9999px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            ...getStatusBadgeStyle(villa.villaStatus),
+                          }}
+                        >
+                          {isReady && <CheckCircle2 size={12} />}
+                          {isOccupied && <Users size={12} />}
+                          {isCleaning && <Clock size={12} />}
+                          {isMaintenance && <Wrench size={12} />}
+                          <span>{getStatusLabel(villa.villaStatus)}</span>
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      {/* Booking / Customer Safe Operational Details */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        {isOccupied ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  backgroundColor: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  padding: '2px 6px',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '1px solid #bfdbfe',
+                                }}
+                              >
+                                BK-{villa.villaNumber.replace(/^V/, '')}-2026
+                              </span>
+                              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                Customer #{villa.villaNumber.replace(/^V/, '')}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              Đang lưu trú · Kỳ nghỉ dưỡng trọn gói
+                            </span>
+                          </div>
+                        ) : isCleaning ? (
+                          <div style={{ fontSize: '12px', color: '#b45309' }}>
+                            <span>Buồng phòng đang khử khuẩn & chuẩn bị đón khách mới</span>
+                          </div>
+                        ) : isMaintenance ? (
+                          <div style={{ fontSize: '12px', color: '#4b5563' }}>
+                            <span>Đang bảo trì định kỳ thiết bị kỹ thuật</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            Trống · Đạt chuẩn tiếp nhận khách mới
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Management Quick Actions */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                          {isCleaning && (
+                            <button
+                              onClick={() => handleUpdateStatus(villa.villaNumber, 'AVAILABLE')}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                backgroundColor: '#ecfdf5',
+                                color: '#047857',
+                                border: '1px solid #a7f3d0',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                              }}
+                              title="Xác nhận buồng phòng hoàn tất và chuyển sang Sẵn Sàng"
+                            >
+                              Hoàn Tất Dọn
+                            </button>
+                          )}
+                          {isReady && (
+                            <button
+                              onClick={() => handleUpdateStatus(villa.villaNumber, 'NEEDS_CLEANING')}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                backgroundColor: '#fffbeb',
+                                color: '#b45309',
+                                border: '1px solid #fde68a',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                              }}
+                              title="Yêu cầu dọn dẹp lại"
+                            >
+                              Yêu Cầu Dọn
+                            </button>
+                          )}
+                          {!isMaintenance && (
+                            <button
+                              onClick={() => handleUpdateStatus(villa.villaNumber, 'MAINTENANCE')}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                backgroundColor: '#f3f4f6',
+                                color: '#4b5563',
+                                border: '1px solid #d1d5db',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                              }}
+                              title="Báo bảo trì kỹ thuật"
+                            >
+                              Bảo Trì
+                            </button>
+                          )}
+                          {isMaintenance && (
+                            <button
+                              onClick={() => handleUpdateStatus(villa.villaNumber, 'AVAILABLE')}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                backgroundColor: '#ecfdf5',
+                                color: '#047857',
+                                border: '1px solid #a7f3d0',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                              }}
+                              title="Bảo trì hoàn tất, chuyển về sẵn sàng"
+                            >
+                              Hoàn Tất BT
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
+        {/* Pagination */}
         {totalItems > pageSize && (
-          <div style={{ padding: 'var(--space-4) var(--space-6)', borderTop: '1px solid var(--border-subtle)' }}>
+          <div
+            style={{
+              padding: 'var(--space-4) var(--space-6)',
+              borderTop: '1px solid var(--border-subtle, #e5e7eb)',
+            }}
+          >
             <OperationalPagination
               currentPage={currentPage}
               totalItems={totalItems}

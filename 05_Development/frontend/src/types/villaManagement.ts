@@ -9,8 +9,12 @@ export interface PhysicalVillaItem {
   floor: string;
   bedroomCount: number;
   bedroomInfo: string;
+  bedType?: string; // e.g. 'King Bed (1.8m x 2.0m)'
+  maxAdults?: number; // e.g. 2
+  maxChildren?: number; // e.g. 1
   maxOccupancy: number;
   areaSqm: number;
+  nightlyRate?: number; // Base or override nightly rate in VND
   hasPrivatePool: boolean;
   poolInfo: string;
   status: VillaOperationalStatus;
@@ -24,12 +28,17 @@ export interface PhysicalVillaItem {
 export interface VillaCategoryItem {
   id: number;
   categoryName: string;
+  categoryCode?: string;
   inventoryCount: number;
   bedroomCount: number;
+  bedType?: string;
   bedroomDescription: string;
+  maxAdults?: number;
+  maxChildren?: number;
   maxOccupancy: number;
   standardOccupancy: number;
   areaRange: string;
+  basePrice?: number; // Base standard nightly rate in VND
   priceModifier: number; // in VND
   hasPrivatePool: boolean;
   poolDescription: string;
