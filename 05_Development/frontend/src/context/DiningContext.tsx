@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import type { 
   DiningContextType, 
   DietaryMenuItem, 
@@ -15,33 +15,59 @@ import {
   MOCK_ALA_CARTE_ORDERS 
 } from '../data/mockDining';
 import { useCustomer } from './CustomerContext';
+import { fnbApi } from '../features/m4-fnb/api/fnbApi';
 
 const DiningContext = createContext<DiningContextType | undefined>(undefined);
 
 export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [menuItems] = useState<DietaryMenuItem[]>(MOCK_MENU_ITEMS);
+  const [menuItems, setMenuItems] = useState<DietaryMenuItem[]>(MOCK_MENU_ITEMS);
   const [mealSelections, setMealSelections] = useState<DailyMealSelection[]>(MOCK_MEAL_SELECTIONS);
   const [alaCarteOrders, setAlaCarteOrders] = useState<AlaCarteOrder[]>(MOCK_ALA_CARTE_ORDERS);
-  
-  // We use useCustomer to safely get access to customer profiles if needed
-  // Note: this hook is used within the app tree so it should be safe, 
-  // but we can also mock the dietary projection internally if it's missing.
-  
-  // However, since F&B is an operations route, useCustomer might only return the currently logged-in customer.
-  // Wait, CustomerContext holds mock customer data. Is the Operations role able to query CustomerContext for other users?
-  // Let's assume we can query it, or we'll provide a mock fallback.
-  // Actually, for the prototype, CustomerContext has `profile` and `wellnessProfile` which represent the active user.
-  // We'll mock a general function that grabs the profile if IDs match, else uses a generic fallback.
+  const [liveKitchenOrders, setLiveKitchenOrders] = useState<MealPrepEntry[]>([]);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
+
   const { profile, wellnessProfile } = useCustomer();
+
+  // Try fetching live catalog on initial mount
+  const refreshMenu = useCallback(async (asOfDate?: string) => {
+    try {
+      const backendMenu = await fnbApi.getMenu(asOfDate);
+      if (backendMenu && backendMenu.length > 0) {
+        // Enrich existing mock items with backend pricing, availability & allergen warning flags
+        setMenuItems(prev => {
+          return prev.map(mockItem => {
+            const match = backendMenu.find(bm => bm.id === Number(mockItem.id) || bm.itemName.toLowerCase() === mockItem.name.en.toLowerCase());
+            if (match) {
+              return {
+                ...mockItem,
+                price: match.price !== undefined ? match.price : mockItem.price,
+                available: match.available !== undefined ? match.available : true,
+                availableServings: match.servingsAvailable,
+                // keep rich localized structure intact
+              };
+            }
+            return mockItem;
+          });
+        });
+      }
+    } catch {
+      // Backend offline or in mock prototype mode: keep default curated menu
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshMenu();
+  }, [refreshMenu]);
 
   const getMenuItemsByPeriod = (period: MealPeriod) => {
     return menuItems.filter(m => m.mealPeriods.includes(period) || m.mealPeriods.includes('all_day'));
   };
 
   const saveMealSelection = (selection: Omit<DailyMealSelection, 'id' | 'status'>) => {
+    const tempId = `MS-${Date.now()}`;
     const newSelection: DailyMealSelection = {
       ...selection,
-      id: `MS-${Date.now()}`,
+      id: tempId,
       status: 'pending',
     };
     
@@ -52,6 +78,36 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       );
       return [...filtered, newSelection];
     });
+
+    // Asynchronously synchronize with backend Spring Boot API
+    const numericBookingId = parseInt(String(selection.bookingId).replace(/\D/g, '') || '1', 10);
+    const parsedItems = (selection.items && selection.items.length > 0)
+      ? selection.items.map(it => ({
+          menuItemId: parseInt(String(it.menuItemId).replace(/\D/g, '') || '1', 10),
+          quantity: it.quantity || selection.quantity || 1,
+        }))
+      : selection.menuItemIds.map(mId => ({
+          menuItemId: parseInt(String(mId).replace(/\D/g, '') || '1', 10),
+          quantity: selection.quantity || 1,
+        }));
+
+    fnbApi.placeDailyMealOrder({
+      bookingId: numericBookingId,
+      orderDate: selection.date,
+      mealType: selection.mealPeriod.toUpperCase(),
+      specialNotes: selection.notes || undefined,
+      items: parsedItems,
+    }).then((res) => {
+      if (res && res.id) {
+        setMealSelections(prev => prev.map(s => s.id === tempId ? {
+          ...s,
+          id: String(res.id),
+          status: (res.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+        } : s));
+      }
+    }).catch(() => {
+      // Retain optimistic local state when in standalone demo mode
+    });
   };
 
   const getMealSelection = (bookingId: string, date: string, period: MealPeriod) => {
@@ -59,33 +115,57 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const createAlaCarteOrder = (order: Omit<AlaCarteOrder, 'id' | 'createdAt' | 'status' | 'chargeType' | 'folioPostingStatus'>) => {
+    const tempId = `ORD-${Date.now()}`;
     const newOrder: AlaCarteOrder = {
       ...order,
-      id: `ORD-${Date.now()}`,
+      id: tempId,
       createdAt: new Date().toISOString(),
       status: 'pending',
       chargeType: 'fnb_extra',
       folioPostingStatus: 'pending_checkout_folio',
     };
     setAlaCarteOrders(prev => [...prev, newOrder]);
+
+    // Asynchronously synchronize with backend Spring Boot API
+    const numericBookingId = parseInt(String(order.bookingId).replace(/\D/g, '') || '1', 10);
+    const parsedItems = order.lines.map(line => ({
+      menuItemId: parseInt(String(line.menuItemId).replace(/\D/g, '') || '1', 10),
+      quantity: line.quantity,
+    }));
+
+    fnbApi.placeAlaCarteOrder({
+      bookingId: numericBookingId,
+      orderDate: new Date().toISOString().split('T')[0],
+      mealType: 'DINNER',
+      specialNotes: order.location ? `Delivery villa/seat: ${order.location}` : undefined,
+      items: parsedItems,
+    }).then((res) => {
+      if (res && res.id) {
+        setAlaCarteOrders(prev => prev.map(o => o.id === tempId ? {
+          ...o,
+          id: String(res.id),
+          status: (res.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+        } : o));
+      }
+    }).catch(() => {
+      // Retain optimistic local state when in standalone demo mode
+    });
+
     return newOrder;
   };
 
   const getDietaryProjection = (customerId: string): FnbDietaryProjection => {
-    // If the customerId matches the logged-in mock customer, we use their actual data.
-    // Otherwise, we provide a safe fallback mock.
     if (profile && profile.id === customerId && wellnessProfile) {
       return {
         customerId,
         customerName: profile.fullName,
-        bookingReference: 'HSW-88192', // We could look up their active booking
+        bookingReference: 'HSW-88192',
         villaNumber: profile.assignedVilla,
         allergies: wellnessProfile.dietaryProfile.allergies || [],
         dietaryRestrictions: wellnessProfile.dietaryProfile.dietaryRestrictions || [],
       };
     }
     
-    // Fallback for other users in the prep list
     return {
       customerId,
       customerName: 'Eleanor Vance',
@@ -110,13 +190,66 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else {
       updateAlaCarteOrderStatus(id, status);
     }
+
+    // Also update live kitchen prep state
+    setLiveKitchenOrders(prev => prev.map(item => item.id === id ? { ...item, status } : item));
+
+    // Try synchronizing with backend
+    const numericId = parseInt(id.replace(/\D/g, ''), 10);
+    if (!isNaN(numericId) && numericId > 0) {
+      fnbApi.updateOrderStatus(numericId, status.toUpperCase()).catch(() => {
+        // Backend offline / mock fallback
+      });
+    }
   };
+
+  const fetchKitchenOrders = useCallback(async (date: string): Promise<MealPrepEntry[]> => {
+    setSyncStatus('syncing');
+    try {
+      const orders = await fnbApi.getKitchenOrders(date);
+      if (orders && Array.isArray(orders) && orders.length > 0) {
+        const mapped: MealPrepEntry[] = orders.map((ko) => ({
+          id: String(ko.id),
+          type: ko.orderType === 'A_LA_CARTE' ? 'a_la_carte' : 'retreat_meal',
+          date: ko.orderDate || date,
+          targetTime: ko.mealType ? ko.mealType.toLowerCase() : undefined,
+          mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
+          customerName: ko.customerFirstName ? `${ko.customerFirstName} (Villa ${ko.villaNumber})` : 'Resort Guest',
+          villaNumber: ko.villaNumber,
+          items: (ko.lines || []).map((line) => ({
+            menuItemId: String(line.menuItemId),
+            quantity: line.quantity,
+            notes: undefined,
+          })),
+          customerNotes: ko.specialNotes || undefined,
+          dietaryNotes: [...(ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
+          status: (ko.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+        }));
+        setLiveKitchenOrders(mapped);
+        setSyncStatus('synced');
+        return mapped;
+      }
+      setSyncStatus('synced');
+      return [];
+    } catch {
+      setSyncStatus('offline');
+      return [];
+    }
+  }, []);
 
   const getDailyPrepList = (date: string): MealPrepEntry[] => {
     const prepList: MealPrepEntry[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. If backend orders exist for this date, include them first
+    liveKitchenOrders.filter(ko => ko.date === date).forEach(ko => {
+      seenIds.add(ko.id);
+      prepList.push(ko);
+    });
     
-    // Retreat Meals
-    mealSelections.filter(s => s.date === date).forEach(s => {
+    // 2. Retreat Meals
+    mealSelections.filter(s => s.date === date && !seenIds.has(s.id)).forEach(s => {
+      seenIds.add(s.id);
       const projection = getDietaryProjection(s.customerId);
       prepList.push({
         id: s.id,
@@ -136,8 +269,9 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     });
 
-    // Ala Carte Orders (assuming same date matches the ISO created date, simplified)
-    alaCarteOrders.filter(o => o.createdAt.startsWith(date) || o.status !== 'delivered').forEach(o => {
+    // 3. Ala Carte Orders
+    alaCarteOrders.filter(o => (o.createdAt.startsWith(date) || o.status !== 'delivered') && !seenIds.has(o.id)).forEach(o => {
+      seenIds.add(o.id);
       const projection = getDietaryProjection(o.customerId);
       prepList.push({
         id: o.id,
@@ -173,7 +307,10 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateAlaCarteOrderStatus,
     updateFulfillmentStatus,
     getDailyPrepList,
-  }), [menuItems, mealSelections, alaCarteOrders]);
+    syncStatus,
+    fetchKitchenOrders,
+    refreshMenu,
+  }), [menuItems, mealSelections, alaCarteOrders, liveKitchenOrders, syncStatus, fetchKitchenOrders, refreshMenu]);
 
   return (
     <DiningContext.Provider value={value}>
@@ -189,3 +326,4 @@ export const useDining = () => {
   }
   return context;
 };
+

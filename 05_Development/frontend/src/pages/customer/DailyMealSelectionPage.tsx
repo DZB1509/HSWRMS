@@ -27,6 +27,7 @@ export const DailyMealSelectionPage: React.FC = () => {
   const [activeDate, setActiveDate] = useState<string>('');
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [portionCount, setPortionCount] = useState<number>(1);
   const [notes, setNotes] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -53,9 +54,11 @@ export const DailyMealSelectionPage: React.FC = () => {
       const existing = getMealSelection(activeBooking.id, activeDate, activePeriod);
       if (existing) {
         setSelectedItemId(existing.menuItemIds[0] || null);
+        setPortionCount(existing.quantity || (existing.items && existing.items[0]?.quantity) || 1);
         setNotes(existing.notes || '');
       } else {
         setSelectedItemId(null);
+        setPortionCount(1);
         setNotes('');
       }
       setSaveSuccess(false);
@@ -78,6 +81,8 @@ export const DailyMealSelectionPage: React.FC = () => {
       date: activeDate,
       mealPeriod: activePeriod,
       menuItemIds: [selectedItemId],
+      quantity: portionCount,
+      items: [{ menuItemId: selectedItemId, quantity: portionCount }],
       notes,
     });
     setSaveSuccess(true);
@@ -277,21 +282,38 @@ export const DailyMealSelectionPage: React.FC = () => {
                   const warning = hasAllergyWarning(item);
                   const localizedName = localize(item.name);
                   const localizedDesc = localize(item.description);
+                  const isAvailable = item.available !== false && (item.availableServings === undefined || item.availableServings > 0);
 
                   return (
                     <div
                       key={item.id}
-                      className={`hsw-culinary-card hsw-selectable-meal-card ${isSelected ? 'is-selected' : ''}`}
-                      onClick={() => setSelectedItemId(item.id)}
+                      className={`hsw-culinary-card hsw-selectable-meal-card ${isSelected ? 'is-selected' : ''} ${!isAvailable ? 'is-unavailable' : ''}`}
+                      style={{
+                        opacity: isAvailable ? 1 : 0.62,
+                        cursor: isAvailable ? 'pointer' : 'not-allowed',
+                        position: 'relative',
+                      }}
+                      onClick={() => {
+                        if (!isAvailable) return;
+                        if (selectedItemId !== item.id) {
+                          setSelectedItemId(item.id);
+                          setPortionCount(1);
+                        }
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          setSelectedItemId(item.id);
+                          if (!isAvailable) return;
+                          if (selectedItemId !== item.id) {
+                            setSelectedItemId(item.id);
+                            setPortionCount(1);
+                          }
                         }
                       }}
-                      tabIndex={0}
+                      tabIndex={isAvailable ? 0 : -1}
                       role="radio"
                       aria-checked={isSelected}
+                      aria-disabled={!isAvailable}
                       id={`select-card-${item.id}`}
                     >
                       <div style={{ position: 'relative' }}>
@@ -304,18 +326,119 @@ export const DailyMealSelectionPage: React.FC = () => {
                       </div>
 
                       <div className="hsw-culinary-card-body">
-                        <h3 className="hsw-culinary-dish-name" style={{ marginBottom: '6px' }}>
-                          {localizedName}
-                        </h3>
+                        {/* Header: Name & Availability Indicator Pill */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                          <h3 className="hsw-culinary-dish-name" style={{ margin: 0, flex: 1, fontSize: '15px' }}>
+                            {localizedName}
+                          </h3>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-pill)',
+                              backgroundColor: isAvailable ? 'rgba(46, 125, 50, 0.1)' : 'rgba(211, 47, 47, 0.1)',
+                              color: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
+                              border: `1px solid ${isAvailable ? 'rgba(46, 125, 50, 0.25)' : 'rgba(211, 47, 47, 0.25)'}`,
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                            }}
+                            id={`availability-badge-${item.id}`}
+                          >
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
+                              }}
+                            />
+                            {isAvailable ? t('dining.select.available', 'Sẵn sàng') : t('dining.select.unavailable', 'Tạm hết')}
+                          </span>
+                        </div>
+
+                        {/* Dish Description */}
                         <p className="hsw-culinary-desc">{localizedDesc}</p>
 
-                        {/* Dietary Badges (Prioritized, ingredient-aware, beverage-reduced) */}
+                        {/* Price Display directly below dish description */}
+                        <div
+                          className="hsw-culinary-dish-price"
+                          style={{
+                            margin: '8px 0',
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '6px',
+                          }}
+                          id={`price-tag-${item.id}`}
+                        >
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-forest)' }}>
+                            {item.price && item.price > 0
+                              ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)
+                              : '85.000 ₫'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                            ({t('dining.select.includedInPackage', 'Đã bao gồm trong gói')})
+                          </span>
+                        </div>
+
+                        {/* Dietary Badges */}
                         <DietaryBadgeList item={item} />
 
                         {warning && (
-                          <div className="hsw-allergy-alert-box" role="alert">
+                          <div className="hsw-allergy-alert-box" role="alert" style={{ marginTop: '8px' }}>
                             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
                             <span>{t('dining.menu.allergyWarning', 'Contains an allergen listed in your dietary profile.')}</span>
+                          </div>
+                        )}
+
+                        {/* Quantity / Portion Selector on card when selected */}
+                        {isSelected && isAvailable && (
+                          <div
+                            className="hsw-portion-selector-box"
+                            style={{
+                              marginTop: 'var(--space-3)',
+                              padding: '8px 12px',
+                              backgroundColor: 'var(--bg-soft)',
+                              borderRadius: 'var(--radius-sm)',
+                              border: '1px solid var(--border-subtle)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            id={`portion-selector-${item.id}`}
+                          >
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {t('dining.select.portionCount', 'Khẩu phần / Số lượng')}:
+                            </span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+                                style={{ padding: '0 8px', height: '26px', minWidth: '26px', fontWeight: 700 }}
+                                onClick={() => setPortionCount((prev) => Math.max(1, prev - 1))}
+                                id={`btn-portion-dec-${item.id}`}
+                                title="Giảm số lượng"
+                              >
+                                -
+                              </button>
+                              <span style={{ fontWeight: 700, fontSize: '13px', minWidth: '60px', textAlign: 'center', color: 'var(--text-primary)' }}>
+                                {portionCount} {t('dining.select.portion', 'suất')}
+                              </span>
+                              <button
+                                type="button"
+                                className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+                                style={{ padding: '0 8px', height: '26px', minWidth: '26px', fontWeight: 700 }}
+                                onClick={() => setPortionCount((prev) => Math.min(10, prev + 1))}
+                                id={`btn-portion-inc-${item.id}`}
+                                title="Tăng số lượng"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -341,7 +464,7 @@ export const DailyMealSelectionPage: React.FC = () => {
                   </h3>
                   {selectedItem && (
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 600 }}>
-                      {t('dining.select.selectedBadge', 'Selected')}: {localize(selectedItem.name)}
+                      {t('dining.select.selectedBadge', 'Selected')}: {portionCount}x {localize(selectedItem.name)}
                     </span>
                   )}
                 </div>

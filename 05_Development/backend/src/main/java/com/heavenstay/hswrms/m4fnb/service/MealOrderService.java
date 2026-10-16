@@ -235,6 +235,19 @@ public class MealOrderService {
             throw new ConflictException("INVALID_ORDER_TRANSITION",
                     "Order status cannot transition from " + currentStatus + " to " + requestedStatus + ".");
         }
+
+        // Operational workflow: Automatically deduct inventory when updating order to PREPARING
+        if (currentStatus == FnbOrderStatus.PENDING && requestedStatus == FnbOrderStatus.PREPARING) {
+            List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
+            for (MealOrderItem line : orderLines) {
+                if (line.getPreparationStatusValue() == MealOrderItemPreparationStatus.PENDING) {
+                    inventoryService.consumeForOrderItem(line.getId(), LocalDate.now());
+                    line.setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+                    orderItemRepository.save(line);
+                }
+            }
+        }
+
         order.setOrderStatus(requestedStatus);
         orderRepository.save(order);
         return mapKitchenOrders(List.of(order)).get(0);
@@ -278,9 +291,8 @@ public class MealOrderService {
         }
 
         ensureKitchenDietaryProjection(order.getRetreatBookingId());
-        if (markReady) {
-            // Deduction and line status update share this service transaction; retrying
-            // READY is idempotent.
+        if (startPreparation) {
+            // Automatically deduct inventory when F&B staff update an item's status to "in preparation" (PREPARING)
             inventoryService.consumeForOrderItem(orderLine.getId(), LocalDate.now());
         }
         orderLine.setPreparationStatus(requestedStatus);
@@ -305,8 +317,8 @@ public class MealOrderService {
 
     private boolean isAllowedTransition(FnbOrderStatus current, FnbOrderStatus requested) {
         return switch (current) {
-            case PENDING -> requested == FnbOrderStatus.CANCELLED;
-            case PREPARING -> false;
+            case PENDING -> requested == FnbOrderStatus.PREPARING || requested == FnbOrderStatus.CANCELLED;
+            case PREPARING -> requested == FnbOrderStatus.READY || requested == FnbOrderStatus.CANCELLED;
             case READY -> requested == FnbOrderStatus.DELIVERED;
             case DELIVERED, CANCELLED -> false;
         };

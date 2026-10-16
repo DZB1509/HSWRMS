@@ -20,9 +20,11 @@ export interface DietaryMenuItem {
   mealPeriods: MealPeriod[];
   dietaryTags: ('vegetarian' | 'lacto_ovo_vegetarian' | 'vegan' | 'gluten_free' | 'gluten_conscious' | 'dairy_free' | 'keto' | 'pescatarian' | 'flexitarian')[];
   allergenTags: ('nuts' | 'shellfish' | 'soy' | 'eggs' | 'fish' | 'dairy')[];
-  price?: number; // Only for a-la-carte
+  price?: number;
   isExtra: boolean;
   calories?: number;
+  available?: boolean;
+  availableServings?: number;
 }
 
 export interface DailyMealSelection {
@@ -32,6 +34,8 @@ export interface DailyMealSelection {
   date: string; // YYYY-MM-DD format
   mealPeriod: MealPeriod;
   menuItemIds: string[]; // Support multiple choices per meal period if allowed
+  quantity?: number; // Portions selected (e.g. 1 portion, 2 portions)
+  items?: { menuItemId: string; quantity: number }[];
   notes: string;
   status: FnbFulfillmentStatus; // Fulfillment status of the included retreat meal
 }
@@ -106,4 +110,10 @@ export interface DiningContextType {
   updateAlaCarteOrderStatus: (id: string, status: FnbFulfillmentStatus) => void;
   updateFulfillmentStatus: (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => void;
   getDailyPrepList: (date: string) => MealPrepEntry[];
+
+  // Live REST API Integration & Sync (Module 4)
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'offline';
+  fetchKitchenOrders?: (date: string) => Promise<MealPrepEntry[]>;
+  refreshMenu?: (asOfDate?: string) => Promise<void>;
 }
+

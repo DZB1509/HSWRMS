@@ -25,6 +25,9 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: [],
     isExtra: false,
     calories: 320,
+    price: 85000,
+    available: true,
+    availableServings: 15,
   },
   {
     id: 'MENU-002',
@@ -50,6 +53,9 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['eggs'],
     isExtra: false,
     calories: 450,
+    price: 110000,
+    available: true,
+    availableServings: 12,
   },
   {
     id: 'MENU-003',
@@ -75,6 +81,9 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['nuts'],
     isExtra: false,
     calories: 380,
+    price: 120000,
+    available: true,
+    availableServings: 20,
   },
   {
     id: 'MENU-004',
@@ -100,6 +109,9 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['fish'],
     isExtra: false,
     calories: 520,
+    price: 260000,
+    available: true,
+    availableServings: 8,
   },
   {
     id: 'MENU-005',
@@ -202,6 +214,9 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: [],
     isExtra: false,
     calories: 230,
+    price: 65000,
+    available: false,
+    availableServings: 0,
   },
   {
     id: 'MENU-009',
