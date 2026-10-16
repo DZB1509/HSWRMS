@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -51,13 +52,16 @@ public class MealOrderService {
     private final ObjectProvider<BookingContextPort> bookingContextPortProvider;
     private final ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider;
 
+    @Autowired
     public MealOrderService(MealOrderRepository orderRepository, MealOrderItemRepository orderItemRepository,
             MenuItemRepository menuItemRepository, MenuItemIngredientRepository recipeRepository,
             MealOrderMapper mealOrderMapper, MenuService menuService, InventoryService inventoryService,
             ObjectProvider<BookingContextPort> bookingContextPortProvider,
             ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.menuItemRepository = menuItemRepository;
@@ -68,6 +72,18 @@ public class MealOrderService {
         this.bookingContextPortProvider = bookingContextPortProvider;
         this.dietaryProfilePortProvider = dietaryProfilePortProvider;
         this.eventPublisher = eventPublisher;
+        this.packageFnbServiceProvider = packageFnbServiceProvider;
+    }
+
+    public MealOrderService(MealOrderRepository orderRepository, MealOrderItemRepository orderItemRepository,
+            MenuItemRepository menuItemRepository, MenuItemIngredientRepository recipeRepository,
+            MealOrderMapper mealOrderMapper, MenuService menuService, InventoryService inventoryService,
+            ObjectProvider<BookingContextPort> bookingContextPortProvider,
+            ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider,
+            ApplicationEventPublisher eventPublisher) {
+        this(orderRepository, orderItemRepository, menuItemRepository, recipeRepository,
+                mealOrderMapper, menuService, inventoryService, bookingContextPortProvider,
+                dietaryProfilePortProvider, eventPublisher, null);
     }
 
     @Transactional
@@ -97,9 +113,14 @@ public class MealOrderService {
             throw new BusinessRuleException("MEAL_SELECTION_SCOPE_CHANGED",
                     "A selection update must keep the same booking, date, and meal period.");
         }
-        requireBookingPort().requireEligibleCustomerBooking(userId, order.getRetreatBookingId(), order.getOrderDate());
+        if (request.orderDate() == null || request.orderDate().isBefore(LocalDate.now())) {
+            throw new BusinessRuleException("PAST_DATE_NOT_ALLOWED",
+                    "Meal orders cannot be updated for past dates. Please select today or future retreat stay dates.");
+        }
+        BookingContextPort.FnbBookingContext booking = requireBookingPort()
+                .requireEligibleCustomerBooking(userId, order.getRetreatBookingId(), order.getOrderDate());
         DietaryProfilePort.FoodProfileProjection profile = requireFoodProfile(userId);
-        List<MenuItem> selectedItems = validateOrderItems(request, FnbOrderType.DAILY_MEAL, profile);
+        List<MenuItem> selectedItems = validateOrderItems(request, FnbOrderType.DAILY_MEAL, profile, booking.packageCode());
 
         order.setSpecialNotes(normalizeNotes(request.specialNotes()));
         orderRepository.save(order);
@@ -117,7 +138,12 @@ public class MealOrderService {
     }
 
     private MealOrderResponse placeOrder(Integer userId, CreateMealOrderRequest request, FnbOrderType orderType) {
-        requireBookingPort().requireEligibleCustomerBooking(userId, request.bookingId(), request.orderDate());
+        if (request.orderDate() == null || request.orderDate().isBefore(LocalDate.now())) {
+            throw new BusinessRuleException("PAST_DATE_NOT_ALLOWED",
+                    "Meal orders cannot be placed for past dates. Please select today or future retreat stay dates.");
+        }
+        BookingContextPort.FnbBookingContext booking = requireBookingPort()
+                .requireEligibleCustomerBooking(userId, request.bookingId(), request.orderDate());
         DietaryProfilePort.FoodProfileProjection profile = requireFoodProfile(userId);
         if (orderType == FnbOrderType.DAILY_MEAL && orderRepository
                 .existsByRetreatBookingIdAndOrderDateAndMealTypeAndOrderTypeAndOrderStatusNot(
@@ -126,7 +152,7 @@ public class MealOrderService {
             throw new ConflictException("DAILY_MEAL_ALREADY_SELECTED",
                     "A daily meal selection already exists for this booking, date, and meal period.");
         }
-        List<MenuItem> selectedItems = validateOrderItems(request, orderType, profile);
+        List<MenuItem> selectedItems = validateOrderItems(request, orderType, profile, booking.packageCode());
 
         LocalDateTime createdAt = LocalDateTime.now();
         MealOrder unsavedOrder = new MealOrder(request.bookingId(), request.orderDate(),
@@ -161,9 +187,11 @@ public class MealOrderService {
     }
 
     private List<MenuItem> validateOrderItems(CreateMealOrderRequest request, FnbOrderType orderType,
-            DietaryProfilePort.FoodProfileProjection profile) {
+            DietaryProfilePort.FoodProfileProjection profile, String packageCode) {
         Set<Integer> uniqueMenuIds = new HashSet<>();
         List<MenuItem> selectedItems = new ArrayList<>();
+        RetreatPackageFnbService packageService = packageFnbServiceProvider != null
+                ? packageFnbServiceProvider.getIfAvailable() : null;
         for (CreateMealOrderLineRequest requestedLine : request.items()) {
             Integer menuItemId = requestedLine.menuItemId();
             if (menuItemId == null) {
@@ -177,6 +205,15 @@ public class MealOrderService {
             if (menuService.conflictsWithFoodProfile(menuItem, profile)) {
                 throw new BusinessRuleException("PERSONALIZED_MENU_CONFLICT",
                         "The order contains a menu item excluded by the customer's allergy or dietary profile.");
+            }
+            if (packageService != null && packageCode != null) {
+                List<String> violations = packageService.validatePackageSafetyViolations(
+                        packageCode, menuItem.getItemName(), menuItem.getAllergenInformation(), menuItem.getDietaryTags());
+                if (!violations.isEmpty()) {
+                    throw new BusinessRuleException("PACKAGE_SAFETY_VIOLATION",
+                            "Món '" + menuItem.getItemName() + "' vi phạm quy tắc an toàn thực phẩm của gói "
+                                    + packageCode + ": " + String.join("; ", violations));
+                }
             }
             var recipe = recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(menuItem.getId());
             var availability = menuService.availability(menuItem, recipe, request.orderDate());
@@ -206,8 +243,9 @@ public class MealOrderService {
     }
 
     public List<KitchenOrderResponse> listKitchenOrders(LocalDate orderDate) {
-        List<MealOrder> orders = orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtAsc(orderDate,
-                "CANCELLED");
+        List<MealOrder> orders = orderDate != null
+                ? orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(orderDate, "CANCELLED")
+                : orderRepository.findByOrderStatusNotOrderByCreatedAtDesc("CANCELLED");
         return mapKitchenOrders(orders);
     }
 
@@ -392,7 +430,8 @@ public class MealOrderService {
             result.add(new KitchenOrderResponse(order.id(), order.bookingId(),
                     booking.guestFirstName(), booking.villaNumber(), order.orderDate(), order.mealType(),
                     order.orderType(), order.status(), order.specialNotes(), true,
-                    profile.foodAllergies(), profile.dietaryPreferences(), kitchenLines));
+                    profile.foodAllergies(), profile.dietaryPreferences(), kitchenLines,
+                    booking.packageCode(), booking.packageName()));
         }
         return result;
     }
