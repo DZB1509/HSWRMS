@@ -5,6 +5,14 @@ spring:
   application:
     name: hswrms
 
+  # Default profile is 'dev' so a fresh clone works with zero manual setup:
+  # OTP verification codes print to the console (DevEmailDeliveryAdapter) and
+  # demo accounts are seeded on startup (DevAccountBootstrap). Override via
+  # SPRING_PROFILES_ACTIVE (e.g. "dev,smtp" for real e-mail, "prod" to disable
+  # all dev conveniences — the dev profile must NOT be active in production).
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   datasource:
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}

@@ -62,8 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (saved && saved in MOCK_PERSONAS) {
       return MOCK_PERSONAS[saved as Role];
     }
-    // Default to Customer for presentation preview
-    return MOCK_PERSONAS.customer;
+    // No stored session/token: start as a PUBLIC visitor so real login and
+    // RoleGuard redirects work. Demo personas are chosen via RoleSwitcher.
+    return null;
   });
 
   const role = currentUser ? currentUser.role : null;

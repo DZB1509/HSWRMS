@@ -5,6 +5,12 @@ spring:
   application:
     name: hswrms
 
+  # Profile selection: application.yml defaults to 'dev' (console OTP delivery
+  # + demo account seed). Production must set SPRING_PROFILES_ACTIVE to a
+  # non-dev profile (add ",smtp" for real e-mail delivery).
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   datasource:
     # Set DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD in your environment
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true

@@ -2,12 +2,17 @@ package com.heavenstay.hswrms.m1identity.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
  * Sensitive HealthProfile entity storing customer health, dietary,
  * allergy, and treatment-safety notes with explicit consent gating.
- * Mapped to dbo.HealthProfile.
+ * Mapped to dbo.HealthProfile. Structured columns + child collections
+ * follow API_CONTRACT.md §5.3; legacy unstructured columns
+ * (allergies, dietary_requirements, treatment_safety_notes) are retained
+ * for backward compatibility with the existing live schema.
  */
 @Entity
 @Table(name = "\"HealthProfile\"", schema = "dbo")
@@ -30,6 +35,42 @@ public class HealthProfile {
 
     @Column(name = "treatment_safety_notes", columnDefinition = "NVARCHAR(MAX)")
     private String treatmentSafetyNotes;
+
+    @Column(name = "current_health_condition", columnDefinition = "NVARCHAR(MAX)")
+    private String currentHealthCondition;
+
+    @Column(name = "injury_surgery_history", columnDefinition = "NVARCHAR(MAX)")
+    private String injurySurgeryHistory;
+
+    @Column(name = "mobility_joint_notes", columnDefinition = "NVARCHAR(MAX)")
+    private String mobilityJointNotes;
+
+    @Column(name = "current_medications", length = 500)
+    private String currentMedications;
+
+    @Column(name = "stress_fatigue_level", length = 20)
+    private String stressFatigueLevel;
+
+    @Column(name = "food_intolerance_notes", columnDefinition = "NVARCHAR(MAX)")
+    private String foodIntoleranceNotes;
+
+    @Column(name = "disliked_ingredients", columnDefinition = "NVARCHAR(MAX)")
+    private String dislikedIngredients;
+
+    @Column(name = "kitchen_notes", columnDefinition = "NVARCHAR(MAX)")
+    private String kitchenNotes;
+
+    @OneToMany(mappedBy = "healthProfile", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private List<FoodAllergy> foodAllergies = new ArrayList<>();
+
+    @OneToMany(mappedBy = "healthProfile", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private List<DietaryRequirement> dietaryRequirementsList = new ArrayList<>();
+
+    @OneToMany(mappedBy = "healthProfile", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private List<HealthProfileTherapyPreference> therapyPreferences = new ArrayList<>();
 
     @Column(name = "anonymization_status", nullable = false, length = 20)
     private String anonymizationStatus = "IDENTIFIABLE"; // IDENTIFIABLE, ANONYMIZED
@@ -108,6 +149,39 @@ public class HealthProfile {
     public void setTreatmentSafetyNotes(String treatmentSafetyNotes) {
         this.treatmentSafetyNotes = treatmentSafetyNotes;
     }
+
+    public String getCurrentHealthCondition() { return currentHealthCondition; }
+    public void setCurrentHealthCondition(String v) { this.currentHealthCondition = v; }
+
+    public String getInjurySurgeryHistory() { return injurySurgeryHistory; }
+    public void setInjurySurgeryHistory(String v) { this.injurySurgeryHistory = v; }
+
+    public String getMobilityJointNotes() { return mobilityJointNotes; }
+    public void setMobilityJointNotes(String v) { this.mobilityJointNotes = v; }
+
+    public String getCurrentMedications() { return currentMedications; }
+    public void setCurrentMedications(String v) { this.currentMedications = v; }
+
+    public String getStressFatigueLevel() { return stressFatigueLevel; }
+    public void setStressFatigueLevel(String v) { this.stressFatigueLevel = v; }
+
+    public String getFoodIntoleranceNotes() { return foodIntoleranceNotes; }
+    public void setFoodIntoleranceNotes(String v) { this.foodIntoleranceNotes = v; }
+
+    public String getDislikedIngredients() { return dislikedIngredients; }
+    public void setDislikedIngredients(String v) { this.dislikedIngredients = v; }
+
+    public String getKitchenNotes() { return kitchenNotes; }
+    public void setKitchenNotes(String v) { this.kitchenNotes = v; }
+
+    public List<FoodAllergy> getFoodAllergies() { return foodAllergies; }
+    public void setFoodAllergies(List<FoodAllergy> foodAllergies) { this.foodAllergies = foodAllergies; }
+
+    public List<DietaryRequirement> getDietaryRequirementsList() { return dietaryRequirementsList; }
+    public void setDietaryRequirementsList(List<DietaryRequirement> v) { this.dietaryRequirementsList = v; }
+
+    public List<HealthProfileTherapyPreference> getTherapyPreferences() { return therapyPreferences; }
+    public void setTherapyPreferences(List<HealthProfileTherapyPreference> v) { this.therapyPreferences = v; }
 
     public String getAnonymizationStatus() {
         return anonymizationStatus;

@@ -31,7 +31,10 @@ export const LoginPage: React.FC = () => {
   const { loginAs, loginWithCredentials } = useAuth();
   const { showToast } = useToast();
 
-  const [email, setEmail] = useState('eleanor.vance@example.com');
+  // Prefill matches the DevAccountBootstrap demo customer (dev profile) so a
+  // fresh clone can log in immediately; users registering their own account
+  // simply overwrite it.
+  const [email, setEmail] = useState('customer@heavenstay.dev');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
