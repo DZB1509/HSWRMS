@@ -81,7 +81,7 @@ export const MyBookingsPage: React.FC = () => {
             justifyContent: 'space-between',
             gap: 'var(--space-4)',
             marginBottom: 'var(--space-8)',
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--surface)',
             padding: 'var(--space-3) var(--space-4)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-subtle)',
@@ -155,7 +155,7 @@ export const MyBookingsPage: React.FC = () => {
         {filteredBookings.length === 0 ? (
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--surface)',
               border: '1px dashed var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-12) var(--space-6)',

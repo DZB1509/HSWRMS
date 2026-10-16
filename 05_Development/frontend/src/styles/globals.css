@@ -85,6 +85,45 @@ input, select, textarea {
   font-family: var(--font-ui);
   font-size: var(--text-base);
   color: var(--text-primary);
+  background-color: var(--control-bg, var(--surface));
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: var(--control-bg, var(--surface));
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-forest);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: var(--surface-muted);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+select option {
+  background-color: var(--surface);
+  color: var(--text-primary);
 }
 
 /* Focus styles for keyboard accessibility (DESIGN.md §11) */
@@ -190,7 +229,7 @@ input, select, textarea {
 .soft-control {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
-  background-color: #ffffff;
+  background-color: var(--surface);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -366,7 +405,7 @@ input, select, textarea {
   .interactive-card:hover h4,
   .interactive-card:hover .card-title {
     transform: translateY(-2px);
-    color: #171d18;
+    color: var(--text-primary);
     text-shadow: var(--shadow-text-hover-rich);
   }
 
@@ -374,7 +413,7 @@ input, select, textarea {
   .interactive-card:hover .card-desc,
   .interactive-card:hover .card-subtitle {
     transform: translateY(-1px);
-    color: #222923;
+    color: var(--text-secondary);
     text-shadow: var(--shadow-text-desc-hover);
   }
 }
@@ -410,7 +449,7 @@ input, select, textarea {
 .spa-treatment-card.selected,
 .spa-treatment-option--active {
   border-color: var(--accent-forest) !important;
-  background-color: #f4f7f4 !important;
+  background-color: var(--surface-interactive) !important;
   box-shadow: 0 3px 12px rgba(43, 68, 48, 0.12) !important;
   transform: none !important;
 }

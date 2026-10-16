@@ -200,7 +200,7 @@ export const AccountSettingsPage: React.FC = () => {
               {/* Personal Information */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',
@@ -231,7 +231,8 @@ export const AccountSettingsPage: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: 'var(--text-sm)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--control-bg, var(--surface))',
+                        color: 'var(--text-primary)',
                       }}
                     />
                   </div>
@@ -254,7 +255,8 @@ export const AccountSettingsPage: React.FC = () => {
                           borderRadius: 'var(--radius-sm)',
                           border: '1px solid var(--border-subtle)',
                           fontSize: 'var(--text-sm)',
-                          backgroundColor: 'var(--bg-soft)',
+                          backgroundColor: 'var(--surface-muted)',
+                          color: 'var(--text-muted)',
                         }}
                       />
                       <span id="account-email-note" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px', display: 'block' }}>
@@ -277,7 +279,8 @@ export const AccountSettingsPage: React.FC = () => {
                           borderRadius: 'var(--radius-sm)',
                           border: '1px solid var(--border-subtle)',
                           fontSize: 'var(--text-sm)',
-                          backgroundColor: '#ffffff',
+                          backgroundColor: 'var(--control-bg, var(--surface))',
+                          color: 'var(--text-primary)',
                         }}
                       />
                     </div>
@@ -299,7 +302,8 @@ export const AccountSettingsPage: React.FC = () => {
                           borderRadius: 'var(--radius-sm)',
                           border: '1px solid var(--border-subtle)',
                           fontSize: 'var(--text-sm)',
-                          backgroundColor: '#ffffff',
+                          backgroundColor: 'var(--control-bg, var(--surface))',
+                          color: 'var(--text-primary)',
                         }}
                       />
                     </div>
@@ -318,7 +322,8 @@ export const AccountSettingsPage: React.FC = () => {
                           borderRadius: 'var(--radius-sm)',
                           border: '1px solid var(--border-subtle)',
                           fontSize: 'var(--text-sm)',
-                          backgroundColor: '#ffffff',
+                          backgroundColor: 'var(--control-bg, var(--surface))',
+                          color: 'var(--text-primary)',
                         }}
                       >
                         <option value="vi">Tiếng Việt</option>
@@ -345,7 +350,8 @@ export const AccountSettingsPage: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: 'var(--text-sm)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--control-bg, var(--surface))',
+                        color: 'var(--text-primary)',
                       }}
                     />
                   </div>
@@ -355,7 +361,7 @@ export const AccountSettingsPage: React.FC = () => {
               {/* Emergency Contact */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',
@@ -385,7 +391,8 @@ export const AccountSettingsPage: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: 'var(--text-sm)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--control-bg, var(--surface))',
+                        color: 'var(--text-primary)',
                       }}
                     />
                   </div>
@@ -405,7 +412,8 @@ export const AccountSettingsPage: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: 'var(--text-sm)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--control-bg, var(--surface))',
+                        color: 'var(--text-primary)',
                       }}
                     />
                   </div>
@@ -425,7 +433,8 @@ export const AccountSettingsPage: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: 'var(--text-sm)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--control-bg, var(--surface))',
+                        color: 'var(--text-primary)',
                       }}
                     />
                   </div>
@@ -435,7 +444,7 @@ export const AccountSettingsPage: React.FC = () => {
               {/* Communication Preferences */}
               <div
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--surface)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-6)',
@@ -534,7 +543,7 @@ export const AccountSettingsPage: React.FC = () => {
             {/* Password Change Form */}
             <div
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 padding: 'var(--space-6)',
@@ -567,9 +576,9 @@ export const AccountSettingsPage: React.FC = () => {
                   style={{
                     padding: '8px 12px',
                     borderRadius: 'var(--radius-sm)',
-                    backgroundColor: '#fdf2f2',
-                    border: '1px solid #fecaca',
-                    color: '#991b1b',
+                    backgroundColor: 'var(--surface-danger)',
+                    border: '1px solid var(--border-danger)',
+                    color: 'var(--text-danger)',
                     fontSize: 'var(--text-xs)',
                     marginBottom: 'var(--space-4)',
                   }}
