@@ -12,7 +12,7 @@ const normalizeRole = (value: string | undefined | null): Role | null => {
   if (normalized === 'customer') return 'customer';
   if (normalized === 'receptionist') return 'receptionist';
   if (normalized === 'therapist' || normalized === 'therapist / yoga instructor') return 'therapist';
-  if (normalized === 'f&b staff' || normalized === 'fb_staff' || normalized === 'fb-staff' || normalized === 'f&b_staff') return 'fb_staff';
+  if (normalized === 'f&b staff' || normalized === 'fb_staff' || normalized === 'fb-staff' || normalized === 'f&b_staff' || normalized === 'fbstaff' || normalized === 'fb staff') return 'fb_staff';
   if (normalized === 'manager') return 'manager';
   if (normalized === 'admin' || normalized === 'administrator') return 'admin';
   return null;

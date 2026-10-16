@@ -24,6 +24,16 @@ const DASHBOARD_BY_ROLE: Record<Role, string> = {
   admin: '/admin/dashboard',
 };
 
+/** Route prefixes each role may be sent back to via `?redirect=` (verified against the router). */
+const REDIRECT_PREFIXES_BY_ROLE: Record<Role, string[]> = {
+  customer: ['/customer', '/retreats', '/'],
+  receptionist: ['/receptionist'],
+  therapist: ['/therapist'],
+  fb_staff: ['/fb'],
+  manager: ['/manager', '/admin/system-overview'],
+  admin: ['/admin', '/manager'],
+};
+
 export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -41,10 +51,25 @@ export const LoginPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const redirectUrl = searchParams.get('redirect') || '/customer/dashboard';
+  const redirectParam = searchParams.get('redirect');
 
   const resolvePostLoginTarget = (resolvedRole: Role): string => {
-    if (searchParams.get('redirect')) return redirectUrl;
+    // Accept the requested redirect only when it is an internal path the
+    // authenticated role is actually allowed to visit; otherwise fall back
+    // to that role's own dashboard so Customer-only URLs never trap staff.
+    if (redirectParam && redirectParam.startsWith('/')) {
+      const allowed = REDIRECT_PREFIXES_BY_ROLE[resolvedRole] ?? [];
+      if (
+        allowed.some(
+          (prefix) =>
+            redirectParam === prefix ||
+            redirectParam === '/' ||
+            (prefix !== '/' && redirectParam.startsWith(`${prefix}/`)),
+        )
+      ) {
+        return redirectParam;
+      }
+    }
     return DASHBOARD_BY_ROLE[resolvedRole];
   };
 
@@ -105,7 +130,7 @@ export const LoginPage: React.FC = () => {
       setIsLoading(false);
       loginAs('customer');
       showToast(t('auth.alerts.ssoSuccess', { provider }), 'success');
-      navigate(redirectUrl);
+      navigate(resolvePostLoginTarget('customer'), { replace: true });
     }, 500);
   };
 
