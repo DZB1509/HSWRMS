@@ -31,7 +31,15 @@ export const DailyMealSelectionPage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Calculate dates based on booking
+  const todayStr = React.useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  // Calculate dates based on the guest's booked retreat package
   const dates = React.useMemo(() => {
     if (!activeBooking) return [];
     const start = new Date(activeBooking.startDate);
@@ -43,11 +51,13 @@ export const DailyMealSelectionPage: React.FC = () => {
     return result;
   }, [activeBooking]);
 
+  // Automatically select the first non-past date linked to the retreat package
   useEffect(() => {
-    if (dates.length > 0 && !activeDate) {
-      setActiveDate(dates[0]);
+    if (dates.length > 0 && (!activeDate || activeDate < todayStr)) {
+      const firstValid = dates.find((d) => d >= todayStr) || dates[0];
+      setActiveDate(firstValid);
     }
-  }, [dates, activeDate]);
+  }, [dates, activeDate, todayStr]);
 
   useEffect(() => {
     if (activeDate && activeBooking) {
@@ -82,7 +92,7 @@ export const DailyMealSelectionPage: React.FC = () => {
       mealPeriod: activePeriod,
       menuItemIds: [selectedItemId],
       quantity: portionCount,
-      items: [{ menuItemId: selectedItemId, quantity: portionCount }],
+      items: [{ menuItemId: selectedItemId, quantity: portionCount, notes }],
       notes,
     });
     setSaveSuccess(true);
@@ -144,16 +154,50 @@ export const DailyMealSelectionPage: React.FC = () => {
       <div className="hsw-meal-select-layout">
         {/* Left Sticky Planning Rail */}
         <aside className="hsw-planning-rail" aria-label="Meal planning controls">
+          {/* Booked Retreat Package Sync Banner */}
+          {activeBooking && (
+            <div
+              style={{
+                padding: '10px 12px',
+                backgroundColor: 'var(--bg-soft)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: 'var(--space-3)',
+                borderLeft: '3px solid var(--accent-forest)',
+              }}
+              id="synced-retreat-package-card"
+            >
+              <div
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--accent-olive)',
+                  marginBottom: '2px',
+                }}
+              >
+                {t('dining.select.retreatPackage', 'Retreat Package')}
+              </div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                {localize(activeBooking.retreatName)}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                {activeBooking.villaNumber} · {activeBooking.startDate} → {activeBooking.endDate}
+              </div>
+            </div>
+          )}
+
           {/* Date Selector */}
           <div style={{ marginBottom: 'var(--space-4)' }}>
             <h3 className="hsw-rail-section-title">
               <Calendar size={13} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
               {t('dining.select.selectDate', 'Retreat Days')}
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {dates.map((d, index) => {
                 const dateObj = new Date(d);
                 const isSelected = activeDate === d;
+                const isPast = d < todayStr;
                 const formattedDate = dateObj.toLocaleDateString(i18n.language || 'en', {
                   weekday: 'short',
                   month: 'short',
@@ -164,11 +208,37 @@ export const DailyMealSelectionPage: React.FC = () => {
                     key={d}
                     type="button"
                     className={`hsw-date-pill-btn ${isSelected ? 'active' : ''}`}
-                    onClick={() => setActiveDate(d)}
+                    onClick={() => !isPast && setActiveDate(d)}
+                    disabled={isPast}
+                    style={{
+                      opacity: isPast ? 0.45 : 1,
+                      cursor: isPast ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      position: 'relative',
+                    }}
                     id={`btn-date-${d}`}
+                    title={isPast ? t('dining.select.pastDateNotice', 'Past date — cannot select') : formattedDate}
                   >
-                    <span>Day {index + 1}</span>
-                    <span style={{ fontSize: '12px', opacity: 0.85 }}>{formattedDate}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600 }}>Day {index + 1}</span>
+                      {isPast && (
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            padding: '1px 5px',
+                            borderRadius: 'var(--radius-pill)',
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                            color: '#d32f2f',
+                          }}
+                        >
+                          Đã qua
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '11px', opacity: 0.85 }}>{formattedDate}</span>
                   </button>
                 );
               })}
@@ -482,13 +552,19 @@ export const DailyMealSelectionPage: React.FC = () => {
                   <button
                     type="button"
                     className="hsw-btn hsw-btn-primary"
-                    disabled={!selectedItemId}
+                    disabled={!selectedItemId || activeDate < todayStr}
                     onClick={handleSave}
                     id="btn-save-meal-selection"
                   >
                     <CheckCircle2 size={16} />
                     <span>{t('dining.select.saveSelection', 'Save Meal Selection')}</span>
                   </button>
+
+                  {activeDate < todayStr && (
+                    <span style={{ color: '#d32f2f', fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+                      {t('dining.select.pastDateNotice', 'Past date — meal selection cannot be modified')}
+                    </span>
+                  )}
 
                   {saveSuccess && (
                     <span

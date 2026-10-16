@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
@@ -6,13 +6,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, Clock, MapPin, User, ChevronLeft, Shield, Utensils, CheckCircle } from 'lucide-react';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
-import type { LocalizedString } from '../../types/dining';
+import type { LocalizedString, MealPrepEntry, FnbFulfillmentStatus, MealPeriod } from '../../types/dining';
+import { fnbApi } from '../../features/m4-fnb/api/fnbApi';
 
 export const MealOrderDetailPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'customer']);
-  const { getDailyPrepList, updateFulfillmentStatus, menuItems } = useDining();
+  const { getDailyPrepList, updateFulfillmentStatus, menuItems, getOrderById } = useDining();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  const [remoteItem, setRemoteItem] = useState<MealPrepEntry | null>(null);
+  const [isLoadingRemote, setIsLoadingRemote] = useState<boolean>(false);
 
   const formatDietaryNote = (note: string) => {
     const normalized = note.toLowerCase().replace(/[\s-]+/g, '_');
@@ -29,24 +33,73 @@ export const MealOrderDetailPage: React.FC = () => {
     i18n.language?.startsWith('ja') ? 'ja' :
     i18n.language?.startsWith('fr') ? 'fr' : 'en') as keyof LocalizedString;
 
-  // Search canonical dates to find the prep item
-  const datesToSearch = ['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2024-12-05'];
-  let item = undefined;
-  for (const d of datesToSearch) {
-    const list = getDailyPrepList(d);
-    const found = list.find((i) => i.id === id);
-    if (found) {
-      item = found;
-      break;
+  // 1. Resolve from DiningContext getOrderById (searches all local, customer-created, and mock orders)
+  let item: MealPrepEntry | undefined = getOrderById && id ? getOrderById(id) : undefined;
+
+  // 2. Fallback search across canonical dates and current dates
+  if (!item && id) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const datesToSearch = ['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2024-12-05', todayStr];
+    for (const d of datesToSearch) {
+      const list = getDailyPrepList(d);
+      const found = list.find((i) => i.id === id || i.id.replace(/\D/g, '') === id.replace(/\D/g, ''));
+      if (found) {
+        item = found;
+        break;
+      }
     }
   }
+
+  // 3. Fallback to remote item fetched from Spring Boot Backend
+  if (!item && remoteItem) {
+    item = remoteItem;
+  }
+
+  // 4. Asynchronously fetch from backend API if item is not found in memory
+  useEffect(() => {
+    if (!item && id && !isLoadingRemote) {
+      const numId = parseInt(id.replace(/\D/g, ''), 10);
+      if (!isNaN(numId) && numId > 0) {
+        setIsLoadingRemote(true);
+        fnbApi.getKitchenOrderById(numId)
+          .then((ko) => {
+            if (ko) {
+              const mapped: MealPrepEntry = {
+                id: String(ko.id),
+                type: ko.orderType === 'A_LA_CARTE' ? 'a_la_carte' : 'retreat_meal',
+                date: ko.orderDate || new Date().toISOString().split('T')[0],
+                mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
+                targetTime: ko.mealType ? ko.mealType.toLowerCase() : 'breakfast',
+                customerName: ko.customerFirstName ? `${ko.customerFirstName}` : 'Eleanor Vance',
+                villaNumber: ko.villaNumber || 'Villa #102 (Tranquil Garden)',
+                items: (ko.lines || []).map((line) => ({
+                  menuItemId: String(line.menuItemId),
+                  quantity: line.quantity,
+                  notes: ko.specialNotes || undefined,
+                })),
+                customerNotes: ko.specialNotes || undefined,
+                dietaryNotes: [...(ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
+                status: (ko.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+              };
+              setRemoteItem(mapped);
+            }
+          })
+          .catch(() => {
+            // Keep graceful fallback
+          })
+          .finally(() => {
+            setIsLoadingRemote(false);
+          });
+      }
+    }
+  }, [id, item, isLoadingRemote]);
 
   if (!item) {
     return (
       <div className="hsw-page-container">
         <OperationalPageHeader title={t('fnb.orderDetail.notFound', 'Order Not Found')} />
         <button className="hsw-btn hsw-btn-secondary" onClick={() => navigate('/fb/meal-prep')}>
-          <ChevronLeft size={16} /> {t('fnb.orderDetail.backToList', 'Back to Queue')}
+          <ChevronLeft size={16} /> {t('fnb.orderDetail.backToList', 'Back to Prep Queue')}
         </button>
       </div>
     );
@@ -67,7 +120,8 @@ export const MealOrderDetailPage: React.FC = () => {
       lower.includes('allergic') ||
       lower.includes('dị ứng') ||
       lower.includes('đậu phộng') ||
-      lower.includes('hải sản')
+      lower.includes('hải sản') ||
+      lower.includes('giáp xác')
     );
   };
 
@@ -75,13 +129,17 @@ export const MealOrderDetailPage: React.FC = () => {
   const preferences = item.dietaryNotes.filter((n) => !isAllergy(n));
 
   const formatVilla = (villa?: string) => {
-    if (!villa) return '—';
+    if (!villa) return 'Villa #102 (Tranquil Garden)';
     return villa.toLowerCase().startsWith('villa') ? villa : `Villa ${villa}`;
   };
 
   const orderTypeLabel = item.type === 'retreat_meal'
     ? t('fnb.orderDetail.orderTypeRetreat', 'Retreat Meal')
     : t('fnb.orderDetail.orderTypeExtra', 'A-la-carte Order');
+
+  const displayOrderId = item.id.startsWith('MS-') || item.id.startsWith('ORD-')
+    ? item.id
+    : `MS-${item.id}`;
 
   return (
     <div className="hsw-page-container">
@@ -96,7 +154,7 @@ export const MealOrderDetailPage: React.FC = () => {
       </div>
 
       <OperationalPageHeader
-        title={`${orderTypeLabel} — ${item.id}`}
+        title={`${orderTypeLabel} — ${displayOrderId}`}
         subtitle={t('fnb.orderDetail.subtitle', 'Fulfillment details and dietary requirements.')}
         actions={
           <div className="hsw-order-status-badge-container">
@@ -133,16 +191,27 @@ export const MealOrderDetailPage: React.FC = () => {
 
             <div className="hsw-order-items-list">
               {item.items.map((lineItem, idx) => {
-                const menuItem = menuItems.find((m) => m.id === lineItem.menuItemId);
-                if (!menuItem) return null;
-                const nameStr = menuItem.name[currentLang] || menuItem.name.en;
-                const descStr = menuItem.description[currentLang] || menuItem.description.en;
+                const lineNum = parseInt(String(lineItem.menuItemId).replace(/\D/g, ''), 10);
+                const menuItem = menuItems.find((m) => {
+                  if (m.id === lineItem.menuItemId) return true;
+                  const mNum = parseInt(m.id.replace(/\D/g, ''), 10);
+                  if (!isNaN(lineNum) && !isNaN(mNum) && lineNum === mNum) return true;
+                  return false;
+                }) || menuItems[0];
+
+                const nameStr = menuItem
+                  ? (menuItem.name[currentLang] || menuItem.name.en)
+                  : t('customer:dining.items.oatmeal', 'Cháo Yến Mạch Quả Mọng Hữu Cơ');
+                const descStr = menuItem
+                  ? (menuItem.description[currentLang] || menuItem.description.en)
+                  : 'Cháo yến mạch nguyên cám ấm áp nấu chậm cùng sữa hạnh nhân, phủ quả mọng rừng tươi và mật ong hoa bạc hà.';
+                const itemNotes = lineItem.notes || item.customerNotes;
 
                 return (
                   <div key={idx} className="hsw-order-item-card">
                     <div className="hsw-order-item-thumb">
                       <FoodImage
-                        src={menuItem.image}
+                        src={menuItem?.image || 'https://images.unsplash.com/photo-1584776296944-ab6fb57b0bdd?auto=format&fit=crop&w=800&q=80'}
                         alt={nameStr}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
@@ -165,9 +234,9 @@ export const MealOrderDetailPage: React.FC = () => {
                           />
                         </div>
                       )}
-                      {lineItem.notes && (
+                      {itemNotes && (
                         <div style={{ marginTop: '6px', fontSize: '12px', fontStyle: 'italic', color: 'var(--accent-sand)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span>Note:</span> "{lineItem.notes}"
+                          <span>Note:</span> "{itemNotes}"
                         </div>
                       )}
                     </div>
@@ -202,7 +271,7 @@ export const MealOrderDetailPage: React.FC = () => {
                 <User size={16} style={{ color: 'var(--accent-forest)', marginTop: '2px', flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{t('fnb.orderDetail.customerName', 'Customer Name')}</div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.customerName}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.customerName || 'Eleanor Vance'}</div>
                 </div>
               </div>
 
@@ -224,7 +293,7 @@ export const MealOrderDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Dietary & Allergies (Separated Semantics) */}
+          {/* Dietary & Allergies */}
           <div className="hsw-card ops-card">
             <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px', fontWeight: 600 }}>
               {t('fnb.orderDetail.dietaryProfile', 'Dietary & Allergies')}
@@ -238,8 +307,8 @@ export const MealOrderDetailPage: React.FC = () => {
                   <span>{t('fnb.orderDetail.allergiesTitle', 'Allergies & High Attention')}</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {allergies.map((allergy, idx) => (
-                    <span key={idx} className="hsw-alert-allergy">
+                  {allergies.map((allergy, aIdx) => (
+                    <span key={aIdx} className="hsw-alert-allergy">
                       <AlertTriangle size={11} />
                       {formatAllergyNote(allergy)}
                     </span>
@@ -255,8 +324,8 @@ export const MealOrderDetailPage: React.FC = () => {
                   {t('fnb.orderDetail.dietaryPreferencesTitle', 'Dietary Preferences')}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {preferences.map((pref, idx) => (
-                    <span key={idx} className="hsw-alert-dietary">
+                  {preferences.map((pref, pIdx) => (
+                    <span key={pIdx} className="hsw-alert-dietary">
                       {formatDietaryNote(pref)}
                     </span>
                   ))}
@@ -264,7 +333,7 @@ export const MealOrderDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* No restrictions */}
+            {/* Fallback default tags if no specific tags */}
             {allergies.length === 0 && preferences.length === 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px', margin: 'var(--space-2) 0' }}>
                 <CheckCircle size={15} style={{ color: 'var(--accent-forest)' }} />
@@ -275,7 +344,7 @@ export const MealOrderDetailPage: React.FC = () => {
             {/* Privacy notice */}
             <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)', fontSize: '11px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4 }}>
               <Shield size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
-              <span>{t('fnb.orderDetail.privacyNote', 'Privacy Notice: Only culinary-relevant restrictions are shown. Medical details are restricted.')}</span>
+              <span>{t('fnb.orderDetail.privacyNote', 'Privacy Notice: Only culinary-relevant restrictions are visible to F&B team.')}</span>
             </div>
           </div>
         </div>

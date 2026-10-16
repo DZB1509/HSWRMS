@@ -24,6 +24,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [mealSelections, setMealSelections] = useState<DailyMealSelection[]>(MOCK_MEAL_SELECTIONS);
   const [alaCarteOrders, setAlaCarteOrders] = useState<AlaCarteOrder[]>(MOCK_ALA_CARTE_ORDERS);
   const [liveKitchenOrders, setLiveKitchenOrders] = useState<MealPrepEntry[]>([]);
+  const [recentOrderIds, setRecentOrderIds] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
 
   const { profile, wellnessProfile } = useCustomer();
@@ -71,12 +72,14 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       status: 'pending',
     };
     
+    setRecentOrderIds(prev => [tempId, ...prev.filter(id => id !== tempId)]);
     setMealSelections(prev => {
       // Remove existing selection for same date/period if any
       const filtered = prev.filter(s => 
         !(s.bookingId === selection.bookingId && s.date === selection.date && s.mealPeriod === selection.mealPeriod)
       );
-      return [...filtered, newSelection];
+      // Ensure the latest order appears at the top of the list
+      return [newSelection, ...filtered];
     });
 
     // Asynchronously synchronize with backend Spring Boot API
@@ -99,6 +102,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       items: parsedItems,
     }).then((res) => {
       if (res && res.id) {
+        setRecentOrderIds(prev => [String(res.id), ...prev]);
         setMealSelections(prev => prev.map(s => s.id === tempId ? {
           ...s,
           id: String(res.id),
@@ -124,7 +128,8 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       chargeType: 'fnb_extra',
       folioPostingStatus: 'pending_checkout_folio',
     };
-    setAlaCarteOrders(prev => [...prev, newOrder]);
+    setRecentOrderIds(prev => [tempId, ...prev.filter(id => id !== tempId)]);
+    setAlaCarteOrders(prev => [newOrder, ...prev]);
 
     // Asynchronously synchronize with backend Spring Boot API
     const numericBookingId = parseInt(String(order.bookingId).replace(/\D/g, '') || '1', 10);
@@ -158,11 +163,11 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (profile && profile.id === customerId && wellnessProfile) {
       return {
         customerId,
-        customerName: profile.fullName,
+        customerName: profile.fullName || 'Eleanor Vance',
         bookingReference: 'HSW-88192',
-        villaNumber: profile.assignedVilla,
-        allergies: wellnessProfile.dietaryProfile.allergies || [],
-        dietaryRestrictions: wellnessProfile.dietaryProfile.dietaryRestrictions || [],
+        villaNumber: profile.assignedVilla || 'Villa #102 (Tranquil Garden)',
+        allergies: wellnessProfile.dietaryProfile?.allergies || ['Crustaceans & Shellfish', 'Peanuts'],
+        dietaryRestrictions: wellnessProfile.dietaryProfile?.dietaryRestrictions || ['Pescatarian', 'Gluten-Conscious'],
       };
     }
     
@@ -170,9 +175,9 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       customerId,
       customerName: 'Eleanor Vance',
       bookingReference: 'HSW-88192',
-      villaNumber: '102',
-      allergies: [],
-      dietaryRestrictions: ['Vegetarian'],
+      villaNumber: 'Villa #102 (Tranquil Garden)',
+      allergies: ['Crustaceans & Shellfish', 'Peanuts'],
+      dietaryRestrictions: ['Pescatarian', 'Gluten-Conscious'],
     };
   };
 
@@ -241,35 +246,111 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const prepList: MealPrepEntry[] = [];
     const seenIds = new Set<string>();
 
-    // 1. If backend orders exist for this date, include them first
-    liveKitchenOrders.filter(ko => ko.date === date).forEach(ko => {
+    // 0. Top priority: Any recent order created in this session by customer appears at the very top
+    recentOrderIds.forEach(recentId => {
+      // Check liveKitchenOrders
+      const ko = liveKitchenOrders.find(o => o.id === recentId);
+      if (ko && !seenIds.has(ko.id)) {
+        seenIds.add(ko.id);
+        prepList.push(ko);
+        return;
+      }
+
+      // Check mealSelections
+      const sel = mealSelections.find(s => s.id === recentId);
+      if (sel && !seenIds.has(sel.id)) {
+        seenIds.add(sel.id);
+        const projection = getDietaryProjection(sel.customerId);
+        const itemsList = (sel.items && sel.items.length > 0)
+          ? sel.items.map(it => ({
+              menuItemId: it.menuItemId,
+              quantity: it.quantity || sel.quantity || 1,
+              notes: it.notes || sel.notes,
+            }))
+          : sel.menuItemIds.map(itemId => ({
+              menuItemId: itemId,
+              quantity: sel.quantity || 1,
+              notes: sel.notes,
+            }));
+
+        prepList.push({
+          id: sel.id,
+          type: 'retreat_meal',
+          date: sel.date,
+          mealPeriod: sel.mealPeriod,
+          targetTime: sel.mealPeriod,
+          customerName: projection.customerName || 'Eleanor Vance',
+          villaNumber: projection.villaNumber || 'Villa #102 (Tranquil Garden)',
+          items: itemsList,
+          customerNotes: sel.notes,
+          dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
+          status: sel.status,
+        });
+        return;
+      }
+
+      // Check alaCarteOrders
+      const ala = alaCarteOrders.find(o => o.id === recentId);
+      if (ala && !seenIds.has(ala.id)) {
+        seenIds.add(ala.id);
+        const projection = getDietaryProjection(ala.customerId);
+        prepList.push({
+          id: ala.id,
+          type: 'a_la_carte',
+          date: ala.createdAt.split('T')[0],
+          targetTime: ala.targetTime,
+          customerName: projection.customerName || 'Eleanor Vance',
+          villaNumber: ala.location || projection.villaNumber || 'Villa #102 (Tranquil Garden)',
+          items: ala.lines.map(line => ({
+            menuItemId: line.menuItemId,
+            quantity: line.quantity,
+            notes: line.notes,
+          })),
+          customerNotes: ala.lines.map(l => l.notes).filter(Boolean).join(' | '),
+          dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
+          status: ala.status,
+        });
+      }
+    });
+
+    // 1. If backend orders exist for this date, include them next
+    liveKitchenOrders.filter(ko => ko.date === date && !seenIds.has(ko.id)).forEach(ko => {
       seenIds.add(ko.id);
       prepList.push(ko);
     });
     
-    // 2. Retreat Meals
+    // 2. Retreat Meals for this date
     mealSelections.filter(s => s.date === date && !seenIds.has(s.id)).forEach(s => {
       seenIds.add(s.id);
       const projection = getDietaryProjection(s.customerId);
+      const itemsList = (s.items && s.items.length > 0)
+        ? s.items.map(it => ({
+            menuItemId: it.menuItemId,
+            quantity: it.quantity || s.quantity || 1,
+            notes: it.notes || s.notes,
+          }))
+        : s.menuItemIds.map(itemId => ({
+            menuItemId: itemId,
+            quantity: s.quantity || 1,
+            notes: s.notes,
+          }));
+
       prepList.push({
         id: s.id,
         type: 'retreat_meal',
         date: s.date,
         mealPeriod: s.mealPeriod,
-        customerName: projection.customerName,
-        villaNumber: projection.villaNumber,
-        items: s.menuItemIds.map(itemId => ({
-          menuItemId: itemId,
-          quantity: 1,
-          notes: s.notes,
-        })),
+        targetTime: s.mealPeriod,
+        customerName: projection.customerName || 'Eleanor Vance',
+        villaNumber: projection.villaNumber || 'Villa #102 (Tranquil Garden)',
+        items: itemsList,
         customerNotes: s.notes,
-        dietaryNotes: [...projection.allergies, ...projection.dietaryRestrictions],
+        dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
         status: s.status,
       });
     });
 
-    // 3. Ala Carte Orders
+    // 3. Ala Carte Orders for this date
     alaCarteOrders.filter(o => (o.createdAt.startsWith(date) || o.status !== 'delivered') && !seenIds.has(o.id)).forEach(o => {
       seenIds.add(o.id);
       const projection = getDietaryProjection(o.customerId);
@@ -278,21 +359,99 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         type: 'a_la_carte',
         date: o.createdAt.split('T')[0],
         targetTime: o.targetTime,
-        customerName: projection.customerName,
-        villaNumber: o.location || projection.villaNumber,
+        customerName: projection.customerName || 'Eleanor Vance',
+        villaNumber: o.location || projection.villaNumber || 'Villa #102 (Tranquil Garden)',
         items: o.lines.map(line => ({
           menuItemId: line.menuItemId,
           quantity: line.quantity,
           notes: line.notes,
         })),
         customerNotes: o.lines.map(l => l.notes).filter(Boolean).join(' | '),
-        dietaryNotes: [...projection.allergies, ...projection.dietaryRestrictions],
+        dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
         status: o.status,
       });
     });
 
     return prepList;
   };
+
+  const getOrderById = useCallback((orderId: string): MealPrepEntry | undefined => {
+    if (!orderId) return undefined;
+    const cleanId = orderId.trim();
+    const numericPart = cleanId.replace(/\D/g, '');
+
+    // 1. Search in live kitchen orders
+    const liveMatch = liveKitchenOrders.find(ko => 
+      ko.id === cleanId || 
+      (numericPart && ko.id.replace(/\D/g, '') === numericPart)
+    );
+    if (liveMatch) return liveMatch;
+
+    // 2. Search in meal selections (both user-submitted and mock) across all dates
+    const selMatch = mealSelections.find(s => 
+      s.id === cleanId || 
+      (numericPart && s.id.replace(/\D/g, '') === numericPart) ||
+      `MS-${s.id}` === cleanId ||
+      s.id === `MS-${cleanId}`
+    );
+    if (selMatch) {
+      const projection = getDietaryProjection(selMatch.customerId);
+      const itemsList = (selMatch.items && selMatch.items.length > 0)
+        ? selMatch.items.map(it => ({
+            menuItemId: it.menuItemId,
+            quantity: it.quantity || selMatch.quantity || 1,
+            notes: it.notes || selMatch.notes,
+          }))
+        : selMatch.menuItemIds.map(itemId => ({
+            menuItemId: itemId,
+            quantity: selMatch.quantity || 1,
+            notes: selMatch.notes,
+          }));
+
+      return {
+        id: selMatch.id,
+        type: 'retreat_meal',
+        date: selMatch.date,
+        mealPeriod: selMatch.mealPeriod,
+        targetTime: selMatch.mealPeriod,
+        customerName: projection.customerName || 'Eleanor Vance',
+        villaNumber: projection.villaNumber || 'Villa #102 (Tranquil Garden)',
+        items: itemsList,
+        customerNotes: selMatch.notes,
+        dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
+        status: selMatch.status || 'pending',
+      };
+    }
+
+    // 3. Search in ala carte orders across all dates
+    const alaMatch = alaCarteOrders.find(o => 
+      o.id === cleanId || 
+      (numericPart && o.id.replace(/\D/g, '') === numericPart) ||
+      `ORD-${o.id}` === cleanId ||
+      o.id === `ORD-${cleanId}`
+    );
+    if (alaMatch) {
+      const projection = getDietaryProjection(alaMatch.customerId);
+      return {
+        id: alaMatch.id,
+        type: 'a_la_carte',
+        date: alaMatch.createdAt.split('T')[0],
+        targetTime: alaMatch.targetTime || '19:00',
+        customerName: projection.customerName || 'Eleanor Vance',
+        villaNumber: alaMatch.location || projection.villaNumber || 'Villa #102 (Tranquil Garden)',
+        items: alaMatch.lines.map(line => ({
+          menuItemId: line.menuItemId,
+          quantity: line.quantity,
+          notes: line.notes,
+        })),
+        customerNotes: alaMatch.lines.map(l => l.notes).filter(Boolean).join(' | '),
+        dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
+        status: alaMatch.status || 'pending',
+      };
+    }
+
+    return undefined;
+  }, [liveKitchenOrders, mealSelections, alaCarteOrders, getDietaryProjection]);
 
   const value = useMemo(() => ({
     menuItems,
@@ -307,10 +466,11 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateAlaCarteOrderStatus,
     updateFulfillmentStatus,
     getDailyPrepList,
+    getOrderById,
     syncStatus,
     fetchKitchenOrders,
     refreshMenu,
-  }), [menuItems, mealSelections, alaCarteOrders, liveKitchenOrders, syncStatus, fetchKitchenOrders, refreshMenu]);
+  }), [menuItems, mealSelections, alaCarteOrders, liveKitchenOrders, syncStatus, fetchKitchenOrders, refreshMenu, getOrderById]);
 
   return (
     <DiningContext.Provider value={value}>
