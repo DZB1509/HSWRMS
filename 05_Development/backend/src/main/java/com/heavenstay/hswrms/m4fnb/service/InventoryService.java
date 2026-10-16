@@ -25,12 +25,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
 public class InventoryService {
+    private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
     private static final Set<String> USABLE_CONDITIONS = Set.of("FRESH", "GOOD", "NEAR_EXPIRY");
     private static final Set<String> ALLOWED_CONDITIONS = Set.of("FRESH", "GOOD", "NEAR_EXPIRY", "HOLD", "EXPIRED",
             "DISCARDED");
@@ -236,6 +239,8 @@ public class InventoryService {
                 BigDecimal allocation = batch.getRemainingQuantity().min(quantityLeft);
                 batch.setRemainingQuantity(batch.getRemainingQuantity().subtract(allocation));
                 quantityLeft = quantityLeft.subtract(allocation);
+                log.info("STOCK_DEDUCTED | OrderLine: {} | ItemId: {} | BatchId: {} | IngredientId: {} | Quantity: {}",
+                        safeOrderLineId, menuItemId, batch.getId(), ingredientId, allocation);
                 if (batch.getRemainingQuantity().signum() == 0)
                     batchIndex++;
             }

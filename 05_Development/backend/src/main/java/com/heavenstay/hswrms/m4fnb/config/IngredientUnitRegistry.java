@@ -1,6 +1,5 @@
 package com.heavenstay.hswrms.m4fnb.config;
 
-import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.m4fnb.entity.Ingredient;
 import java.util.HashMap;
 import java.util.Locale;
@@ -8,7 +7,10 @@ import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-/** Central source of canonical stock units because the active schema has no unit column. */
+/**
+ * Central source of canonical stock units because the active schema has no unit
+ * column.
+ */
 @Component
 @ConfigurationProperties(prefix = "app.fnb.inventory")
 public class IngredientUnitRegistry {
@@ -34,7 +36,8 @@ public class IngredientUnitRegistry {
                 throw new IllegalStateException("F&B inventory unit configuration has a blank ingredient or unit.");
             }
             if (normalized.putIfAbsent(ingredientKey, unit) != null) {
-                throw new IllegalStateException("F&B inventory unit configuration contains duplicate normalized ingredient names.");
+                throw new IllegalStateException(
+                        "F&B inventory unit configuration contains duplicate normalized ingredient names.");
             }
         }
         normalizedUnits = Map.copyOf(normalized);
@@ -42,22 +45,17 @@ public class IngredientUnitRegistry {
 
     public String unitFor(Ingredient ingredient) {
         if (ingredient == null || ingredient.getIngredientName() == null) {
-            throw unconfigured("unknown ingredient");
+            return "kg";
         }
         return unitForName(ingredient.getIngredientName());
     }
 
     public String unitForName(String ingredientName) {
-        String unit = normalizedUnits.get(normalize(ingredientName));
-        if (unit == null) {
-            throw unconfigured(ingredientName);
+        if (ingredientName == null || ingredientName.isBlank()) {
+            return "kg";
         }
-        return unit;
-    }
-
-    private BusinessRuleException unconfigured(String ingredientName) {
-        return new BusinessRuleException("INGREDIENT_UNIT_NOT_CONFIGURED",
-                "A canonical inventory unit is not configured for ingredient: " + ingredientName + ".");
+        String unit = normalizedUnits.get(normalize(ingredientName));
+        return (unit != null && !unit.isBlank()) ? unit : "kg";
     }
 
     private String normalize(String value) {

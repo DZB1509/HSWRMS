@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:YourStrong@Password}
+    password: ${DB_PASSWORD:123}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hikari:
       maximum-pool-size: 10
@@ -26,6 +26,46 @@ spring:
         format_sql: false
 
 app:
+  fnb:
+    inventory:
+      units:
+        "Oatmeal": "g"
+        "Rolled Oats": "g"
+        "Fresh Berries": "g"
+        "Wildflower Honey": "ml"
+        "Almond Milk": "ml"
+        "Organic Eggs": "pcs"
+        "Sourdough Bread": "slice"
+        "Hass Avocado": "g"
+        "Microgreens": "g"
+        "Quinoa": "g"
+        "Cucumber": "g"
+        "Radish": "g"
+        "Peanut Butter Sauce": "ml"
+        "Salmon Fillet": "g"
+        "Passionfruit Glaze": "ml"
+        "Green Asparagus": "g"
+        "Green Apple": "g"
+        "Baby Spinach": "g"
+        "Celery Juice": "ml"
+        "Ginger": "g"
+        "Wagyu Tenderloin": "g"
+        "Lobster Tail": "g"
+        "Herb Butter": "g"
+        "Truffle Puree": "g"
+        "Lotus Stem": "g"
+        "Organic Tofu": "g"
+        "Sesame Seeds": "g"
+        "Coconut Vinegar": "ml"
+        "Chia Seeds": "g"
+        "Coconut Milk": "ml"
+        "Cat Chu Mango": "g"
+        "Butterfly Pea Flower": "g"
+        "Lemongrass": "g"
+        "Rice": "g"
+        "Olive Oil": "ml"
+        "Sea Salt": "g"
+        "Black Pepper": "g"
   jwt:
     secret: ${JWT_SECRET:defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong}
     expiration-ms: 86400000

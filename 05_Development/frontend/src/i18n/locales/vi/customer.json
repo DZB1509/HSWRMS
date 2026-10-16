@@ -671,5 +671,65 @@
     "writtenPlaceholder": "Chia sẻ về khoảnh khắc trị liệu ấn tượng, hương vị ẩm thực hay cảm nhận của quý khách...",
     "btnSubmit": "Gửi Cảm Nhận",
     "btnSkip": "Bỏ Qua Bước Này"
+  },
+  "dining": {
+    "select": {
+      "title": "Lựa Chọn Bữa Ăn Dưỡng Sinh Hàng Ngày",
+      "subtitle": "Chọn món ăn tinh hoa được bếp trưởng thiết kế riêng theo hồ sơ dinh dưỡng và gói nghỉ dưỡng của quý khách.",
+      "retreatPackage": "Gói Dưỡng Sinh",
+      "selectDate": "Ngày Trong Kỳ Nghỉ",
+      "selectPeriod": "Thời Điểm Bữa Ăn",
+      "viewPlan": "Kế Hoạch Bữa Ăn Của Tôi",
+      "noItems": "Không có món ăn khả dụng cho thời điểm này.",
+      "portions": "Khẩu phần / Số suất",
+      "portionUnit": "phần",
+      "includedInPackage": "Đã bao gồm trong gói dưỡng sinh",
+      "notesPlaceholder": "Ghi chú chế biến (Ví dụ: ít muối, sốt để riêng, chỉ uống nước ấm...)",
+      "notesTitle": "Ghi chú Chế biến (Tùy chọn)",
+      "saveSelection": "Lưu Lựa Chọn Bữa Ăn",
+      "saving": "Đang Lưu Lựa Chọn...",
+      "saveSuccess": "Đã lưu lựa chọn món ăn dưỡng sinh thành công!",
+      "pastDateNotice": "Ngày đã qua — không thể chỉnh sửa thực đơn",
+      "unavailableNotice": "Món ăn tạm hết nguyên liệu tươi hôm nay. Quý khách vui lòng chọn món dưỡng sinh khác.",
+      "available": "Sẵn sàng phục vụ",
+      "unavailable": "Tạm hết món",
+      "stayRange": "Lưu trú từ {{checkIn}} đến {{checkOut}}"
+    },
+    "periods": {
+      "breakfast": "Bữa Sáng",
+      "lunch": "Bữa Trưa",
+      "dinner": "Bữa Tối",
+      "all_day": "Cả Ngày"
+    },
+    "allergies": {
+      "crustaceans_shellfish": "Giáp xác & Động vật có vỏ",
+      "peanuts": "Đậu phộng",
+      "nuts": "Hạt & Đậu phộng",
+      "shellfish": "Động vật có vỏ",
+      "eggs": "Trứng",
+      "fish": "Cá",
+      "dairy": "Sữa & Chế phẩm từ sữa",
+      "soy": "Đậu nành"
+    },
+    "dietary": {
+      "pescatarian": "Bán chay / Có cá & hải sản",
+      "gluten_conscious": "Hạn chế gluten",
+      "vegetarian": "Ăn chay có sữa/trứng",
+      "vegan": "Thuần chay",
+      "lacto_ovo_vegetarian": "Ăn chay có trứng & sữa",
+      "gluten_free": "Không chứa gluten",
+      "dairy_free": "Không chứa sữa động vật",
+      "keto": "Keto"
+    },
+    "dietaryTags": {
+      "vegetarian": "Ăn chay",
+      "lacto_ovo_vegetarian": "Ăn chay có trứng",
+      "vegan": "Thuần chay",
+      "gluten_free": "Không chứa gluten",
+      "gluten_conscious": "Hạn chế gluten",
+      "dairy_free": "Không chứa sữa động vật",
+      "keto": "Keto",
+      "pescatarian": "Có cá & hải sản"
+    }
   }
 }

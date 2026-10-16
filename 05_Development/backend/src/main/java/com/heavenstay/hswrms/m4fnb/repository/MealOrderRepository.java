@@ -13,9 +13,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface MealOrderRepository extends JpaRepository<MealOrder, Integer> {
     List<MealOrder> findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(Integer bookingId);
+    List<MealOrder> findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(LocalDate orderDate, String excludedStatus);
+    List<MealOrder> findByOrderStatusNotOrderByCreatedAtDesc(String excludedStatus);
     List<MealOrder> findByOrderDateAndOrderStatusNotOrderByCreatedAtAsc(LocalDate orderDate, String excludedStatus);
     boolean existsByRetreatBookingIdAndOrderDateAndMealTypeAndOrderTypeAndOrderStatusNot(
             Integer retreatBookingId, LocalDate orderDate, String mealType, String orderType, String excludedStatus);
+    List<MealOrder> findByIdInOrderByCreatedAtDesc(Collection<Integer> ids);
     List<MealOrder> findByIdInOrderByCreatedAtAsc(Collection<Integer> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

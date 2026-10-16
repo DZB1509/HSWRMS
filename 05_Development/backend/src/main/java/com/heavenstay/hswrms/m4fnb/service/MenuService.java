@@ -134,17 +134,14 @@ public class MenuService {
             throw new BusinessRuleException("M1_DIETARY_PROFILE_UNAVAILABLE",
                     "The personalized menu is unavailable until M1 provides the customer's food profile.");
         }
-        List<MenuItem> items = menuItemRepository.findByAvailabilityStatusOrderByItemNameAsc("AVAILABLE");
+        List<MenuItem> items = menuItemRepository.findAllByOrderByItemNameAsc();
         List<MenuItemIngredient> recipes = recipesForMenu(items);
         List<MenuItemResponse> personalizedItems = new ArrayList<>();
         for (MenuItem item : items) {
             if (conflictsWithFoodProfile(item, profile)) {
                 continue;
             }
-            MenuItemResponse response = toResponse(item, asOfDate, recipesFor(item.getId(), recipes), null);
-            if (response.available()) {
-                personalizedItems.add(response);
-            }
+            personalizedItems.add(toResponse(item, asOfDate, recipesFor(item.getId(), recipes), null));
         }
         return personalizedItems;
     }
@@ -195,6 +192,24 @@ public class MenuService {
             throw new ResourceNotFoundException("MenuItem", "id", safeMenuItemId);
         }
         return toRecipeResponse(recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(safeMenuItemId));
+    }
+
+    @Transactional
+    public MenuItemResponse toggleAvailability(Integer menuItemId, String rawStatus) {
+        if (menuItemId == null) {
+            throw new BusinessRuleException("INVALID_MENU_ITEM_ID", "Menu item ID is required.");
+        }
+        MenuItem item = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MenuItem", "id", menuItemId));
+        String status = rawStatus == null ? "AVAILABLE" : rawStatus.trim().toUpperCase();
+        if (!"AVAILABLE".equals(status) && !"UNAVAILABLE".equals(status)) {
+            throw new BusinessRuleException("INVALID_AVAILABILITY_STATUS",
+                    "Availability status must be either AVAILABLE or UNAVAILABLE.");
+        }
+        item.setAvailabilityStatus(status);
+        MenuItem saved = menuItemRepository.save(item);
+        List<MenuItemIngredient> recipe = recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(menuItemId);
+        return toResponse(saved, LocalDate.now(), recipe, null);
     }
 
     public List<MenuAvailabilityResponse> getAvailability(LocalDate asOfDate) {

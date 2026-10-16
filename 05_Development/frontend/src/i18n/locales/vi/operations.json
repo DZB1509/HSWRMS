@@ -1040,5 +1040,51 @@
     "nameLabel": "Tên hiển thị danh mục",
     "priceLabel": "Đơn giá niêm yết (VND)",
     "saveSuccess": "Đã cập nhật dữ liệu danh mục thành công."
+  },
+  "fnb": {
+    "prepList": {
+      "title": "Hàng Đợi Chuẩn Bị Bữa Ăn Hàng Ngày",
+      "subtitle": "Quản lý chế biến, định lượng nguyên liệu và bàn giao món ăn cho toàn bộ khách hàng.",
+      "date": "Ngày Mục Tiêu",
+      "search": "Tìm Khách Hàng / Biệt Thự / Món / Nguyên Liệu",
+      "searchPlaceholder": "VD: Eleanor Vance, 102, Cá hồi, Quinoa, Yến mạch...",
+      "allTypes": "Tất cả các loại",
+      "typeRetreat": "Món trong gói dưỡng sinh",
+      "typeExtra": "Món gọi thêm (A-la-carte)",
+      "allStatuses": "Tất cả trạng thái",
+      "dietaryAttentionOnly": "Chỉ món có lưu ý dinh dưỡng",
+      "resetFilters": "Đặt lại bộ lọc",
+      "colTime": "Thời Gian / Bữa",
+      "colCustomer": "Khách Hàng (Biệt Thự)",
+      "colItems": "Món Ăn & Số Lượng",
+      "colAlerts": "Lưu Ý Ăn Uống & Dị Ứng",
+      "colStatus": "Trạng Thái",
+      "colAction": "Thao Tác",
+      "details": "Chi tiết",
+      "batchScalingTitle": "Bảng Tổng Hợp & Quy Đổi Nguyên Liệu Theo Mẻ (Batch Scaling)",
+      "batchScalingSubtitle": "Định lượng nguyên liệu chính xác (g, ml, quả, lát) phục vụ quy mô khoảng 95 - 100 suất ăn.",
+      "servingsVolume": "Quy Mô Mẻ Nấu",
+      "servingsCount": "suất",
+      "ingredientName": "Tên Nguyên Liệu",
+      "unit": "Đơn vị đo",
+      "perServing": "Định lượng / 1 Suất",
+      "scaledTotal": "Tổng Cho {{count}} Suất",
+      "stockStatus": "Tình Trạng Kho",
+      "inStock": "Đủ nguyên liệu",
+      "lowStock": "Sắp hết",
+      "outOfStock": "Hết hàng",
+      "searchRecipePlaceholder": "Tìm nhanh theo tên món hoặc nguyên liệu...",
+      "viewRecipe": "Xem chi tiết công thức",
+      "hideRecipe": "Thu gọn",
+      "totalIngredientsNeeded": "Tổng cộng {{count}} loại nguyên liệu",
+      "orderPortions": "suất"
+    },
+    "status": {
+      "pending": "Chờ chuẩn bị",
+      "preparing": "Đang chế biến",
+      "ready": "Sẵn sàng",
+      "delivered": "Đã phục vụ",
+      "cancelled": "Đã hủy"
+    }
   }
 }

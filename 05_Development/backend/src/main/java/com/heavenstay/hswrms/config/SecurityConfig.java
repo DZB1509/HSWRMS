@@ -47,18 +47,17 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler)
-                )
+                        .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         // Public Foundation & Health Endpoints
                         .requestMatchers("/api/v1/health").permitAll()
                         // Public Auth Endpoints (Phase 2 extension)
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        // Public Retreat Packages Catalog (Phase 3 extension)
+                        // Public Retreat Packages Catalog & F&B Package Plans
                         .requestMatchers("/api/v1/packages/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/fnb/packages", "/api/v1/fnb/packages/*").permitAll()
                         // Any other request requires valid authentication
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
