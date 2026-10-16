@@ -81,6 +81,7 @@ import { AdminDelegationPage } from '../../pages/admin/AdminDelegationPage';
 import { SensitiveAuditLogPage } from '../../pages/admin/SensitiveAuditLogPage';
 import { ManagerDashboardPage } from '../../pages/manager/ManagerDashboardPage';
 import { VillaManagementPage } from '../../pages/manager/VillaManagementPage';
+import { SpaManagementPage } from '../../pages/manager/SpaManagementPage';
 import { SystemOverviewPage } from '../../pages/common/SystemOverviewPage';
 
 export const AppRouter: React.FC = () => {
@@ -237,6 +238,7 @@ export const AppRouter: React.FC = () => {
       >
         <Route path="dashboard" element={<ManagerDashboardPage />} />
         <Route path="villas" element={<VillaManagementPage />} />
+        <Route path="spa" element={<SpaManagementPage />} />
         <Route path="revenue" element={<RevenueDashboardPage />} />
         <Route path="occupancy" element={<OccupancyReportPage />} />
         <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
@@ -257,6 +259,7 @@ export const AppRouter: React.FC = () => {
       >
         <Route path="dashboard" element={<RoleGuard allowedRoles={['admin']}><AdminDashboardPage /></RoleGuard>} />
         <Route path="villas" element={<VillaManagementPage />} />
+        <Route path="spa" element={<SpaManagementPage />} />
         <Route path="staff" element={<RoleGuard allowedRoles={['admin']}><StaffAccountListPage /></RoleGuard>} />
         <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']}><StaffAccountDetailPage /></RoleGuard>} />
         <Route path="master-data" element={<RoleGuard allowedRoles={['admin']}><MasterDataPage /></RoleGuard>} />

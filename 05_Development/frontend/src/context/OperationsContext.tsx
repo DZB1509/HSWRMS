@@ -33,18 +33,18 @@ const sanitizeArrivalForLocalStorage = (arrival: ArrivalRecord): ArrivalRecord =
     ...rest,
     identityVerification: identityVerification
       ? {
-          fullLegalName: identityVerification.fullLegalName,
-          nationality: identityVerification.nationality,
-          residenceCountry: identityVerification.residenceCountry,
-          idType: identityVerification.idType,
-          idNumber: '', // Redacted from plain localStorage
-          dateOfBirth: '', // Redacted from plain localStorage
-          permanentAddress: '', // Redacted from plain localStorage
-          arrivalTransport: identityVerification.arrivalTransport,
-          receptionistNotes: identityVerification.receptionistNotes,
-          verifiedAt: identityVerification.verifiedAt,
-          verifiedBy: identityVerification.verifiedBy,
-        }
+        fullLegalName: identityVerification.fullLegalName,
+        nationality: identityVerification.nationality,
+        residenceCountry: identityVerification.residenceCountry,
+        idType: identityVerification.idType,
+        idNumber: '', // Redacted from plain localStorage
+        dateOfBirth: '', // Redacted from plain localStorage
+        permanentAddress: '', // Redacted from plain localStorage
+        arrivalTransport: identityVerification.arrivalTransport,
+        receptionistNotes: identityVerification.receptionistNotes,
+        verifiedAt: identityVerification.verifiedAt,
+        verifiedBy: identityVerification.verifiedBy,
+      }
       : undefined,
   };
 };
@@ -311,10 +311,10 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       (newStatus === 'ready'
         ? 'inspected'
         : newStatus === 'cleaning'
-        ? 'in_progress'
-        : newStatus === 'maintenance'
-        ? 'dirty'
-        : villa.housekeeping);
+          ? 'in_progress'
+          : newStatus === 'maintenance'
+            ? 'dirty'
+            : villa.housekeeping);
 
     setVillas((prev) =>
       prev.map((v) => {
@@ -340,10 +340,10 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               newStatus === 'ready'
                 ? 'ready'
                 : newStatus === 'cleaning'
-                ? 'cleaning'
-                : newStatus === 'maintenance'
-                ? 'maintenance'
-                : a.villaReadiness,
+                  ? 'cleaning'
+                  : newStatus === 'maintenance'
+                    ? 'maintenance'
+                    : a.villaReadiness,
           };
         }
         return a;

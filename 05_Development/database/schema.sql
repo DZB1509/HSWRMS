@@ -186,10 +186,14 @@ GO
 CREATE TABLE dbo.RetreatPackage (
     retreat_package_id  INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_RetreatPackage PRIMARY KEY,
+    package_code        VARCHAR(50) NULL,
     package_name        NVARCHAR(150) NOT NULL,
     wellness_goal       NVARCHAR(250) NULL,
     duration_nights     INT NOT NULL,
     base_price          DECIMAL(18,2) NOT NULL,
+    included_treatments NVARCHAR(MAX) NULL,
+    dietary_plan        NVARCHAR(1000) NULL,
+    target_guest        NVARCHAR(500) NULL,
     package_status      VARCHAR(20) NOT NULL
         CONSTRAINT DF_RetreatPackage_Status DEFAULT ('ACTIVE'),
 
@@ -400,9 +404,15 @@ GO
 CREATE TABLE dbo.SpaTreatment (
     treatment_id        INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_SpaTreatment PRIMARY KEY,
+    treatment_code      VARCHAR(50) NULL,
     treatment_name      NVARCHAR(150) NOT NULL,
+    category            NVARCHAR(100) NULL,
     duration_minutes    INT NOT NULL,
     base_price          DECIMAL(18,2) NOT NULL,
+    room_compatibility  NVARCHAR(250) NULL,
+    therapist_qualification NVARCHAR(250) NULL,
+    contraindications   NVARCHAR(500) NULL,
+    description         NVARCHAR(1000) NULL,
     treatment_status    VARCHAR(20) NOT NULL
         CONSTRAINT DF_SpaTreatment_Status DEFAULT ('ACTIVE'),
 
@@ -434,6 +444,7 @@ CREATE TABLE dbo.TreatmentRoom (
     room_id             INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_TreatmentRoom PRIMARY KEY,
     room_name           NVARCHAR(100) NOT NULL,
+    room_type           NVARCHAR(100) NULL,
     room_status         VARCHAR(20) NOT NULL
         CONSTRAINT DF_TreatmentRoom_Status DEFAULT ('AVAILABLE'),
 

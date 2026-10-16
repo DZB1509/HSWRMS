@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface SpaTreatmentRepository extends JpaRepository<SpaTreatment, Integer> {
     Optional<SpaTreatment> findByTreatmentName(String treatmentName);
+    Optional<SpaTreatment> findByTreatmentCode(String treatmentCode);
 }

@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface RetreatPackageRepository extends JpaRepository<RetreatPackage, Integer> {
     Optional<RetreatPackage> findByPackageName(String packageName);
+    Optional<RetreatPackage> findByPackageCode(String packageCode);
 }

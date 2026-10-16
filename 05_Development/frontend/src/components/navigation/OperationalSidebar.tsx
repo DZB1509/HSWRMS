@@ -88,6 +88,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.managerDashboard', defaultLabel: 'Bảng Điều Khiển Quản Lý', path: '/manager/dashboard', icon: LayoutDashboard },
         { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Quản Lý Villa & Buồng Phòng', path: '/manager/villas', icon: Home },
+        { labelKey: 'operations.sidebar.spaManagement', defaultLabel: 'Quản Lý Gói Spa & Trị Liệu', path: '/manager/spa', icon: Sparkles },
         { labelKey: 'operations.sidebar.revenueAnalytics', defaultLabel: 'Phân Tích Doanh Thu', path: '/manager/revenue', icon: BarChart3 },
         { labelKey: 'operations.sidebar.occupancyReports', defaultLabel: 'Báo Cáo Công Suất Phòng', path: '/manager/occupancy', icon: TrendingUp },
         { labelKey: 'operations.sidebar.therapistUtilization', defaultLabel: 'Hiệu Suất Kỹ Thuật Viên', path: '/manager/therapist-utilization', icon: Users2 }
@@ -108,6 +109,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.adminDashboard', defaultLabel: 'Bảng Điều Khiển Quản Trị', path: '/admin/dashboard', icon: LayoutDashboard },
         { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Quản Lý Villa & Buồng Phòng', path: '/admin/villas', icon: Home },
+        { labelKey: 'operations.sidebar.spaManagement', defaultLabel: 'Quản Lý Gói Spa & Trị Liệu', path: '/admin/spa', icon: Sparkles },
         { labelKey: 'operations.sidebar.staffAccounts', defaultLabel: 'Tài Khoản Nhân Viên', path: '/admin/staff', icon: UserPlus },
         { labelKey: 'operations.sidebar.masterDataManagement', defaultLabel: 'Quản Lý Dữ Liệu Gốc', path: '/admin/master-data', icon: Database }
       ]

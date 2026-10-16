@@ -872,7 +872,8 @@
   padding: var(--space-4);
 }
 
-.hsw-modal-content {
+.hsw-modal-content,
+.hsw-modal-card {
   background-color: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
