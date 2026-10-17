@@ -12,6 +12,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.ArrayList;
@@ -96,6 +97,17 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(ConcurrencyFailureException.class)
+    public ResponseEntity<ApiError> handleConcurrencyFailure(org.springframework.dao.ConcurrencyFailureException ex, HttpServletRequest request) {
+        ApiError error = new ApiError(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "SERVICE_BUSY",
+                "The verification service is busy. Please retry your request.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

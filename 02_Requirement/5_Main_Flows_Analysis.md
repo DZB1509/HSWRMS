@@ -194,9 +194,8 @@ sequenceDiagram
 ### 4.1. Detailed Sequence Diagram
 
 1. 4.2. Operational Steps & Edge Cases
-1. **Severe Allergen Alert:** Kitchen display renders prominent visual indicators (red banners) for any orders associated with severe allergies.
-1.
-1. **Medical History Isolation:** Under no circumstances does the chef interface expose physical therapy notes, diagnoses, or ID details.
+2. **Severe Allergen Alert:** Kitchen display renders prominent visual indicators (red banners) for any orders associated with severe allergies.
+3. **Medical History Isolation:** Under no circumstances does the chef interface expose physical therapy notes, diagnoses, or ID details.
 
 ---
 

@@ -2,13 +2,14 @@
 ' Project: HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)
 ' Module: Module 4 — Dietary F&B Management (CORE)
 ' Requirements Reference: SRS Ver2 (UC16 - UC20) & Project Specification Ver2 (Section 4, Module 4)
+' Database Schema Reference: 05_Development/database/schema.sql (MS SQL Server HSWRMS Database)
 ' Business Rules: BR-03 (Data Minimization RBAC), BR-04 (Extra F&B Folio Posting), BR-07 (Batch Availability & Data Minimization), BR-08 (Consolidated Folio Accounting)
 ' Legal Compliance: Nghị định 13/2023/NĐ-CP & 356/2025/NĐ-CP (Personal Data Protection & Health Data Minimization)
 ' File: HSWRMS_Conceptual_ERD_Module4.puml
 
 @startuml HSWRMS_Conceptual_ERD_Module4
 
-title HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)\nMODULE 4 — DIETARY F&B MANAGEMENT (CONCEPTUAL ERD)
+title HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)\nMODULE 4 — DIETARY F&B MANAGEMENT (CONCEPTUAL ERD - SYNCHRONIZED WITH SCHEMA)
 
 skinparam backgroundColor #FFFFFF
 skinparam classAttributeIconSize 0
@@ -45,155 +46,128 @@ skinparam class<<Context>> {
 ' CORE MODULE 4 ENTITIES (PINK HEADER)
 ' ============================================================
 
-entity "MEAL_ORDER" as MEAL_ORDER <<Module4>> {
-    * **MealOrderID** : INT <<PK>>
+entity "MealOrder" as MealOrder <<Module4>> {
+    * **meal_order_id** : INT <<PK, IDENTITY>>
     --
-    * **RoomBookingID** : INT <<FK>>
-    * AccountID : INT <<FK>>
-    * OrderDate : DATE
-    * MealType : ENUM ('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK')
-    * OrderStatus : ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED')
-    * IsALaCarte : BOOLEAN
-    * TotalAmount : DECIMAL(12,2)
-    SpecialNotes : TEXT
-    * CreatedAt : TIMESTAMP
-    * UpdatedAt : TIMESTAMP
+    * **retreat_booking_id** : INT <<FK>>
+    * order_date : DATE
+    meal_type : NVARCHAR(50)
+    * order_type : VARCHAR(20) <<DAILY_MEAL | A_LA_CARTE>>
+    * order_status : VARCHAR(20) <<PENDING | PREPARING | READY | DELIVERED | CANCELLED>>
+    * created_at : DATETIME2(0)
 }
 
-entity "MEAL_ORDER_LINE" as MEAL_ORDER_LINE <<Module4>> {
-    * **OrderLineID** : INT <<PK>>
+entity "MealOrderItem" as MealOrderItem <<Module4>> {
+    * **meal_order_item_id** : INT <<PK, IDENTITY>>
     --
-    * **MealOrderID** : INT <<FK>>
-    * **MenuItemID** : INT <<FK>>
-    * Quantity : INT
-    * UnitPrice : DECIMAL(12,2)
-    * Subtotal : DECIMAL(12,2)
-    * PreparationStatus : ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED')
-    Notes : VARCHAR(255)
+    * **meal_order_id** : INT <<FK>>
+    * **menu_item_id** : INT <<FK>>
+    * quantity : INT <<quantity > 0>>
+    .. Unique Constraint ..
+    UQ_MealOrderItem_OrderMenu (meal_order_id, menu_item_id)
 }
 
-entity "MENU_ITEM" as MENU_ITEM <<Module4>> {
-    * **MenuItemID** : INT <<PK>>
+entity "MenuItem" as MenuItem <<Module4>> {
+    * **menu_item_id** : INT <<PK, IDENTITY>>
     --
-    * ItemName : VARCHAR(150)
-    Description : TEXT
-    * Category : ENUM ('APPETIZER', 'MAIN_COURSE', 'DESSERT', 'BEVERAGE', 'SNACK')
-    * MealType : ENUM ('BREAKFAST', 'LUNCH', 'DINNER', 'ALL_DAY')
-    * Price : DECIMAL(12,2)
-    AllergenTags : VARCHAR(255)
-    DietaryType : ENUM ('STANDARD', 'VEGAN', 'VEGETARIAN', 'KETO', 'HALAL', 'LOW_SODIUM')
-    * IsAvailable : BOOLEAN <<UC16 Auto Recalculated>>
-    * CreatedAt : TIMESTAMP
+    * item_name : NVARCHAR(150) <<UQ>>
+    category : NVARCHAR(100)
+    meal_type : NVARCHAR(50)
+    * price : DECIMAL(18,2) <<price >= 0>>
+    dietary_tags : NVARCHAR(500)
+    allergen_information : NVARCHAR(MAX)
+    * availability_status : VARCHAR(20) <<AVAILABLE | UNAVAILABLE>>
 }
 
-entity "INGREDIENT" as INGREDIENT <<Module4>> {
-    * **IngredientID** : INT <<PK>>
+entity "Ingredient" as Ingredient <<Module4>> {
+    * **ingredient_id** : INT <<PK, IDENTITY>>
     --
-    * IngredientName : VARCHAR(150)
-    * Unit : VARCHAR(30)
-    Category : VARCHAR(50)
-    MinimumStockThreshold : DECIMAL(10,2)
-    * IsActive : BOOLEAN
+    * ingredient_name : NVARCHAR(150) <<UQ>>
 }
 
-entity "INGREDIENT_BATCH" as INGREDIENT_BATCH <<Module4>> {
-    * **BatchID** : INT <<PK>>
+entity "MenuItemIngredient" as MenuItemIngredient <<Module4>> {
+    * **menu_item_id** : INT <<PK, FK>>
+    * **ingredient_id** : INT <<PK, FK>>
     --
-    * **IngredientID** : INT <<FK>>
-    * BatchNumber : VARCHAR(50)
-    * ReceivedDate : DATE
-    * ExpiryDate : DATE
-    * InitialQuantity : DECIMAL(10,2)
-    * RemainingQuantity : DECIMAL(10,2)
-    * ConditionStatus : ENUM ('FRESH', 'GOOD', 'NEAR_EXPIRY', 'EXPIRED', 'DISCARDED')
-    UnitCost : DECIMAL(12,2)
-    SupplierName : VARCHAR(150)
+    required_quantity : DECIMAL(18,3) <<required_quantity > 0>>
 }
 
-entity "MENU_ITEM_RECIPE" as MENU_ITEM_RECIPE <<Module4>> {
-    * **RecipeID** : INT <<PK>>
+entity "IngredientBatch" as IngredientBatch <<Module4>> {
+    * **ingredient_batch_id** : INT <<PK, IDENTITY>>
     --
-    * **MenuItemID** : INT <<FK>>
-    * **IngredientID** : INT <<FK>>
-    * RequiredQuantity : DECIMAL(10,2)
-    * Unit : VARCHAR(30)
-    * IsMandatory : BOOLEAN
-}
-
-entity "INGREDIENT_USAGE_LOG" as INGREDIENT_USAGE_LOG <<Module4>> {
-    * **UsageLogID** : INT <<PK>>
-    --
-    * **OrderLineID** : INT <<FK>>
-    * **BatchID** : INT <<FK>>
-    * LoggedByStaffID : INT <<FK>>
-    * QuantityUsed : DECIMAL(10,2)
-    * DeductedAt : TIMESTAMP
+    * **ingredient_id** : INT <<FK>>
+    * received_date : DATE
+    * expiration_date : DATE <<expiration_date >= received_date>>
+    * remaining_quantity : DECIMAL(18,3) <<remaining_quantity >= 0>>
+    * stock_condition : NVARCHAR(50) <<FRESH | GOOD | NEAR_EXPIRY | HOLD | EXPIRED | DISCARDED>>
 }
 
 ' ============================================================
 ' CONNECTED CONTEXT ENTITIES (BLUE HEADER)
 ' ============================================================
 
-entity "GUEST_HEALTH_PROFILE" as GUEST_HEALTH_PROFILE <<Context>> {
-    * **HealthProfileID** : INT <<PK>>
+entity "HealthProfile" as HealthProfile <<Context>> {
+    * **health_profile_id** : INT <<PK, IDENTITY>>
     --
-    * AccountID : INT <<FK>>
-    * ★ **FoodAllergies** : TEXT <<EXPOSED TO F&B (BR-03/07)>>
-    * ★ **DietaryPreferences** : TEXT <<EXPOSED TO F&B>>
-    🔒 MedicalConditions : TEXT <<MASKED / HIDDEN>>
-    🔒 PhysicalLimitations : TEXT <<MASKED / HIDDEN>>
-    ConsentGiven : BOOLEAN
+    * customer_profile_id : INT <<FK, UQ>>
+    * ★ allergies : NVARCHAR(MAX) <<EXPOSED TO F&B (BR-FNB-01/02)>>
+    * ★ dietary_requirements : NVARCHAR(MAX) <<EXPOSED TO F&B>>
+    🔒 treatment_safety_notes : NVARCHAR(MAX) <<MASKED / HIDDEN>>
+    * anonymization_status : VARCHAR(20) <<IDENTIFIABLE | ANONYMIZED>>
+    * created_at : DATETIME2(0)
+    * updated_at : DATETIME2(0)
 }
 
-entity "ROOM_BOOKING" as ROOM_BOOKING <<Context>> {
-    * **RoomBookingID** : INT <<PK>>
+entity "RetreatBooking" as RetreatBooking <<Context>> {
+    * **retreat_booking_id** : INT <<PK, IDENTITY>>
     --
-    * AccountID : INT <<FK>>
-    * PackageID : INT <<FK>>
-    * CheckInDate : DATE
-    * CheckOutDate : DATE
-    * BookingStatus : VARCHAR(30)
-    VillaNumber : VARCHAR(20)
+    * customer_profile_id : INT <<FK>>
+    * retreat_package_id : INT <<FK>>
+    requested_villa_category_id : INT <<FK>>
+    assigned_villa_id : INT <<FK>>
+    * check_in_date : DATE
+    * check_out_date : DATE
+    * booking_status : VARCHAR(20) <<PENDING | CONFIRMED | CHECKED_IN | CANCELLED | COMPLETED>>
+    * deposit_amount : DECIMAL(18,2)
+    * total_estimated_amount : DECIMAL(18,2)
 }
 
-entity "STAFF_ACCOUNT" as STAFF_ACCOUNT <<Context>> {
-    * **StaffID** : INT <<PK>>
+entity "User" as User <<Context>> {
+    * **user_id** : INT <<PK, IDENTITY>>
     --
-    * FullName : VARCHAR(100)
-    * Email : VARCHAR(150)
-    * Role : ENUM ('CHEF', 'FB_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')
-    * AccountStatus : VARCHAR(20)
+    * full_name : NVARCHAR(150)
+    * email : NVARCHAR(255) <<UQ>>
+    * account_status : VARCHAR(20)
+    * email_verified : BIT
 }
 
-entity "FOLIO_CHARGE_ITEM" as FOLIO_CHARGE_ITEM <<Context>> {
-    * **ChargeItemID** : INT <<PK>>
+entity "FolioItem" as FolioItem <<Context>> {
+    * **folio_item_id** : INT <<PK, IDENTITY>>
     --
-    * FolioID : INT <<FK>>
-    * MealOrderID : INT <<FK>>
-    * ChargeDate : DATE
-    * ChargeType : ENUM ('EXTRA_FB', 'EXTRA_SPA', 'PACKAGE', 'DAMAGE')
-    * Amount : DECIMAL(12,2)
-    Description : VARCHAR(255)
-    * PaymentStatus : ENUM ('PENDING', 'PAID', 'WAIVED')
+    * folio_id : INT <<FK>>
+    * charge_category : VARCHAR(20) <<PACKAGE | SPA | FNB>>
+    * description : NVARCHAR(500)
+    * amount : DECIMAL(18,2)
+    * charged_at : DATETIME2(0)
+    source_booking_id : INT <<FK, NULL>>
+    source_spa_session_id : INT <<FK, NULL>>
+    * **source_meal_order_id** : INT <<FK, NOT NULL WHEN FNB>>
 }
 
 ' ============================================================
 ' RELATIONSHIPS & CARDINALITIES
 ' ============================================================
 
-ROOM_BOOKING ||--o{ MEAL_ORDER : "1 : N (places / receives meal orders)"
-MEAL_ORDER ||--|{ MEAL_ORDER_LINE : "1 : N (contains order lines)"
-MENU_ITEM ||--o{ MEAL_ORDER_LINE : "1 : N (selected in)"
-MENU_ITEM ||--|{ MENU_ITEM_RECIPE : "1 : N (defined by)"
-INGREDIENT ||--o{ MENU_ITEM_RECIPE : "1 : N (used in recipe)"
-INGREDIENT ||--o{ INGREDIENT_BATCH : "1 : N (received in batches)"
-MEAL_ORDER_LINE ||--o{ INGREDIENT_USAGE_LOG : "1 : N (consumes stock)"
-INGREDIENT_BATCH ||--o{ INGREDIENT_USAGE_LOG : "1 : N (deducted from)"
-STAFF_ACCOUNT ||--o{ INGREDIENT_USAGE_LOG : "1 : N (logs ingredient usage)"
+RetreatBooking ||--o{ MealOrder : "1 : N (retreat_booking_id)"
+MealOrder ||--|{ MealOrderItem : "1 : N (meal_order_id)"
+MenuItem ||--o{ MealOrderItem : "1 : N (menu_item_id)"
+MenuItem ||--o{ MenuItemIngredient : "1 : N (menu_item_id)"
+Ingredient ||--o{ MenuItemIngredient : "1 : N (ingredient_id)"
+Ingredient ||--o{ IngredientBatch : "1 : N (ingredient_id)"
 
-' Business Rules & Data Flow Integrations (Dashed Lines)
-MEAL_ORDER ..> FOLIO_CHARGE_ITEM : "BR-04 / BR-08: IsALaCarte=TRUE auto-posts EXTRA_FB charge"
-INGREDIENT_BATCH ..> MENU_ITEM : "UC16: Expiry & Stock status recalculates IsAvailable"
-STAFF_ACCOUNT ..> MEAL_ORDER : "UC19: Chef / F&B Staff updates OrderStatus"
+' Business Logic & Folio Integrations
+MealOrder ||--o| FolioItem : "BR-04/08: source_meal_order_id (FNB Charge)"
+HealthProfile ..> MealOrder : "BR-FNB-01: Allergy-safe filtering"
+IngredientBatch ..> MenuItem : "UC16: FEFO stock recalculates availability"
 
 @enduml

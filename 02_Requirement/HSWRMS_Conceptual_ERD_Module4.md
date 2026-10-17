@@ -3,265 +3,282 @@
 <!-- Module: Module 4 — Dietary F&B Management (CORE) -->
 <!-- Target Audience: BA, System Architect, Database Engineer, Developer -->
 <!-- Requirements Baseline: SRS Ver2 (UC16 - UC20) & Project Specification Ver2 (Section 4, Module 4) -->
+<!-- Database Schema Baseline: 05_Development/database/schema.sql (MS SQL Server HSWRMS Database) -->
 <!-- Business Rules: BR-03 (Data Minimization RBAC), BR-04 (Extra F&B Folio Posting), BR-07 (Batch Availability & Data Minimization), BR-08 (Consolidated Folio Accounting) -->
 <!-- Legal Compliance: Nghị định 13/2023/NĐ-CP & Nghị định 356/2025/NĐ-CP (Personal Data Protection PII) -->
-<!-- Created Date: 2026-10-07 -->
+<!-- Created Date: 2026-10-07 | Synchronized Date: 2026-10-12 -->
 <!-- Source File: 02_Requirement/HSWRMS_Conceptual_ERD_Module4.md -->
 
 # THIẾT KẾ MÔ HÌNH DỮ LIỆU KHÁI NIỆM (CONCEPTUAL ERD)
+
 ## MODULE 4: DIETARY F&B MANAGEMENT (QUẢN LÝ ẨM THỰC VÀ DINH DƯỠNG SỨC KHỎE)
 
 ---
 
 ## 1. TỔNG QUAN & PHẠM VI (OVERVIEW & SCOPE)
 
-Mô hình Dữ liệu Khái niệm (Conceptual Entity-Relationship Diagram - ERD) cho **Module 4 (Dietary F&B Management)** thuộc hệ thống **HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)** được thiết kế dựa trên 02 tài liệu chuẩn nghiệp vụ gốc:
+Mô hình Dữ liệu Khái niệm (Conceptual Entity-Relationship Diagram - ERD) cho **Module 4 (Dietary F&B Management)** thuộc hệ thống **HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)** được thiết kế và đồng bộ hóa trực tiếp với:
+
 1. **[HSWRMS_ISP392_Project_Specification_Ver2.md](file:///e:/fal26-isp392-is2005-g1/02_Requirement/Project_Specification/HSWRMS_ISP392_Project_Specification_Ver2.md)** (Cập nhật tháng 10/2026)
 2. **[HSWRMS_ISP392_G1_SRS.md](file:///e:/fal26-isp392-is2005-g1/02_Requirement/SRS/HSWRMS_ISP392_G1_SRS.md)** (Hồ sơ Yêu cầu Phần mềm)
+3. **[05_Development/database/schema.sql](file:///e:/fal26-isp392-is2005-g1/05_Development/database/schema.sql)** (Kịch bản CSDL vật lý Microsoft SQL Server - Nguồn sự thật CSDL)
 
 ### 1.1. Mục Tiêu Nghiệp Vụ Của Module 4
+
 Module 4 đóng vai trò cốt lõi trong hành trình trải nghiệm nghỉ dưỡng cá nhân hóa (Personalized Wellness Journey) của khách hàng tại HeavenStay Resort:
-- **Tự động hóa lọc thực đơn theo sức khỏe (UC17):** Khách hàng (Customer) chọn bữa ăn hàng ngày dựa trên các món ăn khả dụng đã được hệ thống tự động lọc bỏ allergen (chất gây dị ứng) theo hồ sơ sức khỏe (`GUEST_HEALTH_PROFILE`).
-- **Quản lý lô nguyên liệu & tính khả dụng thực đơn (UC16):** Nhân viên F&B/Đầu bếp (Chef) quản lý danh mục và lô nguyên liệu (`INGREDIENT_BATCH`). Hệ thống tự động tính toán lại sự khả dụng của món ăn (`MENU_ITEM.IsAvailable`) dựa trên số lượng tồn thực tế, ngày hết hạn và tình trạng nguyên liệu.
-- **Đặt món a-la-carte ngoài gói & hạch toán Folio (UC18):** Cho phép đặt thêm món ăn ngoài gói Retreat. Hệ thống tự động ghi nhận khoản phí phụ thu (`IsALaCarte = TRUE`) thành một khoản tính phí (`FOLIO_CHARGE_ITEM` loại `EXTRA_FB`) vào Folio thanh toán của khách hàng.
-- **Thực thi quy trình chế biến & trừ kho nguyên liệu (UC19):** Chef/F&B Staff theo dõi các cảnh báo dị ứng, chuẩn bị món ăn, cập nhật trạng thái đơn đặt (`PENDING` -> `PREPARING` -> `READY` -> `DELIVERED`) và ghi nhận nhật ký tiêu hao nguyên liệu (`INGREDIENT_USAGE_LOG`).
-- **Bảo mật & Tối thiểu hóa dữ liệu y tế (UC20 / BR-03 / BR-07):** Phân quyền nghiêm ngặt (RBAC). Nhân viên F&B / Chef chỉ được phép tiếp cận dị ứng thực phẩm (`FoodAllergies`) và chế độ ăn kiêng (`DietaryPreferences`), tuyệt đối **KHÔNG** được xem tiền sử bệnh lý (`MedicalConditions`) hay hạn chế thể chất (`PhysicalLimitations`) của khách hàng.
+
+- **Tự động hóa lọc thực đơn theo sức khỏe (UC17 / S34):** Khách hàng (Customer) duyệt và chọn món dựa trên thực đơn đã được hệ thống tự động lọc bỏ allergen (chất gây dị ứng) theo hồ sơ sức khỏe (`HealthProfile`).
+- **Quản lý lô nguyên liệu & tính khả dụng thực đơn (UC16 / S38):** Nhân viên F&B/Đầu bếp (Chef) quản lý danh mục và lô nguyên liệu (`IngredientBatch`). Hệ thống tự động tính toán lại khả năng phục vụ của món ăn (`MenuItem.availability_status` và khả dụng số suất phục vụ) dựa trên số lượng tồn khả dụng thực tế, ngày hết hạn và tình trạng nguyên liệu (`stock_condition`).
+- **Đặt món a-la-carte ngoài gói & hạch toán Folio (UC18 / S36):** Cho phép đặt thêm món ăn ngoài gói Retreat (`order_type = 'A_LA_CARTE'`). Hệ thống tự động ghi nhận khoản phí phụ thu vào Folio thanh toán của khách hàng thông qua `FolioItem` (với `charge_category = 'FNB'` và khóa ngoại liên kết trực tiếp `source_meal_order_id`).
+- **Thực thi quy trình chế biến & trừ kho nguyên liệu (UC19 / S39, S40):** Chef/F&B Staff theo dõi các cảnh báo dị ứng, chuẩn bị món ăn, cập nhật trạng thái đơn đặt (`PENDING` -> `PREPARING` -> `READY` -> `DELIVERED`). Khi món chuyển sang `READY`, hệ thống tự động trừ kho nguyên liệu từ các lô khả dụng theo nguyên tắc FEFO (First-Expired-First-Out) trực tiếp trên `IngredientBatch.remaining_quantity`.
+- **Bảo mật & Tối thiểu hóa dữ liệu y tế (UC20 / BR-03 / BR-07):** Phân quyền nghiêm ngặt (RBAC). Nhân viên F&B / Chef chỉ được phép tiếp cận dị ứng thực phẩm (`allergies`) và chế độ ăn uống (`dietary_requirements`), tuyệt đối **KHÔNG** được xem tiền sử bệnh lý hay ghi chú điều trị (`treatment_safety_notes`) của khách hàng.
 
 ---
 
-## 2. KIẾN TRÚC MÔ HÌNH DỮ LIỆU (CONCEPTUAL ERD ARCHITECTURE)
+## 2. KIẾN TRÚC MÔ HÌNH DỮ LIỆU ĐỒNG BỘ (SYNCHRONIZED ERD ARCHITECTURE)
 
-Mô hình ERD Module 4 bao gồm **07 Thực thể Cốt lõi (Core Entities)** thuộc Module 4 và **04 Thực thể Ngữ cảnh (Connected Context Entities)** kết nối liên module với Module 1 (Auth & Health), Module 2 (Booking) và Module 5 (Folio & Checkout).
+Mô hình ERD Module 4 đồng bộ chuẩn xác với cấu trúc bảng và khóa ngoại trong [`schema.sql`](file:///e:/fal26-isp392-is2005-g1/05_Development/database/schema.sql):
+
+- **06 Thực thể Cốt lõi (Core Entities):** `MenuItem`, `Ingredient`, `MenuItemIngredient`, `IngredientBatch`, `MealOrder`, `MealOrderItem`.
+- **04 Nhóm Thực thể Ngữ cảnh (Connected Context Entities):** `HealthProfile` (M1 Context), `RetreatBooking` (M2 Context), `User` / `Role` (M1/M6 Context), `Folio` / `FolioItem` (M5 Context).
 
 ```
-+-----------------------------------------------------------------------------------+
-|                            CONNECTED CONTEXT ENTITIES                             |
-|                                                                                   |
-|  +-----------------------+   +-------------------+   +-------------------------+  |
-|  | GUEST_HEALTH_PROFILE  |   |   ROOM_BOOKING    |   |    FOLIO_CHARGE_ITEM    |  |
-|  | (M1 Sensitive Health) |   | (M2 Accommodat'n) |   | (M5 Folio Accounting)   |  |
-|  +-----------+-----------+   +---------+---------+   +------------+------------+  |
-+--------------|-------------------------|--------------------------|---------------+
-               | (BR-03 Flow)            | (1:N)                    | (BR-04 Flow)
-               v                         v                          |
-+--------------+-------------------------+--------------------------|---------------+
-|                               MODULE 4 CORE ENTITIES              |               |
-|                                                                   |               |
-|                      +-------------------+                        |               |
-|                      |    MEAL_ORDER     |------------------------+               |
-|                      +---------+---------+                                        |
-|                                | (1:N)                                            |
-|                                v                                                  |
-|                      +-------------------+       +-------------------+            |
-|                      |  MEAL_ORDER_LINE  |<------|     MENU_ITEM     |            |
-|                      +---------+---------+ (N:1) +---------+---------+            |
-|                                |                           |                      |
-|                                | (1:N)                     | (1:N)                |
-|                                v                           v                      |
-|                      +-------------------+       +-------------------+            |
-|                      |INGREDIENT_USAGE_LOG|      |MENU_ITEM_INGREDIENT|           |
-|                      +---------+---------+       +---------+---------+            |
-|                                ^                           |                      |
-|                                | (N:1)                     | (N:1)                |
-|                      +---------+---------+                 v                      |
-|                      | INGREDIENT_BATCH  |<----------------+                      |
-|                      +---------+---------+   (1:N) | INGREDIENT |                 |
-|                                                    +------------+                 |
-+-----------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------------------+
+|                                 CONNECTED CONTEXT ENTITIES                                  |
+|                                                                                             |
+|  +------------------------+   +------------------------+   +-----------------------------+  |
+|  |     HealthProfile      |   |     RetreatBooking     |   |          FolioItem          |  |
+|  | (M1 Sensitive Health)  |   |   (M2 Accommodation)   |   |   (M5 Billing / Folio)      |  |
+|  +-----------+------------+   +-----------+------------+   +--------------+--------------+  |
++--------------|----------------------------|-------------------------------|-----------------+
+               | (BR-03 Flow)               | (1:N)                         | (BR-04/08 FK)
+               v                            v                               |
++--------------+----------------------------+-------------------------------|-----------------+
+|                                    MODULE 4 CORE ENTITIES                 |                 |
+|                                                                           |                 |
+|                           +------------------------+                      |                 |
+|                           |       MealOrder        |<---------------------+                 |
+|                           | (order_type / status)  | (source_meal_order_id)                 |
+|                           +-----------+------------+                                        |
+|                                       | (1:N)                                               |
+|                                       v                                                     |
+|                           +------------------------+       +------------------------+       |
+|                           |     MealOrderItem      |<------|        MenuItem        |       |
+|                           |    (quantity > 0)      | (N:1) |  (price / status)      |       |
+|                           +------------------------+       +-----------+------------+       |
+|                                                                        |                    |
+|                                                                        | (1:N)              |
+|                                                                        v                    |
+|                                                            +------------------------+       |
+|                                                            |   MenuItemIngredient   |       |
+|                                                            |  (required_quantity)   |       |
+|                                                            +-----------+------------+       |
+|                                                                        |                    |
+|                                                                        | (N:1)              |
+|                                                                        v                    |
+|                           +------------------------+       +------------------------+       |
+|                           |    IngredientBatch     |<------|       Ingredient       |       |
+|                           |  (FEFO remaining_qty)  | (N:1) |    (ingredient_name)   |       |
+|                           +------------------------+       +------------------------+       |
++---------------------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## 3. TỪ ĐỂN DỮ LIỆU CHI TIẾT (DETAILED DATA DICTIONARY)
 
+> [!NOTE]
+> Mọi thuộc tính dưới đây đã được đối soát 1:1 với định nghĩa bảng, kiểu dữ liệu, ràng buộc CHECK và khóa ngoại trong [`05_Development/database/schema.sql`](file:///e:/fal26-isp392-is2005-g1/05_Development/database/schema.sql).
+
 ### 3.1. Các Thực Thể Cốt Lõi Module 4 (Core Module 4 Entities)
 
-#### 1. `MEAL_ORDER` (Đơn Đặt Bữa Ăn)
-- **Mục đích:** Quản lý thông tin tổng quan của một lượt đặt bữa ăn do Khách hàng thực hiện cho cả bữa ăn trong gói nghỉ dưỡng hoặc bữa ăn gọi thêm a-la-carte.
-- **Bảng CSDL đề xuất:** `MEAL_ORDER`
+#### 1. `MealOrder` (Đơn Đặt Bữa Ăn)
 
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`MealOrderID`** | `INT` | **PK**, Auto Inc | Định danh duy nhất cho đơn đặt bữa ăn. |
-| **`RoomBookingID`** | `INT` | **FK**, NOT NULL | Liên kết tới đơn đặt phòng nghỉ dưỡng (`ROOM_BOOKING`). |
-| **`AccountID`** | `INT` | **FK**, NOT NULL | Định danh tài khoản khách hàng thực hiện đặt đơn. |
-| **`OrderDate`** | `DATE` | NOT NULL | Ngày phục vụ bữa ăn dự kiến. |
-| **`MealType`** | `ENUM` | NOT NULL | Loại bữa ăn: `'BREAKFAST'`, `'LUNCH'`, `'DINNER'`, `'SNACK'`. |
-| **`OrderStatus`** | `ENUM` | NOT NULL | Trạng thái đơn: `'PENDING'`, `'PREPARING'`, `'READY'`, `'DELIVERED'`, `'CANCELLED'`. |
-| **`IsALaCarte`** | `BOOLEAN` | NOT NULL | `FALSE`: Bữa ăn nằm trong gói Retreat. `TRUE`: Gọi thêm ngoài gói (phụ thu). |
-| **`TotalAmount`** | `DECIMAL(12,2)` | DEFAULT 0 | Tổng tiền đơn ăn (bằng 0 nếu nằm trong gói; >0 nếu là a-la-carte). |
-| **`SpecialNotes`** | `TEXT` | NULL | Ghi chú thêm của khách (ví dụ: giao tận Villa, không cay...). |
-| **`CreatedAt`** | `TIMESTAMP` | NOT NULL | Thời điểm tạo đơn hàng. |
-| **`UpdatedAt`** | `TIMESTAMP` | NOT NULL | Thời điểm cập nhật trạng thái đơn gần nhất. |
+- **Mục đích:** Quản lý thông tin đơn đặt bữa ăn gắn với kỳ nghỉ dưỡng của khách hàng cho cả bữa ăn trong gói (`DAILY_MEAL`) và bữa ăn gọi thêm a-la-carte (`A_LA_CARTE`).
+- **Bảng CSDL vật lý:** `dbo.MealOrder`
+- **Khóa chính:** `meal_order_id` (INT IDENTITY)
 
----
-
-#### 2. `MEAL_ORDER_LINE` (Chi Tiết Dòng Đơn Ăn)
-- **Mục đích:** Lưu trữ chi tiết từng món ăn được chọn trong đơn, thông tin đơn giá và các cảnh báo dị ứng tự động.
-- **Bảng CSDL đề xuất:** `MEAL_ORDER_LINE`
-
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`OrderLineID`** | `INT` | **PK**, Auto Inc | Định danh dòng món ăn. |
-| **`MealOrderID`** | `INT` | **FK**, NOT NULL | Liên kết với đơn đặt bữa ăn (`MEAL_ORDER`). |
-| **`MenuItemID`** | `INT` | **FK**, NOT NULL | Món ăn được chọn từ thực đơn (`MENU_ITEM`). |
-| **`Quantity`** | `INT` | NOT NULL (>=1) | Số lượng suất ăn. |
-| **`UnitPrice`** | `DECIMAL(12,2)` | NOT NULL | Đơn giá món ăn tại thời điểm đặt (0 VND nếu bao gồm trong gói). |
-| **`Subtotal`** | `DECIMAL(12,2)` | NOT NULL | Thành tiền = `Quantity * UnitPrice`. |
-| **`PreparationStatus`** | `ENUM` | NOT NULL | Trạng thái chế biến: `'PENDING'`, `'PREPARING'`, `'READY'`, `'DELIVERED'`. |
-| **`Notes`** | `VARCHAR(255)`| NULL | Yêu cầu chế biến riêng cho từng món. |
+| Tên Thuộc Tính Khái Niệm | Tên Cột CSDL Vật Lý  | Kiểu Dữ Liệu SQL    | Ràng Buộc CSDL                       | Mô Tả & Quy Tắc Nghiệp Vụ Đồng Bộ Schema                                                                                          |
+| :----------------------- | :------------------- | :------------------ | :----------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
+| **`MealOrderID`**        | `meal_order_id`      | `INT`               | **PK**, IDENTITY(1,1)                | Định danh duy nhất cho đơn đặt bữa ăn.                                                                                            |
+| **`RetreatBookingID`**   | `retreat_booking_id` | `INT`               | **FK**, NOT NULL                     | Khóa ngoại tham chiếu `dbo.RetreatBooking(retreat_booking_id)`.                                                                   |
+| **`OrderDate`**          | `order_date`         | `DATE`              | NOT NULL                             | Ngày phục vụ bữa ăn theo lịch lưu trú.                                                                                            |
+| **`MealType`**           | `meal_type`          | `NVARCHAR(50)`      | NULL                                 | Khung bữa ăn trong ngày: `'BREAKFAST'`, `'LUNCH'`, `'DINNER'`, `'ALL_DAY'`.                                                       |
+| **`OrderType`**          | `order_type`         | `VARCHAR(20)`       | NOT NULL, CHECK                      | Loại đơn: `'DAILY_MEAL'` (bữa ăn tiêu chuẩn trong gói) hoặc `'A_LA_CARTE'` (gọi món thêm phụ thu). Ràng buộc `CK_MealOrder_Type`. |
+| **`OrderStatus`**        | `order_status`       | `VARCHAR(20)`       | NOT NULL, DEFAULT `'PENDING'`        | Trạng thái chế biến: `'PENDING'`, `'PREPARING'`, `'READY'`, `'DELIVERED'`, `'CANCELLED'`. Ràng buộc `CK_MealOrder_Status`.        |
+| **`CreatedAt`**          | `created_at`         | `DATETIME2(0)`      | NOT NULL, DEFAULT `SYSUTCDATETIME()` | Thời điểm tạo đơn hàng.                                                                                                           |
+| _Ghi chú nghiệp vụ:_     | `special_notes`      | _Tầng ứng dụng/DTO_ | _NVARCHAR(1000) (DTO)_               | Yêu cầu phục vụ đặc biệt (ví dụ: giao tại Villa, ít cay) được xử lý tại DTO request/response của tầng Service M4.                 |
 
 ---
 
-#### 3. `MENU_ITEM` (Thực Đơn Món Ăn F&B)
-- **Mục đích:** Danh mục thực đơn món ăn/đồ uống của resort, quản lý thẻ dị ứng và khả năng phục vụ.
-- **Bảng CSDL đề xuất:** `MENU_ITEM`
+#### 2. `MealOrderItem` (Chi Tiết Món Ăn Trong Đơn)
 
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`MenuItemID`** | `INT` | **PK**, Auto Inc | Định danh món ăn. |
-| **`ItemName`** | `VARCHAR(150)` | NOT NULL | Tên món ăn (Ví dụ: "Súp Bí Đỏ Hạt Óc Chó", "Cá Hồi Nướng Herb"). |
-| **`Description`** | `TEXT` | NULL | Mô tả chi tiết thành phần món ăn. |
-| **`Category`** | `ENUM` | NOT NULL | Phân loại: `'APPETIZER'`, `'MAIN_COURSE'`, `'DESSERT'`, `'BEVERAGE'`, `'SNACK'`. |
-| **`MealType`** | `ENUM` | NOT NULL | Khung giờ: `'BREAKFAST'`, `'LUNCH'`, `'DINNER'`, `'ALL_DAY'`. |
-| **`Price`** | `DECIMAL(12,2)` | NOT NULL (>=0) | Giá bán niêm yết (VND). |
-| **`AllergenTags`** | `VARCHAR(255)` | NULL | Thẻ chất gây dị ứng (Ví dụ: `"PEANUT, GLUTEN, DAIRY, SEAFOOD, SOY"`). |
-| **`DietaryType`** | `ENUM` | NOT NULL | Chế độ ăn: `'STANDARD'`, `'VEGAN'`, `'VEGETARIAN'`, `'KETO'`, `'HALAL'`, `'LOW_SODIUM'`. |
-| **`IsAvailable`** | `BOOLEAN` | NOT NULL | **[UC16]** Tự động tính toán dựa trên tồn kho nguyên liệu còn hạn sử dụng. |
-| **`CreatedAt`** | `TIMESTAMP` | NOT NULL | Ngày tạo món trong danh mục. |
+- **Mục đích:** Lưu trữ chi tiết từng món ăn được chọn trong đơn đặt bữa ăn.
+- **Bảng CSDL vật lý:** `dbo.MealOrderItem`
+- **Khóa chính:** `meal_order_item_id` (INT IDENTITY)
+
+| Tên Thuộc Tính Khái Niệm | Tên Cột CSDL Vật Lý                | Kiểu Dữ Liệu SQL    | Ràng Buộc CSDL                               | Mô Tả & Quy Tắc Nghiệp Vụ Đồng Bộ Schema                                                                              |
+| :----------------------- | :--------------------------------- | :------------------ | :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
+| **`MealOrderItemID`**    | `meal_order_item_id`               | `INT`               | **PK**, IDENTITY(1,1)                        | Định danh duy nhất của dòng món trong đơn.                                                                            |
+| **`MealOrderID`**        | `meal_order_id`                    | `INT`               | **FK**, NOT NULL                             | Khóa ngoại tham chiếu `dbo.MealOrder(meal_order_id)`.                                                                 |
+| **`MenuItemID`**         | `menu_item_id`                     | `INT`               | **FK**, NOT NULL                             | Khóa ngoại tham chiếu `dbo.MenuItem(menu_item_id)`.                                                                   |
+| **`Quantity`**           | `quantity`                         | `INT`               | NOT NULL, CHECK                              | Số lượng suất ăn đặt (> 0). Ràng buộc `CK_MealOrderItem_Quantity`.                                                    |
+| _Ràng buộc duy nhất:_    | `UQ_MealOrderItem_OrderMenu`       | -                   | **UNIQUE** (`meal_order_id`, `menu_item_id`) | Mỗi món ăn chỉ xuất hiện tối đa một lần trong cùng một đơn ăn.                                                        |
+| _Đơn giá & Trạng thái:_  | `unit_price`, `preparation_status` | _Tầng ứng dụng/DTO_ | _DECIMAL(18,2), ENUM_                        | Được bắt giữ tại DTO/Service M4 (đối với `DAILY_MEAL` đơn giá là 0đ; đối với `A_LA_CARTE` lấy theo `MenuItem.price`). |
 
 ---
 
-#### 4. `INGREDIENT` (Danh Mục Nguyên Liệu)
-- **Mục đích:** Quản lý danh mục định danh các loại nguyên liệu thô dùng để chế biến món ăn.
-- **Bảng CSDL đề xuất:** `INGREDIENT`
+#### 3. `MenuItem` (Thực Đơn Món Ăn Dinh Dưỡng)
 
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`IngredientID`** | `INT` | **PK**, Auto Inc | Định danh nguyên liệu. |
-| **`IngredientName`** | `VARCHAR(150)` | NOT NULL | Tên nguyên liệu (Ví dụ: "Cá Hồi Na-uy Fresh", "Đậu Phộng", "Sữa Hạnh Nhân"). |
-| **`Unit`** | `VARCHAR(30)` | NOT NULL | Đơn vị tính: `"KG"`, `"GRAMS"`, `"LITERS"`, `"PIECES"`. |
-| **`Category`** | `VARCHAR(50)` | NULL | Phân loại: `"VEGETABLE"`, `"MEAT"`, `"SEAFOOD"`, `"DAIRY"`, `"GRAIN"`, `"SPICE"`. |
-| **`MinimumStockThreshold`**| `DECIMAL(10,2)`| DEFAULT 0 | Ngưỡng tồn kho tối thiểu để cảnh báo nhập hàng. |
-| **`IsActive`** | `BOOLEAN` | DEFAULT TRUE | Trạng thái nguyên liệu đang kinh doanh/sử dụng. |
+- **Mục đích:** Quản lý danh mục món ăn, phân loại, khung bữa ăn, giá bán niêm yết, thông tin dị ứng và trạng thái khả dụng.
+- **Bảng CSDL vật lý:** `dbo.MenuItem`
+- **Khóa chính:** `menu_item_id` (INT IDENTITY)
 
----
-
-#### 5. `INGREDIENT_BATCH` (Lô Nguyên Liệu F&B - UC16)
-- **Mục đích:** Quản lý từng lô hàng nguyên liệu thực tế nhập vào kho, theo dõi hạn sử dụng, số lượng tồn và tình trạng nguyên liệu.
-- **Bảng CSDL đề xuất:** `INGREDIENT_BATCH`
-
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`BatchID`** | `INT` | **PK**, Auto Inc | Định danh lô nguyên liệu. |
-| **`IngredientID`** | `INT` | **FK**, NOT NULL | Liên kết danh mục nguyên liệu (`INGREDIENT`). |
-| **`BatchNumber`** | `VARCHAR(50)` | NOT NULL | Số lô nhập hàng (Lot/Batch code). |
-| **`ReceivedDate`** | `DATE` | NOT NULL | Ngày nhập kho. |
-| **`ExpiryDate`** | `DATE` | NOT NULL | Ngày hết hạn sử dụng. |
-| **`InitialQuantity`** | `DECIMAL(10,2)` | NOT NULL | Số lượng ban đầu khi nhập. |
-| **`RemainingQuantity`** | `DECIMAL(10,2)` | NOT NULL | Số lượng tồn thực tế khả dụng. |
-| **`ConditionStatus`** | `ENUM` | NOT NULL | Trạng thái chất lượng: `'FRESH'`, `'GOOD'`, `'NEAR_EXPIRY'`, `'EXPIRED'`, `'DISCARDED'`. |
-| **`UnitCost`** | `DECIMAL(12,2)` | NULL | Giá vốn đơn vị nguyên liệu. |
-| **`SupplierName`** | `VARCHAR(150)` | NULL | Tên nhà cung cấp. |
+| Tên Thuộc Tính Khái Niệm  | Tên Cột CSDL Vật Lý    | Kiểu Dữ Liệu SQL | Ràng Buộc CSDL                  | Mô Tả & Quy Tắc Nghiệp Vụ Đồng Bộ Schema                                                                               |
+| :------------------------ | :--------------------- | :--------------- | :------------------------------ | :--------------------------------------------------------------------------------------------------------------------- |
+| **`MenuItemID`**          | `menu_item_id`         | `INT`            | **PK**, IDENTITY(1,1)           | Định danh món ăn trong thực đơn resort.                                                                                |
+| **`ItemName`**            | `item_name`            | `NVARCHAR(150)`  | NOT NULL, **UNIQUE**            | Tên món ăn (duy nhất trong toàn bộ thực đơn). Ràng buộc `UQ_MenuItem_Name`.                                            |
+| **`Category`**            | `category`             | `NVARCHAR(100)`  | NULL                            | Phân loại món: `'STARTER'`, `'MAIN'`, `'DESSERT'`, `'BEVERAGE'`, `'WELLNESS_DRINK'`.                                   |
+| **`MealType`**            | `meal_type`            | `NVARCHAR(50)`   | NULL                            | Khung giờ phục vụ: `'BREAKFAST'`, `'LUNCH'`, `'DINNER'`, `'ALL_DAY'`.                                                  |
+| **`Price`**               | `price`                | `DECIMAL(18,2)`  | NOT NULL, DEFAULT 0, CHECK      | Đơn giá niêm yết (VND). Ràng buộc `CK_MenuItem_Price (price >= 0)`.                                                    |
+| **`DietaryTags`**         | `dietary_tags`         | `NVARCHAR(500)`  | NULL                            | Thẻ nhãn dinh dưỡng (ví dụ: `GLUTEN_FREE, VEGAN, VEGETARIAN, LOW_SODIUM, ORGANIC`).                                    |
+| **`AllergenInformation`** | `allergen_information` | `NVARCHAR(MAX)`  | NULL                            | Danh sách chất gây dị ứng (ví dụ: `PEANUT, SHELLFISH, DAIRY, SOY, EGGS`). Dùng đối chiếu hồ sơ khách hàng (BR-FNB-01). |
+| **`AvailabilityStatus`**  | `availability_status`  | `VARCHAR(20)`    | NOT NULL, DEFAULT `'AVAILABLE'` | Trạng thái điều hành: `'AVAILABLE'` hoặc `'UNAVAILABLE'`. Ràng buộc `CK_MenuItem_Availability`.                        |
 
 ---
 
-#### 6. `MENU_ITEM_INGREDIENT` (Công Thức Món Ăn / Định Mức Nguyên Liệu)
-- **Mục đích:** Quy định định mức tiêu hao nguyên liệu cho mỗi suất món ăn, phục vụ trừ kho và kiểm tra tồn kho.
-- **Bảng CSDL:** `MENU_ITEM_INGREDIENT`, quan hệ M:N giữa `MENU_ITEM` và `INGREDIENT`.
-- **Tính nhu cầu:** `quantity_per_serving × ordered_servings`.
+#### 4. `Ingredient` (Danh Mục Nguyên Liệu)
 
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`MenuItemID`** | `INT` | **PK, FK**, NOT NULL | Món ăn áp dụng công thức (`MENU_ITEM`). |
-| **`IngredientID`** | `INT` | **PK, FK**, NOT NULL | Nguyên liệu thành phần (`INGREDIENT`). |
-| **`quantity_per_serving`** | `DECIMAL(18,3)` | NOT NULL, > 0 | Số lượng nguyên liệu cần cho 01 suất ăn. |
-| **`Unit`** | `VARCHAR(30)` | NOT NULL | Đơn vị tính định mức. |
+- **Mục đích:** Danh mục định danh các loại nguyên liệu thực phẩm thô dùng để nấu nướng và pha chế.
+- **Bảng CSDL vật lý:** `dbo.Ingredient`
+- **Khóa chính:** `ingredient_id` (INT IDENTITY)
+
+| Tên Thuộc Tính Khái Niệm | Tên Cột CSDL Vật Lý | Kiểu Dữ Liệu SQL | Ràng Buộc CSDL        | Mô Tả & Quy Tắc Nghiệp Vụ Đồng Bộ Schema                                                                        |
+| :----------------------- | :------------------ | :--------------- | :-------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **`IngredientID`**       | `ingredient_id`     | `INT`            | **PK**, IDENTITY(1,1) | Định danh duy nhất cho loại nguyên liệu.                                                                        |
+| **`IngredientName`**     | `ingredient_name`   | `NVARCHAR(150)`  | NOT NULL, **UNIQUE**  | Tên nguyên liệu thô (ví dụ: `"Cá Hồi Na-uy Fresh"`, `"Hạt Diêm Mạch Organic"`). Ràng buộc `UQ_Ingredient_Name`. |
 
 ---
 
-#### 7. `INGREDIENT_USAGE_LOG` (Nhật Ký Sử Dụng Nguyên Liệu - UC19)
-- **Mục đích:** Ghi vết (Audit trail) việc trừ kho nguyên liệu thực tế khi Bếp/F&B chế biến từng suất ăn.
-- **Bảng CSDL đề xuất:** `INGREDIENT_USAGE_LOG`
+#### 5. `MenuItemIngredient` (Công Thức Món Ăn / Định Mức Tiêu Hao)
 
-| Tên Thuộc Tính (Attribute) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả & Quy Tắc Nghiệp Vụ |
-| :--- | :--- | :--- | :--- |
-| **`UsageLogID`** | `INT` | **PK**, Auto Inc | Định danh nhật ký tiêu hao. |
-| **`OrderLineID`** | `INT` | **FK**, NOT NULL | Chi tiết dòng đơn ăn tương ứng (`MEAL_ORDER_LINE`). |
-| **`BatchID`** | `INT` | **FK**, NOT NULL | Lô nguyên liệu bị xuất trừ (`INGREDIENT_BATCH`). |
-| **`LoggedByStaffID`** | `INT` | **FK**, NOT NULL | Nhân viên Bếp/F&B thực hiện xuất kho (`STAFF_ACCOUNT`). |
-| **`QuantityUsed`** | `DECIMAL(10,2)` | NOT NULL | Số lượng nguyên liệu đã trừ từ lô. |
-| **`DeductedAt`** | `TIMESTAMP` | NOT NULL | Thời điểm ghi nhận xuất kho trừ hàng. |
+- **Mục đích:** Bảng cầu nối (Bridge table) quy định định lượng nguyên liệu cần thiết để chế biến 01 suất ăn của món.
+- **Bảng CSDL vật lý:** `dbo.MenuItemIngredient`
+- **Khóa chính:** Composite PK `(menu_item_id, ingredient_id)`
+
+| Tên Thuộc Tính Khái Niệm | Tên Cột CSDL Vật Lý | Kiểu Dữ Liệu SQL | Ràng Buộc CSDL       | Mô Tả & Quy Tắc Nghiệp Vụ Đồng Bộ Schema                                                                                                                                                |
+| :----------------------- | :------------------ | :--------------- | :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`MenuItemID`**         | `menu_item_id`      | `INT`            | **PK, FK**, NOT NULL | Khóa ngoại tham chiếu `dbo.MenuItem(menu_item_id)`.                                                                                                                                     |
+| **`IngredientID`**       | `ingredient_id`     | `INT`            | **PK, FK**, NOT NULL | Khóa ngoại tham chiếu `dbo.Ingredient(ingredient_id)`.                                                                                                                                  |
+| **`RequiredQuantity`**   | `required_quantity` | `DECIMAL(18,3)`  | NULL, CHECK          | Số lượng nguyên liệu cần cho 01 suất ăn. Ràng buộc `CK_MenuItemIngredient_Quantity (required_quantity IS NULL OR required_quantity > 0)`. _Domain terminology: `quantity_per_serving`._ |
+
+---
+
+#### 6. `IngredientBatch` (Lô Nguyên Liệu & Hạn Sử Dụng - FEFO)
+
+- **Mục đích:** Quản lý từng lô hàng nhập kho thực tế, theo dõi hạn dùng, lượng tồn và tình trạng chất lượng để phục vụ tính khả dụng thực đơn và trừ kho.
+- **Bảng CSDL vật lý:** `dbo.IngredientBatch`
+- **Khóa chính:** `ingredient_batch_id` (INT IDENTITY)
+
+| Tên Thuộc Tính Khái Niệm | Tên Cột CSDL Vật Lý   | Kiểu Dữ Liệu SQL | Ràng Buộc CSDL        | Mô Tả & Quy Tắc Nghiệp Vụ Đồng Bộ Schema                                                                     |
+| :----------------------- | :-------------------- | :--------------- | :-------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **`IngredientBatchID`**  | `ingredient_batch_id` | `INT`            | **PK**, IDENTITY(1,1) | Định danh duy nhất cho lô nguyên liệu.                                                                       |
+| **`IngredientID`**       | `ingredient_id`       | `INT`            | **FK**, NOT NULL      | Khóa ngoại tham chiếu `dbo.Ingredient(ingredient_id)`.                                                       |
+| **`ReceivedDate`**       | `received_date`       | `DATE`           | NOT NULL              | Ngày nhập kho nguyên liệu.                                                                                   |
+| **`ExpirationDate`**     | `expiration_date`     | `DATE`           | NOT NULL              | Ngày hết hạn sử dụng của lô. Ràng buộc `CK_IngredientBatch_Dates (expiration_date >= received_date)`.        |
+| **`RemainingQuantity`**  | `remaining_quantity`  | `DECIMAL(18,3)`  | NOT NULL, CHECK       | Số lượng tồn khả dụng hiện tại của lô. Ràng buộc `CK_IngredientBatch_Quantity (remaining_quantity >= 0)`.    |
+| **`StockCondition`**     | `stock_condition`     | `NVARCHAR(50)`   | NOT NULL              | Tình trạng kiểm định chất lượng: `'FRESH'`, `'GOOD'`, `'NEAR_EXPIRY'`, `'HOLD'`, `'EXPIRED'`, `'DISCARDED'`. |
+
+> [!IMPORTANT]
+> **Cơ Chế Trừ Kho Trực Tiếp (In-place Stock Deduction):**
+> Trong thiết kế CSDL chuẩn hóa [`schema.sql`](file:///e:/fal26-isp392-is2005-g1/05_Development/database/schema.sql), hệ thống trừ trực tiếp trên `dbo.IngredientBatch.remaining_quantity` theo thuật toán FEFO (First-Expired-First-Out) trong cùng transaction với cập nhật trạng thái món mà không tạo bảng riêng `dbo.IngredientUsageLog`.
 
 ---
 
 ### 3.2. Các Thực Thể Ngữ Cảnh Liên Kết (Connected Context Entities)
 
-#### 1. `GUEST_HEALTH_PROFILE` (Hồ Sơ Sức Khỏe - Module 1 Context)
-- **Trách nhiệm ngữ cảnh:** Cung cấp thông tin dị ứng thực phẩm và chế độ ăn uống cho Module 4.
-- **Quy tắc bảo mật (BR-03 / BR-07 / UC20):**
-  - **★ Thuộc tính mở cho F&B Staff / Chef:** `FoodAllergies`, `DietaryPreferences`.
-  - **🔒 Thuộc tính Ẩn/Che giấu (Masked):** `MedicalConditions`, `PhysicalLimitations`, `TreatmentSafetyNotes` (Thuộc tính này chỉ dành cho Spa Therapist / Medical Staff).
+#### 1. `HealthProfile` (Hồ Sơ Sức Khỏe Nhạy Cảm - Module 1 Context)
 
-#### 2. `ROOM_BOOKING` (Đơn Đặt Phòng Nghỉ Dưỡng - Module 2 Context)
-- **Trách nhiệm ngữ cảnh:** Làm gốc tham chiếu (Central Reference Key) để nhóm tất cả các đơn ăn (`MEAL_ORDER`) trong khoảng thời gian lưu trú của Khách hàng tại Resort.
+- **Bảng CSDL vật lý:** `dbo.HealthProfile` (Khóa ngoại tới `dbo.CustomerProfile` và `dbo.[User]`).
+- **Trách nhiệm ngữ cảnh đối với M4:** Cung cấp dữ liệu dị ứng và chế độ ăn uống cho việc lọc thực đơn tự động.
+- **Quy tắc bảo mật & Tối thiểu hóa dữ liệu (BR-03 / BR-07 / UC20):**
+  - **★ Thuộc tính mở cho F&B Staff / Chef:** `allergies` (NVARCHAR(MAX)), `dietary_requirements` (NVARCHAR(MAX)).
+  - **🔒 Thuộc tính Che giấu hoàn toàn (Masked):** `treatment_safety_notes` (Chỉ mở cho Spa Therapist / Y tế).
+  - Tuân thủ Nghị định 13/2023/NĐ-CP và Nghị định 356/2025/NĐ-CP về bảo vệ dữ liệu cá nhân sức khỏe PII.
 
-#### 3. `STAFF_ACCOUNT` (Tài Khoản Nhân Viên - Module 1 Context)
-- **Trách nhiệm ngữ cảnh:** Xác thực và phân quyền cho nhân viên F&B Staff / Chef thực hiện cập nhật trạng thái đơn ăn (`OrderStatus`) và quản lý lô nguyên liệu (`INGREDIENT_BATCH`).
+#### 2. `RetreatBooking` (Đơn Đặt Kỳ Nghỉ Dưỡng - Module 2 Context)
 
-#### 4. `FOLIO_CHARGE_ITEM` (Khoản Phí Folio Thanh Toán - Module 5 Context)
-- **Trách nhiệm ngữ cảnh:** Tiếp nhận các khoản phụ thu tự động từ các đơn ăn gọi thêm a-la-carte ngoài gói (`IsALaCarte = TRUE`) với `ChargeType = 'EXTRA_FB'` nhằm phục vụ gộp hóa đơn checkout tại Module 5.
+- **Bảng CSDL vật lý:** `dbo.RetreatBooking` (Khóa chính: `retreat_booking_id`).
+- **Trách nhiệm ngữ cảnh đối với M4:** Làm gốc liên kết (`retreat_booking_id`) cho mọi đơn đặt món ăn trong suốt kỳ lưu trú. Kiểm tra kỳ nghỉ ở trạng thái `CHECKED_IN` và ngày đặt món nằm giữa `check_in_date` và `check_out_date`.
+
+#### 3. `User` & `Role` (Tài Khoản & Quyền Người Dùng - Module 1/M6 Context)
+
+- **Bảng CSDL vật lý:** `dbo.[User]`, `dbo.[Role]`, `dbo.UserRole`.
+- **Trách nhiệm ngữ cảnh đối với M4:** Xác thực khách hàng (`ROLE_CUSTOMER`), nhân viên bếp (`ROLE_F&B STAFF`), và quản trị viên (`ROLE_ADMIN`).
+
+#### 4. `FolioItem` & `Folio` (Hạch Toán Phụ Thu Folio - Module 5 Context)
+
+- **Bảng CSDL vật lý:** `dbo.Folio` (Khóa chính: `folio_id`), `dbo.FolioItem` (Khóa chính: `folio_item_id`).
+- **Trách nhiệm ngữ cảnh đối với M4:**
+  - Khóa ngoại trực tiếp trong CSDL: `dbo.FolioItem.source_meal_order_id` tham chiếu `dbo.MealOrder(meal_order_id)`.
+  - Ràng buộc toàn vẹn `CK_FolioItem_Category` & `CK_FolioItem_Source`: Khi `charge_category = 'FNB'`, bắt buộc `source_meal_order_id IS NOT NULL` và `source_booking_id IS NULL`, `source_spa_session_id IS NULL`.
+  - Phụ thu a-la-carte được gộp tự động vào Folio thanh toán của khách hàng tại kỳ Checkout (BR-04, BR-08, BR-09).
 
 ---
 
 ## 4. MA TRẬN QUAN HỆ & CƯỜNG ĐỘ (RELATIONSHIP MATRIX & CARDINALITY)
 
-| Thực Thể Gốc (Source) | Thực Thể Đích (Target) | Loại Quan Hệ | Cường Độ (Cardinality) | Mô Tả Nghiệp Vụ |
-| :--- | :--- | :--- | :--- | :--- |
-| `ROOM_BOOKING` | `MEAL_ORDER` | 1 - N | `1 : 0..*` | Một đơn phòng lưu trú có thể có 0 hoặc nhiều đơn đặt bữa ăn. |
-| `MEAL_ORDER` | `MEAL_ORDER_LINE` | 1 - N | `1 : 1..*` | Một đơn đặt bữa ăn chứa 1 hoặc nhiều dòng món ăn chi tiết. |
-| `MENU_ITEM` | `MEAL_ORDER_LINE` | 1 - N | `1 : 0..*` | Một món ăn có thể xuất hiện trong 0 hoặc nhiều dòng đơn ăn. |
-| `MENU_ITEM` | `MENU_ITEM_INGREDIENT` | 1 - N | `1 : 0..*` | Món ăn có thể dùng nhiều nguyên liệu; bridge lưu quantity per serving. |
-| `INGREDIENT` | `MENU_ITEM_INGREDIENT` | 1 - N | `1 : 0..*` | Nguyên liệu có thể dùng trong công thức của nhiều món ăn. |
-| `INGREDIENT` | `INGREDIENT_BATCH` | 1 - N | `1 : 0..*` | Một loại nguyên liệu được nhập về qua nhiều lô hàng khác nhau. |
-| `MEAL_ORDER_LINE` | `INGREDIENT_USAGE_LOG` | 1 - N | `1 : 0..*` | Chế biến một suất ăn ghi nhận trừ kho qua 1 hoặc nhiều nhật ký lô. |
-| `INGREDIENT_BATCH` | `INGREDIENT_USAGE_LOG` | 1 - N | `1 : 0..*` | Một lô nguyên liệu bị trừ dần qua nhiều nhật ký chế biến. |
-| `STAFF_ACCOUNT` | `INGREDIENT_USAGE_LOG` | 1 - N | `1 : 0..*` | Một Chef/F&B Staff thực hiện ghi nhận nhiều nhật ký xuất kho. |
-| `MEAL_ORDER` | `FOLIO_CHARGE_ITEM` | Tương tác Logic | `1 - - - 0..1` | **[BR-04]** Đơn a-la-carte sinh tự động khoản phí `EXTRA_FB` vào Folio. |
+| Thực Thể Gốc (Source) | Thực Thể Đích (Target)   | Khóa Ngoại Tham Chiếu (FK) |  Cường Độ  | Ý Nghĩa Nghiệp Vụ                                                                                                         |
+| :-------------------- | :----------------------- | :------------------------- | :--------: | :------------------------------------------------------------------------------------------------------------------------ |
+| `dbo.RetreatBooking`  | `dbo.MealOrder`          | `retreat_booking_id`       | `1 : 0..*` | Một kỳ nghỉ dưỡng có thể có 0 hoặc nhiều đơn đặt bữa ăn (hàng ngày hoặc a-la-carte).                                      |
+| `dbo.MealOrder`       | `dbo.MealOrderItem`      | `meal_order_id`            | `1 : 1..*` | Mỗi đơn đặt bữa ăn bắt buộc chứa ít nhất 1 dòng món ăn chi tiết.                                                          |
+| `dbo.MenuItem`        | `dbo.MealOrderItem`      | `menu_item_id`             | `1 : 0..*` | Một món ăn trong thực đơn có thể xuất hiện trong nhiều dòng đơn ăn.                                                       |
+| `dbo.MenuItem`        | `dbo.MenuItemIngredient` | `menu_item_id`             | `1 : 0..*` | Một món ăn được cấu thành từ 0 hoặc nhiều dòng định mức nguyên liệu.                                                      |
+| `dbo.Ingredient`      | `dbo.MenuItemIngredient` | `ingredient_id`            | `1 : 0..*` | Một loại nguyên liệu có thể dùng trong công thức của nhiều món ăn khác nhau.                                              |
+| `dbo.Ingredient`      | `dbo.IngredientBatch`    | `ingredient_id`            | `1 : 0..*` | Một loại nguyên liệu được quản lý qua nhiều lô hàng nhập kho khác nhau.                                                   |
+| `dbo.MealOrder`       | `dbo.FolioItem`          | `source_meal_order_id`     | `1 : 0..1` | **[BR-04 / BR-08]** Đơn a-la-carte (`order_type = 'A_LA_CARTE'`) sinh bản ghi phụ thu FNB vào Folio thanh toán của phòng. |
 
 ---
 
 ## 5. QUY TẮC NGHIỆP VỤ & CƠ CHẾ RÀNG BUỘC (BUSINESS RULES ENFORCEMENT)
 
-### 5.1. BR-FNB-01 & BR-FNB-02: Lọc Menu Dị Ứng và Tối Thiểu Hóa Dữ Liệu
-- **Quy tắc:** Trước khi menu đến Customer, hệ thống phải ẩn mọi món có allergen trùng với dị ứng đã khai báo và lọc món theo chế độ ăn. API phải kiểm tra lại món gửi lên và từ chối món xung đột. Chef / F&B Staff chỉ được xem dị ứng và chế độ ăn cần thiết; `MedicalConditions` và `PhysicalLimitations` bị ẩn.
-- **Cơ chế thực thi:** Menu service lọc trước khi trả danh sách; meal-order service xác minh lại lựa chọn trước khi ghi dữ liệu. Dashboard bếp lấy projection dinh dưỡng tối thiểu từ Module 1; cảnh báo bếp không được lưu trên `MEAL_ORDER_LINE`.
+### 5.1. BR-FNB-01: Lọc Thực Đơn Dị Ứng (Allergy-Safe Menu Filtering)
 
-### 5.2. BR-04 & BR-08: Tự Động Hạch Toán Phụ Thu A-la-carte Vào Folio (Folio Accounting)
+- **Quy tắc:** Thực đơn hiển thị cho Customer (S34) và API đặt món (S35, S36) phải loại trừ mọi món ăn có `MenuItem.allergen_information` giao với dị ứng đã khai báo trong `HealthProfile.allergies` của khách hàng.
+- **Thực thi:** Lọc tại tầng Service trước khi trả về client; kiểm tra lại (re-validate) tại API `placeOrder` để chặn trường hợp gửi mã món trực tiếp.
+
+### 5.2. BR-FNB-02: Che Giấu Dữ Liệu Bếp (Kitchen Display Masking / UC20)
+
+- **Quy tắc:** Màn hình KDS/Dashboard Bếp (S38, S39, S40) chỉ hiển thị `allergies` và `dietary_requirements` của khách lưu trú tại Villa tương ứng. Tuyệt đối **không** gửi trường `treatment_safety_notes` hay bệnh lý y tế sang phân hệ F&B.
+- **Thực thi:** Áp dụng Projection tối thiểu thông qua interface `DietaryProfilePort`.
+
+### 5.3. BR-04 / BR-08: Hạch Toán Phụ Thu A-la-carte Vào Folio (Extra F&B Folio Posting)
+
 - **Quy tắc:**
-  - Bữa ăn tiêu chuẩn trong gói nghỉ dưỡng có `IsALaCarte = FALSE` (Đơn giá `UnitPrice = 0 VND`).
-  - Bữa ăn gọi thêm ngoài gói có `IsALaCarte = TRUE`.
-- **Cơ chế thực thi trên ERD:**
-  - Ngay khi đơn ăn có `IsALaCarte = TRUE` được chuyển sang trạng thái xác nhận (`OrderStatus = 'PREPARING'` hoặc `'READY'`), Trigger/Service sẽ tính tổng tiền `TotalAmount = SUM(Quantity * UnitPrice)` và **tự động sinh ra 01 bản ghi `FOLIO_CHARGE_ITEM`** với `ChargeType = 'EXTRA_FB'` gắn trực tiếp với `FolioID` của khách hàng.
-  - Phụ thu này sẽ được gộp tự động vào Hóa đơn thanh toán cuối cùng tại thời điểm Checkout (Module 5), chặn Checkout nếu chưa hoàn tất nghĩa vụ thanh toán (BR-09).
+  - Đơn ăn tiêu chuẩn trong gói (`order_type = 'DAILY_MEAL'`): Không phát sinh chi phí phòng (`UnitPrice = 0`).
+  - Đơn ăn gọi thêm (`order_type = 'A_LA_CARTE'`): Phát sinh phụ thu vào Folio.
+- **Thực thi CSDL:** CSDL lưu vết liên kết bằng khóa ngoại `dbo.FolioItem.source_meal_order_id` trỏ về `dbo.MealOrder.meal_order_id` với `charge_category = 'FNB'`. Khoản phí này bị khóa và phải được thanh toán trước khi hoàn tất Checkout (BR-09).
 
-### 5.3. UC16: Tự Động Tính Toán Khả Năng Phục Vụ Của Thực Đơn (Batch Stock & Expiry Logic)
-- **Quy tắc:** Menu availability phải tính từ tồn lượng còn lại của các lô chưa hết hạn và có stock condition sử dụng được. Lô hết hạn, hold hoặc discarded không được tính là available.
-- **Cơ chế thực thi trên ERD:**
-  - Khi Bếp nhập lô mới hoặc khi Bếp ghi nhận xuất kho (`INGREDIENT_USAGE_LOG`), hệ thống tự động chạy hàm recalculate lại cột `MENU_ITEM.IsAvailable`.
+### 5.4. UC16: Thuật Toán Khả Dụng & Trừ Kho Nguyên Liệu (FEFO Usable Stock)
+
+- **Khả dụng:** Lô nguyên liệu được tính là khả dụng khi và chỉ khi:
+  1. `expiration_date >= CURRENT_DATE`
+  2. `remaining_quantity > 0`
+  3. `stock_condition IN ('FRESH', 'GOOD', 'NEAR_EXPIRY')`
+- **Trừ kho:** Khi món ăn chuyển sang trạng thái `READY`, hệ thống thực hiện trừ kho nguyên liệu theo thứ tự ưu tiên lô có `expiration_date` gần nhất (FEFO) trực tiếp trên `dbo.IngredientBatch.remaining_quantity`. Nếu tồn kho khả dụng không đủ, giao dịch bị rollback và ném ngoại lệ `INSUFFICIENT_USABLE_STOCK`.
 
 ---
 
-## 6. MÃ NGUỒN PLANTUML (PLANTUML SOURCE CODE)
+## 6. MÃ NGUỒN PLANTUML ĐỒNG BỘ SCHEMA (PLANTUML SOURCE CODE)
 
-File mã nguồn PlantUML độc lập được lưu tại: **[HSWRMS_Conceptual_ERD_Module4.puml](file:///e:/fal26-isp392-is2005-g1/02_Requirement/HSWRMS_Conceptual_ERD_Module4.puml)**. 
+File mã nguồn PlantUML độc lập được lưu tại: **[HSWRMS_Conceptual_ERD_Module4.puml](file:///e:/fal26-isp392-is2005-g1/02_Requirement/HSWRMS_Conceptual_ERD_Module4.puml)**.
 
-Dưới đây là mã nguồn nhúng PlantUML đầy đủ để hiển thị trực tiếp trên các trình xem Markdown hỗ trợ PlantUML:
+Dưới đây là mã nguồn nhúng PlantUML đầy đủ đã được đồng bộ hóa 100% với [`05_Development/database/schema.sql`](file:///e:/fal26-isp392-is2005-g1/05_Development/database/schema.sql):
 
 ```plantuml
 @startuml HSWRMS_Conceptual_ERD_Module4
 
-title HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)\nMODULE 4 — DIETARY F&B MANAGEMENT (CONCEPTUAL ERD)
+title HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)\nMODULE 4 — DIETARY F&B MANAGEMENT (CONCEPTUAL ERD - SYNCHRONIZED WITH SCHEMA)
 
 skinparam backgroundColor #FFFFFF
 skinparam classAttributeIconSize 0
@@ -278,6 +295,7 @@ skinparam class {
     FontName "Segoe UI", Arial, sans-serif
 }
 
+' Styling for Core Module 4 Entities (Pink/Rose Theme)
 skinparam class<<Module4>> {
     BackgroundColor #FDF2F8
     HeaderBackgroundColor #BE185D
@@ -285,6 +303,7 @@ skinparam class<<Module4>> {
     FontColor #FFFFFF
 }
 
+' Styling for Connected Context Entities (Blue Theme)
 skinparam class<<Context>> {
     BackgroundColor #F0F9FF
     HeaderBackgroundColor #0284C7
@@ -296,163 +315,155 @@ skinparam class<<Context>> {
 ' CORE MODULE 4 ENTITIES (PINK HEADER)
 ' ============================================================
 
-entity "MEAL_ORDER" as MEAL_ORDER <<Module4>> {
-    * **MealOrderID** : INT <<PK>>
+entity "MealOrder" as MealOrder <<Module4>> {
+    * **meal_order_id** : INT <<PK, IDENTITY>>
     --
-    * **RoomBookingID** : INT <<FK>>
-    * AccountID : INT <<FK>>
-    * OrderDate : DATE
-    * MealType : ENUM ('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK')
-    * OrderStatus : ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED')
-    * IsALaCarte : BOOLEAN
-    * TotalAmount : DECIMAL(12,2)
-    SpecialNotes : TEXT
-    * CreatedAt : TIMESTAMP
-    * UpdatedAt : TIMESTAMP
+    * **retreat_booking_id** : INT <<FK>>
+    * order_date : DATE
+    meal_type : NVARCHAR(50)
+    * order_type : VARCHAR(20) <<DAILY_MEAL | A_LA_CARTE>>
+    * order_status : VARCHAR(20) <<PENDING | PREPARING | READY | DELIVERED | CANCELLED>>
+    * created_at : DATETIME2(0)
 }
 
-entity "MEAL_ORDER_LINE" as MEAL_ORDER_LINE <<Module4>> {
-    * **OrderLineID** : INT <<PK>>
+entity "MealOrderItem" as MealOrderItem <<Module4>> {
+    * **meal_order_item_id** : INT <<PK, IDENTITY>>
     --
-    * **MealOrderID** : INT <<FK>>
-    * **MenuItemID** : INT <<FK>>
-    * Quantity : INT
-    * UnitPrice : DECIMAL(12,2)
-    * Subtotal : DECIMAL(12,2)
-    * PreparationStatus : ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED')
-    Notes : VARCHAR(255)
+    * **meal_order_id** : INT <<FK>>
+    * **menu_item_id** : INT <<FK>>
+    * quantity : INT <<quantity > 0>>
+    .. Unique Constraint ..
+    UQ_MealOrderItem_OrderMenu (meal_order_id, menu_item_id)
 }
 
-entity "MENU_ITEM" as MENU_ITEM <<Module4>> {
-    * **MenuItemID** : INT <<PK>>
+entity "MenuItem" as MenuItem <<Module4>> {
+    * **menu_item_id** : INT <<PK, IDENTITY>>
     --
-    * ItemName : VARCHAR(150)
-    Description : TEXT
-    * Category : ENUM ('APPETIZER', 'MAIN_COURSE', 'DESSERT', 'BEVERAGE', 'SNACK')
-    * MealType : ENUM ('BREAKFAST', 'LUNCH', 'DINNER', 'ALL_DAY')
-    * Price : DECIMAL(12,2)
-    AllergenTags : VARCHAR(255)
-    DietaryType : ENUM ('STANDARD', 'VEGAN', 'VEGETARIAN', 'KETO', 'HALAL', 'LOW_SODIUM')
-    * IsAvailable : BOOLEAN <<UC16 Auto Recalculated>>
-    * CreatedAt : TIMESTAMP
+    * item_name : NVARCHAR(150) <<UQ>>
+    category : NVARCHAR(100)
+    meal_type : NVARCHAR(50)
+    * price : DECIMAL(18,2) <<price >= 0>>
+    dietary_tags : NVARCHAR(500)
+    allergen_information : NVARCHAR(MAX)
+    * availability_status : VARCHAR(20) <<AVAILABLE | UNAVAILABLE>>
 }
 
-entity "INGREDIENT" as INGREDIENT <<Module4>> {
-    * **IngredientID** : INT <<PK>>
+entity "Ingredient" as Ingredient <<Module4>> {
+    * **ingredient_id** : INT <<PK, IDENTITY>>
     --
-    * IngredientName : VARCHAR(150)
-    * Unit : VARCHAR(30)
-    Category : VARCHAR(50)
-    MinimumStockThreshold : DECIMAL(10,2)
-    * IsActive : BOOLEAN
+    * ingredient_name : NVARCHAR(150) <<UQ>>
 }
 
-entity "INGREDIENT_BATCH" as INGREDIENT_BATCH <<Module4>> {
-    * **BatchID** : INT <<PK>>
+entity "MenuItemIngredient" as MenuItemIngredient <<Module4>> {
+    * **menu_item_id** : INT <<PK, FK>>
+    * **ingredient_id** : INT <<PK, FK>>
     --
-    * **IngredientID** : INT <<FK>>
-    * BatchNumber : VARCHAR(50)
-    * ReceivedDate : DATE
-    * ExpiryDate : DATE
-    * InitialQuantity : DECIMAL(10,2)
-    * RemainingQuantity : DECIMAL(10,2)
-    * ConditionStatus : ENUM ('FRESH', 'GOOD', 'NEAR_EXPIRY', 'EXPIRED', 'DISCARDED')
-    UnitCost : DECIMAL(12,2)
-    SupplierName : VARCHAR(150)
+    required_quantity : DECIMAL(18,3) <<required_quantity > 0>>
 }
 
-entity "MENU_ITEM_INGREDIENT" as MENU_ITEM_INGREDIENT <<Module4>> {
-    * **MenuItemID** : INT <<PK, FK>>
-    * **IngredientID** : INT <<PK, FK>>
-    * quantity_per_serving : DECIMAL(18,3)
-    * Unit : VARCHAR(30)
-}
-
-entity "INGREDIENT_USAGE_LOG" as INGREDIENT_USAGE_LOG <<Module4>> {
-    * **UsageLogID** : INT <<PK>>
+entity "IngredientBatch" as IngredientBatch <<Module4>> {
+    * **ingredient_batch_id** : INT <<PK, IDENTITY>>
     --
-    * **OrderLineID** : INT <<FK>>
-    * **BatchID** : INT <<FK>>
-    * LoggedByStaffID : INT <<FK>>
-    * QuantityUsed : DECIMAL(10,2)
-    * DeductedAt : TIMESTAMP
+    * **ingredient_id** : INT <<FK>>
+    * received_date : DATE
+    * expiration_date : DATE <<expiration_date >= received_date>>
+    * remaining_quantity : DECIMAL(18,3) <<remaining_quantity >= 0>>
+    * stock_condition : NVARCHAR(50) <<FRESH | GOOD | NEAR_EXPIRY | HOLD | EXPIRED | DISCARDED>>
 }
 
 ' ============================================================
 ' CONNECTED CONTEXT ENTITIES (BLUE HEADER)
 ' ============================================================
 
-entity "GUEST_HEALTH_PROFILE" as GUEST_HEALTH_PROFILE <<Context>> {
-    * **HealthProfileID** : INT <<PK>>
+entity "HealthProfile" as HealthProfile <<Context>> {
+    * **health_profile_id** : INT <<PK, IDENTITY>>
     --
-    * AccountID : INT <<FK>>
-    * ★ **FoodAllergies** : TEXT <<EXPOSED TO F&B (BR-03/07)>>
-    * ★ **DietaryPreferences** : TEXT <<EXPOSED TO F&B>>
-    🔒 MedicalConditions : TEXT <<MASKED / HIDDEN>>
-    🔒 PhysicalLimitations : TEXT <<MASKED / HIDDEN>>
-    ConsentGiven : BOOLEAN
+    * customer_profile_id : INT <<FK, UQ>>
+    * ★ allergies : NVARCHAR(MAX) <<EXPOSED TO F&B (BR-FNB-01/02)>>
+    * ★ dietary_requirements : NVARCHAR(MAX) <<EXPOSED TO F&B>>
+    🔒 treatment_safety_notes : NVARCHAR(MAX) <<MASKED / HIDDEN>>
+    * anonymization_status : VARCHAR(20) <<IDENTIFIABLE | ANONYMIZED>>
+    * created_at : DATETIME2(0)
+    * updated_at : DATETIME2(0)
 }
 
-entity "ROOM_BOOKING" as ROOM_BOOKING <<Context>> {
-    * **RoomBookingID** : INT <<PK>>
+entity "RetreatBooking" as RetreatBooking <<Context>> {
+    * **retreat_booking_id** : INT <<PK, IDENTITY>>
     --
-    * AccountID : INT <<FK>>
-    * PackageID : INT <<FK>>
-    * CheckInDate : DATE
-    * CheckOutDate : DATE
-    * BookingStatus : VARCHAR(30)
-    VillaNumber : VARCHAR(20)
+    * customer_profile_id : INT <<FK>>
+    * retreat_package_id : INT <<FK>>
+    requested_villa_category_id : INT <<FK>>
+    assigned_villa_id : INT <<FK>>
+    * check_in_date : DATE
+    * check_out_date : DATE
+    * booking_status : VARCHAR(20) <<PENDING | CONFIRMED | CHECKED_IN | CANCELLED | COMPLETED>>
+    * deposit_amount : DECIMAL(18,2)
+    * total_estimated_amount : DECIMAL(18,2)
 }
 
-entity "STAFF_ACCOUNT" as STAFF_ACCOUNT <<Context>> {
-    * **StaffID** : INT <<PK>>
+entity "User" as User <<Context>> {
+    * **user_id** : INT <<PK, IDENTITY>>
     --
-    * FullName : VARCHAR(100)
-    * Email : VARCHAR(150)
-    * Role : ENUM ('CHEF', 'FB_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')
-    * AccountStatus : VARCHAR(20)
+    * full_name : NVARCHAR(150)
+    * email : NVARCHAR(255) <<UQ>>
+    * account_status : VARCHAR(20)
+    * email_verified : BIT
 }
 
-entity "FOLIO_CHARGE_ITEM" as FOLIO_CHARGE_ITEM <<Context>> {
-    * **ChargeItemID** : INT <<PK>>
+entity "FolioItem" as FolioItem <<Context>> {
+    * **folio_item_id** : INT <<PK, IDENTITY>>
     --
-    * FolioID : INT <<FK>>
-    * MealOrderID : INT <<FK>>
-    * ChargeDate : DATE
-    * ChargeType : ENUM ('EXTRA_FB', 'EXTRA_SPA', 'PACKAGE', 'DAMAGE')
-    * Amount : DECIMAL(12,2)
-    Description : VARCHAR(255)
-    * PaymentStatus : ENUM ('PENDING', 'PAID', 'WAIVED')
+    * folio_id : INT <<FK>>
+    * charge_category : VARCHAR(20) <<PACKAGE | SPA | FNB>>
+    * description : NVARCHAR(500)
+    * amount : DECIMAL(18,2)
+    * charged_at : DATETIME2(0)
+    source_booking_id : INT <<FK, NULL>>
+    source_spa_session_id : INT <<FK, NULL>>
+    * **source_meal_order_id** : INT <<FK, NOT NULL WHEN FNB>>
 }
 
 ' ============================================================
 ' RELATIONSHIPS & CARDINALITIES
 ' ============================================================
 
-ROOM_BOOKING ||--o{ MEAL_ORDER : "1 : N (places / receives meal orders)"
-MEAL_ORDER ||--|{ MEAL_ORDER_LINE : "1 : N (contains order lines)"
-MENU_ITEM ||--o{ MEAL_ORDER_LINE : "1 : N (selected in)"
-MENU_ITEM ||--o{ MENU_ITEM_INGREDIENT : "1 : N (recipe lines)"
-INGREDIENT ||--o{ MENU_ITEM_INGREDIENT : "1 : N (recipe lines)"
-INGREDIENT ||--o{ INGREDIENT_BATCH : "1 : N (received in batches)"
-MEAL_ORDER_LINE ||--o{ INGREDIENT_USAGE_LOG : "1 : N (consumes stock)"
-INGREDIENT_BATCH ||--o{ INGREDIENT_USAGE_LOG : "1 : N (deducted from)"
-STAFF_ACCOUNT ||--o{ INGREDIENT_USAGE_LOG : "1 : N (logs ingredient usage)"
+RetreatBooking ||--o{ MealOrder : "1 : N (retreat_booking_id)"
+MealOrder ||--|{ MealOrderItem : "1 : N (meal_order_id)"
+MenuItem ||--o{ MealOrderItem : "1 : N (menu_item_id)"
+MenuItem ||--o{ MenuItemIngredient : "1 : N (menu_item_id)"
+Ingredient ||--o{ MenuItemIngredient : "1 : N (ingredient_id)"
+Ingredient ||--o{ IngredientBatch : "1 : N (ingredient_id)"
 
-' Business Logic & Data Flow Integrations (Dashed Lines)
-MEAL_ORDER ..> FOLIO_CHARGE_ITEM : "BR-04 / BR-08: IsALaCarte=TRUE auto-posts EXTRA_FB charge"
-INGREDIENT_BATCH ..> MENU_ITEM : "UC16: Expiry & Stock status recalculates IsAvailable"
-STAFF_ACCOUNT ..> MEAL_ORDER : "UC19: Chef / F&B Staff updates OrderStatus"
+' Business Logic & Folio Integrations
+MealOrder ||--o| FolioItem : "BR-04/08: source_meal_order_id (FNB Charge)"
+HealthProfile ..> MealOrder : "BR-FNB-01: Allergy-safe filtering"
+IngredientBatch ..> MenuItem : "UC16: FEFO stock recalculates availability"
 
 @enduml
 ```
 
 ---
 
-## 7. XÁC NHẬN VÀ TRUY VẾT YÊU CẦU (REQUIREMENT TRACEABILITY AUDIT)
+## 7. BẢNG ĐỐI CHIẾU THỰC THỂ KHÁI NIỆM & BẢNG CSDL VẬT LÝ (SCHEMA SYNCHRONIZATION AUDIT)
 
-- [x] **Truy vết UC16 (Quản lý Lô nguyên liệu & Tính khả dụng):** Đã mô tả đầy đủ thực thể `INGREDIENT_BATCH` và logic tính toán lại `MENU_ITEM.IsAvailable`.
-- [x] **Truy vết UC17 (Tự chọn Bữa ăn Dinh dưỡng):** Đã mô tả thực thể `MEAL_ORDER`, `MEAL_ORDER_LINE` kết hợp lọc theo `GUEST_HEALTH_PROFILE`.
-- [x] **Truy vết UC18 (Đặt thêm Món A-la-carte):** Đã mô tả cờ `IsALaCarte` và luồng sinh khoản phí `FOLIO_CHARGE_ITEM` (loại `EXTRA_FB`).
-- [x] **Truy vết UC19 (Chế biến & Trừ Kho Nguyên liệu):** Đã bổ sung thực thể `INGREDIENT_USAGE_LOG` để ghi nhận trừ lô nguyên liệu khi Bếp chế biến.
-- [x] **Truy vết UC20 / BR-03 / BR-07 (Tối thiểu hóa dữ liệu y tế PII):** Khẳng định rõ trên ERD F&B Staff chỉ truy cập `FoodAllergies` và `DietaryPreferences`, che giấu hoàn toàn các dữ liệu y tế nhạy cảm khác.
+| Thực Thể Khái Niệm                | Bảng CSDL Vật Lý ([`schema.sql`](file:///e:/fal26-isp392-is2005-g1/05_Development/database/schema.sql)) | Khóa Chính (PK)                 | Khóa Ngoại Chính (FK)                                                    | Ràng Buộc & Ghi Chú Đồng Bộ Schema                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **`MealOrder`**                   | `dbo.MealOrder`                                                                                         | `meal_order_id` (INT)           | `retreat_booking_id` -> `dbo.RetreatBooking`                             | Đồng bộ 100% cột: `order_type` (`DAILY_MEAL`, `A_LA_CARTE`), `order_status` (`PENDING`, `PREPARING`, `READY`, `DELIVERED`, `CANCELLED`). |
+| **`MealOrderItem`**               | `dbo.MealOrderItem`                                                                                     | `meal_order_item_id` (INT)      | `meal_order_id` -> `dbo.MealOrder`<br/>`menu_item_id` -> `dbo.MenuItem`  | Đồng bộ 100%: Ràng buộc `quantity > 0` và `UQ (meal_order_id, menu_item_id)`.                                                            |
+| **`MenuItem`**                    | `dbo.MenuItem`                                                                                          | `menu_item_id` (INT)            | Không                                                                    | Đồng bộ 100%: `price >= 0`, `availability_status` (`AVAILABLE`, `UNAVAILABLE`), `allergen_information`.                                  |
+| **`Ingredient`**                  | `dbo.Ingredient`                                                                                        | `ingredient_id` (INT)           | Không                                                                    | Đồng bộ 100%: `ingredient_name` UNIQUE.                                                                                                  |
+| **`MenuItemIngredient`**          | `dbo.MenuItemIngredient`                                                                                | `(menu_item_id, ingredient_id)` | `menu_item_id` -> `dbo.MenuItem`<br/>`ingredient_id` -> `dbo.Ingredient` | Đồng bộ 100%: Cột `required_quantity DECIMAL(18,3)` (domain alias: `quantity_per_serving`).                                              |
+| **`IngredientBatch`**             | `dbo.IngredientBatch`                                                                                   | `ingredient_batch_id` (INT)     | `ingredient_id` -> `dbo.Ingredient`                                      | Đồng bộ 100%: `expiration_date >= received_date`, `remaining_quantity >= 0`, `stock_condition`.                                          |
+| **`HealthProfile`** (Context M1)  | `dbo.HealthProfile`                                                                                     | `health_profile_id` (INT)       | `customer_profile_id` -> `dbo.CustomerProfile`                           | Thuộc tính F&B: `allergies`, `dietary_requirements`. Thuộc tính bảo mật ẩn: `treatment_safety_notes`.                                    |
+| **`RetreatBooking`** (Context M2) | `dbo.RetreatBooking`                                                                                    | `retreat_booking_id` (INT)      | `customer_profile_id`, `retreat_package_id`                              | Tham chiếu gốc cho đơn ăn lưu trú.                                                                                                       |
+| **`FolioItem`** (Context M5)      | `dbo.FolioItem`                                                                                         | `folio_item_id` (INT)           | `folio_id` -> `dbo.Folio`<br/>`source_meal_order_id` -> `dbo.MealOrder`  | Đồng bộ 100%: Khóa ngoại trực tiếp `source_meal_order_id` với `charge_category = 'FNB'` theo BR-04/BR-08.                                |
+
+---
+
+## 8. XÁC NHẬN VÀ TRUY VẾT YÊU CẦU (REQUIREMENT TRACEABILITY AUDIT)
+
+- [x] **Truy vết UC16 (Quản lý Lô nguyên liệu & Tính khả dụng):** Đã mô tả đầy đủ thực thể `IngredientBatch` và logic tính toán khả dụng số suất ăn theo công thức định mức FEFO.
+- [x] **Truy vết UC17 / S34, S35 (Tự chọn Bữa ăn Dinh dưỡng):** Đã mô tả thực thể `MealOrder` (`order_type = 'DAILY_MEAL'`), `MealOrderItem` kết hợp lọc dị ứng theo `HealthProfile.allergies`.
+- [x] **Truy vết UC18 / S36 (Đặt thêm Món A-la-carte):** Đã mô tả loại đơn `order_type = 'A_LA_CARTE'` và khóa ngoại liên kết trực tiếp tới `dbo.FolioItem.source_meal_order_id` (loại `FNB`).
+- [x] **Truy vết UC19 / S39, S40 (Chế biến & Trừ Kho Nguyên liệu):** Làm rõ cơ chế trừ kho trực tiếp trên `IngredientBatch.remaining_quantity` khi món chuyển sang `READY`.
+- [x] **Truy vết UC20 / BR-03 / BR-07 (Tối thiểu hóa dữ liệu y tế PII):** Khẳng định rõ trên ERD: F&B Staff / Chef chỉ truy cập `allergies` và `dietary_requirements`, che giấu hoàn toàn `treatment_safety_notes` tuân thủ Nghị định 13/2023/NĐ-CP.
