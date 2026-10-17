@@ -33,17 +33,29 @@ public class SpaTreatment {
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    @Column(name = "duration_unit", nullable = false, length = 50)
+    private String durationUnit = "Phút (Minutes)";
+
     @Column(name = "base_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(name = "pricing_rule", length = 500)
+    private String pricingRule;
+
     @Column(name = "room_compatibility", length = 250)
     private String roomCompatibility;
+
+    @Column(name = "required_qualification_code", length = 100)
+    private String requiredQualificationCode;
 
     @Column(name = "therapist_qualification", length = 250)
     private String therapistQualification;
 
     @Column(name = "contraindications", length = 500)
     private String contraindications;
+
+    @Column(name = "precautions", length = 500)
+    private String precautions;
 
     @Column(name = "description", length = 1000)
     private String description;
@@ -69,14 +81,22 @@ public class SpaTreatment {
     public void setCategory(String category) { this.category = category; }
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
+    public String getDurationUnit() { return durationUnit; }
+    public void setDurationUnit(String durationUnit) { this.durationUnit = durationUnit; }
     public BigDecimal getBasePrice() { return basePrice; }
     public void setBasePrice(BigDecimal basePrice) { this.basePrice = basePrice; }
+    public String getPricingRule() { return pricingRule; }
+    public void setPricingRule(String pricingRule) { this.pricingRule = pricingRule; }
     public String getRoomCompatibility() { return roomCompatibility; }
     public void setRoomCompatibility(String roomCompatibility) { this.roomCompatibility = roomCompatibility; }
+    public String getRequiredQualificationCode() { return requiredQualificationCode; }
+    public void setRequiredQualificationCode(String requiredQualificationCode) { this.requiredQualificationCode = requiredQualificationCode; }
     public String getTherapistQualification() { return therapistQualification; }
     public void setTherapistQualification(String therapistQualification) { this.therapistQualification = therapistQualification; }
     public String getContraindications() { return contraindications; }
     public void setContraindications(String contraindications) { this.contraindications = contraindications; }
+    public String getPrecautions() { return precautions; }
+    public void setPrecautions(String precautions) { this.precautions = precautions; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getTreatmentStatus() { return treatmentStatus; }

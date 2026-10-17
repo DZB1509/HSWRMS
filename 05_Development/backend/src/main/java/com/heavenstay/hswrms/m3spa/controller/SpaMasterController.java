@@ -4,12 +4,19 @@ import com.heavenstay.hswrms.common.api.ApiResponse;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
 import com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository;
+import com.heavenstay.hswrms.m3spa.entity.PackageFnBEntitlement;
+import com.heavenstay.hswrms.m3spa.entity.RetreatPackageSpaTreatment;
+import com.heavenstay.hswrms.m3spa.entity.RetreatPackageSpaTreatmentId;
 import com.heavenstay.hswrms.m3spa.entity.SpaTreatment;
 import com.heavenstay.hswrms.m3spa.entity.TreatmentRoom;
+import com.heavenstay.hswrms.m3spa.repository.PackageFnBEntitlementRepository;
+import com.heavenstay.hswrms.m3spa.repository.RetreatPackageSpaTreatmentRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaTreatmentRepository;
 import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,13 +41,22 @@ public class SpaMasterController {
     private final SpaTreatmentRepository spaTreatmentRepo;
     private final RetreatPackageRepository retreatPackageRepo;
     private final TreatmentRoomRepository treatmentRoomRepo;
+    private final RetreatPackageSpaTreatmentRepository packageTreatmentRepo;
+    private final PackageFnBEntitlementRepository fnbEntitlementRepo;
+    private final JdbcTemplate jdbc;
 
     public SpaMasterController(SpaTreatmentRepository spaTreatmentRepo,
                                RetreatPackageRepository retreatPackageRepo,
-                               TreatmentRoomRepository treatmentRoomRepo) {
+                               TreatmentRoomRepository treatmentRoomRepo,
+                               RetreatPackageSpaTreatmentRepository packageTreatmentRepo,
+                               PackageFnBEntitlementRepository fnbEntitlementRepo,
+                               JdbcTemplate jdbc) {
         this.spaTreatmentRepo = spaTreatmentRepo;
         this.retreatPackageRepo = retreatPackageRepo;
         this.treatmentRoomRepo = treatmentRoomRepo;
+        this.packageTreatmentRepo = packageTreatmentRepo;
+        this.fnbEntitlementRepo = fnbEntitlementRepo;
+        this.jdbc = jdbc;
     }
 
     // ========================================================================
@@ -113,12 +130,16 @@ public class SpaMasterController {
         treatment.setDurationMinutes(payload.get("durationMinutes") != null
                 ? Integer.parseInt(payload.get("durationMinutes").toString())
                 : 60);
+        treatment.setDurationUnit((String) payload.getOrDefault("durationUnit", "Phút (Minutes)"));
         treatment.setBasePrice(payload.get("basePrice") != null
                 ? new BigDecimal(payload.get("basePrice").toString())
                 : BigDecimal.ZERO);
+        treatment.setPricingRule((String) payload.get("pricingRule"));
         treatment.setRoomCompatibility((String) payload.get("roomCompatibility"));
+        treatment.setRequiredQualificationCode((String) payload.get("requiredQualificationCode"));
         treatment.setTherapistQualification((String) payload.get("therapistQualification"));
         treatment.setContraindications((String) payload.get("contraindications"));
+        treatment.setPrecautions((String) payload.get("precautions"));
         treatment.setDescription((String) payload.get("description"));
         treatment.setTreatmentStatus((String) payload.getOrDefault("treatmentStatus", SpaTreatment.ACTIVE));
 
@@ -145,17 +166,29 @@ public class SpaMasterController {
         if (payload.containsKey("durationMinutes") && payload.get("durationMinutes") != null) {
             treatment.setDurationMinutes(Integer.parseInt(payload.get("durationMinutes").toString()));
         }
+        if (payload.containsKey("durationUnit")) {
+            treatment.setDurationUnit((String) payload.get("durationUnit"));
+        }
         if (payload.containsKey("basePrice") && payload.get("basePrice") != null) {
             treatment.setBasePrice(new BigDecimal(payload.get("basePrice").toString()));
         }
+        if (payload.containsKey("pricingRule")) {
+            treatment.setPricingRule((String) payload.get("pricingRule"));
+        }
         if (payload.containsKey("roomCompatibility")) {
             treatment.setRoomCompatibility((String) payload.get("roomCompatibility"));
+        }
+        if (payload.containsKey("requiredQualificationCode")) {
+            treatment.setRequiredQualificationCode((String) payload.get("requiredQualificationCode"));
         }
         if (payload.containsKey("therapistQualification")) {
             treatment.setTherapistQualification((String) payload.get("therapistQualification"));
         }
         if (payload.containsKey("contraindications")) {
             treatment.setContraindications((String) payload.get("contraindications"));
+        }
+        if (payload.containsKey("precautions")) {
+            treatment.setPrecautions((String) payload.get("precautions"));
         }
         if (payload.containsKey("description")) {
             treatment.setDescription((String) payload.get("description"));
@@ -181,11 +214,19 @@ public class SpaMasterController {
     }
 
     @DeleteMapping("/spa-treatments/{idOrCode}")
-    public ResponseEntity<ApiResponse<Void>> deleteTreatment(@PathVariable String idOrCode) {
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> deleteTreatment(
+            @PathVariable String idOrCode,
+            @RequestParam(required = false, defaultValue = "false") boolean hard) {
         SpaTreatment treatment = resolveTreatment(idOrCode);
-        treatment.setTreatmentStatus(SpaTreatment.INACTIVE);
-        spaTreatmentRepo.save(treatment);
-        return ResponseEntity.ok(ApiResponse.ok("Treatment deactivated successfully", null));
+        if (hard) {
+            spaTreatmentRepo.delete(treatment);
+            return ResponseEntity.ok(ApiResponse.ok("Treatment deleted permanently", null));
+        } else {
+            treatment.setTreatmentStatus(SpaTreatment.INACTIVE);
+            spaTreatmentRepo.save(treatment);
+            return ResponseEntity.ok(ApiResponse.ok("Treatment deactivated successfully", null));
+        }
     }
 
     // ========================================================================
@@ -225,11 +266,14 @@ public class SpaMasterController {
         pkg.setDurationNights(payload.get("durationNights") != null
                 ? Integer.parseInt(payload.get("durationNights").toString())
                 : 3);
+        pkg.setDurationUnit((String) payload.getOrDefault("durationUnit", "Đêm (Nights)"));
         pkg.setBasePrice(payload.get("basePrice") != null
                 ? new BigDecimal(payload.get("basePrice").toString())
                 : BigDecimal.ZERO);
+        pkg.setBasePriceUnit((String) payload.getOrDefault("basePriceUnit", "VND/khách/gói"));
         pkg.setIncludedTreatments((String) payload.get("includedTreatments"));
         pkg.setDietaryPlan((String) payload.get("dietaryPlan"));
+        pkg.setExtraChargePolicy((String) payload.get("extraChargePolicy"));
         pkg.setTargetGuest((String) payload.get("targetGuest"));
         pkg.setPackageStatus((String) payload.getOrDefault("packageStatus", RetreatPackage.ACTIVE));
 
@@ -256,14 +300,23 @@ public class SpaMasterController {
         if (payload.containsKey("durationNights") && payload.get("durationNights") != null) {
             pkg.setDurationNights(Integer.parseInt(payload.get("durationNights").toString()));
         }
+        if (payload.containsKey("durationUnit")) {
+            pkg.setDurationUnit((String) payload.get("durationUnit"));
+        }
         if (payload.containsKey("basePrice") && payload.get("basePrice") != null) {
             pkg.setBasePrice(new BigDecimal(payload.get("basePrice").toString()));
+        }
+        if (payload.containsKey("basePriceUnit")) {
+            pkg.setBasePriceUnit((String) payload.get("basePriceUnit"));
         }
         if (payload.containsKey("includedTreatments")) {
             pkg.setIncludedTreatments((String) payload.get("includedTreatments"));
         }
         if (payload.containsKey("dietaryPlan")) {
             pkg.setDietaryPlan((String) payload.get("dietaryPlan"));
+        }
+        if (payload.containsKey("extraChargePolicy")) {
+            pkg.setExtraChargePolicy((String) payload.get("extraChargePolicy"));
         }
         if (payload.containsKey("targetGuest")) {
             pkg.setTargetGuest((String) payload.get("targetGuest"));
@@ -300,15 +353,135 @@ public class SpaMasterController {
     }
 
     @DeleteMapping("/retreat-packages/{idOrCode}")
-    public ResponseEntity<ApiResponse<Void>> deletePackage(@PathVariable String idOrCode) {
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> deletePackage(
+            @PathVariable String idOrCode,
+            @RequestParam(required = false, defaultValue = "false") boolean hard) {
         RetreatPackage pkg = resolvePackage(idOrCode);
-        pkg.setPackageStatus(RetreatPackage.INACTIVE);
-        retreatPackageRepo.save(pkg);
-        return ResponseEntity.ok(ApiResponse.ok("Package deactivated successfully", null));
+        if (hard) {
+            retreatPackageRepo.delete(pkg);
+            return ResponseEntity.ok(ApiResponse.ok("Retreat package deleted permanently", null));
+        } else {
+            pkg.setPackageStatus(RetreatPackage.INACTIVE);
+            retreatPackageRepo.save(pkg);
+            return ResponseEntity.ok(ApiResponse.ok("Package deactivated successfully", null));
+        }
     }
 
     // ========================================================================
-    // 3. TREATMENT ROOMS
+    // 3. PACKAGE - TREATMENT MAPPINGS (Sheet 4)
+    // ========================================================================
+
+    @GetMapping("/retreat-packages/{idOrCode}/treatments")
+    public ResponseEntity<ApiResponse<List<RetreatPackageSpaTreatment>>> getPackageTreatments(@PathVariable String idOrCode) {
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        List<RetreatPackageSpaTreatment> list = packageTreatmentRepo.findByRetreatPackageId(pkg.getRetreatPackageId());
+        return ResponseEntity.ok(ApiResponse.ok(list));
+    }
+
+    @PostMapping("/retreat-packages/{idOrCode}/treatments")
+    @Transactional
+    public ResponseEntity<ApiResponse<RetreatPackageSpaTreatment>> addTreatmentToPackage(
+            @PathVariable String idOrCode,
+            @RequestBody Map<String, Object> payload) {
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        String treatmentIdOrCode = payload.get("treatmentId") != null ? payload.get("treatmentId").toString() : (String) payload.get("treatmentCode");
+        if (treatmentIdOrCode == null) {
+            throw new IllegalArgumentException("treatmentId or treatmentCode is required");
+        }
+        SpaTreatment treatment = resolveTreatment(treatmentIdOrCode);
+
+        Integer sessions = payload.get("includedSessions") != null ? Integer.parseInt(payload.get("includedSessions").toString()) : 1;
+        String status = (String) payload.getOrDefault("entitlementStatus", "INCLUDED");
+        String notes = (String) payload.get("notes");
+
+        RetreatPackageSpaTreatment mapping = new RetreatPackageSpaTreatment(pkg, treatment, sessions, status, notes);
+        RetreatPackageSpaTreatment saved = packageTreatmentRepo.save(mapping);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Treatment added to package", saved));
+    }
+
+    @PutMapping("/retreat-packages/{idOrCode}/treatments/{treatmentIdOrCode}")
+    @Transactional
+    public ResponseEntity<ApiResponse<RetreatPackageSpaTreatment>> updatePackageTreatment(
+            @PathVariable String idOrCode,
+            @PathVariable String treatmentIdOrCode,
+            @RequestBody Map<String, Object> payload) {
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        SpaTreatment treatment = resolveTreatment(treatmentIdOrCode);
+
+        RetreatPackageSpaTreatmentId key = new RetreatPackageSpaTreatmentId(pkg.getRetreatPackageId(), treatment.getTreatmentId());
+        RetreatPackageSpaTreatment mapping = packageTreatmentRepo.findById(key)
+                .orElse(new RetreatPackageSpaTreatment(pkg, treatment, 1, "INCLUDED", null));
+
+        if (payload.containsKey("includedSessions") && payload.get("includedSessions") != null) {
+            mapping.setIncludedSessions(Integer.parseInt(payload.get("includedSessions").toString()));
+        }
+        if (payload.containsKey("entitlementStatus")) {
+            mapping.setEntitlementStatus((String) payload.get("entitlementStatus"));
+        }
+        if (payload.containsKey("notes")) {
+            mapping.setNotes((String) payload.get("notes"));
+        }
+
+        RetreatPackageSpaTreatment saved = packageTreatmentRepo.save(mapping);
+        return ResponseEntity.ok(ApiResponse.ok("Package treatment mapping updated", saved));
+    }
+
+    @DeleteMapping("/retreat-packages/{idOrCode}/treatments/{treatmentIdOrCode}")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> removeTreatmentFromPackage(
+            @PathVariable String idOrCode,
+            @PathVariable String treatmentIdOrCode) {
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        SpaTreatment treatment = resolveTreatment(treatmentIdOrCode);
+
+        RetreatPackageSpaTreatmentId key = new RetreatPackageSpaTreatmentId(pkg.getRetreatPackageId(), treatment.getTreatmentId());
+        packageTreatmentRepo.deleteById(key);
+        return ResponseEntity.ok(ApiResponse.ok("Treatment removed from package", null));
+    }
+
+    // ========================================================================
+    // 4. PACKAGE F&B ENTITLEMENTS (Sheet 5)
+    // ========================================================================
+
+    @GetMapping("/retreat-packages/{idOrCode}/fnb")
+    public ResponseEntity<ApiResponse<PackageFnBEntitlement>> getPackageFnB(@PathVariable String idOrCode) {
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        Optional<PackageFnBEntitlement> opt = fnbEntitlementRepo.findByRetreatPackageId(pkg.getRetreatPackageId());
+        return ResponseEntity.ok(ApiResponse.ok(opt.orElse(null)));
+    }
+
+    @PutMapping("/retreat-packages/{idOrCode}/fnb")
+    @Transactional
+    public ResponseEntity<ApiResponse<PackageFnBEntitlement>> updatePackageFnB(
+            @PathVariable String idOrCode,
+            @RequestBody Map<String, Object> payload) {
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        PackageFnBEntitlement fnb = fnbEntitlementRepo.findByRetreatPackageId(pkg.getRetreatPackageId())
+                .orElse(new PackageFnBEntitlement(pkg, 0, 0, 0, null, null));
+
+        if (payload.containsKey("breakfastCount") && payload.get("breakfastCount") != null) {
+            fnb.setBreakfastCount(Integer.parseInt(payload.get("breakfastCount").toString()));
+        }
+        if (payload.containsKey("lunchCount") && payload.get("lunchCount") != null) {
+            fnb.setLunchCount(Integer.parseInt(payload.get("lunchCount").toString()));
+        }
+        if (payload.containsKey("dinnerCount") && payload.get("dinnerCount") != null) {
+            fnb.setDinnerCount(Integer.parseInt(payload.get("dinnerCount").toString()));
+        }
+        fnb.setTotalMeals(fnb.getBreakfastCount() + fnb.getLunchCount() + fnb.getDinnerCount());
+
+        if (payload.containsKey("menuPlan")) fnb.setMenuPlan((String) payload.get("menuPlan"));
+        if (payload.containsKey("dietaryNotes")) fnb.setDietaryNotes((String) payload.get("dietaryNotes"));
+        if (payload.containsKey("entitlementStatus")) fnb.setEntitlementStatus((String) payload.get("entitlementStatus"));
+
+        PackageFnBEntitlement saved = fnbEntitlementRepo.save(fnb);
+        return ResponseEntity.ok(ApiResponse.ok("Package F&B entitlement updated", saved));
+    }
+
+    // ========================================================================
+    // 5. TREATMENT ROOMS
     // ========================================================================
 
     @GetMapping("/treatment-rooms")
@@ -348,5 +521,25 @@ public class SpaMasterController {
         if (payload.containsKey("roomStatus")) room.setRoomStatus((String) payload.get("roomStatus"));
 
         return ResponseEntity.ok(ApiResponse.ok("Treatment room updated successfully", treatmentRoomRepo.save(room)));
+    }
+
+    // ========================================================================
+    // 6. METADATA: ROOM TYPES & QUALIFICATIONS (Sheet 6 & Sheet 7)
+    // ========================================================================
+
+    @GetMapping("/room-types")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRoomTypes() {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT room_type, type_name, technical_specs, design_status FROM dbo.RoomTypeMaster ORDER BY room_type_id ASC"
+        );
+        return ResponseEntity.ok(ApiResponse.ok(rows));
+    }
+
+    @GetMapping("/qualifications")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getQualifications() {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT qualification_code, qualification_name, baseline_status FROM dbo.QualificationMaster ORDER BY qualification_id ASC"
+        );
+        return ResponseEntity.ok(ApiResponse.ok(rows));
     }
 }

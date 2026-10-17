@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Package, Moon, DollarSign, Target, Sparkles, Utensils } from 'lucide-react';
+import { X, Plus, Target, Moon, DollarSign, Sparkles, Utensils, FileText } from 'lucide-react';
 import type { RetreatPackageItem } from '../../types/spaManagement';
 import { formatVND } from '../../i18n';
 import { Button } from '../common/Button';
@@ -18,12 +18,15 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
   const [formData, setFormData] = useState({
     packageCode: '',
     packageName: '',
-    wellnessGoal: 'Detox & Purification',
+    wellnessGoal: 'Holistic Wellness & Recovery',
     durationNights: 3,
+    durationUnit: 'Đêm (Nights)',
     basePrice: 15000000,
+    basePriceUnit: 'VND/khách/gói',
     includedTreatments: '',
     dietaryPlan: '',
-    targetGuest: '',
+    extraChargePolicy: 'ĐÃ BAO GỒM các buổi trị liệu và F&B nêu trên. Khách đặt thêm dịch vụ ngoài danh mục hoặc ngoài số buổi quy định sẽ tính Extra ghi nợ Folio (M5).',
+    targetGuest: 'Khách hàng tìm kiếm phục hồi sức khỏe thân tâm toàn diện',
     status: 'ACTIVE' as const,
   });
 
@@ -38,9 +41,12 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
       packageName: formData.packageName.trim(),
       wellnessGoal: formData.wellnessGoal.trim(),
       durationNights: formData.durationNights,
+      durationUnit: formData.durationUnit,
       basePrice: formData.basePrice,
+      basePriceUnit: formData.basePriceUnit,
       includedTreatments: formData.includedTreatments.trim(),
       dietaryPlan: formData.dietaryPlan.trim(),
+      extraChargePolicy: formData.extraChargePolicy.trim(),
       targetGuest: formData.targetGuest.trim(),
       status: formData.status,
       image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
@@ -53,7 +59,7 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
     <div className="hsw-modal-backdrop" onClick={onClose}>
       <div
         className="hsw-modal-card"
-        style={{ maxWidth: '780px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}
+        style={{ maxWidth: '800px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="hsw-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -66,9 +72,9 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
               <Plus size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>Tạo Gói Nghỉ Dưỡng Retreat Mới</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>Thêm Gói Nghỉ Dưỡng Mới</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Đóng gói chương trình Wellness trọn gói theo mô hình Chiva-Som & Amanoi
+                Tạo gói Retreat trọn gói mới theo chuẩn HSWRMS Master Data V3
               </p>
             </div>
           </div>
@@ -81,7 +87,7 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-                Mã Gói (Package ID)
+                Mã Gói (Package Code)
               </label>
               <input
                 type="text"
@@ -94,12 +100,12 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
 
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-                Tên Gói Trị Liệu / Nghỉ Dưỡng *
+                Tên Gói Nghỉ Dưỡng *
               </label>
               <input
                 type="text"
                 className="hsw-input"
-                placeholder="VD: 3D2N Chữa Lành Năng Lượng & Thức Tỉnh Giác Quan"
+                placeholder="VD: 3D2N Chữa Lành Năng Lượng Tự Nhiên"
                 value={formData.packageName}
                 onChange={(e) => setFormData({ ...formData, packageName: e.target.value })}
                 required
@@ -114,7 +120,7 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
               <input
                 type="text"
                 className="hsw-input"
-                placeholder="VD: Detox & Purification, Sleep Improvement..."
+                placeholder="VD: Detox & Cleansing, Stress Reduction..."
                 value={formData.wellnessGoal}
                 onChange={(e) => setFormData({ ...formData, wellnessGoal: e.target.value })}
                 required
@@ -140,70 +146,70 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
                 <DollarSign size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
-                Giá Gốc Trọn Gói (VND) *
+                Giá Gói Trọn Gói (VND/khách) *
               </label>
               <input
                 type="number"
                 min="0"
-                step="100000"
+                step="500000"
                 className="hsw-input"
                 value={formData.basePrice}
                 onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
                 required
               />
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                {formatVND(formData.basePrice)}
+                {formatVND(formData.basePrice)} / khách / gói
               </span>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-                Đối Tượng Mục Tiêu (Target Guest)
-              </label>
-              <input
-                type="text"
-                className="hsw-input"
-                placeholder="VD: Khách cần phục hồi sau kiệt sức, doanh nhân bận rộn..."
-                value={formData.targetGuest}
-                onChange={(e) => setFormData({ ...formData, targetGuest: e.target.value })}
-              />
             </div>
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
               <Sparkles size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
-              Các Liệu Trình Trị Liệu Bao Gồm (Included Treatments)
+              Chi Tiết Quyền Lợi Trị Liệu (Liệt kê dịch vụ & số buổi)
             </label>
             <textarea
               className="hsw-input"
-              rows={4}
+              rows={3}
+              placeholder="VD: SPA-MASS-01 (01 buổi - 90p), SPA-HYDRO-02 (01 buổi - 45p)..."
               value={formData.includedTreatments}
               onChange={(e) => setFormData({ ...formData, includedTreatments: e.target.value })}
-              placeholder="• 01 Massage dẫn lưu bạch huyết (75p)&#10;• 01 Tẩy tế bào chết khoáng nóng (60p)&#10;• 02 Buổi Hatha Yoga thanh lọc buổi sáng"
             />
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
               <Utensils size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
-              Chế Độ Dinh Dưỡng Đi Kèm (F&B)
+              Kế Hoạch Dinh Dưỡng Đi Kèm (F&B Plan Module 4)
             </label>
             <textarea
               className="hsw-input"
               rows={2}
+              placeholder="VD: 3 bữa sáng thanh lọc + 3 bữa trưa thực dưỡng + 3 bữa tối nhẹ nhàng..."
               value={formData.dietaryPlan}
               onChange={(e) => setFormData({ ...formData, dietaryPlan: e.target.value })}
-              placeholder="Thực đơn thanh lọc, nước ép lạnh hữu cơ không đường..."
             />
           </div>
 
-          <div className="hsw-modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-            <Button variant="tertiary" type="button" onClick={onClose}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#B7791F' }}>
+              <FileText size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+              Quy Tắc Tính Phí Phát Sinh (Extra Charge Policy - Rule 21)
+            </label>
+            <textarea
+              className="hsw-input"
+              rows={2}
+              value={formData.extraChargePolicy}
+              onChange={(e) => setFormData({ ...formData, extraChargePolicy: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <Button variant="secondary" type="button" onClick={onClose}>
               Hủy
             </Button>
-            <Button variant="primary" type="submit" icon={<Package size={16} />}>
-              Tạo Gói Nghỉ Dưỡng Mới
+            <Button variant="primary" type="submit">
+              Tạo Gói Nghỉ Dưỡng
             </Button>
           </div>
         </form>

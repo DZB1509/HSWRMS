@@ -33,14 +33,23 @@ public class RetreatPackage {
     @Column(name = "duration_nights", nullable = false)
     private int durationNights;
 
+    @Column(name = "duration_unit", nullable = false, length = 50)
+    private String durationUnit = "Đêm (Nights)";
+
     @Column(name = "base_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal basePrice;
+
+    @Column(name = "base_price_unit", nullable = false, length = 50)
+    private String basePriceUnit = "VND/khách/gói";
 
     @Column(name = "included_treatments", columnDefinition = "NVARCHAR(MAX)")
     private String includedTreatments;
 
     @Column(name = "dietary_plan", length = 1000)
     private String dietaryPlan;
+
+    @Column(name = "extra_charge_policy", length = 1000)
+    private String extraChargePolicy;
 
     @Column(name = "target_guest", length = 500)
     private String targetGuest;
@@ -67,12 +76,18 @@ public class RetreatPackage {
     public void setWellnessGoal(String wellnessGoal) { this.wellnessGoal = wellnessGoal; }
     public int getDurationNights() { return durationNights; }
     public void setDurationNights(int durationNights) { this.durationNights = durationNights; }
+    public String getDurationUnit() { return durationUnit; }
+    public void setDurationUnit(String durationUnit) { this.durationUnit = durationUnit; }
     public BigDecimal getBasePrice() { return basePrice; }
     public void setBasePrice(BigDecimal basePrice) { this.basePrice = basePrice; }
+    public String getBasePriceUnit() { return basePriceUnit; }
+    public void setBasePriceUnit(String basePriceUnit) { this.basePriceUnit = basePriceUnit; }
     public String getIncludedTreatments() { return includedTreatments; }
     public void setIncludedTreatments(String includedTreatments) { this.includedTreatments = includedTreatments; }
     public String getDietaryPlan() { return dietaryPlan; }
     public void setDietaryPlan(String dietaryPlan) { this.dietaryPlan = dietaryPlan; }
+    public String getExtraChargePolicy() { return extraChargePolicy; }
+    public void setExtraChargePolicy(String extraChargePolicy) { this.extraChargePolicy = extraChargePolicy; }
     public String getTargetGuest() { return targetGuest; }
     public void setTargetGuest(String targetGuest) { this.targetGuest = targetGuest; }
     public String getPackageStatus() { return packageStatus; }

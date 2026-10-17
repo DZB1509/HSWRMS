@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Clock, DollarSign, Home, Award, AlertTriangle, Edit2 } from 'lucide-react';
+import { X, Clock, DollarSign, Home, Award, AlertTriangle, ShieldCheck, FileText, Edit2 } from 'lucide-react';
 import type { SpaTreatmentItem } from '../../types/spaManagement';
 import { formatVND } from '../../i18n';
 import { Button } from '../common/Button';
@@ -23,7 +23,7 @@ export const SpaTreatmentDetailModal: React.FC<SpaTreatmentDetailModalProps> = (
     <div className="hsw-modal-backdrop" onClick={onClose}>
       <div
         className="hsw-modal-card"
-        style={{ maxWidth: '680px', width: '90%', maxHeight: '90vh', overflowY: 'auto', padding: 0, background: 'var(--surface)' }}
+        style={{ maxWidth: '720px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: 0, background: 'var(--surface)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Hero image header */}
@@ -97,91 +97,128 @@ export const SpaTreatmentDetailModal: React.FC<SpaTreatmentDetailModalProps> = (
                 Thời Lượng Phiên Trị Liệu
               </div>
               <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
-                {treatment.durationMinutes} phút
+                {treatment.durationMinutes} phút ({treatment.durationUnit || 'Phút (Minutes)'})
               </div>
             </div>
 
             <div style={{ padding: '14px', borderRadius: '10px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                <DollarSign size={14} color="#C5A059" />
-                Đơn Giá Niêm Yết A-la-carte
+                <DollarSign size={14} color="#B7791F" />
+                Đơn Giá Niêm Yết
               </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '4px', color: '#C5A059' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '4px', color: '#B7791F' }}>
                 {formatVND(treatment.basePrice)}
               </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Mô Tả Trải Nghiệm & Công Dụng
-            </h4>
-            <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
-              {treatment.description || 'Chưa cập nhật mô tả chi tiết cho liệu trình này.'}
-            </p>
-          </div>
+          {/* Pricing Rule */}
+          {treatment.pricingRule && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: 'rgba(197, 160, 89, 0.1)',
+              border: '1px solid rgba(197, 160, 89, 0.3)',
+              fontSize: '0.86rem',
+              color: 'var(--text-primary)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#9E7A24', marginBottom: '4px' }}>
+                <FileText size={15} />
+                Quy Tắc Áp Giá & Hạn Ngạch Gói (Pricing Rule)
+              </div>
+              <div>{treatment.pricingRule}</div>
+            </div>
+          )}
 
-          {/* Operational requirements */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-              <Home size={18} style={{ color: '#2E7D5A', marginTop: '2px', flexShrink: 0 }} />
+          {/* Room & Qualification Requirement */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(49, 130, 206, 0.12)', color: '#2B6CB0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Home size={16} />
+              </div>
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Yêu Cầu Phòng Trị Liệu (Room Compatibility)</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Loại Phòng Tương Thích</div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
                   {treatment.roomCompatibility || 'Phòng Massage Standard/VIP'}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-              <Award size={18} style={{ color: '#9E7A24', marginTop: '2px', flexShrink: 0 }} />
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(128, 90, 213, 0.12)', color: '#6B46C1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Award size={16} />
+              </div>
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Chứng Chỉ Kỹ Thuật Viên (Therapist Qualification)</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Chứng Chỉ KTV Yêu Cầu</div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
-                  {treatment.therapistQualification || 'Chứng chỉ Trị liệu Tiêu chuẩn'}
+                  {treatment.requiredQualificationCode || treatment.therapistQualification || 'Chứng chỉ Trị liệu chuyên sâu'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Contraindications Alert Box */}
-          <div style={{
-            padding: '14px 16px',
-            backgroundColor: 'rgba(217, 83, 79, 0.08)',
-            border: '1px solid rgba(217, 83, 79, 0.3)',
-            borderRadius: '10px',
-            display: 'flex',
-            gap: '12px'
-          }}>
-            <AlertTriangle size={20} color="#D9534F" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#D9534F' }}>
-                Chống Chỉ Định Y Tế (Rule GB-M3-12 Safety Minimization)
+          {/* Contraindications & Precautions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {treatment.contraindications && (
+              <div style={{
+                padding: '14px 16px',
+                borderRadius: '10px',
+                background: 'rgba(229, 62, 62, 0.08)',
+                border: '1px solid rgba(229, 62, 62, 0.25)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#C53030', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>
+                  <AlertTriangle size={16} />
+                  Chống Chỉ Định Tuyệt Đối (Absolute Contraindications)
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  {treatment.contraindications}
+                </div>
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: '4px', lineHeight: 1.5 }}>
-                {treatment.contraindications || 'Không có chống chỉ định nghiêm trọng.'}
+            )}
+
+            {treatment.precautions && (
+              <div style={{
+                padding: '14px 16px',
+                borderRadius: '10px',
+                background: 'rgba(214, 158, 46, 0.08)',
+                border: '1px solid rgba(214, 158, 46, 0.25)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#B7791F', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>
+                  <ShieldCheck size={16} />
+                  Thận Trọng / Cần Đánh Giá Thêm (Precautions / Safety Review)
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  {treatment.precautions}
+                </div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                * Hệ thống tự động đối chiếu hồ sơ sức khỏe (Health Profile) của khách để bảo đảm an toàn trước khi xác nhận phiên spa.
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Footer Actions */}
+          {/* Description */}
+          {treatment.description && (
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Mô Tả Chi Tiết & Tác Dụng Trị Liệu
+              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: 1.6, background: 'var(--bg-secondary)', padding: '12px 16px', borderRadius: '8px' }}>
+                {treatment.description}
+              </div>
+            </div>
+          )}
+
+          {/* Footer buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-            <Button variant="tertiary" type="button" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               Đóng
             </Button>
             <Button
               variant="primary"
-              type="button"
-              icon={<Edit2 size={15} />}
               onClick={() => {
                 onClose();
                 onEdit(treatment);
               }}
             >
+              <Edit2 size={15} style={{ marginRight: '6px' }} />
               Chỉnh Sửa Liệu Trình
             </Button>
           </div>

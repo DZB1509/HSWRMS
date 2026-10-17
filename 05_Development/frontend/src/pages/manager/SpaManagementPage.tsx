@@ -17,12 +17,15 @@ import {
   Layers,
   Utensils,
   Grid,
-  List as ListIcon
+  List as ListIcon,
+  Trash2
 } from 'lucide-react';
 import {
   SPA_TREATMENTS_INVENTORY,
   RETREAT_PACKAGES_INVENTORY,
-  TREATMENT_ROOMS_INVENTORY
+  TREATMENT_ROOMS_INVENTORY,
+  ROOM_TYPES_MASTER,
+  QUALIFICATIONS_MASTER
 } from '../../data/mockSpaInventory';
 import type {
   SpaTreatmentItem,
@@ -98,10 +101,14 @@ export const SpaManagementPage: React.FC = () => {
             treatmentName: item.treatmentName || matched?.treatmentName || 'Liệu Trình Spa',
             category: item.category || matched?.category || 'Body Massage',
             durationMinutes: item.durationMinutes || matched?.durationMinutes || 60,
+            durationUnit: item.durationUnit || matched?.durationUnit || 'Phút (Minutes)',
             basePrice: item.basePrice != null ? Number(item.basePrice) : (matched?.basePrice || 1000000),
+            pricingRule: item.pricingRule || matched?.pricingRule || '',
             roomCompatibility: item.roomCompatibility || matched?.roomCompatibility || 'Phòng Massage Standard/VIP',
+            requiredQualificationCode: item.requiredQualificationCode || matched?.requiredQualificationCode || '',
             therapistQualification: item.therapistQualification || matched?.therapistQualification || 'Chứng chỉ Spa',
             contraindications: item.contraindications || matched?.contraindications || '',
+            precautions: item.precautions || matched?.precautions || '',
             description: item.description || matched?.description || '',
             status: (item.treatmentStatus || matched?.status || 'ACTIVE') as SpaStatus,
             image: matched?.image || 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=800&q=80',
@@ -123,12 +130,17 @@ export const SpaManagementPage: React.FC = () => {
             packageName: item.packageName || matched?.packageName || 'Gói Nghỉ Dưỡng',
             wellnessGoal: item.wellnessGoal || matched?.wellnessGoal || 'Phục hồi sức khỏe',
             durationNights: item.durationNights || matched?.durationNights || 3,
+            durationUnit: item.durationUnit || matched?.durationUnit || 'Đêm (Nights)',
             basePrice: item.basePrice != null ? Number(item.basePrice) : (matched?.basePrice || 15000000),
+            basePriceUnit: item.basePriceUnit || matched?.basePriceUnit || 'VND/khách/gói',
             includedTreatments: item.includedTreatments || matched?.includedTreatments || '',
             dietaryPlan: item.dietaryPlan || matched?.dietaryPlan || '',
+            extraChargePolicy: item.extraChargePolicy || matched?.extraChargePolicy || '',
             targetGuest: item.targetGuest || matched?.targetGuest || '',
             status: (item.packageStatus || matched?.status || 'ACTIVE') as SpaStatus,
             image: matched?.image || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
+            treatmentMappings: matched?.treatmentMappings || [],
+            fnbEntitlement: matched?.fnbEntitlement,
           };
         });
         setPackages(mergedPkgs);
@@ -204,10 +216,14 @@ export const SpaManagementPage: React.FC = () => {
           treatmentCode: updated.treatmentCode,
           category: updated.category,
           durationMinutes: updated.durationMinutes,
+          durationUnit: updated.durationUnit || 'Phút (Minutes)',
           basePrice: updated.basePrice,
+          pricingRule: updated.pricingRule,
           roomCompatibility: updated.roomCompatibility,
+          requiredQualificationCode: updated.requiredQualificationCode,
           therapistQualification: updated.therapistQualification,
           contraindications: updated.contraindications,
+          precautions: updated.precautions,
           description: updated.description,
           treatmentStatus: updated.status,
         }),
@@ -251,10 +267,14 @@ export const SpaManagementPage: React.FC = () => {
           treatmentName: newTreatment.treatmentName,
           category: newTreatment.category,
           durationMinutes: newTreatment.durationMinutes,
+          durationUnit: newTreatment.durationUnit || 'Phút (Minutes)',
           basePrice: newTreatment.basePrice,
+          pricingRule: newTreatment.pricingRule,
           roomCompatibility: newTreatment.roomCompatibility,
+          requiredQualificationCode: newTreatment.requiredQualificationCode,
           therapistQualification: newTreatment.therapistQualification,
           contraindications: newTreatment.contraindications,
+          precautions: newTreatment.precautions,
           description: newTreatment.description,
           treatmentStatus: newTreatment.status,
         }),
@@ -272,6 +292,43 @@ export const SpaManagementPage: React.FC = () => {
     }
 
     showToast(`Đã thêm mới liệu trình "${newTreatment.treatmentName}" thành công!`, 'success');
+  };
+
+  // Handle Delete Treatment
+  const handleDeleteTreatment = async (item: SpaTreatmentItem) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa liệu trình "${item.treatmentName}" (${item.treatmentCode}) khỏi CSDL không?`)) {
+      return;
+    }
+
+    const identifier = item.dbId || item.treatmentCode || item.id;
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/spa-treatments/${encodeURIComponent(identifier)}?hard=true`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        // Fallback soft delete
+        await fetch(`http://localhost:8080/api/v1/spa-treatments/${encodeURIComponent(identifier)}`, {
+          method: 'DELETE',
+        });
+      }
+    } catch (err) {
+      console.warn('Backend delete fallback for treatment:', err);
+    }
+
+    setTreatments((prev) => prev.filter((t) => t.id !== item.id));
+    showToast(`Đã xóa liệu trình "${item.treatmentName}" thành công!`, 'success');
+
+    logAuditEvent({
+      actorId: 'usr-admin',
+      actorName: 'Quản trị viên',
+      actorRole: role || 'admin',
+      action: 'DELETE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: item.treatmentCode,
+      result: 'SUCCESS',
+      detailsKey: 'audit.deleteSpaTreatment',
+      detailsFallback: `Xóa liệu trình "${item.treatmentName}" thành công.`
+    });
   };
 
   // Toggle Treatment Status
@@ -312,9 +369,12 @@ export const SpaManagementPage: React.FC = () => {
           packageName: updated.packageName,
           wellnessGoal: updated.wellnessGoal,
           durationNights: updated.durationNights,
+          durationUnit: updated.durationUnit || 'Đêm (Nights)',
           basePrice: updated.basePrice,
+          basePriceUnit: updated.basePriceUnit || 'VND/khách/gói',
           includedTreatments: updated.includedTreatments,
           dietaryPlan: updated.dietaryPlan,
+          extraChargePolicy: updated.extraChargePolicy,
           targetGuest: updated.targetGuest,
           packageStatus: updated.status,
         }),
@@ -358,9 +418,12 @@ export const SpaManagementPage: React.FC = () => {
           packageName: newPkg.packageName,
           wellnessGoal: newPkg.wellnessGoal,
           durationNights: newPkg.durationNights,
+          durationUnit: newPkg.durationUnit || 'Đêm (Nights)',
           basePrice: newPkg.basePrice,
+          basePriceUnit: newPkg.basePriceUnit || 'VND/khách/gói',
           includedTreatments: newPkg.includedTreatments,
           dietaryPlan: newPkg.dietaryPlan,
+          extraChargePolicy: newPkg.extraChargePolicy,
           targetGuest: newPkg.targetGuest,
           packageStatus: newPkg.status,
         }),
@@ -378,6 +441,42 @@ export const SpaManagementPage: React.FC = () => {
     }
 
     showToast(`Đã thêm mới gói nghỉ dưỡng "${newPkg.packageName}" thành công!`, 'success');
+  };
+
+  // Handle Delete Package
+  const handleDeletePackage = async (item: RetreatPackageItem) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa gói nghỉ dưỡng "${item.packageName}" (${item.packageCode}) khỏi CSDL không?`)) {
+      return;
+    }
+
+    const identifier = item.dbId || item.packageCode || item.id;
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(identifier)}?hard=true`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(identifier)}`, {
+          method: 'DELETE',
+        });
+      }
+    } catch (err) {
+      console.warn('Backend delete fallback for package:', err);
+    }
+
+    setPackages((prev) => prev.filter((p) => p.id !== item.id));
+    showToast(`Đã xóa gói nghỉ dưỡng "${item.packageName}" thành công!`, 'success');
+
+    logAuditEvent({
+      actorId: 'usr-admin',
+      actorName: 'Quản trị viên',
+      actorRole: role || 'admin',
+      action: 'DELETE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: item.packageCode,
+      result: 'SUCCESS',
+      detailsKey: 'audit.deleteRetreatPackage',
+      detailsFallback: `Xóa gói nghỉ dưỡng "${item.packageName}" thành công.`
+    });
   };
 
   // Toggle Package Status
@@ -983,6 +1082,25 @@ export const SpaManagementPage: React.FC = () => {
                       >
                         Chỉnh Sửa
                       </Button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTreatment(t)}
+                        title="Xóa liệu trình khỏi hệ thống"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(217, 83, 79, 0.3)',
+                          background: 'rgba(217, 83, 79, 0.08)',
+                          color: '#D9534F',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1067,6 +1185,15 @@ export const SpaManagementPage: React.FC = () => {
                             title="Chỉnh sửa"
                           >
                             <Edit2 size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="hsw-action-btn"
+                            onClick={() => handleDeleteTreatment(t)}
+                            title="Xóa liệu trình"
+                            style={{ color: '#D9534F' }}
+                          >
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -1188,6 +1315,25 @@ export const SpaManagementPage: React.FC = () => {
                   >
                     Chỉnh Sửa
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePackage(p)}
+                    title="Xóa gói nghỉ dưỡng khỏi hệ thống"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(217, 83, 79, 0.3)',
+                      background: 'rgba(217, 83, 79, 0.08)',
+                      color: '#D9534F',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -1307,6 +1453,110 @@ export const SpaManagementPage: React.FC = () => {
               <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 Liệu trình trong gói Retreat: Không phát sinh tiền. Liệu trình đặt thêm (Extra): Ghi nợ vào Folio của phòng để quyết toán trả phòng tại quầy lễ tân.
               </p>
+            </div>
+          </div>
+
+          {/* Section: Master Room Types */}
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Home size={18} color="#C5A059" />
+              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Bảng Chuẩn Hóa 11 Loại Phòng Trị Liệu & Tiện Ích (Sheet 6 - Room Types)
+              </h4>
+            </div>
+            <div style={{
+              background: 'var(--bg-secondary)',
+              borderRadius: '10px',
+              border: '1px solid var(--border-subtle)',
+              overflowX: 'auto'
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,0.04)', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <th style={{ padding: '10px 14px', width: '220px' }}>Mã Loại Phòng</th>
+                    <th style={{ padding: '10px 14px' }}>Tên Loại Phòng Trị Liệu</th>
+                    <th style={{ padding: '10px 14px' }}>Thông Số Kỹ Thuật & Tiện Ích</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', width: '130px' }}>Trạng Thái Chuẩn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ROOM_TYPES_MASTER.map((rt) => (
+                    <tr key={rt.roomType} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontWeight: 700, color: '#C5A059' }}>
+                        {rt.roomType}
+                      </td>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {rt.typeName}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>
+                        {rt.technicalSpecs}
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          background: 'rgba(46, 125, 90, 0.12)',
+                          color: '#2E7D5A',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700
+                        }}>
+                          {rt.designStatus || 'ACTIVE'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section: Master Qualifications */}
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Award size={18} color="#2E7D5A" />
+              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Bảng Chuẩn Hóa 17 Chứng Chỉ & Chuyên Môn KTV (Sheet 7 - Qualifications)
+              </h4>
+            </div>
+            <div style={{
+              background: 'var(--bg-secondary)',
+              borderRadius: '10px',
+              border: '1px solid var(--border-subtle)',
+              overflowX: 'auto'
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,0.04)', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <th style={{ padding: '10px 14px', width: '260px' }}>Mã Chứng Chỉ</th>
+                    <th style={{ padding: '10px 14px' }}>Tên Bằng Cấp / Tiêu Chuẩn Năng Lực</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', width: '140px' }}>Trạng Thái Chuẩn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {QUALIFICATIONS_MASTER.map((q) => (
+                    <tr key={q.qualificationCode} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontWeight: 700, color: '#2E7D5A' }}>
+                        {q.qualificationCode}
+                      </td>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {q.qualificationName}
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          background: 'rgba(46, 125, 90, 0.12)',
+                          color: '#2E7D5A',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700
+                        }}>
+                          {q.baselineStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

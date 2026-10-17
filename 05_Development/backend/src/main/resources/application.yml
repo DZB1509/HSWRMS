@@ -10,7 +10,7 @@ spring:
   datasource:
     url: jdbc:sqlserver://localhost;instanceName=SQLEXPRESS;databaseName=HSWRMS;encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:YourStrong@Password}
+    password: ${DB_PASSWORD:12345}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hikari:
       maximum-pool-size: 10

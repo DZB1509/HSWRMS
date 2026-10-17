@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, AlertTriangle, ShieldCheck, Clock, DollarSign, Home, Award } from 'lucide-react';
+import { X, Sparkles, AlertTriangle, ShieldCheck, Clock, DollarSign, Home, Award, FileText } from 'lucide-react';
 import type { SpaTreatmentItem, SpaStatus } from '../../types/spaManagement';
 import { formatVND } from '../../i18n';
 import { Button } from '../common/Button';
@@ -36,7 +36,7 @@ export const EditSpaTreatmentModal: React.FC<EditSpaTreatmentModalProps> = ({
     <div className="hsw-modal-backdrop" onClick={onClose}>
       <div
         className="hsw-modal-card"
-        style={{ maxWidth: '720px', width: '90%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}
+        style={{ maxWidth: '750px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="hsw-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -51,7 +51,7 @@ export const EditSpaTreatmentModal: React.FC<EditSpaTreatmentModalProps> = ({
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>Chỉnh Sửa Liệu Trình Trị Liệu</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Mã: <strong>{formData.treatmentCode}</strong> — Rule GB-M3-12 Safety Minimization
+                Mã: <strong>{formData.treatmentCode}</strong> — HSWRMS Standardized Spa Catalog V3
               </p>
             </div>
           </div>
@@ -127,84 +127,109 @@ export const EditSpaTreatmentModal: React.FC<EditSpaTreatmentModalProps> = ({
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
                 <Home size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
-                Yêu Cầu Phòng Trị Liệu (Room Compatibility)
+                Loại Phòng Tương Thích (Room Compatibility)
               </label>
               <input
                 type="text"
                 className="hsw-input"
                 value={formData.roomCompatibility}
                 onChange={(e) => setFormData({ ...formData, roomCompatibility: e.target.value })}
-                placeholder="VD: Phòng Massage Standard/VIP..."
+                placeholder="VD: MASSAGE_STANDARD, MASSAGE_VIP..."
               />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
                 <Award size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
-                Chứng Chỉ Yêu Cầu (Therapist Qualification)
+                Mã Chứng Chỉ KTV (Qualification Code)
               </label>
               <input
                 type="text"
                 className="hsw-input"
-                value={formData.therapistQualification}
-                onChange={(e) => setFormData({ ...formData, therapistQualification: e.target.value })}
-                placeholder="VD: Chứng chỉ Body Therapy & Đá nóng..."
+                value={formData.requiredQualificationCode || formData.therapistQualification}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  requiredQualificationCode: e.target.value,
+                  therapistQualification: e.target.value
+                })}
+                placeholder="VD: QUAL_HOT_STONE_MASSAGE"
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#B26A00' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+              <FileText size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+              Quy Tắc Áp Giá (Pricing Rule - Sheet 2)
+            </label>
+            <input
+              type="text"
+              className="hsw-input"
+              value={formData.pricingRule || ''}
+              onChange={(e) => setFormData({ ...formData, pricingRule: e.target.value })}
+              placeholder="Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm..."
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#C53030' }}>
               <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
-              Chống Chỉ Định Y Tế (Contraindications - Rule GB-M3-12)
+              Chống Chỉ Định Tuyệt Đối (Absolute Contraindications)
             </label>
             <textarea
               className="hsw-input"
               rows={2}
               value={formData.contraindications}
               onChange={(e) => setFormData({ ...formData, contraindications: e.target.value })}
-              placeholder="VD: Huyết áp cao chưa kiểm soát, vết thương hở ngoài da, phụ nữ có thai..."
+              placeholder="VD: Sốt cao, vết thương hở, bệnh ngoài da lây nhiễm..."
             />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Thông tin an toàn y tế sẽ được hiển thị bảo mật cho Kỹ thuật viên (Therapist) trước buổi trị liệu.
-            </span>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#D69E2E' }}>
+              <ShieldCheck size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+              Thận Trọng / Cần Đánh Giá Thêm (Precautions / Review)
+            </label>
+            <textarea
+              className="hsw-input"
+              rows={2}
+              value={formData.precautions || ''}
+              onChange={(e) => setFormData({ ...formData, precautions: e.target.value })}
+              placeholder="VD: Huyết áp cao (cần chỉnh nhiệt độ đá dưới 45°C), da mỏng nhạy cảm..."
+            />
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-              Mô Tả Trải Nghiệm & Tác Dụng
+              Mô Tả Chi Tiết
             </label>
             <textarea
               className="hsw-input"
-              rows={3}
+              rows={2}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Mô tả kỹ thuật, tác dụng sinh học..."
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Trạng Thái Hoạt Động</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Chỉ liệu trình ACTIVE mới hiển thị lên màn hình đặt lịch của khách hàng
-              </div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Trạng Thái:</label>
             <select
               className="hsw-input"
-              style={{ width: 'auto' }}
+              style={{ width: '180px' }}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as SpaStatus })}
             >
-              <option value="ACTIVE">Hoạt Động (ACTIVE)</option>
-              <option value="INACTIVE">Tạm Ngừng (INACTIVE)</option>
+              <option value="ACTIVE">Hoạt động (ACTIVE)</option>
+              <option value="INACTIVE">Tạm dừng (INACTIVE)</option>
             </select>
           </div>
 
-          <div className="hsw-modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', position: 'sticky', bottom: 0, background: 'var(--bg-primary, #fff)', paddingTop: '12px', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
-            <Button variant="tertiary" type="button" onClick={onClose}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <Button variant="secondary" type="button" onClick={onClose}>
               Hủy
             </Button>
-            <Button id="submit-edit-treatment-btn" variant="primary" type="submit" icon={<ShieldCheck size={16} />}>
+            <Button variant="primary" type="submit">
               Lưu Thay Đổi
             </Button>
           </div>

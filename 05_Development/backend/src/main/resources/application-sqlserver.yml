@@ -3,7 +3,7 @@ spring:
     url: jdbc:sqlserver://localhost;instanceName=SQLEXPRESS;databaseName=HSWRMS;encrypt=true;trustServerCertificate=true
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
-    password: YourStrong@Password
+    password: 12345
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2

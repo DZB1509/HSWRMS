@@ -190,9 +190,14 @@ CREATE TABLE dbo.RetreatPackage (
     package_name        NVARCHAR(150) NOT NULL,
     wellness_goal       NVARCHAR(250) NULL,
     duration_nights     INT NOT NULL,
+    duration_unit       NVARCHAR(50) NOT NULL
+        CONSTRAINT DF_RetreatPackage_DurationUnit DEFAULT (N'Đêm (Nights)'),
     base_price          DECIMAL(18,2) NOT NULL,
+    base_price_unit     NVARCHAR(50) NOT NULL
+        CONSTRAINT DF_RetreatPackage_BasePriceUnit DEFAULT (N'VND/khách/gói'),
     included_treatments NVARCHAR(MAX) NULL,
     dietary_plan        NVARCHAR(1000) NULL,
+    extra_charge_policy NVARCHAR(1000) NULL,
     target_guest        NVARCHAR(500) NULL,
     package_status      VARCHAR(20) NOT NULL
         CONSTRAINT DF_RetreatPackage_Status DEFAULT ('ACTIVE'),
@@ -408,10 +413,15 @@ CREATE TABLE dbo.SpaTreatment (
     treatment_name      NVARCHAR(150) NOT NULL,
     category            NVARCHAR(100) NULL,
     duration_minutes    INT NOT NULL,
+    duration_unit       NVARCHAR(50) NOT NULL
+        CONSTRAINT DF_SpaTreatment_DurationUnit DEFAULT (N'Phút (Minutes)'),
     base_price          DECIMAL(18,2) NOT NULL,
+    pricing_rule        NVARCHAR(500) NULL,
     room_compatibility  NVARCHAR(250) NULL,
+    required_qualification_code VARCHAR(100) NULL,
     therapist_qualification NVARCHAR(250) NULL,
     contraindications   NVARCHAR(500) NULL,
+    precautions         NVARCHAR(500) NULL,
     description         NVARCHAR(1000) NULL,
     treatment_status    VARCHAR(20) NOT NULL
         CONSTRAINT DF_SpaTreatment_Status DEFAULT ('ACTIVE'),
@@ -428,15 +438,95 @@ GO
 CREATE TABLE dbo.RetreatPackageSpaTreatment (
     retreat_package_id  INT NOT NULL,
     treatment_id        INT NOT NULL,
+    included_sessions   INT NOT NULL
+        CONSTRAINT DF_RPST_IncludedSessions DEFAULT (1),
+    entitlement_status  VARCHAR(50) NOT NULL
+        CONSTRAINT DF_RPST_EntitlementStatus DEFAULT ('INCLUDED'),
+    notes               NVARCHAR(500) NULL,
 
     CONSTRAINT PK_RetreatPackageSpaTreatment
         PRIMARY KEY (retreat_package_id, treatment_id),
     CONSTRAINT FK_RPST_RetreatPackage
         FOREIGN KEY (retreat_package_id)
-        REFERENCES dbo.RetreatPackage(retreat_package_id),
+        REFERENCES dbo.RetreatPackage(retreat_package_id)
+        ON DELETE CASCADE,
     CONSTRAINT FK_RPST_SpaTreatment
         FOREIGN KEY (treatment_id)
         REFERENCES dbo.SpaTreatment(treatment_id)
+        ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE dbo.PackageFnBEntitlement (
+    entitlement_id      INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_PackageFnBEntitlement PRIMARY KEY,
+    retreat_package_id  INT NOT NULL,
+    breakfast_count     INT NOT NULL
+        CONSTRAINT DF_PFnB_Breakfast DEFAULT (0),
+    lunch_count         INT NOT NULL
+        CONSTRAINT DF_PFnB_Lunch DEFAULT (0),
+    dinner_count        INT NOT NULL
+        CONSTRAINT DF_PFnB_Dinner DEFAULT (0),
+    total_meals         INT NOT NULL
+        CONSTRAINT DF_PFnB_TotalMeals DEFAULT (0),
+    menu_plan           NVARCHAR(250) NULL,
+    dietary_notes       NVARCHAR(500) NULL,
+    entitlement_status  VARCHAR(50) NOT NULL
+        CONSTRAINT DF_PFnB_Status DEFAULT ('APPROVED'),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_PFnB_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT FK_PFnB_RetreatPackage
+        FOREIGN KEY (retreat_package_id)
+        REFERENCES dbo.RetreatPackage(retreat_package_id)
+        ON DELETE CASCADE,
+    CONSTRAINT UQ_PFnB_Package UNIQUE (retreat_package_id)
+);
+GO
+
+CREATE TABLE dbo.RoomTypeMaster (
+    room_type_id        INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_RoomTypeMaster PRIMARY KEY,
+    room_type           VARCHAR(50) NOT NULL,
+    type_name           NVARCHAR(150) NOT NULL,
+    technical_specs     NVARCHAR(500) NULL,
+    design_status       VARCHAR(50) NOT NULL
+        CONSTRAINT DF_RTM_Status DEFAULT ('DESIGN_APPROVED'),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_RTM_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_RoomTypeMaster_Code UNIQUE (room_type)
+);
+GO
+
+CREATE TABLE dbo.TreatmentTypeRoomCompatibility (
+    compatibility_id    INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_TreatmentTypeRoomCompat PRIMARY KEY,
+    treatment_id        INT NOT NULL,
+    room_type           VARCHAR(50) NOT NULL,
+    required_features   NVARCHAR(250) NULL,
+    design_status       VARCHAR(50) NOT NULL
+        CONSTRAINT DF_TTRC_Status DEFAULT ('DESIGN_APPROVED'),
+
+    CONSTRAINT FK_TTRC_Treatment
+        FOREIGN KEY (treatment_id)
+        REFERENCES dbo.SpaTreatment(treatment_id)
+        ON DELETE CASCADE,
+    CONSTRAINT UQ_TTRC_Treatment_RoomType UNIQUE (treatment_id, room_type)
+);
+GO
+
+CREATE TABLE dbo.QualificationMaster (
+    qualification_id    INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_QualificationMaster PRIMARY KEY,
+    qualification_code  VARCHAR(100) NOT NULL,
+    qualification_name  NVARCHAR(200) NOT NULL,
+    baseline_status     VARCHAR(50) NOT NULL
+        CONSTRAINT DF_QM_Status DEFAULT ('DESIGN_APPROVED'),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_QM_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_QualificationMaster_Code UNIQUE (qualification_code)
 );
 GO
 

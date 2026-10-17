@@ -64,19 +64,38 @@ public class VillaInventoryDataInitializer implements ApplicationRunner {
 
     private void initRetreatPackages() {
         Object[][] pkgs = {
-                {"Detox & Thanh Lọc Toàn Diện", "Thanh lọc cơ thể, giải độc tế bào, phục hồi năng lượng tự nhiên", 3, new BigDecimal("18500000"), "ACTIVE"},
-                {"Stress Relief & Phục Hồi Thần Trí", "Giải tỏa căng thẳng, cải thiện giấc ngủ sâu, tái tạo tinh thần", 5, new BigDecimal("29800000"), "ACTIVE"},
-                {"Couple Rejuvenation Hạnh Phúc", "Gắn kết tình cảm, thư giãn đôi lứa ven biển cùng liệu trình khoáng nóng", 4, new BigDecimal("38500000"), "ACTIVE"},
-                {"Longevity & Trẻ Hóa Tế Bào", "Kéo dài tuổi thọ sinh học, cải thiện thể lực và sức khỏe toàn diện", 7, new BigDecimal("56000000"), "ACTIVE"}
+                {"RET-DETOX-03", "3D2N Thải Độc & Thanh Lọc Tinh Khiết (Pure Detox)", "Detox & Cleansing", 2, new BigDecimal("12500000"), "ACTIVE"},
+                {"RET-DETOX-05", "5D4N Tái Tạo Năng Lượng & Thải Độc Sâu (Deep Reset Detox)", "Deep Detoxification", 4, new BigDecimal("24800000"), "ACTIVE"},
+                {"RET-SLEEP-03", "3D2N Khôi Phục Giấc Ngủ Sâu (Holistic Deep Sleep)", "Sleep Improvement", 2, new BigDecimal("11800000"), "ACTIVE"},
+                {"RET-STRESS-04", "4D3N Chữa Lành Thân - Tâm & Buông Thư (Mind-Body Harmony)", "Stress Reduction", 3, new BigDecimal("17500000"), "ACTIVE"},
+                {"RET-AGING-04", "4D3N Trẻ Hóa Tế Bào & Sắc Diện Hoàng Gia (Longevity & Radiance)", "Anti-Aging & Cellular Care", 3, new BigDecimal("22000000"), "ACTIVE"},
+                {"RET-ALIGN-03", "3D2N Nắn Chỉnh Cột Sống & Cổ Vai Gáy (Spine & Posture Care)", "Physical Alignment", 2, new BigDecimal("13200000"), "ACTIVE"},
+                {"RET-VITAL-05", "5D4N Quản Lý Vóc Dáng & Đốt Mỡ Tự Nhiên (Vitality Slimming)", "Fitness & Weight Loss", 4, new BigDecimal("26500000"), "ACTIVE"},
+                {"RET-MOM-03", "3D2N Nghỉ Dưỡng Chữa Lành Mẹ Bầu (Gentle Prenatal Care)", "Maternal Wellness", 2, new BigDecimal("14000000"), "ACTIVE"}
         };
 
         for (Object[] p : pkgs) {
-            String name = (String) p[0];
-            packageRepo.findByPackageName(name).orElseGet(() -> packageRepo.save(
-                    new com.heavenstay.hswrms.m2booking.entity.RetreatPackage(
-                            name, (String) p[1], (Integer) p[2], (BigDecimal) p[3], (String) p[4]
-                    )
-            ));
+            String code = (String) p[0];
+            String name = (String) p[1];
+            packageRepo.findByPackageCode(code).or(() -> packageRepo.findByPackageName(name)).ifPresentOrElse(
+                    existing -> {
+                        existing.setPackageCode(code);
+                        existing.setPackageName(name);
+                        existing.setWellnessGoal((String) p[2]);
+                        existing.setDurationNights((Integer) p[3]);
+                        existing.setBasePrice((BigDecimal) p[4]);
+                        existing.setPackageStatus((String) p[5]);
+                        packageRepo.save(existing);
+                    },
+                    () -> {
+                        com.heavenstay.hswrms.m2booking.entity.RetreatPackage entity =
+                                new com.heavenstay.hswrms.m2booking.entity.RetreatPackage(
+                                        name, (String) p[2], (Integer) p[3], (BigDecimal) p[4], (String) p[5]
+                                );
+                        entity.setPackageCode(code);
+                        packageRepo.save(entity);
+                    }
+            );
         }
     }
 
