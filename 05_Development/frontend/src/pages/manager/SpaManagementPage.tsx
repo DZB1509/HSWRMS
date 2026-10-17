@@ -18,7 +18,11 @@ import {
   Utensils,
   Grid,
   List as ListIcon,
-  Trash2
+  PowerOff,
+  Lock,
+  Unlock,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import {
   SPA_TREATMENTS_INVENTORY,
@@ -49,8 +53,49 @@ type ActiveTab = 'treatments' | 'packages' | 'rooms' | 'rules';
 
 export const SpaManagementPage: React.FC = () => {
   const { role } = useAuth();
-  const { logAuditEvent } = useGovernance();
+  const {
+    hasCapability,
+    managerDelegatedCapabilities,
+    activeDelegations,
+    createDelegation,
+    revokeDelegation,
+    logAuditEvent
+  } = useGovernance();
   const { showToast } = useToast();
+
+  // Xác thực quyền: Chỉ Admin hoặc Quản lý đã được Admin ủy quyền quyền "manage_spa_packages" mới có quyền chỉnh sửa / ngừng gói
+  const isDelegated =
+    role === 'admin' ||
+    hasCapability(role, 'manage_spa_packages') ||
+    managerDelegatedCapabilities.includes('manage_spa_packages');
+
+  const handleToggleDelegationDemo = () => {
+    if (isDelegated) {
+      const activeSpa = activeDelegations.find(
+        (d) => d.delegateRole === 'manager' && d.capabilities.includes('manage_spa_packages')
+      );
+      if (activeSpa) {
+        revokeDelegation(activeSpa.id, 'Hết hạn ủy quyền theo quyết định của Admin');
+      }
+      showToast('Đã thu hồi ủy quyền quản lý gói Spa. Chuyển sang Chế độ Chỉ xem (Read-Only).', 'info');
+    } else {
+      const now = new Date();
+      const startsAt = now.toISOString().replace('T', ' ').substring(0, 16);
+      const end = new Date(now.getTime() + 48 * 3600 * 1000);
+      const expiresAt = end.toISOString().replace('T', ' ').substring(0, 16);
+
+      createDelegation({
+        delegateUserId: 'usr-mgr-01',
+        delegateName: 'Sarah Jenkins',
+        delegateRole: 'manager',
+        capabilities: ['manage_spa_packages'],
+        startsAt,
+        expiresAt,
+        reason: 'Ủy quyền quản lý danh mục liệu trình Spa, cập nhật giá và ngừng/kích hoạt gói theo thẩm quyền Giám đốc điều hành.'
+      });
+      showToast('Đã nhận quyết định Ủy quyền từ Admin (Alexander Wright)! Có quyền Chỉnh sửa và Ngừng gói.', 'success');
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('treatments');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -203,6 +248,10 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Save Treatment
   const handleSaveTreatment = async (updated: SpaTreatmentItem) => {
+    if (!isDelegated) {
+      showToast('Thao tác bị từ chối: Cần Admin ủy quyền quyền "manage_spa_packages" để chỉnh sửa liệu trình.', 'error');
+      return;
+    }
     setTreatments((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setEditingTreatment(null);
 
@@ -255,6 +304,10 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Add Treatment
   const handleAddTreatment = async (newTreatment: SpaTreatmentItem) => {
+    if (!isDelegated) {
+      showToast('Thao tác bị từ chối: Cần Admin ủy quyền quyền "manage_spa_packages" để thêm mới liệu trình.', 'error');
+      return;
+    }
     setTreatments((prev) => [newTreatment, ...prev]);
     setIsAddTreatmentOpen(false);
 
@@ -294,46 +347,21 @@ export const SpaManagementPage: React.FC = () => {
     showToast(`Đã thêm mới liệu trình "${newTreatment.treatmentName}" thành công!`, 'success');
   };
 
-  // Handle Delete Treatment
-  const handleDeleteTreatment = async (item: SpaTreatmentItem) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa liệu trình "${item.treatmentName}" (${item.treatmentCode}) khỏi CSDL không?`)) {
+  // Toggle Treatment Status (Ngừng gói / Kích hoạt lại) - Quy định: Không cho phép xóa, chỉ ngừng gói
+  const handleToggleTreatmentStatus = async (item: SpaTreatmentItem) => {
+    if (!isDelegated) {
+      showToast('Thao tác bị từ chối: Cần Admin ủy quyền quyền "manage_spa_packages" để thay đổi trạng thái gói.', 'error');
       return;
     }
-
-    const identifier = item.dbId || item.treatmentCode || item.id;
-    try {
-      const res = await fetch(`http://localhost:8080/api/v1/spa-treatments/${encodeURIComponent(identifier)}?hard=true`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        // Fallback soft delete
-        await fetch(`http://localhost:8080/api/v1/spa-treatments/${encodeURIComponent(identifier)}`, {
-          method: 'DELETE',
-        });
-      }
-    } catch (err) {
-      console.warn('Backend delete fallback for treatment:', err);
+    const isStopping = item.status === 'ACTIVE';
+    if (isStopping) {
+      const confirmed = window.confirm(
+        `XÁC NHẬN NGỪNG GÓI LIỆU TRÌNH:\n\nBạn có chắc chắn muốn ngừng áp dụng liệu trình "${item.treatmentName}" (${item.treatmentCode}) không?\n\n• Quy định hệ thống: Gói chỉ được phép ngừng cung cấp (chuyển sang Tạm dừng/Inactive), KHÔNG ĐƯỢC PHÉP XÓA để bảo toàn lịch sử dịch vụ và đối soát.\n• Sau khi ngừng, gói sẽ không xuất hiện cho khách đặt mới.`
+      );
+      if (!confirmed) return;
     }
 
-    setTreatments((prev) => prev.filter((t) => t.id !== item.id));
-    showToast(`Đã xóa liệu trình "${item.treatmentName}" thành công!`, 'success');
-
-    logAuditEvent({
-      actorId: 'usr-admin',
-      actorName: 'Quản trị viên',
-      actorRole: role || 'admin',
-      action: 'DELETE',
-      dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: item.treatmentCode,
-      result: 'SUCCESS',
-      detailsKey: 'audit.deleteSpaTreatment',
-      detailsFallback: `Xóa liệu trình "${item.treatmentName}" thành công.`
-    });
-  };
-
-  // Toggle Treatment Status
-  const handleToggleTreatmentStatus = async (item: SpaTreatmentItem) => {
-    const newStatus: SpaStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const newStatus: SpaStatus = isStopping ? 'INACTIVE' : 'ACTIVE';
     const updated = { ...item, status: newStatus };
     setTreatments((prev) => prev.map((t) => (t.id === item.id ? updated : t)));
 
@@ -349,13 +377,33 @@ export const SpaManagementPage: React.FC = () => {
     }
 
     showToast(
-      `Đã chuyển trạng thái liệu trình "${item.treatmentName}" sang ${newStatus === 'ACTIVE' ? 'Hoạt động' : 'Tạm dừng'}!`,
-      'info'
+      isStopping
+        ? `Đã ngừng gói "${item.treatmentName}" (Trạng thái: Tạm dừng)!`
+        : `Đã kích hoạt lại gói "${item.treatmentName}" thành công!`,
+      isStopping ? 'warning' : 'success'
     );
+
+    logAuditEvent({
+      actorId: 'usr-admin',
+      actorName: 'Quản trị viên',
+      actorRole: role || 'admin',
+      action: isStopping ? 'DEACTIVATE' : 'ACTIVATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: item.treatmentCode,
+      result: 'SUCCESS',
+      detailsKey: isStopping ? 'audit.deactivateSpaTreatment' : 'audit.activateSpaTreatment',
+      detailsFallback: isStopping
+        ? `Ngừng cung cấp liệu trình "${item.treatmentName}".`
+        : `Kích hoạt lại liệu trình "${item.treatmentName}".`
+    });
   };
 
   // Handle Save Package
   const handleSavePackage = async (updated: RetreatPackageItem) => {
+    if (!isDelegated) {
+      showToast('Thao tác bị từ chối: Cần Admin ủy quyền quyền "manage_spa_packages" để chỉnh sửa gói retreat.', 'error');
+      return;
+    }
     setPackages((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
     setEditingPackage(null);
 
@@ -406,6 +454,10 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Add Package
   const handleAddPackage = async (newPkg: RetreatPackageItem) => {
+    if (!isDelegated) {
+      showToast('Thao tác bị từ chối: Cần Admin ủy quyền quyền "manage_spa_packages" để tạo gói retreat mới.', 'error');
+      return;
+    }
     setPackages((prev) => [newPkg, ...prev]);
     setIsAddPackageOpen(false);
 
@@ -443,45 +495,21 @@ export const SpaManagementPage: React.FC = () => {
     showToast(`Đã thêm mới gói nghỉ dưỡng "${newPkg.packageName}" thành công!`, 'success');
   };
 
-  // Handle Delete Package
-  const handleDeletePackage = async (item: RetreatPackageItem) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa gói nghỉ dưỡng "${item.packageName}" (${item.packageCode}) khỏi CSDL không?`)) {
+  // Toggle Package Status (Ngừng gói / Kích hoạt lại) - Quy định: Không cho phép xóa, chỉ ngừng gói
+  const handleTogglePackageStatus = async (item: RetreatPackageItem) => {
+    if (!isDelegated) {
+      showToast('Thao tác bị từ chối: Cần Admin ủy quyền quyền "manage_spa_packages" để thay đổi trạng thái gói.', 'error');
       return;
     }
-
-    const identifier = item.dbId || item.packageCode || item.id;
-    try {
-      const res = await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(identifier)}?hard=true`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(identifier)}`, {
-          method: 'DELETE',
-        });
-      }
-    } catch (err) {
-      console.warn('Backend delete fallback for package:', err);
+    const isStopping = item.status === 'ACTIVE';
+    if (isStopping) {
+      const confirmed = window.confirm(
+        `XÁC NHẬN NGỪNG GÓI RETREAT:\n\nBạn có chắc chắn muốn ngừng áp dụng gói nghỉ dưỡng "${item.packageName}" (${item.packageCode}) không?\n\n• Quy định hệ thống: Gói chỉ được phép ngừng cung cấp (chuyển sang Tạm dừng/Inactive), KHÔNG ĐƯỢC PHÉP XÓA để bảo toàn lịch sử lưu trú, lộ trình trị liệu và thanh toán.\n• Sau khi ngừng, gói sẽ không xuất hiện để đặt mới.`
+      );
+      if (!confirmed) return;
     }
 
-    setPackages((prev) => prev.filter((p) => p.id !== item.id));
-    showToast(`Đã xóa gói nghỉ dưỡng "${item.packageName}" thành công!`, 'success');
-
-    logAuditEvent({
-      actorId: 'usr-admin',
-      actorName: 'Quản trị viên',
-      actorRole: role || 'admin',
-      action: 'DELETE',
-      dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: item.packageCode,
-      result: 'SUCCESS',
-      detailsKey: 'audit.deleteRetreatPackage',
-      detailsFallback: `Xóa gói nghỉ dưỡng "${item.packageName}" thành công.`
-    });
-  };
-
-  // Toggle Package Status
-  const handleTogglePackageStatus = async (item: RetreatPackageItem) => {
-    const newStatus: SpaStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const newStatus: SpaStatus = isStopping ? 'INACTIVE' : 'ACTIVE';
     const updated = { ...item, status: newStatus };
     setPackages((prev) => prev.map((p) => (p.id === item.id ? updated : p)));
 
@@ -497,9 +525,25 @@ export const SpaManagementPage: React.FC = () => {
     }
 
     showToast(
-      `Đã chuyển trạng thái gói "${item.packageName}" sang ${newStatus === 'ACTIVE' ? 'Hoạt động' : 'Tạm dừng'}!`,
-      'info'
+      isStopping
+        ? `Đã ngừng gói nghỉ dưỡng "${item.packageName}" (Trạng thái: Tạm dừng)!`
+        : `Đã kích hoạt lại gói nghỉ dưỡng "${item.packageName}" thành công!`,
+      isStopping ? 'warning' : 'success'
     );
+
+    logAuditEvent({
+      actorId: 'usr-admin',
+      actorName: 'Quản trị viên',
+      actorRole: role || 'admin',
+      action: isStopping ? 'DEACTIVATE' : 'ACTIVATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: item.packageCode,
+      result: 'SUCCESS',
+      detailsKey: isStopping ? 'audit.deactivateRetreatPackage' : 'audit.activateRetreatPackage',
+      detailsFallback: isStopping
+        ? `Ngừng cung cấp gói nghỉ dưỡng "${item.packageName}".`
+        : `Kích hoạt lại gói nghỉ dưỡng "${item.packageName}".`
+    });
   };
 
   // Stats
@@ -579,23 +623,111 @@ export const SpaManagementPage: React.FC = () => {
 
           {activeTab === 'treatments' ? (
             <Button
-              variant="primary"
+              variant={isDelegated ? 'primary' : 'secondary'}
               size="sm"
-              icon={<Plus size={15} />}
-              onClick={() => setIsAddTreatmentOpen(true)}
+              icon={isDelegated ? <Plus size={15} /> : <Lock size={14} />}
+              onClick={() => {
+                if (!isDelegated) {
+                  showToast('Thao tác bị khóa: Cần được Admin ủy quyền quyền "manage_spa_packages" để thêm mới liệu trình.', 'warning');
+                  return;
+                }
+                setIsAddTreatmentOpen(true);
+              }}
+              style={{ opacity: isDelegated ? 1 : 0.7 }}
+              title={!isDelegated ? 'Cần Admin ủy quyền để thêm mới' : undefined}
             >
               Thêm Liệu Trình Mới
             </Button>
           ) : activeTab === 'packages' ? (
             <Button
-              variant="primary"
+              variant={isDelegated ? 'primary' : 'secondary'}
               size="sm"
-              icon={<Plus size={15} />}
-              onClick={() => setIsAddPackageOpen(true)}
+              icon={isDelegated ? <Plus size={15} /> : <Lock size={14} />}
+              onClick={() => {
+                if (!isDelegated) {
+                  showToast('Thao tác bị khóa: Cần được Admin ủy quyền quyền "manage_spa_packages" để tạo gói retreat mới.', 'warning');
+                  return;
+                }
+                setIsAddPackageOpen(true);
+              }}
+              style={{ opacity: isDelegated ? 1 : 0.7 }}
+              title={!isDelegated ? 'Cần Admin ủy quyền để thêm mới' : undefined}
             >
               Tạo Gói Retreat Mới
             </Button>
           ) : null}
+        </div>
+      </div>
+
+      {/* Governance & Administrative Delegation Card */}
+      <div style={{
+        marginBottom: '20px',
+        padding: '16px 20px',
+        borderRadius: '12px',
+        border: isDelegated ? '1px solid rgba(46, 125, 90, 0.35)' : '1px solid rgba(221, 107, 32, 0.35)',
+        background: isDelegated
+          ? 'linear-gradient(135deg, rgba(46, 125, 90, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)'
+          : 'linear-gradient(135deg, rgba(221, 107, 32, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '14px',
+        boxShadow: 'var(--shadow-xs)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '1 1 500px' }}>
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: isDelegated ? 'rgba(46, 125, 90, 0.15)' : 'rgba(221, 107, 32, 0.15)',
+            color: isDelegated ? '#2E7D5A' : '#DD6B20',
+            flexShrink: 0
+          }}>
+            {isDelegated ? <ShieldCheck size={22} /> : <ShieldAlert size={22} />}
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: isDelegated ? '#2E7D5A' : '#DD6B20'
+              }}>
+                {isDelegated
+                  ? 'ĐÃ ĐƯỢC ADMIN ỦY QUYỀN HÀNH CHÍNH (TOÀN QUYỀN TÁC NGHIỆP ĐANG MỞ)'
+                  : 'CHẾ ĐỘ CHỈ XEM — YÊU CẦU ADMIN ỦY QUYỀN ĐỂ CHỈNH SỬA & NGỪNG GÓI'}
+              </span>
+              <span style={{
+                fontSize: '0.72rem',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-pill)',
+                fontWeight: 600,
+                background: isDelegated ? 'rgba(46, 125, 90, 0.15)' : 'rgba(221, 107, 32, 0.15)',
+                color: isDelegated ? '#2E7D5A' : '#DD6B20'
+              }}>
+                {isDelegated ? 'Authorized' : 'Restricted (Read-Only)'}
+              </span>
+            </div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+              {isDelegated
+                ? 'Quản trị viên (Alexander Wright) đã cấp quyền "manage_spa_packages": Bạn có toàn quyền cập nhật thông tin liệu trình, thay đổi đơn giá niêm yết và thực hiện thao tác Ngừng gói / Kích hoạt lại.'
+                : 'Theo quy chế quản trị vận hành HSWRMS: Quản lý resort chỉ có quyền tra cứu danh mục. Các thao tác [Chỉnh Sửa], [Ngừng gói] và [Thêm mới] sẽ bị khóa cho đến khi được Admin cấp ủy quyền chính thức.'}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Button
+            variant={isDelegated ? 'secondary' : 'primary'}
+            size="sm"
+            icon={isDelegated ? <Lock size={14} /> : <Unlock size={14} />}
+            onClick={handleToggleDelegationDemo}
+          >
+            {isDelegated ? 'Thu Hồi Quyền (Xem Chế Độ Khóa)' : 'Mô Phỏng Nhận Quyền Admin'}
+          </Button>
         </div>
       </div>
 
@@ -942,6 +1074,9 @@ export const SpaManagementPage: React.FC = () => {
                       src={t.image || 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=800&q=80'}
                       alt={t.treatmentName}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80';
+                      }}
                     />
                     <div style={{
                       position: 'absolute',
@@ -975,23 +1110,38 @@ export const SpaManagementPage: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => handleToggleTreatmentStatus(t)}
+                      onClick={() => {
+                        if (!isDelegated) {
+                          showToast('Cần Admin ủy quyền quyền "manage_spa_packages" để thay đổi trạng thái gói.', 'warning');
+                          return;
+                        }
+                        handleToggleTreatmentStatus(t);
+                      }}
                       style={{
                         position: 'absolute',
                         top: '12px',
                         right: '12px',
-                        padding: '3px 8px',
-                        background: t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.9)' : 'rgba(113, 128, 150, 0.9)',
+                        padding: '3px 10px',
+                        background: !isDelegated
+                          ? 'rgba(74, 85, 104, 0.95)'
+                          : t.status === 'ACTIVE'
+                          ? 'rgba(46, 125, 90, 0.95)'
+                          : 'rgba(113, 128, 150, 0.95)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 'var(--radius-pill)',
                         fontSize: '0.72rem',
                         fontWeight: 700,
-                        cursor: 'pointer'
+                        cursor: !isDelegated ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                       }}
-                      title="Nhấn để bật/tắt hoạt động"
+                      title={!isDelegated ? 'Cần Admin ủy quyền để thay đổi trạng thái' : 'Nhấn để ngừng gói hoặc kích hoạt lại'}
                     >
-                      {t.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
+                      {t.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
                     </button>
                   </div>
 
@@ -1076,30 +1226,81 @@ export const SpaManagementPage: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        style={{ flex: 1 }}
-                        icon={<Edit2 size={14} />}
-                        onClick={() => setEditingTreatment(t)}
+                        style={{ flex: 1, opacity: isDelegated ? 1 : 0.65 }}
+                        icon={isDelegated ? <Edit2 size={14} /> : <Lock size={13} />}
+                        onClick={() => {
+                          if (!isDelegated) {
+                            showToast('Thao tác bị khóa: Quản lý cần được Admin ủy quyền mới có quyền chỉnh sửa gói này.', 'warning');
+                            return;
+                          }
+                          setEditingTreatment(t);
+                        }}
+                        title={!isDelegated ? 'Cần Admin ủy quyền để chỉnh sửa' : 'Chỉnh sửa liệu trình'}
                       >
                         Chỉnh Sửa
                       </Button>
                       <button
                         type="button"
-                        onClick={() => handleDeleteTreatment(t)}
-                        title="Xóa liệu trình khỏi hệ thống"
+                        onClick={() => {
+                          if (!isDelegated) {
+                            showToast('Thao tác bị khóa: Quản lý cần được Admin ủy quyền mới có quyền ngừng hoặc kích hoạt gói này.', 'warning');
+                            return;
+                          }
+                          handleToggleTreatmentStatus(t);
+                        }}
+                        title={
+                          !isDelegated
+                            ? 'Cần Admin ủy quyền để ngừng hoặc kích hoạt gói'
+                            : t.status === 'ACTIVE'
+                            ? 'Ngừng áp dụng gói này (Chuyển sang Inactive, không xóa)'
+                            : 'Kích hoạt lại gói này'
+                        }
                         style={{
+                          flex: 1,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          gap: '5px',
                           padding: '6px 10px',
                           borderRadius: '8px',
-                          border: '1px solid rgba(217, 83, 79, 0.3)',
-                          background: 'rgba(217, 83, 79, 0.08)',
-                          color: '#D9534F',
-                          cursor: 'pointer',
+                          border: !isDelegated
+                            ? '1px solid rgba(160, 174, 192, 0.35)'
+                            : t.status === 'ACTIVE'
+                            ? '1px solid rgba(221, 107, 32, 0.35)'
+                            : '1px solid rgba(46, 125, 90, 0.35)',
+                          background: !isDelegated
+                            ? 'rgba(160, 174, 192, 0.08)'
+                            : t.status === 'ACTIVE'
+                            ? 'rgba(221, 107, 32, 0.08)'
+                            : 'rgba(46, 125, 90, 0.08)',
+                          color: !isDelegated
+                            ? '#718096'
+                            : t.status === 'ACTIVE'
+                            ? '#DD6B20'
+                            : '#2E7D5A',
+                          cursor: !isDelegated ? 'not-allowed' : 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
                           transition: 'all 0.2s ease',
+                          opacity: isDelegated ? 1 : 0.65
                         }}
                       >
-                        <Trash2 size={14} />
+                        {!isDelegated ? (
+                          <>
+                            <Lock size={13} />
+                            <span>{t.status === 'ACTIVE' ? 'Ngừng gói' : 'Kích hoạt'}</span>
+                          </>
+                        ) : t.status === 'ACTIVE' ? (
+                          <>
+                            <PowerOff size={13} />
+                            <span>Ngừng gói</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={13} />
+                            <span>Kích hoạt</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1181,19 +1382,47 @@ export const SpaManagementPage: React.FC = () => {
                           <button
                             type="button"
                             className="hsw-action-btn"
-                            onClick={() => setEditingTreatment(t)}
-                            title="Chỉnh sửa"
+                            onClick={() => {
+                              if (!isDelegated) {
+                                showToast('Cần Admin ủy quyền để chỉnh sửa liệu trình.', 'warning');
+                                return;
+                              }
+                              setEditingTreatment(t);
+                            }}
+                            title={!isDelegated ? 'Cần Admin ủy quyền để chỉnh sửa' : 'Chỉnh sửa'}
+                            style={{ opacity: isDelegated ? 1 : 0.6 }}
                           >
-                            <Edit2 size={15} />
+                            {isDelegated ? <Edit2 size={15} /> : <Lock size={14} />}
                           </button>
                           <button
                             type="button"
                             className="hsw-action-btn"
-                            onClick={() => handleDeleteTreatment(t)}
-                            title="Xóa liệu trình"
-                            style={{ color: '#D9534F' }}
+                            onClick={() => {
+                              if (!isDelegated) {
+                                showToast('Cần Admin ủy quyền để thay đổi trạng thái gói.', 'warning');
+                                return;
+                              }
+                              handleToggleTreatmentStatus(t);
+                            }}
+                            title={
+                              !isDelegated
+                                ? 'Cần Admin ủy quyền để ngừng hoặc kích hoạt gói'
+                                : t.status === 'ACTIVE'
+                                ? 'Ngừng áp dụng gói'
+                                : 'Kích hoạt lại gói'
+                            }
+                            style={{
+                              color: !isDelegated ? '#718096' : t.status === 'ACTIVE' ? '#DD6B20' : '#2E7D5A',
+                              opacity: isDelegated ? 1 : 0.6
+                            }}
                           >
-                            <Trash2 size={15} />
+                            {!isDelegated ? (
+                              <Lock size={14} />
+                            ) : t.status === 'ACTIVE' ? (
+                              <PowerOff size={15} />
+                            ) : (
+                              <CheckCircle2 size={15} />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -1234,6 +1463,9 @@ export const SpaManagementPage: React.FC = () => {
                   src={p.image || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80'}
                   alt={p.packageName}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80';
+                  }}
                 />
                 <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px' }}>
                   <span style={{ padding: '3px 8px', background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -1245,22 +1477,34 @@ export const SpaManagementPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleTogglePackageStatus(p)}
+                  onClick={() => {
+                    if (!isDelegated) {
+                      showToast('Cần Admin ủy quyền quyền "manage_spa_packages" để thay đổi trạng thái gói retreat.', 'warning');
+                      return;
+                    }
+                    handleTogglePackageStatus(p);
+                  }}
                   style={{
                     position: 'absolute',
                     top: '12px',
                     right: '12px',
-                    padding: '3px 8px',
-                    background: p.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
+                    padding: '3px 10px',
+                    background: !isDelegated ? '#4A5568' : p.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: !isDelegated ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                   }}
+                  title={!isDelegated ? 'Cần Admin ủy quyền để thay đổi trạng thái' : 'Nhấn để ngừng gói hoặc kích hoạt lại'}
                 >
-                  {p.status}
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: p.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
+                  {p.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
                 </button>
               </div>
 
@@ -1309,30 +1553,81 @@ export const SpaManagementPage: React.FC = () => {
                   <Button
                     variant="secondary"
                     size="sm"
-                    style={{ flex: 1 }}
-                    icon={<Edit2 size={14} />}
-                    onClick={() => setEditingPackage(p)}
+                    style={{ flex: 1, opacity: isDelegated ? 1 : 0.65 }}
+                    icon={isDelegated ? <Edit2 size={14} /> : <Lock size={13} />}
+                    onClick={() => {
+                      if (!isDelegated) {
+                        showToast('Thao tác bị khóa: Quản lý cần được Admin ủy quyền mới có quyền chỉnh sửa gói này.', 'warning');
+                        return;
+                      }
+                      setEditingPackage(p);
+                    }}
+                    title={!isDelegated ? 'Cần Admin ủy quyền để chỉnh sửa' : 'Chỉnh sửa'}
                   >
                     Chỉnh Sửa
                   </Button>
                   <button
                     type="button"
-                    onClick={() => handleDeletePackage(p)}
-                    title="Xóa gói nghỉ dưỡng khỏi hệ thống"
+                    onClick={() => {
+                      if (!isDelegated) {
+                        showToast('Thao tác bị khóa: Quản lý cần được Admin ủy quyền mới có quyền ngừng hoặc kích hoạt gói này.', 'warning');
+                        return;
+                      }
+                      handleTogglePackageStatus(p);
+                    }}
+                    title={
+                      !isDelegated
+                        ? 'Cần Admin ủy quyền để ngừng hoặc kích hoạt gói'
+                        : p.status === 'ACTIVE'
+                        ? 'Ngừng gói retreat này (Chuyển sang Inactive, không xóa)'
+                        : 'Kích hoạt lại gói này'
+                    }
                     style={{
+                      flex: 1,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      gap: '5px',
                       padding: '6px 12px',
                       borderRadius: '8px',
-                      border: '1px solid rgba(217, 83, 79, 0.3)',
-                      background: 'rgba(217, 83, 79, 0.08)',
-                      color: '#D9534F',
-                      cursor: 'pointer',
+                      border: !isDelegated
+                        ? '1px solid rgba(160, 174, 192, 0.35)'
+                        : p.status === 'ACTIVE'
+                        ? '1px solid rgba(221, 107, 32, 0.35)'
+                        : '1px solid rgba(46, 125, 90, 0.35)',
+                      background: !isDelegated
+                        ? 'rgba(160, 174, 192, 0.08)'
+                        : p.status === 'ACTIVE'
+                        ? 'rgba(221, 107, 32, 0.08)'
+                        : 'rgba(46, 125, 90, 0.08)',
+                      color: !isDelegated
+                        ? '#718096'
+                        : p.status === 'ACTIVE'
+                        ? '#DD6B20'
+                        : '#2E7D5A',
+                      cursor: !isDelegated ? 'not-allowed' : 'pointer',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
                       transition: 'all 0.2s ease',
+                      opacity: isDelegated ? 1 : 0.65
                     }}
                   >
-                    <Trash2 size={14} />
+                    {!isDelegated ? (
+                      <>
+                        <Lock size={13} />
+                        <span>{p.status === 'ACTIVE' ? 'Ngừng gói' : 'Kích hoạt'}</span>
+                      </>
+                    ) : p.status === 'ACTIVE' ? (
+                      <>
+                        <PowerOff size={13} />
+                        <span>Ngừng gói</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={13} />
+                        <span>Kích hoạt</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

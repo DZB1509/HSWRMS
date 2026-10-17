@@ -119,3 +119,53 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
     phone: '+84 258 399 1009'
   }
 ];
+
+const STAFF_STORAGE_KEY = 'hswrms_staff_accounts';
+
+export function getStoredStaffAccounts(): StaffAccount[] {
+  if (typeof window === 'undefined') return INITIAL_STAFF_ACCOUNTS;
+  try {
+    const raw = localStorage.getItem(STAFF_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(INITIAL_STAFF_ACCOUNTS));
+      return [...INITIAL_STAFF_ACCOUNTS];
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+    return [...INITIAL_STAFF_ACCOUNTS];
+  } catch (err) {
+    console.error('Failed to parse stored staff accounts:', err);
+    return [...INITIAL_STAFF_ACCOUNTS];
+  }
+}
+
+export function saveStoredStaffAccounts(accounts: StaffAccount[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(accounts));
+    window.dispatchEvent(new Event('hswrms_staff_accounts_updated'));
+  } catch (err) {
+    console.error('Failed to save staff accounts:', err);
+  }
+}
+
+export function updateStaffAccountStatus(id: string, status: StaffStatus): StaffAccount[] {
+  const accounts = getStoredStaffAccounts();
+  const updated = accounts.map((acc) => (acc.id === id ? { ...acc, status } : acc));
+  saveStoredStaffAccounts(updated);
+  return updated;
+}
+
+export function addStaffAccount(account: StaffAccount): StaffAccount[] {
+  const accounts = getStoredStaffAccounts();
+  const updated = [account, ...accounts];
+  saveStoredStaffAccounts(updated);
+  return updated;
+}
+
+export function resetStaffAccounts(): StaffAccount[] {
+  saveStoredStaffAccounts(INITIAL_STAFF_ACCOUNTS);
+  return [...INITIAL_STAFF_ACCOUNTS];
+}

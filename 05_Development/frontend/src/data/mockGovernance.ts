@@ -792,6 +792,25 @@ export const PERMISSION_RULES: PermissionRule[] = [
     },
     isImmutableBoundary: false,
     isDelegableToManager: true
+  },
+  {
+    capability: 'manage_spa_packages',
+    categoryKey: 'governance.permissions.categories.spa',
+    defaultCategory: 'Quản Trị Dịch Vụ Spa & Chữa Lành',
+    nameKey: 'governance.permissions.manageSpaPackages.name',
+    defaultName: 'Quản Lý & Chỉnh Sửa, Ngừng Gói Spa & Trị Liệu',
+    descriptionKey: 'governance.permissions.manageSpaPackages.desc',
+    defaultDescription: 'Ủy quyền cho Quản lý quyền chỉnh sửa thông tin gói, cập nhật đơn giá niêm yết, thời lượng và chuyển trạng thái ngừng/kích hoạt gói Spa & Retreat.',
+    grants: {
+      customer: 'denied',
+      receptionist: 'denied',
+      therapist: 'denied',
+      fb_staff: 'denied',
+      manager: 'denied',
+      admin: 'granted'
+    },
+    isImmutableBoundary: false,
+    isDelegableToManager: true
   }
 ];
 

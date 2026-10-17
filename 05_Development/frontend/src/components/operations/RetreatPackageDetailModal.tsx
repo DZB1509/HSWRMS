@@ -69,6 +69,9 @@ export const RetreatPackageDetailModal: React.FC<RetreatPackageDetailModalProps>
             src={pkg.image || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80'}
             alt={pkg.packageName}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80';
+            }}
           />
           <div style={{
             position: 'absolute', inset: 0,

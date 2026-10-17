@@ -16,7 +16,7 @@ import {
   Lock,
   ShieldAlert
 } from 'lucide-react';
-import { INITIAL_STAFF_ACCOUNTS } from '../../data/mockStaff';
+import { INITIAL_STAFF_ACCOUNTS, getStoredStaffAccounts, updateStaffAccountStatus } from '../../data/mockStaff';
 import type { StaffAccount, StaffStatus } from '../../types/staff';
 import type { Role } from '../../types/auth';
 import { Button } from '../../components/common/Button';
@@ -27,13 +27,14 @@ export const StaffAccountDetailPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
 
-  const initialStaff = INITIAL_STAFF_ACCOUNTS.find((s) => s.id === id) || INITIAL_STAFF_ACCOUNTS[0];
+  const initialStaff = getStoredStaffAccounts().find((s) => s.id === id) || INITIAL_STAFF_ACCOUNTS.find((s) => s.id === id) || INITIAL_STAFF_ACCOUNTS[0];
   const [staff, setStaff] = useState<StaffAccount>(initialStaff);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
 
   const toggleStatus = () => {
     if (staff.role === 'admin') return;
     const nextStatus: StaffStatus = staff.status === 'active' ? 'suspended' : 'active';
+    updateStaffAccountStatus(staff.id, nextStatus);
     setStaff((prev) => ({ ...prev, status: nextStatus }));
     setStatusModalOpen(false);
     showToast(

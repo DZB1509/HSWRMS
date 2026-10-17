@@ -15,7 +15,7 @@ import {
   Info
 } from 'lucide-react';
 import { useGovernance } from '../../hooks/useGovernance';
-import { INITIAL_STAFF_ACCOUNTS } from '../../data/mockStaff';
+import { INITIAL_STAFF_ACCOUNTS, getStoredStaffAccounts } from '../../data/mockStaff';
 
 export const AdminDashboardPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
@@ -23,6 +23,8 @@ export const AdminDashboardPage: React.FC = () => {
 
   const activeDelegationsCount = delegations.filter((d) => d.status === 'active').length;
   const recentAuditEvents = auditEvents.slice(0, 5);
+  const staffAccounts = getStoredStaffAccounts();
+  const activeStaffCount = staffAccounts.filter((s) => s.status === 'active').length;
 
   return (
     <div style={{ padding: 'var(--space-6) var(--space-8)' }}>
@@ -79,9 +81,9 @@ export const AdminDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('operations.adminDashboard.kpiStaff', 'Tài Khoản Nhân Viên')}
           </span>
-          <span className="hsw-gov-kpi-val">{INITIAL_STAFF_ACCOUNTS.length}</span>
+          <span className="hsw-gov-kpi-val">{activeStaffCount} / {staffAccounts.length}</span>
           <span className="hsw-gov-kpi-sub">
-            {t('operations.adminDashboard.kpiStaffSub', 'Nhân sự vận hành đang hoạt động')}
+            {t('operations.adminDashboard.kpiStaffSub', 'Đang hoạt động / Tổng biên chế')}
           </span>
         </div>
 

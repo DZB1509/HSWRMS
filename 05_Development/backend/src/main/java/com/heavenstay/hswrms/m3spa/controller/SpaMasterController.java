@@ -218,15 +218,15 @@ public class SpaMasterController {
     public ResponseEntity<ApiResponse<Void>> deleteTreatment(
             @PathVariable String idOrCode,
             @RequestParam(required = false, defaultValue = "false") boolean hard) {
-        SpaTreatment treatment = resolveTreatment(idOrCode);
         if (hard) {
-            spaTreatmentRepo.delete(treatment);
-            return ResponseEntity.ok(ApiResponse.ok("Treatment deleted permanently", null));
-        } else {
-            treatment.setTreatmentStatus(SpaTreatment.INACTIVE);
-            spaTreatmentRepo.save(treatment);
-            return ResponseEntity.ok(ApiResponse.ok("Treatment deactivated successfully", null));
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Quy định nghiệp vụ HSWRMS: Không được phép xóa gói/liệu trình khỏi hệ thống. Chỉ được phép ngừng gói (INACTIVE) để bảo toàn dữ liệu lịch sử đặt chỗ và đối soát.");
         }
+        SpaTreatment treatment = resolveTreatment(idOrCode);
+        treatment.setTreatmentStatus(SpaTreatment.INACTIVE);
+        spaTreatmentRepo.save(treatment);
+        return ResponseEntity.ok(ApiResponse.ok("Treatment deactivated successfully (Đã ngừng gói)", null));
     }
 
     // ========================================================================
@@ -357,15 +357,15 @@ public class SpaMasterController {
     public ResponseEntity<ApiResponse<Void>> deletePackage(
             @PathVariable String idOrCode,
             @RequestParam(required = false, defaultValue = "false") boolean hard) {
-        RetreatPackage pkg = resolvePackage(idOrCode);
         if (hard) {
-            retreatPackageRepo.delete(pkg);
-            return ResponseEntity.ok(ApiResponse.ok("Retreat package deleted permanently", null));
-        } else {
-            pkg.setPackageStatus(RetreatPackage.INACTIVE);
-            retreatPackageRepo.save(pkg);
-            return ResponseEntity.ok(ApiResponse.ok("Package deactivated successfully", null));
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Quy định nghiệp vụ HSWRMS: Không được phép xóa gói retreat khỏi hệ thống. Chỉ được phép ngừng gói (INACTIVE) để bảo toàn dữ liệu lịch sử đặt chỗ và đối soát.");
         }
+        RetreatPackage pkg = resolvePackage(idOrCode);
+        pkg.setPackageStatus(RetreatPackage.INACTIVE);
+        retreatPackageRepo.save(pkg);
+        return ResponseEntity.ok(ApiResponse.ok("Retreat package deactivated successfully (Đã ngừng gói)", null));
     }
 
     // ========================================================================

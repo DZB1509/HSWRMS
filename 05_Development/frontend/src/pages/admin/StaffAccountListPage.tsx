@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,9 +7,11 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
+  UserCheck,
+  UserX,
   X
 } from 'lucide-react';
-import { INITIAL_STAFF_ACCOUNTS } from '../../data/mockStaff';
+import { INITIAL_STAFF_ACCOUNTS, getStoredStaffAccounts, updateStaffAccountStatus, addStaffAccount } from '../../data/mockStaff';
 import type { StaffAccount } from '../../types/staff';
 import type { Role } from '../../types/auth';
 import { Button } from '../../components/common/Button';
@@ -19,7 +21,18 @@ export const StaffAccountListPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
 
-  const [staffList, setStaffList] = useState<StaffAccount[]>(INITIAL_STAFF_ACCOUNTS);
+  const [staffList, setStaffList] = useState<StaffAccount[]>(() => getStoredStaffAccounts());
+
+  useEffect(() => {
+    const handleSync = () => {
+      setStaffList(getStoredStaffAccounts());
+    };
+    handleSync();
+    window.addEventListener('hswrms_staff_accounts_updated', handleSync);
+    return () => {
+      window.removeEventListener('hswrms_staff_accounts_updated', handleSync);
+    };
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -79,12 +92,25 @@ export const StaffAccountListPage: React.FC = () => {
       avatar: initials
     };
 
-    setStaffList((prev) => [newAccount, ...prev]);
+    const updated = addStaffAccount(newAccount);
+    setStaffList(updated);
     setAddModalOpen(false);
     setNewName('');
     setNewEmail('');
     setNewTitle('');
     showToast(t('operations.staffList.createdToast', 'Đã cấp tài khoản nhân viên thành công (mô hình thử nghiệm)'), 'success');
+  };
+
+  const handleQuickToggleStatus = (staffId: string, currentStatus: string, staffName: string) => {
+    const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    const updated = updateStaffAccountStatus(staffId, nextStatus);
+    setStaffList(updated);
+    showToast(
+      nextStatus === 'active'
+        ? `Đã khôi phục quyền truy cập: ${staffName}`
+        : `Đã tạm khóa tài khoản nhân viên: ${staffName}`,
+      nextStatus === 'active' ? 'success' : 'info'
+    );
   };
 
   const getRoleBadgeStyle = (role: Role) => {
@@ -309,14 +335,49 @@ export const StaffAccountListPage: React.FC = () => {
                     {staff.lastActiveAt}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <Link
-                      to={`/admin/staff/${staff.id}`}
-                      className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
-                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      {t('common.actions.view', 'Xem Chi Tiết')}
-                      <ArrowRight size={13} />
-                    </Link>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                      {staff.role !== 'admin' && (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickToggleStatus(staff.id, staff.status, staff.name)}
+                          className="hsw-btn hsw-btn-sm"
+                          style={{
+                            padding: '3px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            borderRadius: 'var(--radius-pill)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            backgroundColor: staff.status === 'active' ? '#fff5f5' : '#e6f7f2',
+                            color: staff.status === 'active' ? 'var(--danger)' : '#00695c',
+                            border: `1px solid ${staff.status === 'active' ? '#feb2b2' : '#80cbc4'}`,
+                            cursor: 'pointer'
+                          }}
+                          title={staff.status === 'active' ? 'Tạm dừng / Khóa tài khoản' : 'Mở khóa / Kích hoạt lại'}
+                        >
+                          {staff.status === 'active' ? (
+                            <>
+                              <UserX size={12} />
+                              <span>Khóa</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck size={12} />
+                              <span>Mở khóa</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <Link
+                        to={`/admin/staff/${staff.id}`}
+                        className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
+                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        {t('common.actions.view', 'Xem Chi Tiết')}
+                        <ArrowRight size={13} />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               );

@@ -148,7 +148,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Huyết áp quá thấp, chứng sợ không gian kín khi nhắm mắt (Claustrophobia)",
     "description": "Nhỏ Dầu Ấm Luân Xa Trán (Ayurvedic Shirodhara). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1512290900672-1f4864c20790?auto=format&fit=crop&w=800&q=80"
+    "image": "https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=800&q=80"
   },
   {
     "id": "TRT-SPA-HEAL-03",
@@ -220,7 +220,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Làn da nhạy cảm mỏng manh (giảm nồng độ AHA/Enzyme tẩy tế bào chết ban đầu)",
     "description": "Trẻ Hóa Tế Bào Tảo Biển Hữu Cơ (Organic Marine Collagen). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1512290903671-1e96a40a87f5?auto=format&fit=crop&w=800&q=80"
+    "image": "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80"
   },
   {
     "id": "TRT-SPA-BODY-01",
