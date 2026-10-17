@@ -5,6 +5,7 @@ import com.heavenstay.hswrms.m1identity.dto.LoginRequest;
 import com.heavenstay.hswrms.m1identity.dto.LoginResponse;
 import com.heavenstay.hswrms.m1identity.dto.RegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
+import com.heavenstay.hswrms.m1identity.dto.SsoRegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailResponse;
 import com.heavenstay.hswrms.m1identity.service.AuthService;
@@ -28,6 +29,20 @@ public class AuthController {
         RegisterResponse response = authService.registerGuest(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Guest registered successfully.", response));
+    }
+
+    /**
+     * Completes a Google SSO registration (FR-M1-05 case 3): the account is created
+     * only here — at form submission — with the validated provider email, explicit
+     * ToS consent, and an optional password. On success the user is signed in with
+     * the standard login response (Google's verified email replaces the OTP step).
+     */
+    @PostMapping("/register/sso")
+    public ResponseEntity<ApiResponse<LoginResponse>> registerWithSso(
+            @Valid @RequestBody SsoRegisterRequest request) {
+        LoginResponse response = authService.registerWithSso(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Registration successful.", response));
     }
 
     @PostMapping("/verify-email")

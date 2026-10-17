@@ -56,6 +56,14 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+  # Google SSO (S05/S06). Client credentials are read from the environment by
+  # SsoClientConfig (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET) and must NEVER be
+  # committed. Redirect URI to register in the Google Cloud Console:
+  #   http://localhost:8080/api/v1/auth/sso/callback/google
+  sso:
+    frontend-base-url: ${SSO_FRONTEND_BASE_URL:http://localhost:5173}
+    login-ticket-ttl-ms: 300000
+    registration-ticket-ttl-ms: 600000
 
 logging:
   level:

@@ -7,11 +7,17 @@ import com.heavenstay.hswrms.m1identity.dto.LoginRequest;
 import com.heavenstay.hswrms.m1identity.dto.LoginResponse;
 import com.heavenstay.hswrms.m1identity.dto.RegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
+import com.heavenstay.hswrms.m1identity.dto.SsoRegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailResponse;
 import com.heavenstay.hswrms.m1identity.entity.*;
 import com.heavenstay.hswrms.m1identity.repository.*;
+import com.heavenstay.hswrms.m1identity.sso.SsoRejectedException;
+import com.heavenstay.hswrms.m1identity.sso.SsoTicket;
+import com.heavenstay.hswrms.m1identity.sso.SsoTicketPurpose;
+import com.heavenstay.hswrms.m1identity.sso.SsoTicketService;
 import com.heavenstay.hswrms.security.JwtTokenProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,9 +39,11 @@ public class AuthService {
     private final CustomerProfileRepository customerProfileRepository;
     private final ConsentRecordRepository consentRecordRepository;
     private final EmailOtpRepository emailOtpRepository;
+    private final AuthIdentityRepository authIdentityRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailDeliveryAdapter emailDeliveryAdapter;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SsoTicketService ssoTicketService;
 
     private static final String EMAIL_VERIFICATION_PURPOSE = "EMAIL_VERIFICATION";
     private static final int MAX_OTP_ATTEMPTS = 5;
@@ -49,17 +57,21 @@ public class AuthService {
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        UserRoleRepository userRoleRepository, CustomerProfileRepository customerProfileRepository,
                        ConsentRecordRepository consentRecordRepository,
-                       EmailOtpRepository emailOtpRepository, PasswordEncoder passwordEncoder,
-                       EmailDeliveryAdapter emailDeliveryAdapter, JwtTokenProvider jwtTokenProvider) {
+                       EmailOtpRepository emailOtpRepository, AuthIdentityRepository authIdentityRepository,
+                       PasswordEncoder passwordEncoder,
+                       EmailDeliveryAdapter emailDeliveryAdapter, JwtTokenProvider jwtTokenProvider,
+                       SsoTicketService ssoTicketService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.consentRecordRepository = consentRecordRepository;
         this.emailOtpRepository = emailOtpRepository;
+        this.authIdentityRepository = authIdentityRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailDeliveryAdapter = emailDeliveryAdapter;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.ssoTicketService = ssoTicketService;
     }
 
     @Transactional
@@ -107,6 +119,81 @@ public class AuthService {
         emailDeliveryAdapter.sendVerificationOtp(email, rawOtp);
 
         return new RegisterResponse(user.getUserId(), user.getEmail(), "Registration successful. OTP dispatched.");
+    }
+
+    /**
+     * Google SSO registration completion (FR-M1-05 case 3).
+     *
+     * <p>Runs only when the user submits the existing registration form with a valid
+     * REGISTRATION ticket that was created at the OAuth callback from server-validated
+     * provider claims. The email is taken from the ticket — never from the request —
+     * so the client cannot claim a different email or provider subject. Google's
+     * verified email replaces the OTP step: the account is created ACTIVE and
+     * email-verified. A password is optional; SSO-only accounts keep
+     * {@code password_hash = NULL}. ToS consent is recorded here (and only here),
+     * and sensitive health-data consent remains a separate, later step.</p>
+     */
+    @Transactional
+    public LoginResponse registerWithSso(SsoRegisterRequest request) {
+        // Single-use consumption: a ticket can never complete two registrations,
+        // and every failure below requires restarting the (cheap) Google flow.
+        SsoTicket ticket = ssoTicketService.consume(request.getSsoTicket(), SsoTicketPurpose.REGISTRATION);
+        if (!ticket.emailVerified()) {
+            throw new SsoRejectedException("SSO_EMAIL_NOT_VERIFIED",
+                    "The provider did not verify the email address for this account.");
+        }
+
+        String email = ticket.email().trim().toLowerCase();
+
+        if (userRepository.existsByEmail(email)) {
+            throw new ConflictException("EMAIL_EXISTS", "The email address is already registered.");
+        }
+
+        String passwordHash = null;
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            if (request.getPassword().length() < 8) {
+                throw new BusinessRuleException("PASSWORD_TOO_SHORT",
+                        "Password must be at least 8 characters long.");
+            }
+            passwordHash = passwordEncoder.encode(request.getPassword());
+        }
+
+        // 1. Create the base user account — verified/active because the provider
+        //    already verified the email (owner-approved policy for Google SSO).
+        User user = new User();
+        user.setFullName(request.getFullName().trim());
+        user.setEmail(email);
+        user.setPhoneNumber(request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null);
+        user.setPasswordHash(passwordHash);
+        user.setAccountStatus("ACTIVE");
+        user.setEmailVerified(true);
+        try {
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            // B6: concurrent registration with the same email is a controlled conflict.
+            throw new ConflictException("EMAIL_EXISTS", "The email address is already registered.");
+        }
+
+        // 2. Assign canonical CUSTOMER role
+        Role role = roleRepository.findByRoleNameIgnoreCase("Customer")
+                .orElseThrow(() -> new BusinessRuleException("ROLE_NOT_FOUND", "System configuration error: Customer role is missing."));
+        userRoleRepository.save(new UserRole(user, role));
+
+        // 3. Initialize Customer profile
+        customerProfileRepository.save(new CustomerProfile(user));
+
+        // 4. Persist ToS consent — recorded only because the user affirmatively
+        //    submitted the registration form (explicit consent checkbox required).
+        consentRecordRepository.save(new ConsentRecord(user, TOS_CONSENT_TYPE, TOS_POLICY_VERSION));
+
+        // 5. Bind the Google identity to the new account.
+        authIdentityRepository.save(new AuthIdentity(user, ticket.provider(), ticket.providerSubject()));
+
+        // 6. Sign the user in with the standard JWT/login response.
+        List<String> roles = List.of(role.getRoleName());
+        String token = jwtTokenProvider.generateToken(user.getUserId(), user.getEmail(), user.getFullName(), roles);
+        return new LoginResponse(token, "Bearer", jwtTokenProvider.getExpirationMs(),
+                user.getUserId(), user.getEmail(), user.getFullName(), roles, user.getAccountStatus());
     }
     /**
      * Email/password login issuing a JWT on success.

@@ -36,3 +36,15 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: http://localhost:5173,http://localhost:4173
+  # Google SSO (M1 FR-M1-05). Set the credentials through environment variables —
+  # never commit them:
+  #   GOOGLE_CLIENT_ID=<OAuth 2.0 Client ID (Web application) from Google Cloud Console>
+  #   GOOGLE_CLIENT_SECRET=<client secret>
+  # Authorized redirect URI registered in Google Cloud Console (must match exactly):
+  #   http://localhost:8080/api/v1/auth/sso/callback/google
+  # When unset, the backend still starts and the Google buttons show a controlled
+  # "not configured" message instead of a broken Google redirect.
+  sso:
+    frontend-base-url: ${SSO_FRONTEND_BASE_URL:http://localhost:5173}
+    login-ticket-ttl-ms: 300000
+    registration-ticket-ttl-ms: 600000

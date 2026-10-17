@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, UserPlus, Compass } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
@@ -8,13 +8,18 @@ import { PasswordInput } from '../../components/common/PasswordInput';
 import { Checkbox } from '../../components/common/Checkbox';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../hooks/useToast';
-import { registerRequest } from '../../api/auth/authApi';
+import { useAuth } from '../../hooks/useAuth';
+import { setAuthToken } from '../../api/client/apiClient';
+import { resolvePostLoginTarget } from './roleRouting';
+import { registerRequest, ssoRegisterRequest, ssoResolveTicket } from '../../api/auth/authApi';
+import { type SsoRegistrationPrefillData } from '../../api/auth/authApi';
 import { AppApiError } from '../../api/errors/apiError';
 
 export const RegisterPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { loginWithCredentials } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,6 +30,34 @@ export const RegisterPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // ── Google SSO registration prefill ────────────────────────────────
+  const [searchParams] = useSearchParams();
+  const ssoTicket = searchParams.get('ssoTicket');
+  const [isSsoRegistration, setIsSsoRegistration] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+
+  useEffect(() => {
+    if (!ssoTicket || isSsoRegistration || isResolving) return;
+
+    const resolveSsoTicket = async () => {
+      setIsResolving(true);
+      try {
+        const response = await ssoResolveTicket({ ticket: ssoTicket });
+        const prefill: SsoRegistrationPrefillData = response.data;
+        setFullName(prefill.fullName);
+        setEmail(prefill.email);
+        setIsSsoRegistration(true);
+      } catch {
+        // Resolution failed — fall back to normal registration without prefill.
+        setIsSsoRegistration(false);
+      } finally {
+        setIsResolving(false);
+      }
+    };
+
+    resolveSsoTicket();
+  }, [ssoTicket, isSsoRegistration, isResolving]);
 
   const toUserMessage = (error: unknown): string => {
     if (error instanceof AppApiError) {
@@ -44,10 +77,15 @@ export const RegisterPage: React.FC = () => {
     if (isLoading) return;
     const newErrors: Record<string, string> = {};
 
-    if (!fullName.trim()) newErrors.fullName = t('auth.alerts.fullNameRequired');
-    if (!email.trim()) newErrors.email = t('auth.alerts.emailInvalid');
-    if (!password || password.length < 8) newErrors.password = t('auth.alerts.passwordMinLength');
-    if (password !== confirmPassword) newErrors.confirmPassword = t('auth.alerts.passwordMismatch');
+    if (!isSsoRegistration) {
+      if (!fullName.trim()) newErrors.fullName = t('auth.alerts.fullNameRequired');
+      if (!email.trim()) newErrors.email = t('auth.alerts.emailInvalid');
+      if (!password || password.length < 8) newErrors.password = t('auth.alerts.passwordMinLength');
+      if (password !== confirmPassword) newErrors.confirmPassword = t('auth.alerts.passwordMismatch');
+    } else if (!fullName.trim()) {
+      // SSO prefill already filled the name, but the user may clear it.
+      newErrors.fullName = t('auth.alerts.fullNameRequired');
+    }
     if (!consent) newErrors.consent = t('auth.alerts.consentRequired');
 
     if (Object.keys(newErrors).length > 0) {
@@ -60,17 +98,41 @@ export const RegisterPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await registerRequest({
-        fullName: fullName.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-        password,
-        confirmPassword,
-        consent,
-      });
-      sessionStorage.setItem('hswrms_pending_verification_email', email.trim());
-      showToast(t('auth.alerts.otpDispatched'), 'success');
-      navigate('/register/verify');
+      if (isSsoRegistration && ssoTicket) {
+        // SSO-only registration: no password, email comes from the server-bound ticket.
+        const response = await ssoRegisterRequest({
+          ssoTicket,
+          fullName: fullName.trim(),
+          phone: phone.trim() || undefined,
+          consent,
+        });
+        // SSO registration auto-signs in; persist the standard JWT login session
+        // exactly like the password and SSO-callback login flows.
+        setAuthToken(response.data.token);
+        const resolvedRole = loginWithCredentials({
+          userId: response.data.userId,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          roles: response.data.roles,
+          accountStatus: response.data.accountStatus,
+          tokenType: response.data.tokenType,
+          expiresInMs: response.data.expiresInMs,
+        });
+        showToast(t('auth.alerts.registrationCompleted'), 'success');
+        navigate(resolvePostLoginTarget(null, resolvedRole), { replace: true });
+      } else {
+        await registerRequest({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+          password,
+          confirmPassword,
+          consent,
+        });
+        sessionStorage.setItem('hswrms_pending_verification_email', email.trim());
+        showToast(t('auth.alerts.otpDispatched'), 'success');
+        navigate('/register/verify');
+      }
     } catch (error) {
       const message = toUserMessage(error);
       setFormError(message);
@@ -112,17 +174,46 @@ export const RegisterPage: React.FC = () => {
           </div>
         ) : null}
 
-        <FormField label={t('auth.register.fullNameLabel')} required error={errors.fullName} id="reg-fullname">
+        {isSsoRegistration && (
+          <div
+            style={{
+              padding: 'var(--space-3)',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--info-bg)',
+              color: 'var(--info)',
+              fontSize: 'var(--text-sm)',
+              lineHeight: 1.5,
+              marginBottom: 'var(--space-2)',
+            }}
+          >
+            <strong>{t('auth.register.ssoBannerTitle')}:</strong> {t(
+              'auth.register.ssoBannerBody'
+            )}
+          </div>
+        )}
+
+        <FormField
+          label={t('auth.register.fullNameLabel')}
+          required={!isSsoRegistration}
+          error={errors.fullName}
+          id="reg-fullname"
+        >
           <TextInput
             id="reg-fullname"
             placeholder={t('auth.register.fullNamePlaceholder')}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             error={!!errors.fullName}
+            disabled={isSsoRegistration}
           />
         </FormField>
 
-        <FormField label={t('auth.register.emailLabel')} required error={errors.email} id="reg-email">
+        <FormField
+          label={t('auth.register.emailLabel')}
+          required={!isSsoRegistration}
+          error={errors.email}
+          id="reg-email"
+        >
           <TextInput
             id="reg-email"
             type="email"
@@ -130,6 +221,7 @@ export const RegisterPage: React.FC = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={!!errors.email}
+            disabled={isSsoRegistration}
           />
         </FormField>
 
@@ -143,25 +235,39 @@ export const RegisterPage: React.FC = () => {
           />
         </FormField>
 
-        <FormField label={t('auth.register.passwordLabel')} required error={errors.password} id="reg-password">
-          <PasswordInput
-            id="reg-password"
-            placeholder={t('auth.register.passwordPlaceholder')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={!!errors.password}
-          />
-        </FormField>
+        {!isSsoRegistration && (
+          <>
+            <FormField
+              label={t('auth.register.passwordLabel')}
+              required
+              error={errors.password}
+              id="reg-password"
+            >
+              <PasswordInput
+                id="reg-password"
+                placeholder={t('auth.register.passwordPlaceholder')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={!!errors.password}
+              />
+            </FormField>
 
-        <FormField label={t('auth.register.confirmPasswordLabel')} required error={errors.confirmPassword} id="reg-confirm-password">
-          <PasswordInput
-            id="reg-confirm-password"
-            placeholder={t('auth.register.confirmPasswordPlaceholder')}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            error={!!errors.confirmPassword}
-          />
-        </FormField>
+            <FormField
+              label={t('auth.register.confirmPasswordLabel')}
+              required
+              error={errors.confirmPassword}
+              id="reg-confirm-password"
+            >
+              <PasswordInput
+                id="reg-confirm-password"
+                placeholder={t('auth.register.confirmPasswordPlaceholder')}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                error={!!errors.confirmPassword}
+              />
+            </FormField>
+          </>
+        )}
 
         <Checkbox
           id="register-consent"
@@ -179,7 +285,7 @@ export const RegisterPage: React.FC = () => {
           icon={<UserPlus size={16} />}
           style={{ width: '100%', marginTop: 'var(--space-2)' }}
         >
-          {t('auth.register.submitBtn')}
+          {isSsoRegistration ? t('auth.register.submitSsoBtn') : t('auth.register.submitBtn')}
         </Button>
       </form>
 

@@ -10,7 +10,7 @@ import { Button } from '../../components/common/Button';
 import { GoogleIcon, FacebookIcon } from '../../components/common/BrandIcons';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { loginRequest } from '../../api/auth/authApi';
+import { loginRequest, ssoAuthorizeUrl } from '../../api/auth/authApi';
 import { setAuthToken } from '../../api/client/apiClient';
 import { AppApiError } from '../../api/errors/apiError';
 import type { Role } from '../../types/auth';
@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { loginAs, loginWithCredentials } = useAuth();
+  const { loginWithCredentials } = useAuth();
   const { showToast } = useToast();
 
   // Prefill matches the DevAccountBootstrap demo customer (dev profile) so a
@@ -124,14 +124,12 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleSimulatedSSO = (provider: 'Google' | 'Facebook') => {
+  const handleGoogleSso = () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      loginAs('customer');
-      showToast(t('auth.alerts.ssoSuccess', { provider }), 'success');
-      navigate(resolvePostLoginTarget('customer'), { replace: true });
-    }, 500);
+    // Full browser redirect to the backend OAuth authorization endpoint.
+    // The backend issues a one-time ticket and the browser returns here via
+    // the SsoCallbackPage route after the Google consent screen.
+    window.location.href = ssoAuthorizeUrl('google');
   };
 
   return (
@@ -228,7 +226,7 @@ export const LoginPage: React.FC = () => {
         <button
           type="button"
           className="hsw-btn-sso"
-          onClick={() => handleSimulatedSSO('Google')}
+          onClick={handleGoogleSso}
           aria-label={t('auth.login.google')}
         >
           <GoogleIcon size={18} />
@@ -237,12 +235,13 @@ export const LoginPage: React.FC = () => {
 
         <button
           type="button"
-          className="hsw-btn-sso"
-          onClick={() => handleSimulatedSSO('Facebook')}
+          className="hsw-btn-sso hsw-btn-sso-disabled"
+          disabled
           aria-label={t('auth.login.facebook')}
+          aria-disabled="true"
         >
           <FacebookIcon size={18} />
-          <span>Facebook</span>
+          <span>Facebook (Coming Soon)</span>
         </button>
       </div>
 
