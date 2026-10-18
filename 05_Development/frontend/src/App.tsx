@@ -6,6 +6,7 @@ import { AppRouter } from './app/router';
 import { RoleSwitcher } from './components/navigation/RoleSwitcher';
 import { SmoothScrollProvider } from './components/motion/SmoothScrollProvider';
 import { CursorProvider } from './components/motion/CursorProvider';
+import { ThemeProvider } from './context/ThemeContext';
 import { CustomerProvider } from './context/CustomerContext';
 import { OperationsProvider } from './context/OperationsContext';
 import { SpaProvider } from './context/SpaContext';
@@ -25,30 +26,32 @@ import './styles/governance.css';
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CustomerProvider>
-          <OperationsProvider>
-            <SpaProvider>
-              <DiningProvider>
-                <FolioProvider>
-                  <GovernanceProvider>
-                    <ToastProvider>
-                      <SmoothScrollProvider>
-                        <CursorProvider>
-                          <PageTransition />
-                          <AppRouter />
-                          <RoleSwitcher />
-                          <DevHealthIndicator />
-                        </CursorProvider>
-                      </SmoothScrollProvider>
-                    </ToastProvider>
-                  </GovernanceProvider>
-                </FolioProvider>
-              </DiningProvider>
-            </SpaProvider>
-          </OperationsProvider>
-        </CustomerProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <CustomerProvider>
+            <OperationsProvider>
+              <SpaProvider>
+                <DiningProvider>
+                  <FolioProvider>
+                    <GovernanceProvider>
+                      <ToastProvider>
+                        <SmoothScrollProvider>
+                          <CursorProvider>
+                            <PageTransition />
+                            <AppRouter />
+                            <RoleSwitcher />
+                            <DevHealthIndicator />
+                          </CursorProvider>
+                        </SmoothScrollProvider>
+                      </ToastProvider>
+                    </GovernanceProvider>
+                  </FolioProvider>
+                </DiningProvider>
+              </SpaProvider>
+            </OperationsProvider>
+          </CustomerProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };

@@ -20,6 +20,11 @@ This directory contains the working database schema and migrations for the Heave
    sqlcmd -S localhost -U sa -P "YourStrong@Password" -i schema.sql
    ```
 
+## Database Setup & Migration Strategy
+- **Clean Installation:** `schema.sql` represents the complete clean-install baseline including latest non-destructive columns. Running `schema.sql` sets up the full database.
+- **Incremental Migrations (`migrations/`):** For existing database instances, migration scripts (e.g., `V001__m3_spa_scheduling.sql`) use idempotent `IF NOT EXISTS` guards to apply schema evolution safely without duplicate-column failures.
+- **Development Seed Data (`seed/`):** Development sample data (treatments, rooms, mock packages) resides strictly in `seed/` (e.g. `seed/m3_spa_seed.sql`). Schema migrations must never bundle sample demo data.
+
 ## Development Schema Evolution Rules
 - **Design vs. Development Rule:** The file in `03_Design/Database/` is the read-only conceptual/design baseline. All implementation adjustments, index optimizations, and approved business model fixes live here under `05_Development/database/`.
 - **Non-Destructive Hibernate Mode:** Spring Boot should use `spring.jpa.hibernate.ddl-auto=validate` (or `none`) to ensure Hibernate never silently mutates or drops the relational schema.

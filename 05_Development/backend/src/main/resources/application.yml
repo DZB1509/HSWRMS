@@ -31,6 +31,13 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+  spa:
+    scheduling:
+      # Operational parameters configurable by environment.
+      # No unapproved business defaults (e.g. 08:00-20:00 or 3 days) are hard-coded as business truth.
+      operating-open: ${SPA_OPEN_TIME:}
+      operating-close: ${SPA_CLOSE_TIME:}
+      alternative-search-days: ${SPA_ALT_DAYS:}
 
 logging:
   level:

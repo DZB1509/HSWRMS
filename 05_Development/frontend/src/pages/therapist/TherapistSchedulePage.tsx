@@ -269,21 +269,6 @@ export const TherapistSchedulePage: React.FC = () => {
                           <span>{t('therapist.viewDetails', 'View Details')}</span>
                           <ChevronRight size={13} />
                         </button>
-                        {session.status === 'confirmed' && (
-                          <button
-                            type="button"
-                            className="therapist-start-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartSession(session.id);
-                            }}
-                            id={`therapist-start-${session.id}`}
-                            title={t('therapist.startSession', 'Start Session')}
-                          >
-                            <Play size={12} />
-                            <span>{t('therapist.start', 'Start')}</span>
-                          </button>
-                        )}
                       </div>
                     </div>
                   </React.Fragment>
