@@ -39,6 +39,15 @@ export const CheckoutConfirmationPage: React.FC = () => {
   const [isFinalizing, setIsFinalizing] = useState<boolean>(false);
   const [justCompleted, setJustCompleted] = useState<boolean>(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+  const [activeInvoiceId, setActiveInvoiceId] = useState<number>(2);
+
+  React.useEffect(() => {
+    billingApi.getFolio(bookingId || 1)
+      .then((f) => {
+        if (f.invoiceId) setActiveInvoiceId(f.invoiceId);
+      })
+      .catch(() => {});
+  }, [bookingId]);
 
   const alreadyCheckedOut = isStayCheckedOut(folioData.bookingReference) || justCompleted;
   const existingRecord = getCheckoutRecord(folioData.bookingReference);
@@ -46,7 +55,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
   const handleDownloadPdf = async () => {
     setIsDownloadingPdf(true);
     try {
-      await billingApi.downloadInvoicePdf(1, folioData.bookingReference);
+      await billingApi.downloadInvoicePdf(activeInvoiceId, folioData.bookingReference);
     } catch (err) {
       console.error('Failed to download invoice PDF:', err);
     } finally {
@@ -70,7 +79,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
     try {
       // Attempt backend atomic checkout finalization
       try {
-        await billingApi.finalizeCheckout(1);
+        await billingApi.finalizeCheckout(activeInvoiceId);
       } catch (err: any) {
         if (err?.code === 'UNSETTLED_SERVICE_ORDERS' || err?.code === 'UNPAID_CHARGES_REMAIN') {
           setCheckoutError(err.message || 'Cannot checkout while unsettled service orders or unpaid balances remain.');

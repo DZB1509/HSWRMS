@@ -1,4 +1,4 @@
-import { apiClient } from '../../../api/client/apiClient';
+import { apiClient, getAuthToken } from '../../../api/client/apiClient';
 import type {
   FolioResponse,
   PostChargeRequest,
@@ -49,7 +49,7 @@ export const billingApi = {
 
   downloadInvoicePdf: async (invoiceId: number | string, invoiceNumber?: string): Promise<void> => {
     const url = `${API_BASE_URL}/billing/invoices/${invoiceId}/pdf`;
-    const token = sessionStorage.getItem('hswrms_jwt_token') || localStorage.getItem('hswrms_jwt_token');
+    const token = getAuthToken();
 
     const headers: Record<string, string> = {};
     if (token) {
@@ -124,7 +124,7 @@ export const billingApi = {
     if (toDate) params.append('toDate', toDate);
 
     const url = `${API_BASE_URL}/analytics/export?${params.toString()}`;
-    const token = sessionStorage.getItem('hswrms_jwt_token') || localStorage.getItem('hswrms_jwt_token');
+    const token = getAuthToken();
 
     const headers: Record<string, string> = {};
     if (token) {

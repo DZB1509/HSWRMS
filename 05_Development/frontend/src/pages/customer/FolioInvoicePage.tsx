@@ -58,7 +58,8 @@ export const FolioInvoicePage: React.FC = () => {
     const fetchBackendData = async () => {
       setIsSyncing(true);
       try {
-        const data = await billingApi.getFolio(1);
+        const targetId = bookingId ? Number(bookingId) : 1;
+        const data = await billingApi.getFolio(targetId);
         if (isMounted) {
           setBackendFolio(data);
           setSyncError(null);

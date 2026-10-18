@@ -19,6 +19,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: false
     properties:
       hibernate:
@@ -40,7 +42,7 @@ app:
     mock-auto-confirm: ${VNPAY_MOCK_AUTO_CONFIRM:false}
   seed:
     # Seeds the Eleanor Vance demo stay. Keep false outside local demos.
-    demo-data: ${SEED_DEMO_DATA:false}
+    demo-data: ${SEED_DEMO_DATA:true}
 
 logging:
   level:

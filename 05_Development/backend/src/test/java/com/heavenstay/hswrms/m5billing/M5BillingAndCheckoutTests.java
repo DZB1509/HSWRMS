@@ -244,7 +244,7 @@ public class M5BillingAndCheckoutTests {
         assertEquals("PAID", currentFolio.getFolioStatus()); // Paid, but NOT closed!
         assertNull(currentFolio.getClosedAt());
 
-        PhysicalVillaEntity currentVilla = villaRepository.findByVillaNumber("Villa #102").orElseThrow();
+        PhysicalVillaEntity currentVilla = villaRepository.findByVillaNumber("V102").orElseThrow();
         assertEquals("OCCUPIED", currentVilla.getVillaStatus()); // Still occupied!
     }
 

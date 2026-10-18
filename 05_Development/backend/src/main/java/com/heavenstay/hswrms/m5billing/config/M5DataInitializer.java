@@ -48,6 +48,7 @@ public class M5DataInitializer implements CommandLineRunner {
     private final FolioItemRepository folioItemRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final javax.sql.DataSource dataSource;
 
     public M5DataInitializer(EntityManager entityManager,
                              RetreatBookingRepository bookingRepository,
@@ -58,7 +59,8 @@ public class M5DataInitializer implements CommandLineRunner {
                              FolioRepository folioRepository,
                              FolioItemRepository folioItemRepository,
                              InvoiceRepository invoiceRepository,
-                             PaymentTransactionRepository paymentTransactionRepository) {
+                             PaymentTransactionRepository paymentTransactionRepository,
+                             javax.sql.DataSource dataSource) {
         this.entityManager = entityManager;
         this.bookingRepository = bookingRepository;
         this.villaRepository = villaRepository;
@@ -69,6 +71,7 @@ public class M5DataInitializer implements CommandLineRunner {
         this.folioItemRepository = folioItemRepository;
         this.invoiceRepository = invoiceRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
+        this.dataSource = dataSource;
     }
 
     @Override
@@ -98,16 +101,23 @@ public class M5DataInitializer implements CommandLineRunner {
         entityManager.persist(profile);
 
         // 3. Villas
-        PhysicalVillaEntity v102 = new PhysicalVillaEntity(null, 1L, "Villa #102", "OCCUPIED");
+        PhysicalVillaEntity v102 = villaRepository.findByVillaNumber("V102")
+                .orElseGet(() -> villaRepository.save(new PhysicalVillaEntity(null, 1L, "V102", "AVAILABLE")));
+        v102.setVillaStatus("OCCUPIED");
         villaRepository.save(v102);
 
-        PhysicalVillaEntity v103 = new PhysicalVillaEntity(null, 1L, "Villa #103", "AVAILABLE");
+        PhysicalVillaEntity v103 = villaRepository.findByVillaNumber("V103")
+                .orElseGet(() -> villaRepository.save(new PhysicalVillaEntity(null, 1L, "V103", "AVAILABLE")));
         villaRepository.save(v103);
 
-        PhysicalVillaEntity v104 = new PhysicalVillaEntity(null, 2L, "Villa #104", "NEEDS_CLEANING");
+        PhysicalVillaEntity v104 = villaRepository.findByVillaNumber("V104")
+                .orElseGet(() -> villaRepository.save(new PhysicalVillaEntity(null, 2L, "V104", "AVAILABLE")));
+        v104.setVillaStatus("NEEDS_CLEANING");
         villaRepository.save(v104);
 
-        PhysicalVillaEntity v105 = new PhysicalVillaEntity(null, 2L, "Villa #105", "MAINTENANCE");
+        PhysicalVillaEntity v105 = villaRepository.findByVillaNumber("V105")
+                .orElseGet(() -> villaRepository.save(new PhysicalVillaEntity(null, 2L, "V105", "AVAILABLE")));
+        v105.setVillaStatus("MAINTENANCE");
         villaRepository.save(v105);
 
         // 4. Therapists
@@ -120,6 +130,21 @@ public class M5DataInitializer implements CommandLineRunner {
         therapist2.setUser(therapistUser2);
         therapist2.setTherapistStatus("ACTIVE");
         therapistRepository.save(therapist2);
+
+        // Ensure qualification and room compatibility for Spa Sessions if running against Microsoft SQL Server
+        try (java.sql.Connection conn = dataSource.getConnection()) {
+            String dbName = conn.getMetaData().getDatabaseProductName();
+            if (dbName != null && dbName.toLowerCase().contains("sql server")) {
+                try (java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("IF NOT EXISTS (SELECT 1 FROM dbo.TherapistTreatmentQualification WHERE therapist_id = " + therapist1.getTherapistId() + " AND treatment_id = 1) INSERT INTO dbo.TherapistTreatmentQualification (therapist_id, treatment_id) VALUES (" + therapist1.getTherapistId() + ", 1)");
+                    stmt.executeUpdate("IF NOT EXISTS (SELECT 1 FROM dbo.TherapistTreatmentQualification WHERE therapist_id = " + therapist1.getTherapistId() + " AND treatment_id = 2) INSERT INTO dbo.TherapistTreatmentQualification (therapist_id, treatment_id) VALUES (" + therapist1.getTherapistId() + ", 2)");
+                    stmt.executeUpdate("IF NOT EXISTS (SELECT 1 FROM dbo.TreatmentRoomCompatibility WHERE room_id = 1 AND treatment_id = 1) INSERT INTO dbo.TreatmentRoomCompatibility (room_id, treatment_id) VALUES (1, 1)");
+                    stmt.executeUpdate("IF NOT EXISTS (SELECT 1 FROM dbo.TreatmentRoomCompatibility WHERE room_id = 2 AND treatment_id = 2) INSERT INTO dbo.TreatmentRoomCompatibility (room_id, treatment_id) VALUES (2, 2)");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("SQL Server qualification seed skipped or not applicable: {}", e.getMessage());
+        }
 
         // 5. Booking 1: Eleanor Vance (HSW-88192, id = 1)
         RetreatBookingEntity booking1 = new RetreatBookingEntity();
@@ -151,7 +176,7 @@ public class M5DataInitializer implements CommandLineRunner {
         // Included session (completed)
         SpaSessionEntity session1 = new SpaSessionEntity();
         session1.setRetreatBooking(savedBooking);
-        session1.setTreatmentId(101L);
+        session1.setTreatmentId(1L);
         session1.setTherapist(therapist1);
         session1.setRoomId(1L);
         session1.setScheduledStartAt(LocalDateTime.now().minusDays(2).withHour(10).withMinute(0));
@@ -165,7 +190,7 @@ public class M5DataInitializer implements CommandLineRunner {
         // Extra session (completed)
         SpaSessionEntity session2 = new SpaSessionEntity();
         session2.setRetreatBooking(savedBooking);
-        session2.setTreatmentId(102L);
+        session2.setTreatmentId(2L);
         session2.setTherapist(therapist1);
         session2.setRoomId(2L);
         session2.setScheduledStartAt(LocalDateTime.now().minusDays(1).withHour(14).withMinute(0));

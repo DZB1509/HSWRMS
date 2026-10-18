@@ -36,6 +36,16 @@ export const FinalPaymentPage: React.FC = () => {
   const amountToPay = folioData.outstandingBalance;
   const isZeroBalance = amountToPay <= 0;
 
+  const [activeInvoiceId, setActiveInvoiceId] = useState<number>(2);
+
+  React.useEffect(() => {
+    billingApi.getFolio(bookingId || 1)
+      .then((f) => {
+        if (f.invoiceId) setActiveInvoiceId(f.invoiceId);
+      })
+      .catch(() => {});
+  }, [bookingId]);
+
   const handlePay = async () => {
     setIsProcessing(true);
     try {
@@ -43,7 +53,7 @@ export const FinalPaymentPage: React.FC = () => {
 
       // Attempt live backend call
       try {
-        await billingApi.payInvoice(1, {
+        await billingApi.payInvoice(activeInvoiceId, {
           paymentMethod: selectedMethod,
           amount: amountToPay,
           transactionReference: generatedRef,
@@ -67,7 +77,7 @@ export const FinalPaymentPage: React.FC = () => {
     setIsProcessing(true);
     try {
       try {
-        await billingApi.finalizeCheckout(1);
+        await billingApi.finalizeCheckout(activeInvoiceId);
       } catch {
         // Fallback
       }
