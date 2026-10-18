@@ -1,0 +1,155 @@
+package com.heavenstay.hswrms.m2booking.service;
+
+import com.heavenstay.hswrms.common.exception.BusinessRuleException;
+import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m2booking.dto.BookingCalculationRequest;
+import com.heavenstay.hswrms.m2booking.dto.BookingCalculationResponse;
+import com.heavenstay.hswrms.m2booking.dto.BookingSummaryResponse;
+import com.heavenstay.hswrms.m2booking.dto.CreateBookingRequest;
+import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
+import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
+import com.heavenstay.hswrms.m2booking.entity.VillaCategory;
+import com.heavenstay.hswrms.m2booking.repository.ResidenceRecordRepository;
+import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
+import com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository;
+import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+public class RetreatBookingService {
+
+    private final RetreatBookingRepository bookingRepository;
+    private final RetreatPackageRepository packageRepository;
+    private final VillaCategoryRepository villaCategoryRepository;
+    private final VillaAvailabilityService availabilityService;
+    private final ResidenceRecordRepository residenceRecordRepository;
+
+    public RetreatBookingService(RetreatBookingRepository bookingRepository,
+                                 RetreatPackageRepository packageRepository,
+                                 VillaCategoryRepository villaCategoryRepository,
+                                 VillaAvailabilityService availabilityService,
+                                 ResidenceRecordRepository residenceRecordRepository) {
+        this.bookingRepository = bookingRepository;
+        this.packageRepository = packageRepository;
+        this.villaCategoryRepository = villaCategoryRepository;
+        this.availabilityService = availabilityService;
+        this.residenceRecordRepository = residenceRecordRepository;
+    }
+
+    public BookingSummaryResponse createBooking(CreateBookingRequest request, Integer customerProfileId) {
+        RetreatPackage pkg = packageRepository.findById(request.getRetreatPackageId())
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat package not found: " + request.getRetreatPackageId()));
+
+        VillaCategory category = villaCategoryRepository.findById(request.getRequestedVillaCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Villa category not found: " + request.getRequestedVillaCategoryId()));
+
+        BookingCalculationRequest calcReq = new BookingCalculationRequest();
+        calcReq.setRetreatPackageId(pkg.getRetreatPackageId());
+        calcReq.setVillaCategoryId(category.getVillaCategoryId());
+        calcReq.setCheckInDate(request.getCheckInDate());
+        calcReq.setCheckOutDate(request.getCheckOutDate());
+        calcReq.setGuestCount(1);
+
+        BookingCalculationResponse calcRes = availabilityService.calculateBooking(calcReq);
+        if (!calcRes.isAvailable()) {
+            throw new BusinessRuleException("No villas available in category '" + category.getCategoryName() + "' for the selected dates");
+        }
+
+        RetreatBooking booking = new RetreatBooking();
+        booking.setCustomerProfileId(customerProfileId != null ? customerProfileId : 1);
+        booking.setRetreatPackage(pkg);
+        booking.setRequestedVillaCategory(category);
+        booking.setCheckInDate(request.getCheckInDate());
+        booking.setCheckOutDate(request.getCheckOutDate());
+        booking.setBookingStatus("PENDING");
+        booking.setTotalEstimatedAmount(calcRes.getTotalEstimatedAmount());
+        booking.setDepositAmount(calcRes.getRequiredDepositAmount());
+        booking.setSpecialRequest(request.getSpecialRequest());
+        booking.setCreatedAt(LocalDateTime.now());
+
+        RetreatBooking saved = bookingRepository.save(booking);
+        return toSummaryResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingSummaryResponse> getCustomerBookings(Integer customerProfileId) {
+        return bookingRepository.findByCustomerProfileIdOrderByCreatedAtDesc(customerProfileId)
+                .stream()
+                .map(this::toSummaryResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public BookingSummaryResponse getBookingDetail(Integer bookingId) {
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
+        return toSummaryResponse(booking);
+    }
+
+    public BookingSummaryResponse cancelBooking(Integer bookingId, Integer customerProfileId) {
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
+
+        if (customerProfileId != null && !booking.getCustomerProfileId().equals(customerProfileId)) {
+            throw new BusinessRuleException("You do not have permission to cancel this booking");
+        }
+
+        if (!"PENDING".equals(booking.getBookingStatus()) && !"CONFIRMED".equals(booking.getBookingStatus())) {
+            throw new BusinessRuleException("Cannot cancel booking with status: " + booking.getBookingStatus());
+        }
+
+        booking.setBookingStatus("CANCELLED");
+        RetreatBooking updated = bookingRepository.save(booking);
+        return toSummaryResponse(updated);
+    }
+
+    public BookingSummaryResponse confirmBookingDeposit(Integer bookingId, BigDecimal amountPaid, String txnRef) {
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
+
+        if ("CONFIRMED".equals(booking.getBookingStatus()) || "CHECKED_IN".equals(booking.getBookingStatus())) {
+            return toSummaryResponse(booking); // Idempotent
+        }
+
+        booking.setBookingStatus("CONFIRMED");
+        if (amountPaid != null && amountPaid.compareTo(BigDecimal.ZERO) > 0) {
+            booking.setDepositAmount(amountPaid);
+        }
+
+        RetreatBooking saved = bookingRepository.save(booking);
+        return toSummaryResponse(saved);
+    }
+
+    public BookingSummaryResponse toSummaryResponse(RetreatBooking entity) {
+        BookingSummaryResponse res = new BookingSummaryResponse();
+        res.setRetreatBookingId(entity.getRetreatBookingId());
+        res.setCustomerProfileId(entity.getCustomerProfileId());
+        res.setRetreatPackageId(entity.getRetreatPackage().getRetreatPackageId());
+        res.setPackageName(entity.getRetreatPackage().getPackageName());
+        res.setRequestedVillaCategoryId(entity.getRequestedVillaCategory().getVillaCategoryId());
+        res.setRequestedCategoryName(entity.getRequestedVillaCategory().getCategoryName());
+        if (entity.getAssignedVilla() != null) {
+            res.setAssignedVillaId(entity.getAssignedVilla().getVillaId());
+            res.setAssignedVillaNumber(entity.getAssignedVilla().getVillaNumber());
+        }
+        res.setCheckInDate(entity.getCheckInDate());
+        res.setCheckOutDate(entity.getCheckOutDate());
+        res.setBookingStatus(entity.getBookingStatus());
+        res.setDepositAmount(entity.getDepositAmount());
+        res.setTotalEstimatedAmount(entity.getTotalEstimatedAmount());
+        res.setSpecialRequest(entity.getSpecialRequest());
+        res.setCreatedAt(entity.getCreatedAt());
+
+        boolean hasResidence = residenceRecordRepository.existsByRetreatBooking_RetreatBookingId(entity.getRetreatBookingId());
+        res.setHasResidenceRecord(hasResidence);
+
+        return res;
+    }
+}

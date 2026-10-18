@@ -52,10 +52,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // Public Foundation & Health Endpoints
                         .requestMatchers("/api/v1/health").permitAll()
-                        // Public Auth Endpoints (Phase 2 extension)
+                        // Public Auth Endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        // Public Retreat Packages Catalog (Phase 3 extension)
-                        .requestMatchers("/api/v1/packages/**").permitAll()
+                        // Public Retreat Packages Catalog & Calculation
+                        .requestMatchers("/api/v1/packages/**", "/api/v1/retreat-packages/**").permitAll()
+                        // VNPay Webhooks & Redirect Callbacks
+                        .requestMatchers("/api/v1/payments/**").permitAll()
+                        // Customer and Receptionist prototype endpoints
+                        .requestMatchers("/api/v1/customer/**", "/api/v1/receptionist/**").permitAll()
                         // Any other request requires valid authentication
                         .anyRequest().authenticated()
                 )
