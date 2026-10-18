@@ -52,12 +52,6 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.SpaTreatment') AND name = 'duration_unit')
-BEGIN
-    ALTER TABLE dbo.SpaTreatment ADD duration_unit NVARCHAR(50) NOT NULL CONSTRAINT DF_SpaTreatment_DurationUnit DEFAULT (N'Phút (Minutes)');
-    PRINT 'Added duration_unit to SpaTreatment';
-END
-GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.SpaTreatment') AND name = 'required_qualification_code')
 BEGIN

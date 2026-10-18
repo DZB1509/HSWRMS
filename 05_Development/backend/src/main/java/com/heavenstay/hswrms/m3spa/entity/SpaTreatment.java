@@ -2,6 +2,8 @@ package com.heavenstay.hswrms.m3spa.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,9 +14,6 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "SpaTreatment")
 public class SpaTreatment {
-
-    public static final String ACTIVE = "ACTIVE";
-    public static final String INACTIVE = "INACTIVE";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,9 +31,6 @@ public class SpaTreatment {
 
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
-
-    @Column(name = "duration_unit", nullable = false, length = 50)
-    private String durationUnit = "Phút (Minutes)";
 
     @Column(name = "base_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal basePrice;
@@ -60,16 +56,21 @@ public class SpaTreatment {
     @Column(name = "description", length = 1000)
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "treatment_status", nullable = false, length = 20)
-    private String treatmentStatus = ACTIVE;
+    private TreatmentStatus treatmentStatus = TreatmentStatus.ACTIVE;
 
     public SpaTreatment() {}
 
-    public SpaTreatment(String treatmentName, int durationMinutes, BigDecimal basePrice, String treatmentStatus) {
+    public SpaTreatment(String treatmentName, int durationMinutes, BigDecimal basePrice, TreatmentStatus treatmentStatus) {
         this.treatmentName = treatmentName;
         this.durationMinutes = durationMinutes;
         this.basePrice = basePrice;
-        this.treatmentStatus = treatmentStatus != null ? treatmentStatus : ACTIVE;
+        this.treatmentStatus = treatmentStatus != null ? treatmentStatus : TreatmentStatus.ACTIVE;
+    }
+
+    public SpaTreatment(String treatmentName, int durationMinutes, BigDecimal basePrice, String treatmentStatus) {
+        this(treatmentName, durationMinutes, basePrice, TreatmentStatus.from(treatmentStatus));
     }
 
     public Integer getTreatmentId() { return treatmentId; }
@@ -81,8 +82,6 @@ public class SpaTreatment {
     public void setCategory(String category) { this.category = category; }
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
-    public String getDurationUnit() { return durationUnit; }
-    public void setDurationUnit(String durationUnit) { this.durationUnit = durationUnit; }
     public BigDecimal getBasePrice() { return basePrice; }
     public void setBasePrice(BigDecimal basePrice) { this.basePrice = basePrice; }
     public String getPricingRule() { return pricingRule; }
@@ -99,6 +98,7 @@ public class SpaTreatment {
     public void setPrecautions(String precautions) { this.precautions = precautions; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public String getTreatmentStatus() { return treatmentStatus; }
-    public void setTreatmentStatus(String treatmentStatus) { this.treatmentStatus = treatmentStatus; }
+    public TreatmentStatus getTreatmentStatus() { return treatmentStatus; }
+    public void setTreatmentStatus(TreatmentStatus treatmentStatus) { this.treatmentStatus = treatmentStatus; }
+    public void setTreatmentStatus(String treatmentStatus) { this.treatmentStatus = TreatmentStatus.from(treatmentStatus); }
 }

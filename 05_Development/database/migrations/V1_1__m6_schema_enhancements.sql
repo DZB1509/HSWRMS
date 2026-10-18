@@ -159,6 +159,26 @@ BEGIN
         ALTER TABLE dbo.AuditLog ADD request_payload_masked NVARCHAR(MAX) NULL;
     END
 
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'target_ref_id')
+    BEGIN
+        ALTER TABLE dbo.AuditLog ADD target_ref_id VARCHAR(100) NULL;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'old_value')
+    BEGIN
+        ALTER TABLE dbo.AuditLog ADD old_value NVARCHAR(500) NULL;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'new_value')
+    BEGIN
+        ALTER TABLE dbo.AuditLog ADD new_value NVARCHAR(500) NULL;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'delegation_id')
+    BEGIN
+        ALTER TABLE dbo.AuditLog ADD delegation_id INT NULL;
+    END
+
     IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'response_status')
     BEGIN
         ALTER TABLE dbo.AuditLog ADD response_status INT NULL;

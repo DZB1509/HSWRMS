@@ -9,6 +9,7 @@ import com.heavenstay.hswrms.m3spa.entity.RetreatPackageSpaTreatment;
 import com.heavenstay.hswrms.m3spa.entity.RetreatPackageSpaTreatmentId;
 import com.heavenstay.hswrms.m3spa.entity.SpaTreatment;
 import com.heavenstay.hswrms.m3spa.entity.TreatmentRoom;
+import com.heavenstay.hswrms.m3spa.entity.TreatmentStatus;
 import com.heavenstay.hswrms.m3spa.repository.PackageFnBEntitlementRepository;
 import com.heavenstay.hswrms.m3spa.repository.RetreatPackageSpaTreatmentRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaTreatmentRepository;
@@ -16,6 +17,7 @@ import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -93,13 +95,13 @@ public class SpaMasterController {
     // 1. SPA TREATMENTS
     // ========================================================================
 
-    @GetMapping("/spa-treatments")
+    @GetMapping({"/spa/treatments", "/spa-treatments"})
     public ResponseEntity<ApiResponse<List<SpaTreatment>>> getAllTreatments(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String category) {
         List<SpaTreatment> list = spaTreatmentRepo.findAll();
         if (status != null && !status.isBlank()) {
-            list = list.stream().filter(t -> t.getTreatmentStatus().equalsIgnoreCase(status)).toList();
+            list = list.stream().filter(t -> t.getTreatmentStatus().name().equalsIgnoreCase(status.trim())).toList();
         }
         if (category != null && !category.isBlank()) {
             list = list.stream().filter(t -> t.getCategory() != null && t.getCategory().equalsIgnoreCase(category)).toList();
@@ -107,13 +109,14 @@ public class SpaMasterController {
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
-    @GetMapping("/spa-treatments/{idOrCode}")
+    @GetMapping({"/spa/treatments/{idOrCode}", "/spa-treatments/{idOrCode}"})
     public ResponseEntity<ApiResponse<SpaTreatment>> getTreatmentById(@PathVariable String idOrCode) {
         SpaTreatment treatment = resolveTreatment(idOrCode);
         return ResponseEntity.ok(ApiResponse.ok(treatment));
     }
 
-    @PostMapping("/spa-treatments")
+    @PostMapping({"/spa/treatments", "/spa-treatments"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<SpaTreatment>> createTreatment(@RequestBody Map<String, Object> payload) {
         String treatmentName = (String) payload.get("treatmentName");
         if (treatmentName == null || treatmentName.isBlank()) {
@@ -130,7 +133,6 @@ public class SpaMasterController {
         treatment.setDurationMinutes(payload.get("durationMinutes") != null
                 ? Integer.parseInt(payload.get("durationMinutes").toString())
                 : 60);
-        treatment.setDurationUnit((String) payload.getOrDefault("durationUnit", "Phút (Minutes)"));
         treatment.setBasePrice(payload.get("basePrice") != null
                 ? new BigDecimal(payload.get("basePrice").toString())
                 : BigDecimal.ZERO);
@@ -141,14 +143,18 @@ public class SpaMasterController {
         treatment.setContraindications((String) payload.get("contraindications"));
         treatment.setPrecautions((String) payload.get("precautions"));
         treatment.setDescription((String) payload.get("description"));
-        treatment.setTreatmentStatus((String) payload.getOrDefault("treatmentStatus", SpaTreatment.ACTIVE));
+        String statusStr = payload.containsKey("treatmentStatus") && payload.get("treatmentStatus") != null
+                ? payload.get("treatmentStatus").toString()
+                : null;
+        treatment.setTreatmentStatus(TreatmentStatus.from(statusStr));
 
         SpaTreatment saved = spaTreatmentRepo.save(treatment);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Spa treatment created successfully", saved));
     }
 
-    @PutMapping("/spa-treatments/{idOrCode}")
+    @PutMapping({"/spa/treatments/{idOrCode}", "/spa-treatments/{idOrCode}"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<SpaTreatment>> updateTreatment(
             @PathVariable String idOrCode,
             @RequestBody Map<String, Object> payload) {
@@ -165,9 +171,6 @@ public class SpaMasterController {
         }
         if (payload.containsKey("durationMinutes") && payload.get("durationMinutes") != null) {
             treatment.setDurationMinutes(Integer.parseInt(payload.get("durationMinutes").toString()));
-        }
-        if (payload.containsKey("durationUnit")) {
-            treatment.setDurationUnit((String) payload.get("durationUnit"));
         }
         if (payload.containsKey("basePrice") && payload.get("basePrice") != null) {
             treatment.setBasePrice(new BigDecimal(payload.get("basePrice").toString()));
@@ -193,27 +196,32 @@ public class SpaMasterController {
         if (payload.containsKey("description")) {
             treatment.setDescription((String) payload.get("description"));
         }
-        if (payload.containsKey("treatmentStatus")) {
-            treatment.setTreatmentStatus((String) payload.get("treatmentStatus"));
+        if (payload.containsKey("treatmentStatus") && payload.get("treatmentStatus") != null) {
+            treatment.setTreatmentStatus(TreatmentStatus.from(payload.get("treatmentStatus").toString()));
         }
 
         SpaTreatment updated = spaTreatmentRepo.save(treatment);
         return ResponseEntity.ok(ApiResponse.ok("Spa treatment updated successfully", updated));
     }
 
-    @PatchMapping("/spa-treatments/{idOrCode}/status")
+    @PatchMapping({"/spa/treatments/{idOrCode}/status", "/spa-treatments/{idOrCode}/status"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<SpaTreatment>> toggleTreatmentStatus(
             @PathVariable String idOrCode,
             @RequestBody(required = false) Map<String, Object> payload) {
         SpaTreatment treatment = resolveTreatment(idOrCode);
-        String newStatus = (payload != null && payload.containsKey("treatmentStatus"))
-                ? (String) payload.get("treatmentStatus")
-                : (SpaTreatment.ACTIVE.equals(treatment.getTreatmentStatus()) ? SpaTreatment.INACTIVE : SpaTreatment.ACTIVE);
+        TreatmentStatus newStatus;
+        if (payload != null && payload.containsKey("treatmentStatus") && payload.get("treatmentStatus") != null) {
+            newStatus = TreatmentStatus.from(payload.get("treatmentStatus").toString());
+        } else {
+            newStatus = treatment.getTreatmentStatus() == TreatmentStatus.ACTIVE ? TreatmentStatus.INACTIVE : TreatmentStatus.ACTIVE;
+        }
         treatment.setTreatmentStatus(newStatus);
         return ResponseEntity.ok(ApiResponse.ok("Treatment status updated", spaTreatmentRepo.save(treatment)));
     }
 
-    @DeleteMapping("/spa-treatments/{idOrCode}")
+    @DeleteMapping({"/spa/treatments/{idOrCode}", "/spa-treatments/{idOrCode}"})
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> deleteTreatment(
             @PathVariable String idOrCode,
@@ -224,7 +232,7 @@ public class SpaMasterController {
                     "Quy định nghiệp vụ HSWRMS: Không được phép xóa gói/liệu trình khỏi hệ thống. Chỉ được phép ngừng gói (INACTIVE) để bảo toàn dữ liệu lịch sử đặt chỗ và đối soát.");
         }
         SpaTreatment treatment = resolveTreatment(idOrCode);
-        treatment.setTreatmentStatus(SpaTreatment.INACTIVE);
+        treatment.setTreatmentStatus(TreatmentStatus.INACTIVE);
         spaTreatmentRepo.save(treatment);
         return ResponseEntity.ok(ApiResponse.ok("Treatment deactivated successfully (Đã ngừng gói)", null));
     }
@@ -250,6 +258,7 @@ public class SpaMasterController {
     }
 
     @PostMapping("/retreat-packages")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RetreatPackage>> createPackage(@RequestBody Map<String, Object> payload) {
         String packageName = (String) payload.get("packageName");
         if (packageName == null || packageName.isBlank()) {
@@ -283,6 +292,7 @@ public class SpaMasterController {
     }
 
     @PutMapping("/retreat-packages/{idOrCode}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RetreatPackage>> updatePackage(
             @PathVariable String idOrCode,
             @RequestBody Map<String, Object> payload) {
@@ -330,6 +340,7 @@ public class SpaMasterController {
     }
 
     @PatchMapping("/retreat-packages/{idOrCode}/price")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RetreatPackage>> updatePackagePrice(
             @PathVariable String idOrCode,
             @RequestBody Map<String, Object> payload) {
@@ -341,6 +352,7 @@ public class SpaMasterController {
     }
 
     @PatchMapping("/retreat-packages/{idOrCode}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RetreatPackage>> togglePackageStatus(
             @PathVariable String idOrCode,
             @RequestBody(required = false) Map<String, Object> payload) {
@@ -353,6 +365,7 @@ public class SpaMasterController {
     }
 
     @DeleteMapping("/retreat-packages/{idOrCode}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> deletePackage(
             @PathVariable String idOrCode,
@@ -380,6 +393,7 @@ public class SpaMasterController {
     }
 
     @PostMapping("/retreat-packages/{idOrCode}/treatments")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<RetreatPackageSpaTreatment>> addTreatmentToPackage(
             @PathVariable String idOrCode,
@@ -402,6 +416,7 @@ public class SpaMasterController {
     }
 
     @PutMapping("/retreat-packages/{idOrCode}/treatments/{treatmentIdOrCode}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<RetreatPackageSpaTreatment>> updatePackageTreatment(
             @PathVariable String idOrCode,
@@ -429,6 +444,7 @@ public class SpaMasterController {
     }
 
     @DeleteMapping("/retreat-packages/{idOrCode}/treatments/{treatmentIdOrCode}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> removeTreatmentFromPackage(
             @PathVariable String idOrCode,
@@ -453,6 +469,7 @@ public class SpaMasterController {
     }
 
     @PutMapping("/retreat-packages/{idOrCode}/fnb")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<PackageFnBEntitlement>> updatePackageFnB(
             @PathVariable String idOrCode,
@@ -484,7 +501,7 @@ public class SpaMasterController {
     // 5. TREATMENT ROOMS
     // ========================================================================
 
-    @GetMapping("/treatment-rooms")
+    @GetMapping({"/spa/treatment-rooms", "/treatment-rooms"})
     public ResponseEntity<ApiResponse<List<TreatmentRoom>>> getAllTreatmentRooms(
             @RequestParam(required = false) String status) {
         List<TreatmentRoom> list = treatmentRoomRepo.findAll();
@@ -494,7 +511,8 @@ public class SpaMasterController {
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
-    @PostMapping("/treatment-rooms")
+    @PostMapping({"/spa/treatment-rooms", "/treatment-rooms"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<TreatmentRoom>> createTreatmentRoom(@RequestBody Map<String, Object> payload) {
         String roomName = (String) payload.get("roomName");
         if (roomName == null || roomName.isBlank()) {
@@ -509,7 +527,8 @@ public class SpaMasterController {
                 .body(ApiResponse.created("Treatment room created successfully", saved));
     }
 
-    @PutMapping("/treatment-rooms/{roomId}")
+    @PutMapping({"/spa/treatment-rooms/{roomId}", "/treatment-rooms/{roomId}"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<TreatmentRoom>> updateTreatmentRoom(
             @PathVariable Integer roomId,
             @RequestBody Map<String, Object> payload) {

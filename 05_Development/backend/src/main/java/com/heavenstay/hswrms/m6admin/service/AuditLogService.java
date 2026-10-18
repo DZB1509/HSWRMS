@@ -45,10 +45,14 @@ public class AuditLogService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(Integer actorUserId, String actorRole, String action, String targetDataType,
                        String targetRefId, String accessStatus, String oldValue, String newValue) {
-        Integer delegationId = resolveDelegation(actorUserId, actorRole);
-        repository.save(new AuditLog(actorUserId, actorRole, truncate(action, 150), truncate(targetDataType, 100),
-                truncate(targetRefId, 100), accessStatus, truncate(oldValue, 500), truncate(newValue, 500),
-                delegationId, now()));
+        try {
+            Integer delegationId = resolveDelegation(actorUserId, actorRole);
+            repository.save(new AuditLog(actorUserId, actorRole, truncate(action, 150), truncate(targetDataType, 100),
+                    truncate(targetRefId, 100), accessStatus, truncate(oldValue, 500), truncate(newValue, 500),
+                    delegationId, now()));
+        } catch (Exception ex) {
+            log.warn("Could not write audit log record [action={}, target={}]: {}", action, targetDataType, ex.getMessage());
+        }
     }
 
     public void record(CurrentActor actor, String action, String targetDataType, String targetRefId, String status) {

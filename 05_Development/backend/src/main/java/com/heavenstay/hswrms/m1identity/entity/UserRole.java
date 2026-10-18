@@ -25,6 +25,7 @@ public class UserRole {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @org.hibernate.annotations.ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "assigned_at", nullable = false)
     private Instant assignedAt;
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { getAuthToken } from '../../api/client/apiClient';
 import {
   Sparkles,
   Package,
@@ -123,12 +124,20 @@ export const SpaManagementPage: React.FC = () => {
   const [viewingPackage, setViewingPackage] = useState<RetreatPackageItem | null>(null);
   const [isAddPackageOpen, setIsAddPackageOpen] = useState(false);
 
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
   // Fetch data directly from backend REST API (SQL Server)
   const fetchSpaDataFromDb = async () => {
     setIsLoadingDb(true);
     try {
       const [treatmentsRes, pkgsRes, roomsRes] = await Promise.all([
-        fetch('http://localhost:8080/api/v1/spa-treatments').then((r) => (r.ok ? r.json() : null)),
+        fetch('http://localhost:8080/api/v1/spa/treatments').then((r) => (r.ok ? r.json() : null)),
         fetch('http://localhost:8080/api/v1/retreat-packages').then((r) => (r.ok ? r.json() : null)),
         fetch('http://localhost:8080/api/v1/treatment-rooms').then((r) => (r.ok ? r.json() : null)),
       ]);
@@ -257,9 +266,9 @@ export const SpaManagementPage: React.FC = () => {
 
     try {
       const identifier = updated.dbId || updated.treatmentCode || updated.id;
-      const res = await fetch(`http://localhost:8080/api/v1/spa-treatments/${encodeURIComponent(identifier)}`, {
+      const res = await fetch(`http://localhost:8080/api/v1/spa/treatments/${encodeURIComponent(identifier)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           treatmentName: updated.treatmentName,
           treatmentCode: updated.treatmentCode,
@@ -312,9 +321,9 @@ export const SpaManagementPage: React.FC = () => {
     setIsAddTreatmentOpen(false);
 
     try {
-      const res = await fetch('http://localhost:8080/api/v1/spa-treatments', {
+      const res = await fetch('http://localhost:8080/api/v1/spa/treatments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           treatmentCode: newTreatment.treatmentCode,
           treatmentName: newTreatment.treatmentName,
@@ -367,9 +376,9 @@ export const SpaManagementPage: React.FC = () => {
 
     try {
       const identifier = item.dbId || item.treatmentCode || item.id;
-      await fetch(`http://localhost:8080/api/v1/spa-treatments/${encodeURIComponent(identifier)}/status`, {
+      await fetch(`http://localhost:8080/api/v1/spa/treatments/${encodeURIComponent(identifier)}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ treatmentStatus: newStatus }),
       });
     } catch (err) {
@@ -464,7 +473,7 @@ export const SpaManagementPage: React.FC = () => {
     try {
       const res = await fetch('http://localhost:8080/api/v1/retreat-packages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           packageCode: newPkg.packageCode,
           packageName: newPkg.packageName,
@@ -517,7 +526,7 @@ export const SpaManagementPage: React.FC = () => {
       const identifier = item.dbId || item.packageCode || item.id;
       await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(identifier)}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ packageStatus: newStatus }),
       });
     } catch (err) {

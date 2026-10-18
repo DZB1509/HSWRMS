@@ -19,7 +19,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "`User`")
+@Table(name = "\"User\"", schema = "dbo")
 public class UserAccount {
 
     public static final String PENDING = "PENDING";
@@ -68,7 +68,8 @@ public class UserAccount {
     private LocalDateTime updatedAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "UserRole",
+    @JoinTable(name = "\"UserRole\"",
+            schema = "dbo",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();

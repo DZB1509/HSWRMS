@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,7 +16,8 @@ import {
   Lock,
   ShieldAlert
 } from 'lucide-react';
-import { INITIAL_STAFF_ACCOUNTS, getStoredStaffAccounts, updateStaffAccountStatus } from '../../data/mockStaff';
+import { INITIAL_STAFF_ACCOUNTS } from '../../data/mockStaff';
+import { staffAccountsApi } from '../../features/m6-admin/api/staffAccountsApi';
 import type { StaffAccount, StaffStatus } from '../../types/staff';
 import type { Role } from '../../types/auth';
 import { Button } from '../../components/common/Button';
@@ -27,22 +28,35 @@ export const StaffAccountDetailPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
 
-  const initialStaff = getStoredStaffAccounts().find((s) => s.id === id) || INITIAL_STAFF_ACCOUNTS.find((s) => s.id === id) || INITIAL_STAFF_ACCOUNTS[0];
-  const [staff, setStaff] = useState<StaffAccount>(initialStaff);
+  const [staff, setStaff] = useState<StaffAccount>(INITIAL_STAFF_ACCOUNTS[0]);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const toggleStatus = () => {
+  useEffect(() => {
+    if (!id) return;
+    staffAccountsApi
+      .get(id)
+      .then((s) => { setStaff(s); setLoaded(true); })
+      .catch((err: any) => showToast(err?.message || 'Không thể tải hồ sơ nhân viên', 'error'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const toggleStatus = async () => {
     if (staff.role === 'admin') return;
     const nextStatus: StaffStatus = staff.status === 'active' ? 'suspended' : 'active';
-    updateStaffAccountStatus(staff.id, nextStatus);
-    setStaff((prev) => ({ ...prev, status: nextStatus }));
-    setStatusModalOpen(false);
-    showToast(
-      nextStatus === 'active'
-        ? t('operations.staffDetail.reactivatedToast', 'Đã khôi phục quyền truy cập tài khoản nhân viên (Hoạt động)')
-        : t('operations.staffDetail.suspendedToast', 'Đã tạm khóa quyền truy cập tài khoản nhân viên'),
-      nextStatus === 'active' ? 'success' : 'info'
-    );
+    try {
+      const updated = await staffAccountsApi.setStatus(staff.id, nextStatus === 'active');
+      setStaff(updated);
+      setStatusModalOpen(false);
+      showToast(
+        nextStatus === 'active'
+          ? t('operations.staffDetail.reactivatedToast', 'Đã khôi phục quyền truy cập tài khoản nhân viên (Hoạt động)')
+          : t('operations.staffDetail.suspendedToast', 'Đã tạm khóa quyền truy cập tài khoản nhân viên'),
+        nextStatus === 'active' ? 'success' : 'info'
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể cập nhật trạng thái tài khoản', 'error');
+    }
   };
 
   const getRoleScopeDescription = (role: Role) => {
@@ -150,7 +164,7 @@ export const StaffAccountDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {staff.role !== 'admin' && (<div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          {loaded && staff.role !== 'admin' && (<div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <Button
               variant={staff.status === 'active' ? 'destructive' : 'primary'}
               size="sm"

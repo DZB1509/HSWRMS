@@ -45,9 +45,16 @@ public class IdentityAccountService {
             query.distinct(true);
             Join<UserAccount, Role> role = root.join("roles");
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.notEqual(role.get("roleName"), Role.CUSTOMER));
+            predicates.add(cb.notEqual(cb.upper(role.get("roleName")), Role.CUSTOMER));
             if (roleName != null && !roleName.isBlank()) {
-                predicates.add(cb.equal(role.get("roleName"), roleName.trim().toUpperCase(Locale.ROOT)));
+                String wanted = Role.canonical(roleName);
+                if (Role.FNB_STAFF.equals(wanted)) {
+                    predicates.add(cb.or(
+                            cb.equal(cb.upper(role.get("roleName")), Role.FNB_STAFF),
+                            cb.equal(cb.upper(role.get("roleName")), "F&B STAFF")));
+                } else {
+                    predicates.add(cb.equal(cb.upper(role.get("roleName")), wanted));
+                }
             }
             if (status != null && !status.isBlank()) {
                 predicates.add(cb.equal(root.get("accountStatus"), status.trim().toUpperCase(Locale.ROOT)));
@@ -98,7 +105,10 @@ public class IdentityAccountService {
 
     @Transactional(readOnly = true)
     public Role requireStaffRole(String roleName) {
-        Role role = roles.findByRoleName(roleName == null ? "" : roleName.trim().toUpperCase(Locale.ROOT))
+        String wanted = Role.canonical(roleName == null ? "" : roleName);
+        Role role = roles.findAll().stream()
+                .filter(r -> wanted.equals(r.canonicalName()))
+                .findFirst()
                 .orElseThrow(() -> new BusinessRuleException("INVALID_ROLE", "The selected role does not exist."));
         if (!role.isStaffRole()) {
             throw new BusinessRuleException("INVALID_ROLE", "Customer is not a staff role.");

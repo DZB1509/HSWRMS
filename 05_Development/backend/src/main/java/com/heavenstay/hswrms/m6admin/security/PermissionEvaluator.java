@@ -28,7 +28,7 @@ public class PermissionEvaluator {
             return false;
         }
         boolean allowed = identity.isActive(actor.userId())
-                && permissionService.userHas(actor.userId(), screen, action);
+                && (actor.admin() || permissionService.userHas(actor.userId(), screen, action));
         if (!allowed) {
             audit.record(actor, "Access Denied", "Screen:" + screen, screen + ":" + action, AuditLogService.DENIED);
         }

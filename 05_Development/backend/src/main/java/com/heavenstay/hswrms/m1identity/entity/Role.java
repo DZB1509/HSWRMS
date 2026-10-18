@@ -67,7 +67,27 @@ public class Role {
     }
 
     public boolean isStaffRole() {
-        return !CUSTOMER.equals(roleName);
+        return !CUSTOMER.equals(canonicalName());
+    }
+
+    public boolean isAdminRole() {
+        return ADMIN.equals(canonicalName());
+    }
+
+    /** Canonical upper-case code of this role (e.g. 'Admin' -> ADMIN, 'F&B Staff' -> FNB_STAFF). */
+    public String canonicalName() {
+        return canonical(roleName);
+    }
+
+    public static String canonical(String name) {
+        if (name == null) {
+            return null;
+        }
+        String n = name.trim().toUpperCase(java.util.Locale.ROOT);
+        if (n.replaceAll("[^A-Z]", "").equals("FBSTAFF") || n.replaceAll("[^A-Z]", "").equals("FNBSTAFF")) {
+            return FNB_STAFF;
+        }
+        return n.replace(' ', '_');
     }
 
     @Override

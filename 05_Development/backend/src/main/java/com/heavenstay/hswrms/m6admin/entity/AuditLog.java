@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Immutable
-@Table(name = "AuditLog")
+@Table(name = "\"AuditLog\"", schema = "dbo")
 public class AuditLog {
 
     @Id

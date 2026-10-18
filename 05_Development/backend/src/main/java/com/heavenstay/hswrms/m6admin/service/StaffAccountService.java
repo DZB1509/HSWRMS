@@ -77,7 +77,7 @@ public class StaffAccountService {
         Role newRole = identity.requireStaffRole(request.role());
         String oldRole = primaryRole(account);
 
-        if (id.equals(actor.userId()) && !Role.ADMIN.equals(newRole.getRoleName())) {
+        if (id.equals(actor.userId()) && !newRole.isAdminRole()) {
             audit.record(actor, "Update Staff Account", "User", String.valueOf(id), AuditLogService.DENIED);
             throw selfLockout();
         }
@@ -105,6 +105,10 @@ public class StaffAccountService {
         if (UserAccount.INACTIVE.equals(status) && id.equals(actor.userId())) {
             audit.record(actor, "Deactivate Staff Account", "User", String.valueOf(id), AuditLogService.DENIED);
             throw selfLockout();
+        }
+        if (UserAccount.INACTIVE.equals(status) && account.getRoles().stream().anyMatch(Role::isAdminRole)) {
+            audit.record(actor, "Deactivate Staff Account", "User", String.valueOf(id), AuditLogService.DENIED);
+            throw new BusinessRuleException("M6-MSG-03", "Admin accounts cannot be locked or deactivated.");
         }
         String old = account.getAccountStatus();
         account.setAccountStatus(status);
@@ -146,7 +150,7 @@ public class StaffAccountService {
     }
 
     private static String primaryRole(UserAccount account) {
-        return account.getRoles().stream().map(Role::getRoleName).sorted().findFirst().orElse(null);
+        return account.getRoles().stream().map(Role::canonicalName).sorted().findFirst().orElse(null);
     }
 
     static StaffView toView(UserAccount a) {

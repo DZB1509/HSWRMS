@@ -11,7 +11,7 @@ import {
   UserX,
   X
 } from 'lucide-react';
-import { INITIAL_STAFF_ACCOUNTS, getStoredStaffAccounts, updateStaffAccountStatus, addStaffAccount } from '../../data/mockStaff';
+import { staffAccountsApi } from '../../features/m6-admin/api/staffAccountsApi';
 import type { StaffAccount } from '../../types/staff';
 import type { Role } from '../../types/auth';
 import { Button } from '../../components/common/Button';
@@ -21,17 +21,20 @@ export const StaffAccountListPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
 
-  const [staffList, setStaffList] = useState<StaffAccount[]>(() => getStoredStaffAccounts());
+  const [staffList, setStaffList] = useState<StaffAccount[]>([]);
+  const [tempCredential, setTempCredential] = useState<{ email: string; password: string } | null>(null);
+
+  const loadStaff = async () => {
+    try {
+      setStaffList(await staffAccountsApi.list());
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể tải danh sách nhân viên từ máy chủ', 'error');
+    }
+  };
 
   useEffect(() => {
-    const handleSync = () => {
-      setStaffList(getStoredStaffAccounts());
-    };
-    handleSync();
-    window.addEventListener('hswrms_staff_accounts_updated', handleSync);
-    return () => {
-      window.removeEventListener('hswrms_staff_accounts_updated', handleSync);
-    };
+    loadStaff();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -62,55 +65,45 @@ export const StaffAccountListPage: React.FC = () => {
     return true;
   });
 
-  const handleCreateStaff = (e: React.FormEvent) => {
+  const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newEmail.trim()) {
       showToast('Name and email are required', 'error');
       return;
     }
 
-    const newId = `usr-${newRole.slice(0, 3)}-${Math.floor(10 + Math.random() * 90)}`;
-    const initials = newName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-
-    const nowStr = new Date().toISOString().split('T')[0];
-
-    const newAccount: StaffAccount = {
-      id: newId,
-      name: newName.trim(),
-      email: newEmail.trim(),
-      role: newRole,
-      title: newTitle.trim() || `Chuyên viên ${newRole.toUpperCase()}`,
-      department: newDepartment,
-      status: 'active',
-      joinedDate: nowStr,
-      lastActiveAt: 'Vừa xong',
-      avatar: initials
-    };
-
-    const updated = addStaffAccount(newAccount);
-    setStaffList(updated);
-    setAddModalOpen(false);
-    setNewName('');
-    setNewEmail('');
-    setNewTitle('');
-    showToast(t('operations.staffList.createdToast', 'Đã cấp tài khoản nhân viên thành công (mô hình thử nghiệm)'), 'success');
+    try {
+      const result = await staffAccountsApi.create({
+        fullName: newName.trim(),
+        email: newEmail.trim(),
+        role: newRole,
+      });
+      await loadStaff();
+      setAddModalOpen(false);
+      setTempCredential({ email: result.staff.email, password: result.temporaryPassword });
+      setNewName('');
+      setNewEmail('');
+      setNewTitle('');
+      showToast(t('operations.staffList.createdToast', 'Đã cấp tài khoản nhân viên và lưu vào cơ sở dữ liệu'), 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể tạo tài khoản nhân viên', 'error');
+    }
   };
 
-  const handleQuickToggleStatus = (staffId: string, currentStatus: string, staffName: string) => {
-    const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-    const updated = updateStaffAccountStatus(staffId, nextStatus);
-    setStaffList(updated);
-    showToast(
-      nextStatus === 'active'
-        ? `Đã khôi phục quyền truy cập: ${staffName}`
-        : `Đã tạm khóa tài khoản nhân viên: ${staffName}`,
-      nextStatus === 'active' ? 'success' : 'info'
-    );
+  const handleQuickToggleStatus = async (staffId: string, currentStatus: string, staffName: string) => {
+    const activate = currentStatus !== 'active';
+    try {
+      await staffAccountsApi.setStatus(staffId, activate);
+      await loadStaff();
+      showToast(
+        activate
+          ? `Đã khôi phục quyền truy cập: ${staffName}`
+          : `Đã tạm khóa tài khoản nhân viên: ${staffName} (không thể đăng nhập / truy cập nữa)`,
+        activate ? 'success' : 'info'
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể cập nhật trạng thái tài khoản', 'error');
+    }
   };
 
   const getRoleBadgeStyle = (role: Role) => {
@@ -500,6 +493,24 @@ export const StaffAccountListPage: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Temporary password shown once after creation */}
+      {tempCredential && (
+        <div className="hsw-gov-modal-backdrop" onClick={() => setTempCredential(null)}>
+          <div className="hsw-gov-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="hsw-gov-modal-title">Tài khoản đã được tạo</h3>
+            <p style={{ fontSize: 'var(--text-sm)' }}>
+              Email đăng nhập: <strong>{tempCredential.email}</strong>
+            </p>
+            <p style={{ fontSize: 'var(--text-sm)' }}>
+              Mật khẩu tạm thời (chỉ hiển thị một lần): <strong>{tempCredential.password}</strong>
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+              <Button variant="primary" onClick={() => setTempCredential(null)}>Đã ghi lại</Button>
+            </div>
           </div>
         </div>
       )}

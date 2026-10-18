@@ -5,6 +5,7 @@ import com.heavenstay.hswrms.m1identity.entity.UserAccount;
 import com.heavenstay.hswrms.m1identity.repository.RoleRepository;
 import com.heavenstay.hswrms.m1identity.repository.UserAccountRepository;
 import com.heavenstay.hswrms.m1identity.service.IdentityAccountService;
+import com.heavenstay.hswrms.m3spa.entity.TreatmentStatus;
 import com.heavenstay.hswrms.m6admin.entity.Permission;
 import com.heavenstay.hswrms.m6admin.entity.RolePermission;
 import com.heavenstay.hswrms.m6admin.entity.SystemConfiguration;
@@ -93,7 +94,36 @@ public class M6DataInitializer implements ApplicationRunner {
         ensureParam(BusinessParameterService.AUDIT_LOG_RETENTION_DAYS, "90", "INT",
                 new BigDecimal("30"), new BigDecimal("365"), "Days", "Audit log retention duration before JOB-02 purge", false);
 
-        // 4. Default Accounts
+        // 4. Default Accounts (HSWRMS Baseline: exactly 1 Admin, 1 Manager, 1 Receptionist, 1 Therapist, 1 F&B Staff)
+        try {
+            // Ensure AuditLog columns exist in SQL Server if running on existing database
+            jdbc.execute("""
+                IF OBJECT_ID(N'dbo.AuditLog', N'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'actor_role')
+                        ALTER TABLE dbo.AuditLog ADD actor_role VARCHAR(50) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'target_ref_id')
+                        ALTER TABLE dbo.AuditLog ADD target_ref_id VARCHAR(100) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'old_value')
+                        ALTER TABLE dbo.AuditLog ADD old_value NVARCHAR(500) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'new_value')
+                        ALTER TABLE dbo.AuditLog ADD new_value NVARCHAR(500) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.AuditLog') AND name = 'delegation_id')
+                        ALTER TABLE dbo.AuditLog ADD delegation_id INT NULL;
+                END
+            """);
+        } catch (Exception ex) {
+            log.debug("AuditLog column migration skipped or already applied: {}", ex.getMessage());
+        }
+
+        try {
+            // Purge duplicate .dev staff accounts if they exist in the DB, keeping only official @heavenstay.com staff
+            jdbc.update("DELETE FROM dbo.UserRole WHERE user_id IN (SELECT user_id FROM dbo.[User] WHERE email IN ('admin@heavenstay.dev', 'manager@heavenstay.dev', 'receptionist@heavenstay.dev', 'therapist@heavenstay.dev', 'fbstaff@heavenstay.dev'))");
+            jdbc.update("DELETE FROM dbo.[User] WHERE email IN ('admin@heavenstay.dev', 'manager@heavenstay.dev', 'receptionist@heavenstay.dev', 'therapist@heavenstay.dev', 'fbstaff@heavenstay.dev')");
+        } catch (Exception ex) {
+            log.debug("Purge of redundant dev staff accounts skipped: {}", ex.getMessage());
+        }
+
         ensureAccount("admin@heavenstay.com", "System Admin", "0900000001", roles.get(Role.ADMIN), "Admin@123456");
         ensureAccount("manager@heavenstay.com", "Resort Manager", "0900000002", roles.get(Role.MANAGER), "Manager@123456");
         ensureAccount("receptionist@heavenstay.com", "Front Desk Receptionist", "0900000003", roles.get(Role.RECEPTIONIST), "Staff@123456");
@@ -113,9 +143,9 @@ public class M6DataInitializer implements ApplicationRunner {
             Integer spaCount = jdbc.queryForObject("select count(*) from SpaTreatment", Integer.class);
             if (spaCount == null || spaCount == 0) {
                 jdbc.update("insert into SpaTreatment (treatment_name, duration_minutes, base_price, treatment_status) values (?, ?, ?, ?)",
-                        "Aromatherapy Deep Relaxation", 60, new BigDecimal("85.00"), "ACTIVE");
+                        "Aromatherapy Deep Relaxation", 60, new BigDecimal("85.00"), TreatmentStatus.ACTIVE.name());
                 jdbc.update("insert into SpaTreatment (treatment_name, duration_minutes, base_price, treatment_status) values (?, ?, ?, ?)",
-                        "Himalayan Salt Stone Therapy", 90, new BigDecimal("120.00"), "ACTIVE");
+                        "Himalayan Salt Stone Therapy", 90, new BigDecimal("120.00"), TreatmentStatus.ACTIVE.name());
             }
 
             Integer packageCount = jdbc.queryForObject("select count(*) from RetreatPackage", Integer.class);

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ================================================================================
 HSWRMS Seed Data V1.4 - Spa Treatments, Retreat Packages & Entitlements V3
 Source: 02_Requirement/Screen_Inventory/HSWRMS_Goi_Spa_Tri_Lieu_Chuan_Hoa_v3.xlsx
@@ -106,7 +106,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -138,7 +138,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -170,7 +170,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -202,7 +202,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -234,7 +234,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -266,7 +266,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -298,7 +298,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -330,7 +330,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -362,7 +362,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -394,7 +394,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -426,7 +426,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -458,7 +458,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -490,7 +490,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -522,7 +522,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -554,7 +554,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -586,7 +586,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -618,7 +618,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
@@ -650,7 +650,7 @@ END
 ELSE
 BEGIN
     INSERT INTO dbo.SpaTreatment (
-        treatment_code, treatment_name, category, duration_minutes, duration_unit,
+        treatment_code, treatment_name, category, duration_minutes,
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (

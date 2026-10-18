@@ -9,6 +9,8 @@ import com.heavenstay.hswrms.m6admin.dto.AdminDtos.MatrixChangeRequest;
 import com.heavenstay.hswrms.m6admin.dto.AdminDtos.ParameterUpdateRequest;
 import com.heavenstay.hswrms.m6admin.dto.AdminDtos.StaffCreateRequest;
 import com.heavenstay.hswrms.m6admin.dto.AdminDtos.StaffStatusRequest;
+import com.heavenstay.hswrms.m6admin.service.MasterDataService.MasterDataSaveRequest;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -122,6 +125,82 @@ class M6AdminIntegrationTests {
                         .content(objectMapper.writeValueAsString(new StaffStatusRequest("INACTIVE"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is("M6-MSG-02")));
+
+        // Admin accounts can never be locked, not even by another Admin (M6-MSG-03)
+        StaffCreateRequest adminReq = new StaffCreateRequest("Second Admin",
+                "second.admin." + System.currentTimeMillis() + "@heavenstay.com", "0911111111", "ADMIN");
+        MvcResult adminRes = mockMvc.perform(post("/api/v1/admin/staff")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(adminReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        int otherAdminId = objectMapper.readTree(adminRes.getResponse().getContentAsString())
+                .at("/data/staff/userId").asInt();
+        mockMvc.perform(patch("/api/v1/admin/staff/" + otherAdminId + "/status")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new StaffStatusRequest("INACTIVE"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("M6-MSG-03")));
+    }
+
+    @Test
+    @DisplayName("FR-M6-01: New staff can log in; locked staff cannot log in or reuse an existing token")
+    void accountLockAndCreateFlow() throws Exception {
+        // 1. Create a Manager account and log in with the temporary password
+        String email = "manager.lock." + System.currentTimeMillis() + "@heavenstay.com";
+        MvcResult createdRes = mockMvc.perform(post("/api/v1/admin/staff")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new StaffCreateRequest("Lock Test Manager", email, "0900000099", "MANAGER"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode created = objectMapper.readTree(createdRes.getResponse().getContentAsString()).path("data");
+        int staffId = created.path("staff").path("userId").asInt();
+        String tempPassword = created.path("temporaryPassword").asText();
+
+        MvcResult loginRes = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, tempPassword))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles", hasItem("MANAGER")))
+                .andReturn();
+        String managerToken = objectMapper.readTree(loginRes.getResponse().getContentAsString())
+                .path("data").path("token").asText();
+
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk());
+
+        // 2. Admin locks the account
+        mockMvc.perform(patch("/api/v1/admin/staff/" + staffId + "/status")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new StaffStatusRequest("INACTIVE"))))
+                .andExpect(status().isOk());
+
+        // 3. Locked account cannot log in again...
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, tempPassword))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("ACCOUNT_NOT_ACTIVE")));
+
+        // ...and its previously issued token is rejected immediately
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isUnauthorized());
+
+        // 4. Unlock restores access
+        mockMvc.perform(patch("/api/v1/admin/staff/" + staffId + "/status")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new StaffStatusRequest("ACTIVE"))))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, tempPassword))))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -209,5 +288,108 @@ class M6AdminIntegrationTests {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", startsWith("text/csv")));
+    }
+
+    @Test
+    @DisplayName("FR-M6-02: Master Data Spa Treatment CRUD enforces TreatmentStatus enum and duration_minutes")
+    void spaTreatmentMasterDataLifecycle() throws Exception {
+        // List spa services
+        mockMvc.perform(get("/api/v1/admin/master-data/spa-services")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", notNullValue()));
+
+        // Create spa service with TreatmentStatus ACTIVE
+        String uniqueName = "Zen Bamboo Massage " + System.currentTimeMillis();
+        MasterDataSaveRequest req = new MasterDataSaveRequest(uniqueName, "Relaxing bamboo treatment",
+                new BigDecimal("95.00"), 75, "ACTIVE");
+        MvcResult createRes = mockMvc.perform(post("/api/v1/admin/master-data/spa-services")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name", is(uniqueName)))
+                .andExpect(jsonPath("$.data.durationOrOccupancy", is(75)))
+                .andExpect(jsonPath("$.data.status", is("ACTIVE")))
+                .andReturn();
+
+        JsonNode json = objectMapper.readTree(createRes.getResponse().getContentAsString());
+        int treatmentId = json.path("data").path("id").asInt();
+
+        // Update with INACTIVE
+        MasterDataSaveRequest updateReq = new MasterDataSaveRequest(uniqueName, "Updated bamboo treatment",
+                new BigDecimal("105.00"), 90, "INACTIVE");
+        mockMvc.perform(put("/api/v1/admin/master-data/spa-services/" + treatmentId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.durationOrOccupancy", is(90)))
+                .andExpect(jsonPath("$.data.status", is("INACTIVE")));
+
+        // Invalid status must be rejected (M6-MSG-04)
+        MasterDataSaveRequest badStatusReq = new MasterDataSaveRequest(uniqueName, "Invalid status",
+                new BigDecimal("105.00"), 90, "NON_EXISTENT_STATUS");
+        mockMvc.perform(put("/api/v1/admin/master-data/spa-services/" + treatmentId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(badStatusReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("M6-MSG-04")));
+
+        // Deactivate
+        mockMvc.perform(patch("/api/v1/admin/master-data/spa-services/" + treatmentId + "/deactivate")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("M3 Security: GET /spa/treatments is public permitAll, POST requires ADMIN authentication")
+    void spaSecurityEndpointRules() throws Exception {
+        // 1. GET /api/v1/spa/treatments is public without token
+        mockMvc.perform(get("/api/v1/spa/treatments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", notNullValue()));
+
+        // 2. POST /api/v1/spa/treatments without token is 401 UNAUTHORIZED
+        Map<String, Object> newTreatment = Map.of(
+                "treatmentName", "Himalayan Stone Body Wrap " + System.currentTimeMillis(),
+                "durationMinutes", 60,
+                "basePrice", 80.0
+        );
+        mockMvc.perform(post("/api/v1/spa/treatments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newTreatment)))
+                .andExpect(status().isUnauthorized());
+
+        // 3. POST /api/v1/spa/treatments with ADMIN token succeeds (201 Created)
+        mockMvc.perform(post("/api/v1/spa/treatments")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newTreatment)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.treatmentName", is(newTreatment.get("treatmentName"))));
+
+        // 4. GET /api/v1/spa/treatment-rooms is public without token
+        mockMvc.perform(get("/api/v1/spa/treatment-rooms"))
+                .andExpect(status().isOk());
+
+        // 5. POST /api/v1/spa/treatment-rooms without token is 401 UNAUTHORIZED
+        Map<String, Object> newRoom = Map.of(
+                "roomName", "Lotus VIP Suite " + System.currentTimeMillis(),
+                "roomType", "MASSAGE_STANDARD"
+        );
+        mockMvc.perform(post("/api/v1/spa/treatment-rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newRoom)))
+                .andExpect(status().isUnauthorized());
+
+        // 6. POST /api/v1/spa/treatment-rooms with ADMIN token succeeds (201 Created)
+        mockMvc.perform(post("/api/v1/spa/treatment-rooms")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newRoom)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.roomName", is(newRoom.get("roomName"))));
     }
 }

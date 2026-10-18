@@ -69,12 +69,7 @@ public class DevAccountBootstrap implements ApplicationRunner {
     );
 
     private static final List<AccountSeed> ACCOUNT_SEEDS = List.of(
-            new AccountSeed("customer@heavenstay.dev", "Demo Customer", "Customer", true),
-            new AccountSeed("receptionist@heavenstay.dev", "Demo Receptionist", "Receptionist", false),
-            new AccountSeed("therapist@heavenstay.dev", "Demo Therapist", "Therapist", false),
-            new AccountSeed("fbstaff@heavenstay.dev", "Demo F&B Staff", "F&B Staff", false),
-            new AccountSeed("manager@heavenstay.dev", "Demo Manager", "Manager", false),
-            new AccountSeed("admin@heavenstay.dev", "Demo Administrator", "Admin", false)
+            new AccountSeed("customer@heavenstay.dev", "Demo Customer", "Customer", true)
     );
 
     private final RoleRepository roleRepository;

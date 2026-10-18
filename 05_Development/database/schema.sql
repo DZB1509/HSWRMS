@@ -495,8 +495,6 @@ CREATE TABLE dbo.SpaTreatment (
     treatment_name      NVARCHAR(150) NOT NULL,
     category            NVARCHAR(100) NULL,
     duration_minutes    INT NOT NULL,
-    duration_unit       NVARCHAR(50) NOT NULL
-        CONSTRAINT DF_SpaTreatment_DurationUnit DEFAULT (N'Phút (Minutes)'),
     base_price          DECIMAL(18,2) NOT NULL,
     pricing_rule        NVARCHAR(500) NULL,
     room_compatibility  NVARCHAR(250) NULL,

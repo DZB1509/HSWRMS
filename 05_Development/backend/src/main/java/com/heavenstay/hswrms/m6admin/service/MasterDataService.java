@@ -2,6 +2,7 @@ package com.heavenstay.hswrms.m6admin.service;
 
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m3spa.entity.TreatmentStatus;
 import com.heavenstay.hswrms.m6admin.security.CurrentActor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -59,14 +60,24 @@ public class MasterDataService {
                     ));
         } else if ("spa-services".equals(clean)) {
             return jdbc.query("select treatment_id, treatment_name, duration_minutes, base_price, treatment_status from SpaTreatment order by treatment_id asc",
-                    (rs, rowNum) -> new MasterDataItem(
-                            rs.getInt("treatment_id"),
-                            rs.getString("treatment_name"),
-                            rs.getInt("duration_minutes") + " mins",
-                            rs.getBigDecimal("base_price"),
-                            rs.getInt("duration_minutes"),
-                            rs.getString("treatment_status")
-                    ));
+                    (rs, rowNum) -> {
+                        String rawStatus = rs.getString("treatment_status");
+                        TreatmentStatus statusEnum = TreatmentStatus.ACTIVE;
+                        if (rawStatus != null) {
+                            try {
+                                statusEnum = TreatmentStatus.valueOf(rawStatus.trim().toUpperCase());
+                            } catch (IllegalArgumentException ignored) {
+                            }
+                        }
+                        return new MasterDataItem(
+                                rs.getInt("treatment_id"),
+                                rs.getString("treatment_name"),
+                                rs.getInt("duration_minutes") + " mins",
+                                rs.getBigDecimal("base_price"),
+                                rs.getInt("duration_minutes"),
+                                statusEnum.name()
+                        );
+                    });
         } else if ("retreat-packages".equals(clean)) {
             return jdbc.query("select retreat_package_id, package_name, wellness_goal, duration_nights, base_price, package_status from RetreatPackage order by retreat_package_id asc",
                     (rs, rowNum) -> new MasterDataItem(
@@ -94,8 +105,16 @@ public class MasterDataService {
             audit.record(actor, "Create Master Data", "VillaCategory", req.name(), AuditLogService.SUCCESS);
         } else if ("spa-services".equals(clean)) {
             int duration = req.durationOrOccupancy() != null && req.durationOrOccupancy() > 0 ? req.durationOrOccupancy() : 60;
+            TreatmentStatus treatmentStatus = TreatmentStatus.ACTIVE;
+            if (req.status() != null && !req.status().isBlank()) {
+                try {
+                    treatmentStatus = TreatmentStatus.valueOf(req.status().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new BusinessRuleException("M6-MSG-04", "Invalid treatment status: " + req.status());
+                }
+            }
             jdbc.update("insert into SpaTreatment (treatment_name, duration_minutes, base_price, treatment_status) values (?, ?, ?, ?)",
-                    req.name(), duration, req.price(), status);
+                    req.name(), duration, req.price(), treatmentStatus.name());
             audit.record(actor, "Create Master Data", "SpaTreatment", req.name(), AuditLogService.SUCCESS);
         } else if ("retreat-packages".equals(clean)) {
             int nights = req.durationOrOccupancy() != null && req.durationOrOccupancy() > 0 ? req.durationOrOccupancy() : 3;
@@ -124,8 +143,16 @@ public class MasterDataService {
             audit.record(actor, "Update Master Data", "VillaCategory", String.valueOf(id), AuditLogService.SUCCESS);
         } else if ("spa-services".equals(clean)) {
             int duration = req.durationOrOccupancy() != null && req.durationOrOccupancy() > 0 ? req.durationOrOccupancy() : 60;
+            TreatmentStatus treatmentStatus = TreatmentStatus.ACTIVE;
+            if (req.status() != null && !req.status().isBlank()) {
+                try {
+                    treatmentStatus = TreatmentStatus.valueOf(req.status().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new BusinessRuleException("M6-MSG-04", "Invalid treatment status: " + req.status());
+                }
+            }
             int rows = jdbc.update("update SpaTreatment set treatment_name = ?, duration_minutes = ?, base_price = ?, treatment_status = ? where treatment_id = ?",
-                    req.name(), duration, req.price(), status, id);
+                    req.name(), duration, req.price(), treatmentStatus.name(), id);
             if (rows == 0) throw new ResourceNotFoundException("Spa Treatment", "id", id);
             audit.record(actor, "Update Master Data", "SpaTreatment", String.valueOf(id), AuditLogService.SUCCESS);
         } else if ("retreat-packages".equals(clean)) {
@@ -149,7 +176,7 @@ public class MasterDataService {
             jdbc.update("update VillaCategory set category_status = 'INACTIVE' where villa_category_id = ?", id);
             audit.record(actor, "Deactivate Master Data", "VillaCategory", String.valueOf(id), AuditLogService.SUCCESS);
         } else if ("spa-services".equals(clean)) {
-            jdbc.update("update SpaTreatment set treatment_status = 'INACTIVE' where treatment_id = ?", id);
+            jdbc.update("update SpaTreatment set treatment_status = ? where treatment_id = ?", TreatmentStatus.INACTIVE.name(), id);
             audit.record(actor, "Deactivate Master Data", "SpaTreatment", String.valueOf(id), AuditLogService.SUCCESS);
         } else if ("retreat-packages".equals(clean)) {
             jdbc.update("update RetreatPackage set package_status = 'INACTIVE' where retreat_package_id = ?", id);
