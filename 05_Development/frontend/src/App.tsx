@@ -39,7 +39,7 @@ export const App: React.FC = () => {
                           <CursorProvider>
                             <PageTransition />
                             <AppRouter />
-                            <RoleSwitcher />
+                            {import.meta.env.DEV && <RoleSwitcher />}
                             <DevHealthIndicator />
                           </CursorProvider>
                         </SmoothScrollProvider>

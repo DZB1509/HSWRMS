@@ -5,6 +5,14 @@ spring:
   application:
     name: hswrms
 
+  # Default profile is 'dev' so a fresh clone works with zero manual setup:
+  # OTP verification codes print to the console (DevEmailDeliveryAdapter) and
+  # demo accounts are seeded on startup (DevAccountBootstrap). Override via
+  # SPRING_PROFILES_ACTIVE (e.g. "dev,smtp" for real e-mail, "prod" to disable
+  # all dev conveniences — the dev profile must NOT be active in production).
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   datasource:
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}
@@ -19,11 +27,28 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: false
+
+  # Spring Mail configuration for SMTP delivery (used when smtp profile is active).
+  # All values are externalized via environment variables. Never hardcode credentials.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
+          from: ${MAIL_FROM:${MAIL_USERNAME:noreply@heavenstay.com}}
 
 app:
   jwt:
@@ -31,13 +56,22 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+
   spa:
     scheduling:
       # Operational parameters configurable by environment.
-      # No unapproved business defaults (e.g. 08:00-20:00 or 3 days) are hard-coded as business truth.
+      # No unapproved business defaults are hard-coded.
       operating-open: ${SPA_OPEN_TIME:}
       operating-close: ${SPA_CLOSE_TIME:}
       alternative-search-days: ${SPA_ALT_DAYS:}
+
+  # Google SSO (S05/S06). Credentials are read from environment variables.
+  # Redirect URI: http://localhost:8080/api/v1/auth/sso/callback/google
+  sso:
+    frontend-base-url: ${SSO_FRONTEND_BASE_URL:http://localhost:5173}
+    login-ticket-ttl-ms: 300000
+    registration-ticket-ttl-ms: 600000
+
 
 logging:
   level:

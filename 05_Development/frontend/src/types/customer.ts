@@ -43,7 +43,6 @@ export interface HealthNotes {
   currentMedications: string;
   stressLevel: 'mild' | 'moderate' | 'high';
   treatmentPreferences: string[];
-  therapistNotes: string;
 }
 
 export interface DietaryProfile {
@@ -143,6 +142,8 @@ export interface RetreatBooking {
 export interface CustomerContextType {
   profile: CustomerProfile;
   updateProfile: (updated: Partial<CustomerProfile>) => void;
+  refreshServerProfile: () => Promise<CustomerProfile | null>;
+  isProfileLoading: boolean;
   wellnessProfile: WellnessProfile;
   updateWellnessProfile: (updated: Partial<WellnessProfile>) => void;
   deletionRequest: HealthDataDeletionRequest | null;

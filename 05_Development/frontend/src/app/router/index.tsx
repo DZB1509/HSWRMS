@@ -16,6 +16,7 @@ import { RetreatListPage } from '../../pages/retreats/RetreatListPage';
 import { RetreatDetailPage } from '../../pages/retreats/RetreatDetailPage';
 import { LoginPage } from '../../pages/auth/LoginPage';
 import { RegisterPage } from '../../pages/auth/RegisterPage';
+import { SsoCallbackPage } from '../../pages/auth/SsoCallbackPage';
 import { EmailOtpVerificationPage } from '../../pages/auth/EmailOtpVerificationPage';
 import { PasswordResetPage } from '../../pages/auth/PasswordResetPage';
 
@@ -108,6 +109,8 @@ export const AppRouter: React.FC = () => {
         <Route path="/register" element={<RegisterPage />} />
         {/* Screen #4: Email OTP Verification */}
         <Route path="/register/verify" element={<EmailOtpVerificationPage />} />
+        {/* Screen #6: Google SSO Callback */}
+        <Route path="/auth/sso/callback" element={<SsoCallbackPage />} />
         {/* Screen #6: Password Reset */}
         <Route path="/password-reset" element={<PasswordResetPage />} />
       </Route>

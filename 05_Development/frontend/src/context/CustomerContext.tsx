@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type {
   CustomerProfile,
   WellnessProfile,
@@ -14,6 +14,8 @@ import {
   INITIAL_BOOKINGS,
   INITIAL_DELETION_REQUEST,
 } from '../data/mockCustomer';
+import { useAuth } from '../hooks/useAuth';
+import { getMyProfile } from '../api/customer/customerProfileApi';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
@@ -25,7 +27,8 @@ const STORAGE_KEYS = {
 };
 
 export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profile, setProfile] = useState<CustomerProfile>(() => {
+  const { currentUser } = useAuth();
+  const [storedProfile, setStoredProfile] = useState<CustomerProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
       return saved ? JSON.parse(saved) : INITIAL_CUSTOMER_PROFILE;
@@ -62,13 +65,72 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   // Save to localStorage on changes
+  // Real authenticated identity (AuthProvider session) always takes precedence
+  // over the stored mock profile for id/fullName/email. Backend profile fields
+  // loaded from GET /customers/me/profile take precedence for the supported
+  // editable fields; all other demo fields remain mock until a real API exists.
+  const [serverProfile, setServerProfile] = useState<CustomerProfile | null>(null);
+
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+
+  const refreshServerProfile = useCallback(async () => {
+    if (!currentUser || currentUser.role !== 'customer') {
+      setServerProfile(null);
+      return null;
+    }
+    setIsProfileLoading(true);
+    try {
+      const response = await getMyProfile();
+      const data = response.data;
+      const mapped: CustomerProfile = {
+        ...INITIAL_CUSTOMER_PROFILE,
+        id: `usr-${data.userId}`,
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phoneNumber ?? '',
+        dateOfBirth: data.dateOfBirth ?? '',
+        address: data.residentialAddress ?? '',
+        preferredLanguage: data.preferredLanguage ?? 'en',
+        emergencyContact: {
+          name: data.emergencyContactName ?? '',
+          phone: data.emergencyContactPhone ?? '',
+          relationship: data.emergencyContactRelationship ?? '',
+        },
+      };
+      setServerProfile(mapped);
+      return mapped;
+    } catch {
+      setServerProfile(null);
+      return null;
+    } finally {
+      setIsProfileLoading(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    void refreshServerProfile();
+  }, [refreshServerProfile]);
+
+  const profile: CustomerProfile = useMemo(() => {
+    if (serverProfile) return serverProfile;
+    if (currentUser && currentUser.role === 'customer') {
+      return {
+        ...storedProfile,
+        id: currentUser.id,
+        fullName: currentUser.name,
+        email: currentUser.email,
+      };
+    }
+    return storedProfile;
+  }, [serverProfile, storedProfile, currentUser]);
+
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
+      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(storedProfile));
     } catch {
       // Ignore storage errors in sandbox
     }
-  }, [profile]);
+  }, [storedProfile]);
 
   useEffect(() => {
     try {
@@ -99,7 +161,7 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [deletionRequest]);
 
   const updateProfile = (updated: Partial<CustomerProfile>) => {
-    setProfile((prev) => ({ ...prev, ...updated }));
+    setStoredProfile((prev) => ({ ...prev, ...updated }));
   };
 
   const updateWellnessProfile = (updated: Partial<WellnessProfile>) => {
@@ -207,6 +269,8 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         profile,
         updateProfile,
+        refreshServerProfile,
+        isProfileLoading,
         wellnessProfile,
         updateWellnessProfile,
         deletionRequest,
