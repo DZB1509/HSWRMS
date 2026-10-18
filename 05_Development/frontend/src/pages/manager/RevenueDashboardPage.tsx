@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3,
   Receipt,
   ShieldCheck,
+  FileSpreadsheet,
+  RotateCw,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -21,12 +23,57 @@ import {
 import { useFolio } from '../../context/FolioContext';
 import { formatVND } from '../../i18n';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import type { RevenueAnalytics } from '../../features/m5-billing/types';
 
 export const RevenueDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { getRevenueAnalytics, activeFolio } = useFolio();
 
-  const analytics = getRevenueAnalytics();
+  const localAnalytics = getRevenueAnalytics();
+
+  // Date range filter
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | 'ytd'>('30d');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [liveAnalytics, setLiveAnalytics] = useState<RevenueAnalytics | null>(null);
+
+  // Derive date bounds
+  const getDates = () => {
+    const to = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    if (dateRange === '7d') d.setDate(d.getDate() - 7);
+    else if (dateRange === '30d') d.setDate(d.getDate() - 30);
+    else d.setFullYear(d.getFullYear(), 0, 1);
+    const from = d.toISOString().slice(0, 10);
+    return { from, to };
+  };
+
+  useEffect(() => {
+    const { from, to } = getDates();
+    billingApi.getRevenueAnalytics(from, to)
+      .then(setLiveAnalytics)
+      .catch(() => {
+        // Fallback to local context
+      });
+  }, [dateRange]);
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const { from, to } = getDates();
+      await billingApi.downloadExcelReport('revenue', from, to);
+    } catch (err) {
+      console.error('Failed to export revenue excel:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const currentTotal = liveAnalytics?.totalRevenue ?? localAnalytics.totalRevenue;
+  const currentRetreat = liveAnalytics?.packageRevenue ?? localAnalytics.retreatRevenue;
+  const currentSpa = liveAnalytics?.spaRevenue ?? localAnalytics.spaRevenue;
+  const currentFnb = liveAnalytics?.fnbRevenue ?? localAnalytics.fnbRevenue;
+  const currentOutstanding = liveAnalytics?.outstandingBalance ?? localAnalytics.outstandingRevenue;
 
   // Pagination for settlement items
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,15 +90,15 @@ export const RevenueDashboardPage: React.FC = () => {
   const barData = [
     {
       category: t('manager.revenue.retreatPkg', 'Retreat Packages'),
-      amount: analytics.retreatRevenue,
+      amount: currentRetreat,
     },
     {
       category: t('manager.revenue.spaTherapies', 'Spa Therapies'),
-      amount: analytics.spaRevenue,
+      amount: currentSpa,
     },
     {
       category: t('manager.revenue.fnbDining', 'F&B Dining'),
-      amount: analytics.fnbRevenue,
+      amount: currentFnb,
     },
   ];
 
@@ -81,7 +128,7 @@ export const RevenueDashboardPage: React.FC = () => {
     }
   };
 
-  const localizedBreakdown = analytics.categoryBreakdown.map((item) => {
+  const localizedBreakdown = (liveAnalytics?.categoryBreakdown || localAnalytics.categoryBreakdown).map((item) => {
     let name = item.name;
     if (item.name === 'Retreat Packages') name = t('manager.revenue.retreatPkg', 'Retreat Packages');
     else if (item.name === 'Spa & Therapies') name = t('manager.revenue.spaTherapies', 'Spa & Therapies');
@@ -104,10 +151,77 @@ export const RevenueDashboardPage: React.FC = () => {
             </h1>
           </div>
 
-          {/* Privacy & Clearance Tag */}
-          <div className="hsw-manager-privacy-notice">
-            <ShieldCheck size={14} />
-            <span>{t('manager.revenue.privacyNotice', 'Manager Clearance · Financial Aggregates Only · Personal Data Masked')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            {/* Date Range Selector */}
+            <div style={{ display: 'inline-flex', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setDateRange('7d')}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: dateRange === '7d' ? '#fff' : 'transparent',
+                  fontWeight: dateRange === '7d' ? 600 : 400,
+                  cursor: 'pointer',
+                  boxShadow: dateRange === '7d' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                }}
+              >
+                7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange('30d')}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: dateRange === '30d' ? '#fff' : 'transparent',
+                  fontWeight: dateRange === '30d' ? 600 : 400,
+                  cursor: 'pointer',
+                  boxShadow: dateRange === '30d' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                }}
+              >
+                30 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange('ytd')}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: dateRange === 'ytd' ? '#fff' : 'transparent',
+                  fontWeight: dateRange === 'ytd' ? 600 : 400,
+                  cursor: 'pointer',
+                  boxShadow: dateRange === 'ytd' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                }}
+              >
+                Year-to-Date
+              </button>
+            </div>
+
+            {/* Export to Excel Button */}
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              id="btn-export-revenue-excel"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isExporting ? <RotateCw size={15} className="animate-spin" /> : <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />}
+              <span>{isExporting ? 'Exporting...' : 'Export to Excel (.xlsx)'}</span>
+            </button>
+
+            {/* Privacy & Clearance Tag */}
+            <div className="hsw-manager-privacy-notice">
+              <ShieldCheck size={14} />
+              <span>{t('manager.revenue.privacyNotice', 'Manager Clearance · Financial Aggregates Only')}</span>
+            </div>
           </div>
         </div>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
@@ -118,7 +232,7 @@ export const RevenueDashboardPage: React.FC = () => {
         </p>
       </div>
 
-      {/* KPI Cards Row (Rule 37: No fabricated comparison metrics) */}
+      {/* KPI Cards Row */}
       <div className="hsw-manager-kpi-grid">
         {/* Total Settled Revenue */}
         <div className="hsw-manager-kpi-card" style={{ borderLeft: '4px solid var(--accent-forest)' }}>
@@ -126,7 +240,7 @@ export const RevenueDashboardPage: React.FC = () => {
             {t('manager.revenue.totalSettled', 'Total Settled Revenue')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--accent-forest)' }}>
-            {formatVND(analytics.totalRevenue)}
+            {formatVND(currentTotal)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.revenue.settledSub', 'Deposits & settled folios')}
@@ -139,7 +253,7 @@ export const RevenueDashboardPage: React.FC = () => {
             {t('manager.revenue.retreatRevenue', 'Retreat Packages')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: '#1e40af' }}>
-            {formatVND(analytics.retreatRevenue)}
+            {formatVND(currentRetreat)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.revenue.retreatSub', 'Core sanctuary stays')}
@@ -152,10 +266,10 @@ export const RevenueDashboardPage: React.FC = () => {
             {t('manager.revenue.ancillaryExtras', 'Spa & Dining Extras')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: '#b45309' }}>
-            {formatVND(analytics.spaRevenue + analytics.fnbRevenue)}
+            {formatVND(currentSpa + currentFnb)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Spa: {formatVND(analytics.spaRevenue)} · F&B: {formatVND(analytics.fnbRevenue)}
+            Spa: {formatVND(currentSpa)} · F&B: {formatVND(currentFnb)}
           </div>
         </div>
 
@@ -165,7 +279,7 @@ export const RevenueDashboardPage: React.FC = () => {
             {t('manager.revenue.outstandingRevenue', 'Outstanding / Pending')}
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: '#dc2626' }}>
-            {formatVND(analytics.outstandingRevenue)}
+            {formatVND(currentOutstanding)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.revenue.outstandingSub', 'Due upon checkout handover')}

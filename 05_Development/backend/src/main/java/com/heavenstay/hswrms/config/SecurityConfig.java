@@ -56,6 +56,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // Public Retreat Packages Catalog (Phase 3 extension)
                         .requestMatchers("/api/v1/packages/**").permitAll()
+                        // Module 5: VNPay IPN callback is authenticated by HMAC-SHA512 signature, not by JWT
+                        .requestMatchers("/api/v1/commerce/payment/webhook/vnpay").permitAll()
+                        // Module 5: analytics are Manager/Admin only
+                        .requestMatchers("/api/v1/analytics/**").hasAnyRole("MANAGER", "ADMIN")
+                        // Module 5: reviews belong to the authenticated Customer (ownership checked in service)
+                        .requestMatchers("/api/v1/customer/reviews/**").hasRole("CUSTOMER")
+                        // Module 5: billing requires authentication; per-endpoint role/ownership via @PreAuthorize
+                        .requestMatchers("/api/v1/billing/**").authenticated()
                         // Any other request requires valid authentication
                         .anyRequest().authenticated()
                 )

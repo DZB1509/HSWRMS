@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
   Home,
   ShieldCheck,
+  FileSpreadsheet,
+  RotateCw,
+  Calendar,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -15,19 +18,93 @@ import {
 } from 'recharts';
 import { useFolio } from '../../context/FolioContext';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import type { OccupancyAnalytics } from '../../features/m5-billing/types';
 
 export const OccupancyReportPage: React.FC = () => {
   const { t } = useTranslation();
   const { getOccupancyAnalytics } = useFolio();
 
-  const analytics = getOccupancyAnalytics();
+  const localAnalytics = getOccupancyAnalytics();
+
+  // Date range filter
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | 'ytd'>('30d');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [liveAnalytics, setLiveAnalytics] = useState<OccupancyAnalytics | null>(null);
+
+  const getDates = () => {
+    const to = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    if (dateRange === '7d') d.setDate(d.getDate() - 7);
+    else if (dateRange === '30d') d.setDate(d.getDate() - 30);
+    else d.setFullYear(d.getFullYear(), 0, 1);
+    const from = d.toISOString().slice(0, 10);
+    return { from, to };
+  };
+
+  useEffect(() => {
+    const { from, to } = getDates();
+    billingApi.getOccupancyAnalytics(from, to)
+      .then(setLiveAnalytics)
+      .catch(() => {
+        // Fallback to local context
+      });
+  }, [dateRange]);
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const { from, to } = getDates();
+      await billingApi.downloadExcelReport('occupancy', from, to);
+    } catch (err) {
+      console.error('Failed to export occupancy excel:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const totalVillas = liveAnalytics?.totalVillas ?? localAnalytics.totalVillas;
+  const occupiedCount = liveAnalytics?.occupiedCount ?? localAnalytics.occupiedCount;
+  const reservedCount = liveAnalytics?.reservedCount ?? localAnalytics.reservedCount;
+  const readyCount = liveAnalytics?.readyCount ?? localAnalytics.readyCount;
+  const cleaningCount = liveAnalytics?.cleaningCount ?? localAnalytics.cleaningCount;
+  const maintenanceCount = localAnalytics.maintenanceCount;
+  const occupancyRate = liveAnalytics?.occupancyRate ?? localAnalytics.occupancyRate;
 
   // Status Filter & Pagination
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  const filteredVillas = analytics.villaDetails.filter((v) => {
+  type VillaDetailItem = {
+    id: string;
+    code: string;
+    category: string;
+    status: string;
+    customerName?: string;
+    bookingRef?: string;
+    activeCustomerName?: string;
+    activeBookingRef?: string;
+    previousCustomerName?: string;
+    previousBookingRef?: string;
+  };
+
+  const allVillas: VillaDetailItem[] = (liveAnalytics?.villaDetails && liveAnalytics.villaDetails.length > 0)
+    ? liveAnalytics.villaDetails.map((vd): VillaDetailItem => ({
+        id: `villa-${vd.villaId}`,
+        code: vd.villaNumber,
+        category: vd.category,
+        status: vd.status.toLowerCase(),
+        activeBookingRef: vd.status.toUpperCase() === 'OCCUPIED' ? (vd.bookingReference || undefined) : undefined,
+        bookingRef: vd.status.toUpperCase() === 'RESERVED' ? (vd.bookingReference || undefined) : undefined,
+        previousBookingRef: vd.status.toUpperCase() === 'CLEANING' ? (vd.bookingReference || undefined) : undefined,
+        customerName: vd.customerName || undefined,
+        activeCustomerName: vd.status.toUpperCase() === 'OCCUPIED' ? (vd.customerName || undefined) : undefined,
+        previousCustomerName: vd.status.toUpperCase() === 'CLEANING' ? (vd.customerName || undefined) : undefined,
+      }))
+    : localAnalytics.villaDetails;
+
+  const filteredVillas = allVillas.filter((v) => {
     if (filterStatus === 'all') return true;
     return v.status === filterStatus;
   });
@@ -39,11 +116,11 @@ export const OccupancyReportPage: React.FC = () => {
   );
 
   const pieData = [
-    { name: t('manager.occupancy.occupied', 'Occupied'), value: analytics.occupiedCount, color: '#3b82f6' },
-    { name: t('manager.occupancy.reserved', 'Reserved'), value: analytics.reservedCount, color: '#8b5cf6' },
-    { name: t('manager.occupancy.available', 'Ready / Available'), value: analytics.readyCount, color: '#10b981' },
-    { name: t('manager.occupancy.cleaning', 'Cleaning / Sanitizing'), value: analytics.cleaningCount, color: '#f59e0b' },
-    { name: t('manager.occupancy.maintenance', 'Maintenance'), value: analytics.maintenanceCount, color: '#6b7280' },
+    { name: t('manager.occupancy.occupied', 'Occupied'), value: occupiedCount, color: '#3b82f6' },
+    { name: t('manager.occupancy.reserved', 'Reserved'), value: reservedCount, color: '#8b5cf6' },
+    { name: t('manager.occupancy.available', 'Ready / Available'), value: readyCount, color: '#10b981' },
+    { name: t('manager.occupancy.cleaning', 'Cleaning / Sanitizing'), value: cleaningCount, color: '#f59e0b' },
+    { name: t('manager.occupancy.maintenance', 'Maintenance'), value: maintenanceCount, color: '#6b7280' },
   ].filter((d) => d.value > 0);
 
   const getVillaStatusLabel = (status: string) => {
@@ -80,9 +157,55 @@ export const OccupancyReportPage: React.FC = () => {
             </h1>
           </div>
 
-          <div className="hsw-manager-privacy-notice">
-            <ShieldCheck size={14} />
-            <span>{t('manager.occupancy.privacyNotice', 'Manager Clearance · Villa Allocations Only · Identity Data Masked')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            {/* Date Range Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--surface-sunken)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <Calendar size={14} style={{ color: 'var(--text-secondary)' }} />
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {(['7d', '30d', 'ytd'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setDateRange(r)}
+                    style={{
+                      border: 'none',
+                      background: dateRange === r ? 'var(--accent-forest)' : 'transparent',
+                      color: dateRange === r ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {r.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Export Excel Button */}
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              style={{ padding: '6px 14px', fontSize: '12px' }}
+              id="btn-export-occupancy-excel"
+            >
+              {isExporting ? (
+                <RotateCw size={14} className="hsw-spin" />
+              ) : (
+                <FileSpreadsheet size={14} style={{ color: '#047857' }} />
+              )}
+              <span>{isExporting ? t('common.exporting', 'Exporting...') : t('manager.revenue.exportExcel', 'Export to Excel (.xlsx)')}</span>
+            </button>
+
+            <div className="hsw-manager-privacy-notice">
+              <ShieldCheck size={14} />
+              <span>{t('manager.occupancy.privacyNotice', 'Manager Clearance · Villa Allocations Only · Identity Data Masked')}</span>
+            </div>
           </div>
         </div>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
@@ -101,7 +224,7 @@ export const OccupancyReportPage: React.FC = () => {
             {t('manager.occupancy.totalVillas', 'Total Resort Villas')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
-            {analytics.totalVillas}
+            {totalVillas}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.occupancy.activeInventory', 'All inventory registered in Operations')}
@@ -114,7 +237,7 @@ export const OccupancyReportPage: React.FC = () => {
             {t('manager.occupancy.occupiedCount', 'Currently Occupied')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#1d4ed8' }}>
-            {analytics.occupiedCount}
+            {occupiedCount}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.occupancy.inHouseGuests', 'In-house customer stays')}
@@ -127,7 +250,7 @@ export const OccupancyReportPage: React.FC = () => {
             {t('manager.occupancy.readyCount', 'Ready for Arrival')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#047857' }}>
-            {analytics.readyCount}
+            {readyCount}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.occupancy.inspectedReady', 'Cleaned & inspected')}
@@ -140,10 +263,10 @@ export const OccupancyReportPage: React.FC = () => {
             {t('manager.occupancy.rate', 'Occupancy Rate')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#b45309' }}>
-            {analytics.occupancyRate.toFixed(1)}%
+            {occupancyRate.toFixed(1)}%
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {analytics.reservedCount} {t('manager.occupancy.inReserved', 'reserved')} · {analytics.cleaningCount} {t('manager.occupancy.inCleaning', 'in cleaning')} · {analytics.maintenanceCount} {t('manager.occupancy.inMaintenance', 'maintenance')}
+            {reservedCount} {t('manager.occupancy.inReserved', 'reserved')} · {cleaningCount} {t('manager.occupancy.inCleaning', 'in cleaning')} · {maintenanceCount} {t('manager.occupancy.inMaintenance', 'maintenance')}
           </div>
         </div>
       </div>
@@ -153,7 +276,7 @@ export const OccupancyReportPage: React.FC = () => {
         <div className="hsw-manager-chart-card">
           <div className="hsw-manager-chart-title">
             <span>{t('manager.occupancy.chartTitle', 'Villa Operational Status Ratio')}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{analytics.totalVillas} Villas Total</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{totalVillas} Villas Total</span>
           </div>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
@@ -190,7 +313,7 @@ export const OccupancyReportPage: React.FC = () => {
                 {t('manager.occupancy.occupied', 'Occupied')}
               </span>
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#1e40af' }}>
-                {analytics.occupiedCount} / {analytics.totalVillas} ({analytics.occupancyRate.toFixed(1)}%)
+                {occupiedCount} / {totalVillas} ({occupancyRate.toFixed(1)}%)
               </span>
             </div>
 
@@ -199,7 +322,7 @@ export const OccupancyReportPage: React.FC = () => {
                 {t('manager.occupancy.reserved', 'Reserved')}
               </span>
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#6d28d9' }}>
-                {analytics.reservedCount} / {analytics.totalVillas} ({((analytics.reservedCount / analytics.totalVillas) * 100).toFixed(1)}%)
+                {reservedCount} / {totalVillas} ({((reservedCount / totalVillas) * 100).toFixed(1)}%)
               </span>
             </div>
 
@@ -208,7 +331,7 @@ export const OccupancyReportPage: React.FC = () => {
                 {t('manager.occupancy.available', 'Ready for Arrival')}
               </span>
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#065f46' }}>
-                {analytics.readyCount} / {analytics.totalVillas} ({((analytics.readyCount / analytics.totalVillas) * 100).toFixed(1)}%)
+                {readyCount} / {totalVillas} ({((readyCount / totalVillas) * 100).toFixed(1)}%)
               </span>
             </div>
 
@@ -217,7 +340,7 @@ export const OccupancyReportPage: React.FC = () => {
                 {t('manager.occupancy.cleaning', 'Post-Checkout Sanitization')}
               </span>
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#854d0e' }}>
-                {analytics.cleaningCount} / {analytics.totalVillas} ({((analytics.cleaningCount / analytics.totalVillas) * 100).toFixed(1)}%)
+                {cleaningCount} / {totalVillas} ({((cleaningCount / totalVillas) * 100).toFixed(1)}%)
               </span>
             </div>
 
@@ -226,7 +349,7 @@ export const OccupancyReportPage: React.FC = () => {
                 {t('manager.occupancy.maintenance', 'Scheduled Maintenance')}
               </span>
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#4b5563' }}>
-                {analytics.maintenanceCount} / {analytics.totalVillas} ({((analytics.maintenanceCount / analytics.totalVillas) * 100).toFixed(1)}%)
+                {maintenanceCount} / {totalVillas} ({((maintenanceCount / totalVillas) * 100).toFixed(1)}%)
               </span>
             </div>
           </div>

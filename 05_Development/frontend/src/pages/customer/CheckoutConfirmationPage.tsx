@@ -10,11 +10,15 @@ import {
   CreditCard,
   Key,
   Heart,
+  RotateCw,
+  Download,
+  Printer,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
 
 export const CheckoutConfirmationPage: React.FC = () => {
   const { t } = useTranslation();
@@ -32,10 +36,23 @@ export const CheckoutConfirmationPage: React.FC = () => {
   const folioData = getFolioForBooking(bookingId);
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [justCompleted, setJustCompleted] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState<boolean>(false);
+  const [justCompleted, setJustCompleted] = useState<boolean>(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
   const alreadyCheckedOut = isStayCheckedOut(folioData.bookingReference) || justCompleted;
   const existingRecord = getCheckoutRecord(folioData.bookingReference);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      await billingApi.downloadInvoicePdf(1, folioData.bookingReference);
+    } catch (err) {
+      console.error('Failed to download invoice PDF:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const folioRoute = isStaff && bookingId
     ? `/receptionist/folio/${bookingId}`
@@ -47,17 +64,33 @@ export const CheckoutConfirmationPage: React.FC = () => {
 
   const reviewRoute = `/customer/review/${folioData.bookingReference}`;
 
-  const handleConfirmCheckout = () => {
+  const handleConfirmCheckout = async () => {
     setCheckoutError(null);
-    const result = completeResortCheckout(
-      folioData.bookingReference,
-      isStaff ? 'receptionist' : 'customer'
-    );
+    setIsFinalizing(true);
+    try {
+      // Attempt backend atomic checkout finalization
+      try {
+        await billingApi.finalizeCheckout(1);
+      } catch (err: any) {
+        if (err?.code === 'UNSETTLED_SERVICE_ORDERS' || err?.code === 'UNPAID_CHARGES_REMAIN') {
+          setCheckoutError(err.message || 'Cannot checkout while unsettled service orders or unpaid balances remain.');
+          setIsFinalizing(false);
+          return;
+        }
+      }
 
-    if (result.success) {
-      setJustCompleted(true);
-    } else {
-      setCheckoutError(result.message);
+      const result = completeResortCheckout(
+        folioData.bookingReference,
+        isStaff ? 'receptionist' : 'customer'
+      );
+
+      if (result.success) {
+        setJustCompleted(true);
+      } else {
+        setCheckoutError(result.message);
+      }
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -190,7 +223,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
                   backgroundColor: 'var(--bg-surface)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-4)',
-                  marginBottom: 'var(--space-6)',
+                  marginBottom: 'var(--space-5)',
                   fontSize: 'var(--text-sm)',
                 }}
               >
@@ -231,6 +264,27 @@ export const CheckoutConfirmationPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Room Key Return Reminder Box */}
+              <div
+                style={{
+                  backgroundColor: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: 'var(--space-6)',
+                  color: '#92400e',
+                  fontSize: '13px',
+                }}
+              >
+                <Key size={18} style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>Key Card Return Reminder:</strong> Please present your RFID room key card at the front desk counter during final departure handover.
+                </span>
+              </div>
+
               {checkoutError && (
                 <div style={{ padding: 'var(--space-3)', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', fontSize: '13px', marginBottom: 'var(--space-4)' }}>
                   {checkoutError}
@@ -243,12 +297,17 @@ export const CheckoutConfirmationPage: React.FC = () => {
                   type="button"
                   className="hsw-btn hsw-btn-retreat-primary"
                   onClick={handleConfirmCheckout}
+                  disabled={isFinalizing}
                   style={{ width: '100%', justifyContent: 'center' }}
                   id="btn-confirm-departure"
                 >
-                  <Key size={16} />
-                  <span>{t('checkout.btnConfirmDeparture', 'Complete Resort Checkout & Release Villa')}</span>
-                  <ArrowRight size={16} />
+                  {isFinalizing ? <RotateCw size={16} className="animate-spin" /> : <Key size={16} />}
+                  <span>
+                    {isFinalizing
+                      ? 'Finalizing Resort Departure...'
+                      : t('checkout.btnConfirmDeparture', 'Complete Resort Checkout & Release Villa')}
+                  </span>
+                  {!isFinalizing && <ArrowRight size={16} />}
                 </button>
 
                 <button
@@ -292,7 +351,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
             )}
           </p>
 
-          {/* Operational notification */}
+          {/* Operational notification: PhysicalVilla transition to NEEDS_CLEANING */}
           <div
             style={{
               display: 'inline-flex',
@@ -308,7 +367,9 @@ export const CheckoutConfirmationPage: React.FC = () => {
             }}
           >
             <Home size={14} />
-            <span>{t('checkout.housekeepingNotified', 'Villa {{villa}} released · Housekeeping sanitization dispatched', { villa: folioData.villaCode })}</span>
+            <span>
+              Sanctuary Villa #{folioData.villaCode} status changed to <strong>NEEDS_CLEANING</strong> · Housekeeping sanitization dispatched
+            </span>
           </div>
 
           {/* Meta Grid */}
@@ -327,7 +388,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
                 {t('checkout.villaHandover', 'Villa Handover')}
               </div>
               <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {folioData.villaCode} (Cleared)
+                {folioData.villaCode} (Needs Cleaning)
               </div>
             </div>
 
@@ -362,6 +423,31 @@ export const CheckoutConfirmationPage: React.FC = () => {
               <span>{t('checkout.btnLeaveReview', 'Leave a Stay Review (Optional)')}</span>
               <ArrowRight size={16} />
             </Link>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-secondary"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                style={{ width: '100%', justifyContent: 'center' }}
+                id="btn-checkout-download-pdf"
+              >
+                {isDownloadingPdf ? <RotateCw size={15} className="animate-spin" /> : <Download size={15} />}
+                <span>{isDownloadingPdf ? 'Downloading...' : 'Download PDF Invoice'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-secondary"
+                onClick={() => window.print()}
+                style={{ width: '100%', justifyContent: 'center' }}
+                id="btn-checkout-print"
+              >
+                <Printer size={15} />
+                <span>Print Official Receipt</span>
+              </button>
+            </div>
 
             <Link
               to={folioRoute}

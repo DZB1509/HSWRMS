@@ -15,3 +15,10 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: http://localhost:5173
+  billing:
+    vat-rate: 0.08
+  vnpay:
+    hash-secret: test-vnpay-secret
+    mock-auto-confirm: true
+  seed:
+    demo-data: true

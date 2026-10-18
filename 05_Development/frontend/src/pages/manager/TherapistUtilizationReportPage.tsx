@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users2,
   HeartHandshake,
   ShieldCheck,
+  FileSpreadsheet,
+  RotateCw,
+  Calendar,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -16,12 +19,57 @@ import {
 } from 'recharts';
 import { useFolio } from '../../context/FolioContext';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import type { TherapistUtilization } from '../../features/m5-billing/types';
 
 export const TherapistUtilizationReportPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { getTherapistUtilizationAnalytics } = useFolio();
 
-  const analytics = getTherapistUtilizationAnalytics();
+  const localAnalytics = getTherapistUtilizationAnalytics();
+
+  // Date range filter
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | 'ytd'>('30d');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [liveAnalytics, setLiveAnalytics] = useState<TherapistUtilization | null>(null);
+
+  const getDates = () => {
+    const to = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    if (dateRange === '7d') d.setDate(d.getDate() - 7);
+    else if (dateRange === '30d') d.setDate(d.getDate() - 30);
+    else d.setFullYear(d.getFullYear(), 0, 1);
+    const from = d.toISOString().slice(0, 10);
+    return { from, to };
+  };
+
+  useEffect(() => {
+    const { from, to } = getDates();
+    billingApi.getTherapistUtilization(from, to)
+      .then(setLiveAnalytics)
+      .catch(() => {
+        // Fallback to local context
+      });
+  }, [dateRange]);
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const { from, to } = getDates();
+      await billingApi.downloadExcelReport('therapist', from, to);
+    } catch (err) {
+      console.error('Failed to export therapist excel:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const totalTherapists = liveAnalytics?.totalTherapists ?? localAnalytics.totalTherapists;
+  const totalScheduledSessions = liveAnalytics?.totalScheduledSessions ?? localAnalytics.totalScheduledSessions;
+  const completedSessions = liveAnalytics?.completedSessions ?? localAnalytics.completedSessions;
+  const noShowSessions = liveAnalytics?.noShowSessions ?? localAnalytics.noShowSessions;
+  const totalBookedHours = liveAnalytics?.totalBookedHours ?? localAnalytics.totalBookedHours;
+  const totalBookedMinutes = (liveAnalytics?.totalBookedHours ? Math.round(liveAnalytics.totalBookedHours * 60) : undefined) ?? localAnalytics.totalBookedMinutes;
 
   // Helper for locale-aware units (e.g., VI: "510 phút", "8,5 giờ"; EN: "510 min", "8.5 hrs")
   const formatDuration = (mins: number, hours: number, lang: string) => {
@@ -62,20 +110,24 @@ export const TherapistUtilizationReportPage: React.FC = () => {
     };
   };
 
-  const durationInfo = formatDuration(analytics.totalBookedMinutes, analytics.totalBookedHours, i18n.language);
+  const durationInfo = formatDuration(totalBookedMinutes, totalBookedHours, i18n.language);
 
   // Pagination for therapist table
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
-  const totalItems = analytics.therapistDetails.length;
-  const paginatedTherapists = analytics.therapistDetails.slice(
+  const currentTherapistDetails = (liveAnalytics?.therapistDetails && liveAnalytics.therapistDetails.length > 0)
+    ? liveAnalytics.therapistDetails
+    : localAnalytics.therapistDetails;
+
+  const totalItems = currentTherapistDetails.length;
+  const paginatedTherapists = currentTherapistDetails.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
-  const chartData = analytics.therapistDetails.map((td) => ({
-    name: td.name.split(' ').slice(-1)[0], // last name / short name for readable bar charts
+  const chartData = currentTherapistDetails.map((td) => ({
+    name: td.name.split(' ').slice(-1)[0],
     fullName: td.name,
     bookedMinutes: td.bookedMinutes,
     bookedHours: td.bookedHours,
@@ -94,9 +146,55 @@ export const TherapistUtilizationReportPage: React.FC = () => {
             </h1>
           </div>
 
-          <div className="hsw-manager-privacy-notice">
-            <ShieldCheck size={14} />
-            <span>{t('manager.therapists.privacyNotice', 'Manager Clearance · Operational Workload Only · Health & Clinical Notes Excluded')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            {/* Date Range Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--surface-sunken)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <Calendar size={14} style={{ color: 'var(--text-secondary)' }} />
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {(['7d', '30d', 'ytd'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setDateRange(r)}
+                    style={{
+                      border: 'none',
+                      background: dateRange === r ? 'var(--accent-forest)' : 'transparent',
+                      color: dateRange === r ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {r.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Export Excel Button */}
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              style={{ padding: '6px 14px', fontSize: '12px' }}
+              id="btn-export-therapist-excel"
+            >
+              {isExporting ? (
+                <RotateCw size={14} className="hsw-spin" />
+              ) : (
+                <FileSpreadsheet size={14} style={{ color: '#047857' }} />
+              )}
+              <span>{isExporting ? t('common.exporting', 'Exporting...') : t('manager.revenue.exportExcel', 'Export to Excel (.xlsx)')}</span>
+            </button>
+
+            <div className="hsw-manager-privacy-notice">
+              <ShieldCheck size={14} />
+              <span>{t('manager.therapists.privacyNotice', 'Manager Clearance · Operational Workload Only · Health & Clinical Notes Excluded')}</span>
+            </div>
           </div>
         </div>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
@@ -115,7 +213,7 @@ export const TherapistUtilizationReportPage: React.FC = () => {
             {t('manager.therapists.totalPractitioners', 'Active Practitioners')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
-            {analytics.totalTherapists}
+            {totalTherapists}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {t('manager.therapists.registeredStaff', 'Therapists & Yoga instructors')}
@@ -128,10 +226,10 @@ export const TherapistUtilizationReportPage: React.FC = () => {
             {t('manager.therapists.totalSessions', 'Scheduled Sessions')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#1d4ed8' }}>
-            {analytics.totalScheduledSessions}
+            {totalScheduledSessions}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {analytics.completedSessions} {t('manager.therapists.completedSub', 'completed')} · {analytics.noShowSessions} {t('manager.therapists.noShowSub', 'no-show')}
+            {completedSessions} {t('manager.therapists.completedSub', 'completed')} · {noShowSessions} {t('manager.therapists.noShowSub', 'no-show')}
           </div>
         </div>
 
@@ -141,7 +239,7 @@ export const TherapistUtilizationReportPage: React.FC = () => {
             {t('manager.therapists.totalMinutes', 'Booked Treatment Time')}
           </div>
           <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: '#b45309' }}>
-            {analytics.totalBookedMinutes.toLocaleString()} <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{durationInfo.minUnit}</span>
+            {totalBookedMinutes.toLocaleString()} <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{durationInfo.minUnit}</span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {durationInfo.formattedHours} {durationInfo.hrUnit} {t('manager.therapists.hoursTreatment', 'hours of hands-on therapy')}
@@ -167,7 +265,7 @@ export const TherapistUtilizationReportPage: React.FC = () => {
         <div className="hsw-manager-chart-title">
           <span>{t('manager.therapists.chartTitle', 'Practitioner Workload Distribution (Minutes Booked)')}</span>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            {analytics.totalBookedMinutes.toLocaleString()} {t('manager.therapists.totalTreatmentMinutes', 'Total Treatment Minutes')}
+            {totalBookedMinutes.toLocaleString()} {t('manager.therapists.totalTreatmentMinutes', 'Total Treatment Minutes')}
           </span>
         </div>
         <div style={{ width: '100%', height: 280 }}>
@@ -225,16 +323,18 @@ export const TherapistUtilizationReportPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedTherapists.map((therapist) => (
-                <tr key={therapist.id}>
-                  <td>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {therapist.name}
-                    </div>
-                  </td>
-                  <td>
-                    <span className="hsw-source-badge">{therapist.id}</span>
-                  </td>
+              {paginatedTherapists.map((therapist) => {
+                const staffId = 'therapistId' in therapist ? `TH-${therapist.therapistId}` : therapist.id;
+                return (
+                  <tr key={staffId}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {therapist.name}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="hsw-source-badge">{staffId}</span>
+                    </td>
                   <td style={{ textAlign: 'center', fontWeight: 600 }}>
                     {therapist.sessionsCount}
                   </td>
@@ -253,7 +353,8 @@ export const TherapistUtilizationReportPage: React.FC = () => {
                     </span>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>

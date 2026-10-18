@@ -1,4 +1,4 @@
-﻿/*
+/*
 ================================================================================
 HSWRMS - HeavenStay Wellness Resort Management System
 SQL Server Database Schema
@@ -782,6 +782,9 @@ CREATE TABLE dbo.CustomerReview (
     retreat_booking_id  INT NOT NULL,
     overall_rating      TINYINT NOT NULL,
     comments            NVARCHAR(2000) NULL,
+    room_rating         TINYINT NULL,
+    spa_rating          TINYINT NULL,
+    dining_rating       TINYINT NULL,
     submitted_at        DATETIME2(0) NOT NULL
         CONSTRAINT DF_CustomerReview_SubmittedAt DEFAULT (SYSUTCDATETIME()),
 
@@ -790,7 +793,11 @@ CREATE TABLE dbo.CustomerReview (
         FOREIGN KEY (retreat_booking_id)
         REFERENCES dbo.RetreatBooking(retreat_booking_id),
     CONSTRAINT CK_CustomerReview_Rating
-        CHECK (overall_rating BETWEEN 1 AND 5)
+        CHECK (overall_rating BETWEEN 1 AND 5),
+    CONSTRAINT CK_CustomerReview_CategoryRatings
+        CHECK ((room_rating   IS NULL OR room_rating   BETWEEN 1 AND 5)
+           AND (spa_rating    IS NULL OR spa_rating    BETWEEN 1 AND 5)
+           AND (dining_rating IS NULL OR dining_rating BETWEEN 1 AND 5))
 );
 GO
 
