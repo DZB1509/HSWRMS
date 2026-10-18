@@ -1,11 +1,21 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import type { Role } from '../../../types/auth';
 import type { CapabilityKey } from '../../../types/governance';
 import { useGovernance } from '../../../hooks/useGovernance';
 import { ShieldAlert, ArrowRight } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
+
+/** Existing landing route per role (verified against the router). */
+const DASHBOARD_BY_ROLE: Record<Role, string> = {
+  customer: '/customer/dashboard',
+  receptionist: '/receptionist/dashboard',
+  therapist: '/therapist/dashboard',
+  fb_staff: '/fb/dashboard',
+  manager: '/manager/dashboard',
+  admin: '/admin/dashboard',
+};
 
 export interface RoleGuardProps {
   children: React.ReactNode;
@@ -21,6 +31,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   const { role, isAuthenticated, currentUser } = useAuth();
   const { hasCapability } = useGovernance();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Not logged in at all
   if (!isAuthenticated) {
@@ -74,13 +85,14 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           color: 'var(--text-secondary)',
           marginBottom: 'var(--space-6)'
         }}>
-          💡 <em>Tip for Reviewers:</em> Use the floating <strong>Demo Role Switcher</strong> at the bottom right to switch your persona to one of the authorized roles above.
+          You are signed in as <strong>{currentUser?.name}</strong> ({currentUser?.email}) with role <code>{role}</code>.
+          Sign in with an account that has one of the authorized roles above to access this area.
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-3)' }}>
           <Button variant="secondary" onClick={() => window.history.back()}>
             Go Back
           </Button>
-          <Button variant="primary" onClick={() => window.location.href = `/${role}/dashboard`} icon={<ArrowRight size={14} />}>
+          <Button variant="primary" onClick={() => navigate(role ? DASHBOARD_BY_ROLE[role] : '/login', { replace: true })} icon={<ArrowRight size={14} />}>
             Go to My Dashboard
           </Button>
         </div>

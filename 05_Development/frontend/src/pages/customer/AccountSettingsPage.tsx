@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCustomer } from '../../context/CustomerContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/common/Toast';
 import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
 import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader';
+import { updateMyProfile } from '../../api/customer/customerProfileApi';
+import { AppApiError } from '../../api/errors/apiError';
 import { User, Phone, Lock, Bell, Shield, Save } from 'lucide-react';
 
 export const AccountSettingsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { profile, updateProfile } = useCustomer();
+  const { profile, refreshServerProfile, isProfileLoading } = useCustomer();
+  const { loginWithCredentials, currentUser } = useAuth();
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -26,6 +30,26 @@ export const AccountSettingsPage: React.FC = () => {
     notifySms: profile.notificationPreferences.sms,
     notifyWellness: profile.notificationPreferences.wellnessReminders,
   });
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      fullName: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      dateOfBirth: profile.dateOfBirth,
+      address: profile.address,
+      preferredLanguage: profile.preferredLanguage,
+      emergencyName: profile.emergencyContact.name,
+      emergencyPhone: profile.emergencyContact.phone,
+      emergencyRelationship: profile.emergencyContact.relationship,
+      notifyEmail: profile.notificationPreferences.email,
+      notifySms: profile.notificationPreferences.sms,
+      notifyWellness: profile.notificationPreferences.wellnessReminders,
+    });
+  }, [profile]);
 
   const [passwordState, setPasswordState] = useState({
     currentPassword: '',
@@ -45,28 +69,79 @@ export const AccountSettingsPage: React.FC = () => {
     }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
-      fullName: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-      dateOfBirth: formData.dateOfBirth,
-      address: formData.address,
-      preferredLanguage: formData.preferredLanguage,
-      emergencyContact: {
-        name: formData.emergencyName,
-        phone: formData.emergencyPhone,
-        relationship: formData.emergencyRelationship,
-      },
-      notificationPreferences: {
-        email: formData.notifyEmail,
-        sms: formData.notifySms,
-        wellnessReminders: formData.notifyWellness,
-      },
-    });
+    if (isSaving) return;
+    setFormError(null);
 
-    showToast(t('customer.account.saveSuccess', 'Account settings updated successfully.'), 'success');
+    const fullName = formData.fullName.trim();
+    if (!fullName) {
+      const message = t('customer.account.fullNameRequired', 'Please enter your full name.');
+      setFormError(message);
+      showToast(message, 'error');
+      return;
+    }
+    if (formData.dateOfBirth) {
+      const dob = new Date(`${formData.dateOfBirth}T00:00:00`);
+      if (Number.isNaN(dob.getTime()) || dob > new Date()) {
+        const message = t('customer.account.invalidDob', 'Date of birth must be a valid past date.');
+        setFormError(message);
+        showToast(message, 'error');
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await updateMyProfile({
+        fullName,
+        phoneNumber: formData.phone.trim() ? formData.phone.trim() : null,
+        dateOfBirth: formData.dateOfBirth ? formData.dateOfBirth : null,
+        residentialAddress: formData.address.trim() ? formData.address.trim() : null,
+        preferredLanguage: formData.preferredLanguage,
+        emergencyContactName: formData.emergencyName.trim() ? formData.emergencyName.trim() : null,
+        emergencyContactPhone: formData.emergencyPhone.trim() ? formData.emergencyPhone.trim() : null,
+        emergencyContactRelationship: formData.emergencyRelationship.trim() ? formData.emergencyRelationship.trim() : null,
+      });
+      const refreshed = await refreshServerProfile();
+      if (currentUser && currentUser.role === 'customer') {
+        loginWithCredentials({
+          userId: response.data.userId,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          roles: currentUser ? [currentUser.role] : ['customer'],
+          accountStatus: 'ACTIVE',
+          tokenType: 'Bearer',
+          expiresInMs: 0,
+        });
+      }
+      if (!refreshed) {
+        setFormData((prev) => ({
+          ...prev,
+          fullName: response.data.fullName,
+          email: response.data.email,
+          phone: response.data.phoneNumber ?? '',
+          dateOfBirth: response.data.dateOfBirth ?? '',
+          address: response.data.residentialAddress ?? '',
+          preferredLanguage: response.data.preferredLanguage ?? 'en',
+          emergencyName: response.data.emergencyContactName ?? '',
+          emergencyPhone: response.data.emergencyContactPhone ?? '',
+          emergencyRelationship: response.data.emergencyContactRelationship ?? '',
+        }));
+      }
+      showToast(t('customer.account.saveSuccess', 'Account settings updated successfully.'), 'success');
+    } catch (error) {
+      const message =
+        error instanceof AppApiError
+          ? error.code === 'NETWORK_ERROR'
+            ? t('customer.account.networkError', 'Cannot reach the HSWRMS server. Please try again.')
+            : error.message || t('customer.account.saveFailed', 'Could not save profile. Please try again.')
+          : t('customer.account.saveFailed', 'Could not save profile. Please try again.');
+      setFormError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -101,7 +176,27 @@ export const AccountSettingsPage: React.FC = () => {
               Left Column: Profile, Emergency Contact, Notifications
               ==================================================================== */}
           <div>
-            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }} aria-busy={isSaving || isProfileLoading}>
+              {formError ? (
+                <div
+                  role="alert"
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: '#fdf2f2',
+                    border: '1px solid #fecaca',
+                    color: '#991b1b',
+                    fontSize: 'var(--text-xs)',
+                  }}
+                >
+                  {formError}
+                </div>
+              ) : null}
+              {isProfileLoading ? (
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  {t('customer.account.loadingProfile', 'Loading your profile from HSWRMS…')}
+                </div>
+              ) : null}
               {/* Personal Information */}
               <div
                 style={{
@@ -151,18 +246,22 @@ export const AccountSettingsPage: React.FC = () => {
                         type="email"
                         name="email"
                         value={formData.email}
-                        onChange={handleInputChange}
-                        required
+                        readOnly
+                        disabled
+                        aria-describedby="account-email-note"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
                           borderRadius: 'var(--radius-sm)',
                           border: '1px solid var(--border-subtle)',
                           fontSize: 'var(--text-sm)',
-                          backgroundColor: 'var(--control-bg, var(--surface))',
-                          color: 'var(--text-primary)',
+                          backgroundColor: 'var(--surface-muted)',
+                          color: 'var(--text-muted)',
                         }}
                       />
+                      <span id="account-email-note" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px', display: 'block' }}>
+                        {t('customer.account.emailReadOnlyNote', 'Email identifies your account and cannot be changed here.')}
+                      </span>
                     </div>
 
                     <div>
@@ -174,7 +273,6 @@ export const AccountSettingsPage: React.FC = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        required
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -361,35 +459,38 @@ export const AccountSettingsPage: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                     <input
                       type="checkbox"
                       name="notifyEmail"
                       checked={formData.notifyEmail}
-                      onChange={handleInputChange}
+                      disabled
                     />
                     <span>{t('customer.account.notifyEmail', 'Retreat Updates & Booking Confirmations (Email)')}</span>
                   </label>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                     <input
                       type="checkbox"
                       name="notifySms"
                       checked={formData.notifySms}
-                      onChange={handleInputChange}
+                      disabled
                     />
                     <span>{t('customer.account.notifySms', 'Urgent Pre-Arrival & Villa Reminders (SMS)')}</span>
                   </label>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                     <input
                       type="checkbox"
                       name="notifyWellness"
                       checked={formData.notifyWellness}
-                      onChange={handleInputChange}
+                      disabled
                     />
                     <span>{t('customer.account.notifyWellness', 'Daily Mindfulness & Session Reminders (App/Email)')}</span>
                   </label>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                    {t('customer.account.notificationsDemoNote', 'Demo only in this build — notification choices are not saved to the backend yet.')}
+                  </span>
                 </div>
               </div>
 
@@ -399,6 +500,8 @@ export const AccountSettingsPage: React.FC = () => {
                   variant="primary"
                   size="md"
                   icon={<Save size={16} />}
+                  isLoading={isSaving}
+                  disabled={isProfileLoading}
                   style={{ backgroundColor: 'var(--accent-forest)', color: '#ffffff', fontWeight: 600 }}
                 >
                   {t('customer.account.saveChanges', 'Save Changes')}
@@ -432,6 +535,9 @@ export const AccountSettingsPage: React.FC = () => {
               <div style={{ fontSize: '11px', color: 'var(--accent-olive)', fontWeight: 600 }}>
                 ✓ Priority Villa Allocation · Dedicated Wellness Concierge · Seasonal Herbal Blends
               </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: 'var(--space-2)', display: 'block' }}>
+                {t('customer.account.membershipDemoNote', 'Demo data in this build — membership and villa details are not loaded from the backend yet.')}
+              </span>
             </div>
 
             {/* Password Change Form */}
@@ -449,6 +555,20 @@ export const AccountSettingsPage: React.FC = () => {
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
                   {t('customer.account.securitySection', 'Password & Security')}
                 </h2>
+              </div>
+
+              <div
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-soft)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 'var(--text-xs)',
+                  marginBottom: 'var(--space-4)',
+                }}
+              >
+                {t('customer.account.passwordDemoNote', 'Demo only in this build — password change is not connected to the backend yet.')}
               </div>
 
               {passwordError && (

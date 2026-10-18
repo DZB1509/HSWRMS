@@ -100,7 +100,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConcurrencyFailureException.class)
-    public ResponseEntity<ApiError> handleConcurrencyFailure(org.springframework.dao.ConcurrencyFailureException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleConcurrencyFailure(ConcurrencyFailureException ex, HttpServletRequest request) {
         ApiError error = new ApiError(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 "SERVICE_BUSY",

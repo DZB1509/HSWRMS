@@ -1,6 +1,6 @@
 import { AppApiError, type ApiErrorResponse } from '../errors/apiError';
 
-const API_BASE_URL: string =
+export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8080/api/v1';
 
 const AUTH_TOKEN_KEY = 'hswrms_jwt_token';
