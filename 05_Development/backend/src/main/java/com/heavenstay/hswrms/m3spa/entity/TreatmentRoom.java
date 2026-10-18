@@ -15,6 +15,9 @@ public class TreatmentRoom {
     @Column(name = "room_name", nullable = false, length = 100, unique = true)
     private String roomName;
 
+    @Column(name = "room_type", length = 50)
+    private String roomType;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "room_status", nullable = false, length = 20)
     private TreatmentRoomStatus roomStatus = TreatmentRoomStatus.AVAILABLE;
@@ -25,6 +28,20 @@ public class TreatmentRoom {
     public TreatmentRoom(String roomName, TreatmentRoomStatus roomStatus) {
         this.roomName = roomName;
         this.roomStatus = roomStatus;
+    }
+
+    public TreatmentRoom(String roomName, TreatmentRoomStatus roomStatus, String roomType) {
+        this.roomName = roomName;
+        this.roomStatus = roomStatus;
+        this.roomType = roomType;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public void setRoomType(String roomType) {
+        this.roomType = roomType;
     }
 
     public Integer getRoomId() {

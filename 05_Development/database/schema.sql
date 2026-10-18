@@ -335,6 +335,7 @@ GO
 CREATE TABLE dbo.SpaTreatment (
     treatment_id        INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_SpaTreatment PRIMARY KEY,
+    treatment_code      VARCHAR(50) NULL,
     treatment_name      NVARCHAR(150) NOT NULL,
     duration_minutes    INT NOT NULL,
     base_price          DECIMAL(18,2) NOT NULL,
@@ -349,6 +350,11 @@ CREATE TABLE dbo.SpaTreatment (
     CONSTRAINT CK_SpaTreatment_Status
         CHECK (treatment_status IN ('ACTIVE','INACTIVE'))
 );
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode
+    ON dbo.SpaTreatment (treatment_code)
+    WHERE treatment_code IS NOT NULL;
 GO
 
 /* Conceptual relation: Retreat Package includes Spa Treatments. */
@@ -371,6 +377,7 @@ CREATE TABLE dbo.TreatmentRoom (
     room_id             INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_TreatmentRoom PRIMARY KEY,
     room_name           NVARCHAR(100) NOT NULL,
+    room_type           VARCHAR(50) NULL,
     room_status         VARCHAR(20) NOT NULL
         CONSTRAINT DF_TreatmentRoom_Status DEFAULT ('AVAILABLE'),
 

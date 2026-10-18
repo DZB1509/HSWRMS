@@ -860,4 +860,207 @@ public class SpaServiceTests {
         assertNull(nullBookingResult.getRelevantPrecautions());
         assertNull(nullBookingResult.getCustomerFirstName());
     }
+
+    @Test
+    @DisplayName("36. SpaTreatment persistence and retrieval with treatmentCode preserves durationMinutes, category, and status")
+    public void testSpaTreatmentCodePersistenceAndRetrieval() {
+        SpaTreatment treatment = new SpaTreatment(
+                "TRT-HYDRO-01",
+                "Ocean Mineral Hydrotherapy",
+                45,
+                new BigDecimal("950000.00"),
+                "Hydrotherapy",
+                "Restorative warm mineral soak"
+        );
+        SpaTreatment saved = treatmentRepository.save(treatment);
+        assertNotNull(saved.getTreatmentId());
+
+        SpaTreatment loaded = treatmentRepository.findById(saved.getTreatmentId()).orElseThrow();
+        assertEquals("TRT-HYDRO-01", loaded.getTreatmentCode());
+        assertEquals("Ocean Mineral Hydrotherapy", loaded.getTreatmentName());
+        assertEquals(45, loaded.getDurationMinutes());
+        assertEquals(new BigDecimal("950000.00"), loaded.getBasePrice());
+        assertEquals("Hydrotherapy", loaded.getCategory());
+        assertEquals(TreatmentStatus.ACTIVE, loaded.getTreatmentStatus());
+
+        loaded.setTreatmentCode("TRT-HYDRO-02");
+        SpaTreatment updated = treatmentRepository.save(loaded);
+        assertEquals("TRT-HYDRO-02", updated.getTreatmentCode());
+    }
+
+    @Test
+    @DisplayName("37. TreatmentRoom persistence and retrieval with roomType preserves roomStatus and roomName")
+    public void testTreatmentRoomTypePersistenceAndRetrieval() {
+        TreatmentRoom room = new TreatmentRoom(
+                "Ocean Breeze VIP Suite",
+                TreatmentRoomStatus.AVAILABLE,
+                "VIP_SUITE"
+        );
+        TreatmentRoom saved = roomRepository.save(room);
+        assertNotNull(saved.getRoomId());
+
+        TreatmentRoom loaded = roomRepository.findById(saved.getRoomId()).orElseThrow();
+        assertEquals("Ocean Breeze VIP Suite", loaded.getRoomName());
+        assertEquals("VIP_SUITE", loaded.getRoomType());
+        assertEquals(TreatmentRoomStatus.AVAILABLE, loaded.getRoomStatus());
+
+        loaded.setRoomType("SINGLE_STANDARD");
+        TreatmentRoom updated = roomRepository.save(loaded);
+        assertEquals("SINGLE_STANDARD", updated.getRoomType());
+    }
+
+    @Test
+    @DisplayName("38. findUnsettledSessionsForBooking retrieves unsettled sessions (SCHEDULED, RESCHEDULING) by retreatBookingId, excludes terminal statuses (CANCELLED, COMPLETED, NO_SHOW), and orders ASC by scheduledStartAt")
+    public void testFindUnsettledSessionsForBookingFiltersAndOrders() {
+        Integer targetBookingId = 301;
+        Integer otherBookingId = 302;
+
+        LocalDateTime baseTime = LocalDateTime.of(2026, 10, 1, 9, 0);
+
+        // Session 1: target booking, SCHEDULED at 09:00 (MUST be included)
+        SpaSession s1 = new SpaSession(
+                targetBookingId, massageTreatment, qualifiedTherapist, compatibleRoom,
+                baseTime, baseTime, baseTime.plusMinutes(60), BookingSource.CUSTOMER, "Session 1 Scheduled"
+        );
+        s1.setSessionStatus(SpaSessionStatus.SCHEDULED);
+        sessionRepository.save(s1);
+
+        // Session 2: target booking, CANCELLED at 11:00 (MUST be excluded)
+        LocalDateTime t2 = baseTime.plusHours(2);
+        SpaSession s2 = new SpaSession(
+                targetBookingId, massageTreatment, qualifiedTherapist, compatibleRoom,
+                t2, t2, t2.plusMinutes(60), BookingSource.CUSTOMER, "Session 2 Cancelled"
+        );
+        s2.setSessionStatus(SpaSessionStatus.CANCELLED);
+        sessionRepository.save(s2);
+
+        // Session 3: target booking, RESCHEDULING at 12:00 (MUST be included)
+        LocalDateTime t3 = baseTime.plusHours(3);
+        SpaSession s3 = new SpaSession(
+                targetBookingId, massageTreatment, qualifiedTherapist, compatibleRoom,
+                t3, t3, t3.plusMinutes(60), BookingSource.CUSTOMER, "Session 3 Rescheduling"
+        );
+        s3.setSessionStatus(SpaSessionStatus.RESCHEDULING);
+        sessionRepository.save(s3);
+
+        // Session 4: target booking, COMPLETED at 14:00 (MUST be excluded - terminal status)
+        LocalDateTime t4 = baseTime.plusHours(5);
+        SpaSession s4 = new SpaSession(
+                targetBookingId, massageTreatment, qualifiedTherapist, compatibleRoom,
+                t4, t4, t4.plusMinutes(60), BookingSource.CUSTOMER, "Session 4 Completed"
+        );
+        s4.setSessionStatus(SpaSessionStatus.COMPLETED);
+        sessionRepository.save(s4);
+
+        // Session 5: target booking, NO_SHOW at 16:00 (MUST be excluded - terminal status)
+        LocalDateTime t5 = baseTime.plusHours(7);
+        SpaSession s5 = new SpaSession(
+                targetBookingId, massageTreatment, qualifiedTherapist, compatibleRoom,
+                t5, t5, t5.plusMinutes(60), BookingSource.CUSTOMER, "Session 5 No-Show"
+        );
+        s5.setSessionStatus(SpaSessionStatus.NO_SHOW);
+        sessionRepository.save(s5);
+
+        // Session 6: different booking ID at 08:00 (MUST be excluded)
+        LocalDateTime t6 = baseTime.minusHours(1);
+        SpaSession s6 = new SpaSession(
+                otherBookingId, massageTreatment, qualifiedTherapist, compatibleRoom,
+                t6, t6, t6.plusMinutes(60), BookingSource.CUSTOMER, "Other Booking Session"
+        );
+        s6.setSessionStatus(SpaSessionStatus.SCHEDULED);
+        sessionRepository.save(s6);
+
+        List<SpaSession> unsettled = sessionRepository.findUnsettledSessionsForBooking(targetBookingId);
+
+        // Verify count: exactly 2 unsettled sessions (s1 SCHEDULED and s3 RESCHEDULING)
+        assertEquals(2, unsettled.size(),
+                "Must return exactly 2 unsettled sessions (SCHEDULED, RESCHEDULING; CANCELLED, COMPLETED, NO_SHOW excluded)");
+        assertTrue(unsettled.stream().noneMatch(s ->
+                s.getSessionStatus() == SpaSessionStatus.CANCELLED
+                        || s.getSessionStatus() == SpaSessionStatus.COMPLETED
+                        || s.getSessionStatus() == SpaSessionStatus.NO_SHOW),
+                "Terminal statuses (CANCELLED, COMPLETED, NO_SHOW) must be strictly excluded from unsettled sessions");
+        assertTrue(unsettled.stream().allMatch(s -> s.getRetreatBookingId().equals(targetBookingId)),
+                "All returned sessions must match requested retreatBookingId");
+
+        // Verify ascending chronological order: s1 at 09:00, then s3 at 12:00
+        assertEquals(baseTime, unsettled.get(0).getScheduledStartAt(), "First unsettled session must be s1 at 09:00");
+        assertEquals(t3, unsettled.get(1).getScheduledStartAt(), "Second unsettled session must be s3 at 12:00");
+
+        // Verify empty result for unknown booking
+        List<SpaSession> emptyList = sessionRepository.findUnsettledSessionsForBooking(9999);
+        assertTrue(emptyList.isEmpty(), "Must return empty list for non-existent booking ID");
+    }
+
+    @Test
+    @DisplayName("39. findSessionsInDateRange retrieves sessions within inclusive range ordered ascending by scheduledStartAt with therapist fetched eagerly")
+    public void testFindSessionsInDateRangeInclusiveAndOrdered() {
+        LocalDate testDay = LocalDate.of(2026, 10, 5);
+        LocalDateTime lowerBound = testDay.atTime(9, 0);
+        LocalDateTime upperBound = testDay.atTime(17, 0);
+
+        // Session A: before range at 08:00 (excluded)
+        SpaSession sA = new SpaSession(
+                201, massageTreatment, qualifiedTherapist, compatibleRoom,
+                testDay.atTime(8, 0), testDay.atTime(8, 0), testDay.atTime(9, 0),
+                BookingSource.CUSTOMER, "Before lower bound"
+        );
+        sessionRepository.save(sA);
+
+        // Session B: exactly at lower bound 09:00 (included - inclusive)
+        SpaSession sB = new SpaSession(
+                201, massageTreatment, qualifiedTherapist, compatibleRoom,
+                lowerBound, lowerBound, lowerBound.plusMinutes(60),
+                BookingSource.CUSTOMER, "At lower bound"
+        );
+        sessionRepository.save(sB);
+
+        // Session C: inside range at 13:00 (included)
+        LocalDateTime midTime = testDay.atTime(13, 0);
+        SpaSession sC = new SpaSession(
+                201, massageTreatment, qualifiedTherapist, compatibleRoom,
+                midTime, midTime, midTime.plusMinutes(60),
+                BookingSource.CUSTOMER, "Mid range"
+        );
+        sessionRepository.save(sC);
+
+        // Session D: exactly at upper bound 17:00 (included - inclusive)
+        SpaSession sD = new SpaSession(
+                201, massageTreatment, qualifiedTherapist, compatibleRoom,
+                upperBound, upperBound, upperBound.plusMinutes(60),
+                BookingSource.CUSTOMER, "At upper bound"
+        );
+        sessionRepository.save(sD);
+
+        // Session E: after range at 18:00 (excluded)
+        SpaSession sE = new SpaSession(
+                201, massageTreatment, qualifiedTherapist, compatibleRoom,
+                testDay.atTime(18, 0), testDay.atTime(18, 0), testDay.atTime(19, 0),
+                BookingSource.CUSTOMER, "After upper bound"
+        );
+        sessionRepository.save(sE);
+
+        List<SpaSession> rangeSessions = sessionRepository.findSessionsInDateRange(lowerBound, upperBound);
+
+        // Verify count: exactly 3 (sB, sC, sD)
+        assertEquals(3, rangeSessions.size(), "Must include exact boundary matches (09:00 and 17:00) and mid-range session");
+        assertEquals(lowerBound, rangeSessions.get(0).getScheduledStartAt(), "First result must be lower bound (09:00)");
+        assertEquals(midTime, rangeSessions.get(1).getScheduledStartAt(), "Second result must be mid-range (13:00)");
+        assertEquals(upperBound, rangeSessions.get(2).getScheduledStartAt(), "Third result must be upper bound (17:00)");
+
+        // Verify that LEFT JOIN FETCH eagerly loaded therapist association
+        for (SpaSession session : rangeSessions) {
+            assertNotNull(session.getTherapist(), "Therapist must be eagerly fetched by LEFT JOIN FETCH");
+            assertEquals(qualifiedTherapist.getTherapistId(), session.getTherapist().getTherapistId());
+            assertEquals(qualifiedTherapist.getUserId(), session.getTherapist().getUserId());
+            assertEquals(TherapistStatus.ACTIVE, session.getTherapist().getTherapistStatus());
+        }
+
+        // Verify empty result when range has no sessions
+        List<SpaSession> emptyRange = sessionRepository.findSessionsInDateRange(
+                testDay.plusDays(10).atTime(9, 0),
+                testDay.plusDays(10).atTime(17, 0)
+        );
+        assertTrue(emptyRange.isEmpty(), "Must return empty list for date range with no sessions");
+    }
 }

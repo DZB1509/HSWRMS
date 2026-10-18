@@ -13,6 +13,9 @@ public class SpaTreatment {
     @Column(name = "treatment_id")
     private Integer treatmentId;
 
+    @Column(name = "treatment_code", length = 50)
+    private String treatmentCode;
+
     @Column(name = "treatment_name", nullable = false, length = 150)
     private String treatmentName;
 
@@ -42,6 +45,24 @@ public class SpaTreatment {
         this.category = category;
         this.description = description;
         this.treatmentStatus = TreatmentStatus.ACTIVE;
+    }
+
+    public SpaTreatment(String treatmentCode, String treatmentName, Integer durationMinutes, BigDecimal basePrice, String category, String description) {
+        this.treatmentCode = treatmentCode;
+        this.treatmentName = treatmentName;
+        this.durationMinutes = durationMinutes;
+        this.basePrice = basePrice;
+        this.category = category;
+        this.description = description;
+        this.treatmentStatus = TreatmentStatus.ACTIVE;
+    }
+
+    public String getTreatmentCode() {
+        return treatmentCode;
+    }
+
+    public void setTreatmentCode(String treatmentCode) {
+        this.treatmentCode = treatmentCode;
     }
 
     public Integer getTreatmentId() {

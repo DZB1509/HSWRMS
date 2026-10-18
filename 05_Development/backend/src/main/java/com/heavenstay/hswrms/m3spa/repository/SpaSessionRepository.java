@@ -48,4 +48,21 @@ public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
             @Param("confirmationStatus") SpaConfirmationStatus confirmationStatus,
             @Param("deadline") LocalDateTime deadline
     );
+
+    @Query("SELECT s FROM SpaSession s " +
+           "WHERE s.retreatBookingId = :retreatBookingId " +
+           "AND s.sessionStatus NOT IN (com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.CANCELLED, " +
+           "                            com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.COMPLETED, " +
+           "                            com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.NO_SHOW) " +
+           "ORDER BY s.scheduledStartAt ASC")
+    List<SpaSession> findUnsettledSessionsForBooking(@Param("retreatBookingId") Integer retreatBookingId);
+
+    @Query("SELECT s FROM SpaSession s " +
+           "LEFT JOIN FETCH s.therapist " +
+           "WHERE s.scheduledStartAt >= :startAt AND s.scheduledStartAt <= :endAt " +
+           "ORDER BY s.scheduledStartAt ASC")
+    List<SpaSession> findSessionsInDateRange(
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
 }
