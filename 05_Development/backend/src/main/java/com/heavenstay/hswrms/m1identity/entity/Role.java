@@ -6,9 +6,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Objects;
 
+/**
+ * System role entity representing permissions and actor profiles.
+ * Mapped to dbo.[Role].
+ */
 @Entity
-@Table(name = "`Role`")
+@Table(name = "\"Role\"", schema = "dbo")
 public class Role {
 
     public static final String ADMIN = "ADMIN";
@@ -20,7 +25,7 @@ public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
+    @Column(name = "role_id", nullable = false)
     private Integer roleId;
 
     @Column(name = "role_name", nullable = false, unique = true, length = 50)
@@ -29,7 +34,7 @@ public class Role {
     @Column(name = "description", length = 500)
     private String description;
 
-    protected Role() {
+    public Role() {
     }
 
     public Role(String roleName, String description) {
@@ -41,15 +46,40 @@ public class Role {
         return roleId;
     }
 
+    public void setRoleId(Integer roleId) {
+        this.roleId = roleId;
+    }
+
     public String getRoleName() {
         return roleName;
+    }
+
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 
     public String getDescription() {
         return description;
     }
 
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public boolean isStaffRole() {
         return !CUSTOMER.equals(roleName);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Role role = (Role) o;
+        return Objects.equals(roleId, role.roleId) || Objects.equals(roleName, role.roleName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(roleName);
     }
 }

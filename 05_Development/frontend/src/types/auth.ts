@@ -16,11 +16,22 @@ export interface User {
   department?: string;
 }
 
+export interface AuthSession {
+  userId: number;
+  email: string;
+  fullName: string;
+  roles: string[];
+  accountStatus: string;
+  tokenType: string;
+  expiresInMs: number;
+}
+
 export interface AuthContextType {
   currentUser: User | null;
   role: Role | null;
   isAuthenticated: boolean;
   loginAs: (role: Role) => void;
+  loginWithCredentials: (session: AuthSession) => Role;
   logout: () => void;
 }
 

@@ -94,6 +94,28 @@ CREATE TABLE dbo.UserRole (
 );
 GO
 
+CREATE TABLE dbo.EmailOtp (
+    otp_id              INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_EmailOtp PRIMARY KEY,
+    user_id             INT NOT NULL,
+    otp_hash            VARCHAR(255) NOT NULL,
+    purpose             VARCHAR(30) NOT NULL,
+    expires_at          DATETIME2(0) NOT NULL,
+    consumed            BIT NOT NULL
+        CONSTRAINT DF_EmailOtp_Consumed DEFAULT (0),
+    consumed_at         DATETIME2(0) NULL,
+    attempt_count       INT NOT NULL
+        CONSTRAINT DF_EmailOtp_AttemptCount DEFAULT (0),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_EmailOtp_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT FK_EmailOtp_User
+        FOREIGN KEY (user_id) REFERENCES dbo.[User](user_id),
+    CONSTRAINT CK_EmailOtp_Purpose
+        CHECK (purpose IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET'))
+);
+GO
+
 
 /* ============================================================================
    2. CUSTOMER / HEALTH / CONSENT
@@ -103,7 +125,14 @@ CREATE TABLE dbo.CustomerProfile (
     customer_profile_id     INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_CustomerProfile PRIMARY KEY,
     user_id                 INT NOT NULL,
-    emergency_contact       NVARCHAR(300) NULL,
+    date_of_birth           DATE NULL,
+    residential_address     NVARCHAR(500) NULL,
+    preferred_language      VARCHAR(10) NULL
+        CONSTRAINT DF_CustomerProfile_PrefLang DEFAULT ('en'),
+    emergency_contact       NVARCHAR(300) NULL, -- legacy unstructured contact
+    emergency_contact_name  NVARCHAR(255) NULL,
+    emergency_contact_phone NVARCHAR(50) NULL,
+    emergency_contact_relationship NVARCHAR(100) NULL,
     notification_preference NVARCHAR(100) NULL,
     created_at              DATETIME2(0) NOT NULL
         CONSTRAINT DF_CustomerProfile_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -140,6 +169,14 @@ CREATE TABLE dbo.HealthProfile (
     allergies               NVARCHAR(MAX) NULL,
     dietary_requirements    NVARCHAR(MAX) NULL,
     treatment_safety_notes  NVARCHAR(MAX) NULL,
+    current_health_condition NVARCHAR(MAX) NULL,
+    injury_surgery_history  NVARCHAR(MAX) NULL,
+    mobility_joint_notes    NVARCHAR(MAX) NULL,
+    current_medications     NVARCHAR(500) NULL,
+    stress_fatigue_level    VARCHAR(20) NULL,
+    food_intolerance_notes  NVARCHAR(MAX) NULL,
+    disliked_ingredients    NVARCHAR(MAX) NULL,
+    kitchen_notes           NVARCHAR(MAX) NULL,
     anonymization_status    VARCHAR(20) NOT NULL
         CONSTRAINT DF_HealthProfile_AnonStatus DEFAULT ('IDENTIFIABLE'),
     created_at              DATETIME2(0) NOT NULL
@@ -152,7 +189,52 @@ CREATE TABLE dbo.HealthProfile (
         FOREIGN KEY (customer_profile_id)
         REFERENCES dbo.CustomerProfile(customer_profile_id),
     CONSTRAINT CK_HealthProfile_AnonStatus
-        CHECK (anonymization_status IN ('IDENTIFIABLE','ANONYMIZED'))
+        CHECK (anonymization_status IN ('IDENTIFIABLE','ANONYMIZED')),
+    CONSTRAINT CK_HealthProfile_StressLevel
+        CHECK (stress_fatigue_level IS NULL OR stress_fatigue_level IN ('mild','moderate','high'))
+);
+GO
+
+CREATE TABLE dbo.FoodAllergy (
+    food_allergy_id   INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_FoodAllergy PRIMARY KEY,
+    health_profile_id INT NOT NULL,
+    allergen_name     NVARCHAR(120) NOT NULL,
+    display_order     INT NOT NULL
+        CONSTRAINT DF_FoodAllergy_Order DEFAULT (0),
+
+    CONSTRAINT FK_FoodAllergy_HealthProfile
+        FOREIGN KEY (health_profile_id)
+        REFERENCES dbo.HealthProfile(health_profile_id) ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE dbo.DietaryRequirement (
+    dietary_requirement_id INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_DietaryRequirement PRIMARY KEY,
+    health_profile_id      INT NOT NULL,
+    requirement_name       NVARCHAR(120) NOT NULL,
+    display_order          INT NOT NULL
+        CONSTRAINT DF_DietaryRequirement_Order DEFAULT (0),
+
+    CONSTRAINT FK_DietaryRequirement_HealthProfile
+        FOREIGN KEY (health_profile_id)
+        REFERENCES dbo.HealthProfile(health_profile_id) ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE dbo.HealthProfileTherapyPreference (
+    therapy_preference_id INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_HealthProfileTherapyPreference PRIMARY KEY,
+    health_profile_id     INT NOT NULL,
+    preference_label      NVARCHAR(120) NOT NULL,
+    therapy_code          VARCHAR(40) NULL,
+    display_order         INT NOT NULL
+        CONSTRAINT DF_TherapyPreference_Order DEFAULT (0),
+
+    CONSTRAINT FK_TherapyPreference_HealthProfile
+        FOREIGN KEY (health_profile_id)
+        REFERENCES dbo.HealthProfile(health_profile_id) ON DELETE CASCADE
 );
 GO
 

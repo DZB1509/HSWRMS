@@ -65,6 +65,10 @@ public class JwtTokenProvider {
                 .getPayload();
     }
 
+    public long getExpirationMs() {
+        return expirationMs;
+    }
+
     public String getUsernameFromToken(String token) {
         return getClaimsFromToken(token).getSubject();
     }
