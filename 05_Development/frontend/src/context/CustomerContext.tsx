@@ -49,7 +49,16 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [bookings, setBookings] = useState<RetreatBooking[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BOOKINGS);
-      return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
+      if (saved) {
+        const parsed: RetreatBooking[] = JSON.parse(saved);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const active = parsed.find((b) => b.status === 'upcoming' || b.status === 'in_stay');
+        if (active && active.endDate < todayStr) {
+          return INITIAL_BOOKINGS;
+        }
+        return parsed;
+      }
+      return INITIAL_BOOKINGS;
     } catch {
       return INITIAL_BOOKINGS;
     }

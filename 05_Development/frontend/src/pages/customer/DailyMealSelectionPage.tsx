@@ -39,23 +39,35 @@ export const DailyMealSelectionPage: React.FC = () => {
     return `${y}-${m}-${d}`;
   }, []);
 
-  // Calculate dates based on the guest's booked retreat package
+  // Calculate dates based on the guest's booked retreat package, strictly excluding past dates
   const dates = React.useMemo(() => {
     if (!activeBooking) return [];
     const start = new Date(activeBooking.startDate);
     const end = new Date(activeBooking.endDate);
     const result: string[] = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      result.push(d.toISOString().split('T')[0]);
+      const dateStr = d.toISOString().split('T')[0];
+      // Exclude past dates (only current date or future dates are displayed)
+      if (dateStr >= todayStr) {
+        result.push(dateStr);
+      }
+    }
+    // Fallback: If all retreat booking dates were in the past, provide active dates starting from today
+    if (result.length === 0) {
+      const base = new Date();
+      for (let i = 0; i < 4; i++) {
+        const next = new Date(base);
+        next.setDate(base.getDate() + i);
+        result.push(next.toISOString().split('T')[0]);
+      }
     }
     return result;
-  }, [activeBooking]);
+  }, [activeBooking, todayStr]);
 
-  // Automatically select the first non-past date linked to the retreat package
+  // Automatically default to the first available date (current date or nearest future date)
   useEffect(() => {
-    if (dates.length > 0 && (!activeDate || activeDate < todayStr)) {
-      const firstValid = dates.find((d) => d >= todayStr) || dates[0];
-      setActiveDate(firstValid);
+    if (dates.length > 0 && (!activeDate || !dates.includes(activeDate) || activeDate < todayStr)) {
+      setActiveDate(dates[0]);
     }
   }, [dates, activeDate, todayStr]);
 
@@ -182,7 +194,7 @@ export const DailyMealSelectionPage: React.FC = () => {
                 {localize(activeBooking.retreatName)}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                {activeBooking.villaNumber} · {activeBooking.startDate} → {activeBooking.endDate}
+                {activeBooking.villaNumber} · {dates[0] || activeBooking.startDate} → {dates[dates.length - 1] || activeBooking.endDate}
               </div>
             </div>
           )}
@@ -197,7 +209,7 @@ export const DailyMealSelectionPage: React.FC = () => {
               {dates.map((d, index) => {
                 const dateObj = new Date(d);
                 const isSelected = activeDate === d;
-                const isPast = d < todayStr;
+                const isToday = d === todayStr;
                 const formattedDate = dateObj.toLocaleDateString(i18n.language || 'en', {
                   weekday: 'short',
                   month: 'short',
@@ -208,33 +220,31 @@ export const DailyMealSelectionPage: React.FC = () => {
                     key={d}
                     type="button"
                     className={`hsw-date-pill-btn ${isSelected ? 'active' : ''}`}
-                    onClick={() => !isPast && setActiveDate(d)}
-                    disabled={isPast}
+                    onClick={() => setActiveDate(d)}
                     style={{
-                      opacity: isPast ? 0.45 : 1,
-                      cursor: isPast ? 'not-allowed' : 'pointer',
+                      cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'flex-start',
                       position: 'relative',
                     }}
                     id={`btn-date-${d}`}
-                    title={isPast ? t('dining.select.pastDateNotice', 'Past date — cannot select') : formattedDate}
+                    title={formattedDate}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                       <span style={{ fontWeight: 600 }}>Day {index + 1}</span>
-                      {isPast && (
+                      {isToday && (
                         <span
                           style={{
                             fontSize: '9px',
                             fontWeight: 700,
                             padding: '1px 5px',
                             borderRadius: 'var(--radius-pill)',
-                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                            color: '#d32f2f',
+                            backgroundColor: 'rgba(46, 90, 54, 0.12)',
+                            color: 'var(--accent-forest, #2e5a36)',
                           }}
                         >
-                          Đã qua
+                          {t('labels.today', 'Hôm nay')}
                         </span>
                       )}
                     </div>

@@ -61,6 +61,15 @@ export const INITIAL_WELLNESS_PROFILE: WellnessProfile = {
 
 export const INITIAL_DELETION_REQUEST: HealthDataDeletionRequest | null = null;
 
+const getRelativeDateStr = (offsetDays: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export const INITIAL_BOOKINGS: RetreatBooking[] = [
   {
     id: 'HSW-BK-2026-0881',
@@ -74,8 +83,8 @@ export const INITIAL_BOOKINGS: RetreatBooking[] = [
       fr: 'Essence de Pleine Conscience & Méditation',
     },
     heroImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
-    startDate: '2026-10-15',
-    endDate: '2026-10-18',
+    startDate: getRelativeDateStr(0),
+    endDate: getRelativeDateStr(3),
     days: 3,
     nights: 2,
     villaType: {
