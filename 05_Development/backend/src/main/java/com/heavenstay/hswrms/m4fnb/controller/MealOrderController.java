@@ -75,14 +75,14 @@ public class MealOrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<List<KitchenOrderResponse>>> getKitchenOrders(
             @RequestParam(required = false) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.ok(mealOrderService.listKitchenOrders(date)));
+        return ResponseEntity.ok(ApiResponse.ok(mealOrderService.listKitchenOrders(date == null ? LocalDate.now() : date)));
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<KitchenOrderResponse>> getKitchenOrder(@PathVariable Integer orderId) {
         return ResponseEntity.ok(ApiResponse.ok(mealOrderService.getKitchenOrder(orderId)));
     }

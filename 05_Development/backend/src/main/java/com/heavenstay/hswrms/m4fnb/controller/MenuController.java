@@ -77,13 +77,4 @@ public class MenuController {
             @Valid @RequestBody ReplaceRecipeRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("RECIPE_UPDATED", menuService.replaceRecipe(menuItemId, request)));
     }
-
-    @PutMapping("/{menuItemId}/availability")
-    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
-    public ResponseEntity<ApiResponse<MenuItemResponse>> toggleAvailability(
-            @PathVariable Integer menuItemId,
-            @RequestParam(defaultValue = "AVAILABLE") String status) {
-        return ResponseEntity.ok(ApiResponse.ok("MENU_ITEM_AVAILABILITY_UPDATED",
-                menuService.toggleAvailability(menuItemId, status)));
-    }
 }

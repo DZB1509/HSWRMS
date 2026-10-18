@@ -36,7 +36,7 @@ public class IngredientController {
     }
 
     @GetMapping("/ingredients")
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")  // Admin: read-only tracking, no dietary data
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients() {
         return ResponseEntity.ok(ApiResponse.ok(ingredientService.listIngredients()));
     }
@@ -48,7 +48,7 @@ public class IngredientController {
     }
 
     @GetMapping("/inventory/batches")
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF','ROLE_ADMIN')")  // Admin: read-only tracking, no dietary data
     public ResponseEntity<ApiResponse<List<IngredientBatchResponse>>> getBatches(
             @RequestParam(required = false) Integer ingredientId,
             @RequestParam(required = false) LocalDate asOfDate) {

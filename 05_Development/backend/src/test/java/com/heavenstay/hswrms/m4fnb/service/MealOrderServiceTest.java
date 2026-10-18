@@ -2,10 +2,15 @@ package com.heavenstay.hswrms.m4fnb.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderStatus;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderType;
@@ -236,5 +241,71 @@ class MealOrderServiceTest {
         assertEquals(1, response.items().size());
         assertEquals("Cháo Yến Mạch Quả Mọng Hữu Cơ", response.items().get(0).itemName());
         assertEquals(1, response.items().get(0).quantity());
+    }
+
+    @Test
+    @DisplayName("updateStatus from PENDING to PREPARING automatically consumes inventory and updates item status")
+    void updateStatusToPreparingTriggersInventoryDeduction() {
+        Integer orderId = 2001;
+        MealOrder order = mock(MealOrder.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("LUNCH");
+        when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(99);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Cháo Yến Mạch");
+        when(menuItem.getPrice()).thenReturn(BigDecimal.ZERO);
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        mealOrderService.updateStatus(orderId, "PREPARING");
+
+        // Verify inventory service was called to consume stock for order line 99
+        verify(inventoryService).consumeForOrderItem(eq(99), any(LocalDate.class));
+        // Verify line preparation status set to PREPARING and saved
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+        verify(orderItemRepository).save(item);
+        // Verify order status set to PREPARING and saved
+        verify(order).setOrderStatus(FnbOrderStatus.PREPARING);
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    @DisplayName("updateStatus rejects invalid transition from DELIVERED to PENDING")
+    void updateStatusRejectsDisallowedTransitions() {
+        Integer orderId = 2002;
+        MealOrder order = mock(MealOrder.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.DELIVERED);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        ConflictException exception = assertThrows(ConflictException.class, () ->
+                mealOrderService.updateStatus(orderId, "PENDING"));
+
+        assertEquals("INVALID_ORDER_TRANSITION", exception.getConflictCode());
     }
 }

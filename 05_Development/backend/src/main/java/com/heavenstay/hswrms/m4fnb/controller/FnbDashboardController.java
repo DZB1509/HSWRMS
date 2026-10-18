@@ -11,25 +11,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// ============================================================================
-// [TRACEABILITY HEADER - ISO/IEC 25010 MAINTAINABILITY & TRACEABILITY STANDARD]
-// ----------------------------------------------------------------------------
-// Requirements Ref   : UC19 / UC20 / BF-04 (Fulfill Meal Orders & Dietary F&B Management)
-// Business Rule Ref  : BR-FNB-02 (Kitchen Preparation & Allergy Minimization)
-// Database Entity    : INGREDIENT, INGREDIENT_BATCH, MENU_ITEM_INGREDIENT, MEAL_ORDER
-// Compliance Standard: Nghị định 13/2023/NĐ-CP & 356/2025/NĐ-CP (Personal Data Protection PII)
-// Architecture Layer : CONTROLLER LAYER -> REST API Endpoints
-// International Standard: Oracle Java Code Conventions & Google Java Style Guide
-// ============================================================================
 @RestController
 @RequestMapping("/api/v1/fnb/dashboard")
 @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
 public class FnbDashboardController {
     private final FnbDashboardService dashboardService;
 
-    public FnbDashboardController(FnbDashboardService dashboardService) {
-        this.dashboardService = dashboardService;
-    }
+    public FnbDashboardController(FnbDashboardService dashboardService) { this.dashboardService = dashboardService; }
 
     @GetMapping
     public ResponseEntity<ApiResponse<FnbDashboardResponse>> getDashboard(
