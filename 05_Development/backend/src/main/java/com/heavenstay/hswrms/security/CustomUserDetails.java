@@ -1,5 +1,6 @@
 package com.heavenstay.hswrms.security;
 
+import com.heavenstay.hswrms.m1identity.entity.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,7 +25,15 @@ public class CustomUserDetails implements UserDetails {
         this.fullName = fullName;
         this.active = active;
         this.authorities = roles.stream()
-                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role.toUpperCase())
+                .flatMap(role -> {
+                    String canonical = Role.canonical(role);
+                    String upper = role.toUpperCase(java.util.Locale.ROOT);
+                    return java.util.stream.Stream.of(
+                            canonical.startsWith("ROLE_") ? canonical : "ROLE_" + canonical,
+                            upper.startsWith("ROLE_") ? upper : "ROLE_" + upper
+                    );
+                })
+                .distinct()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
     }

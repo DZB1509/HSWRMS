@@ -169,3 +169,13 @@ export function resetStaffAccounts(): StaffAccount[] {
   saveStoredStaffAccounts(INITIAL_STAFF_ACCOUNTS);
   return [...INITIAL_STAFF_ACCOUNTS];
 }
+
+export function getStaffStatistics(): { total: number; active: number; suspended: number } {
+  const accounts = getStoredStaffAccounts();
+  const active = accounts.filter((s) => s.status === 'active').length;
+  return {
+    total: accounts.length,
+    active,
+    suspended: accounts.length - active
+  };
+}

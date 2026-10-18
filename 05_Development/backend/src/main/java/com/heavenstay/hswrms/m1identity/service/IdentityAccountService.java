@@ -137,7 +137,11 @@ public class IdentityAccountService {
 
     @Transactional
     public Role ensureRole(String roleName, String description) {
-        return roles.findByRoleName(roleName).orElseGet(() -> roles.save(new Role(roleName, description)));
+        String wanted = Role.canonical(roleName == null ? "" : roleName);
+        return roles.findAll().stream()
+                .filter(r -> wanted.equals(r.canonicalName()))
+                .findFirst()
+                .orElseGet(() -> roles.save(new Role(roleName, description)));
     }
 
     @Transactional(readOnly = true)

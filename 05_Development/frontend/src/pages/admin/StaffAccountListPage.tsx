@@ -16,10 +16,12 @@ import type { StaffAccount } from '../../types/staff';
 import type { Role } from '../../types/auth';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
+import { useGovernance } from '../../hooks/useGovernance';
 
 export const StaffAccountListPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
+  const { logAuditEvent } = useGovernance();
 
   const [staffList, setStaffList] = useState<StaffAccount[]>([]);
   const [tempCredential, setTempCredential] = useState<{ email: string; password: string } | null>(null);
@@ -78,6 +80,18 @@ export const StaffAccountListPage: React.FC = () => {
         email: newEmail.trim(),
         role: newRole,
       });
+      logAuditEvent({
+        actorId: 'usr-adm-01',
+        actorName: 'Alexander Wright',
+        actorRole: 'admin',
+        action: 'CREATE',
+        dataCategory: 'STAFF_IDENTITY',
+        targetRef: result.staff.id,
+        result: 'SUCCESS',
+        detailsKey: 'governance.audit.details.staffCreated',
+        detailsFallback: `Đã cấp tài khoản nhân viên mới: ${result.staff.name} (${getRoleLabel(result.staff.role)})`
+      });
+
       await loadStaff();
       setAddModalOpen(false);
       setTempCredential({ email: result.staff.email, password: result.temporaryPassword });
@@ -94,6 +108,19 @@ export const StaffAccountListPage: React.FC = () => {
     const activate = currentStatus !== 'active';
     try {
       await staffAccountsApi.setStatus(staffId, activate);
+      logAuditEvent({
+        actorId: 'usr-adm-01',
+        actorName: 'Alexander Wright',
+        actorRole: 'admin',
+        action: 'UPDATE',
+        dataCategory: 'STAFF_IDENTITY',
+        targetRef: staffId,
+        result: 'SUCCESS',
+        detailsKey: 'governance.audit.details.staffStatusChanged',
+        detailsFallback: activate
+          ? `Khôi phục quyền truy cập hoạt động cho nhân viên: ${staffName}`
+          : `Tạm khóa quyền truy cập tài khoản nhân viên: ${staffName}`
+      });
       await loadStaff();
       showToast(
         activate

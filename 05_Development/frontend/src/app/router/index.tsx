@@ -260,6 +260,7 @@ export const AppRouter: React.FC = () => {
           </RoleGuard>
         }
       >
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<RoleGuard allowedRoles={['admin']}><AdminDashboardPage /></RoleGuard>} />
         <Route path="villas" element={<VillaManagementPage />} />
         <Route path="spa" element={<SpaManagementPage />} />

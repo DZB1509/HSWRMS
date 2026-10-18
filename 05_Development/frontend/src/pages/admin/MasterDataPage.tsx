@@ -24,6 +24,7 @@ import type { VillaCategoryItem } from '../../types/villaManagement';
 import { formatVND } from '../../i18n';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
+import { useGovernance } from '../../hooks/useGovernance';
 import { AddRetreatPackageModal } from '../../components/operations/AddRetreatPackageModal';
 import { AddSpaTreatmentModal } from '../../components/operations/AddSpaTreatmentModal';
 import { AddVillaCategoryModal } from '../../components/operations/AddVillaCategoryModal';
@@ -31,6 +32,7 @@ import { AddVillaCategoryModal } from '../../components/operations/AddVillaCateg
 export const MasterDataPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
+  const { logAuditEvent } = useGovernance();
 
   const [activeTab, setActiveTab] = useState<MasterDataCategory>('packages');
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,11 +58,33 @@ export const MasterDataPage: React.FC = () => {
 
   const handleAddPackage = (newPkg: RetreatPackageMaster) => {
     setPackages((prev) => [newPkg, ...prev]);
+    logAuditEvent({
+      actorId: 'usr-adm-01',
+      actorName: 'Alexander Wright',
+      actorRole: 'admin',
+      action: 'CREATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: newPkg.id,
+      result: 'SUCCESS',
+      detailsKey: 'governance.audit.details.packageCreated',
+      detailsFallback: `Đã khởi tạo gói nghỉ dưỡng Wellness mới: ${newPkg.name}`
+    });
     showToast(`Đã thêm gói nghỉ dưỡng "${newPkg.name}" thành công!`, 'success');
   };
 
   const handleAddSpaService = (newSrv: SpaServiceMaster) => {
     setSpaServices((prev) => [newSrv, ...prev]);
+    logAuditEvent({
+      actorId: 'usr-adm-01',
+      actorName: 'Alexander Wright',
+      actorRole: 'admin',
+      action: 'CREATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: newSrv.id,
+      result: 'SUCCESS',
+      detailsKey: 'governance.audit.details.spaTreatmentCreated',
+      detailsFallback: `Đã khởi tạo liệu trình Spa mới: ${newSrv.name}`
+    });
     showToast(`Đã thêm liệu trình trị liệu "${newSrv.name}" thành công!`, 'success');
   };
 
@@ -83,6 +107,17 @@ export const MasterDataPage: React.FC = () => {
       description: newCat.featuresAndAmenities || 'Hạng biệt thự nghỉ dưỡng sang trọng'
     };
     setVillas((prev) => [masterCat, ...prev]);
+    logAuditEvent({
+      actorId: 'usr-adm-01',
+      actorName: 'Alexander Wright',
+      actorRole: 'admin',
+      action: 'CREATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: masterCat.id,
+      result: 'SUCCESS',
+      detailsKey: 'governance.audit.details.villaCategoryCreated',
+      detailsFallback: `Đã khởi tạo phân loại biệt thự Wellness mới: ${newCat.categoryName}`
+    });
     showToast(`Đã thêm hạng biệt thự "${newCat.categoryName}" thành công!`, 'success');
   };
 

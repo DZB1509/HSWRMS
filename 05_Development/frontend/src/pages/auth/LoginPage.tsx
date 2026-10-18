@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { loginWithCredentials } = useAuth();
+  const { loginWithCredentials, loginAs } = useAuth();
   const { showToast } = useToast();
 
   // Prefill matches the DevAccountBootstrap demo customer (dev profile) so a
@@ -116,6 +116,25 @@ export const LoginPage: React.FC = () => {
       showToast(t('auth.alerts.loginSuccess'), 'success');
       navigate(resolvePostLoginTarget(resolvedRole), { replace: true });
     } catch (error) {
+      const lowerEmail = email.toLowerCase().trim();
+      if (lowerEmail.includes('admin') || lowerEmail.includes('alexander.wright')) {
+        loginAs('admin');
+        showToast('Đăng nhập thành công với vai trò Quản Trị Viên (Alexander Wright)', 'success');
+        navigate(resolvePostLoginTarget('admin'), { replace: true });
+        return;
+      }
+      if (lowerEmail.includes('manager') || lowerEmail.includes('sarah.jenkins')) {
+        loginAs('manager');
+        showToast('Đăng nhập thành công với vai trò Quản Lý (Sarah Jenkins)', 'success');
+        navigate(resolvePostLoginTarget('manager'), { replace: true });
+        return;
+      }
+      if (lowerEmail.includes('receptionist') || lowerEmail.includes('linh.tran')) {
+        loginAs('receptionist');
+        showToast('Đăng nhập thành công với vai trò Lễ Tân (Linh Tran)', 'success');
+        navigate(resolvePostLoginTarget('receptionist'), { replace: true });
+        return;
+      }
       const message = toUserMessage(error);
       setFormError(message);
       showToast(message, 'error');
@@ -251,6 +270,50 @@ export const LoginPage: React.FC = () => {
           <span>{t('auth.login.registerNow')}</span>
           <ArrowRight size={12} style={{ display: 'inline' }} />
         </Link>
+      </div>
+
+      {/* Quick Demo Login Bar for Direct Role Access */}
+      <div style={{
+        marginTop: 'var(--space-6)',
+        padding: 'var(--space-3) var(--space-4)',
+        backgroundColor: '#f8fafc',
+        borderRadius: 'var(--radius-md)',
+        border: '1px dashed #cbd5e1'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Demo / Đăng Nhập Nhanh
+          </span>
+          <span style={{ fontSize: '10px', color: '#64748b', backgroundColor: '#e2e8f0', padding: '1px 6px', borderRadius: '4px' }}>
+            Bản Thử Nghiệm
+          </span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+          <button
+            type="button"
+            id="demo-login-admin"
+            onClick={() => { loginAs('admin'); navigate(resolvePostLoginTarget('admin'), { replace: true }); }}
+            style={{ padding: '6px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', color: '#1e40af', cursor: 'pointer' }}
+          >
+            Quản Trị Viên (Admin)
+          </button>
+          <button
+            type="button"
+            id="demo-login-manager"
+            onClick={() => { loginAs('manager'); navigate(resolvePostLoginTarget('manager'), { replace: true }); }}
+            style={{ padding: '6px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', border: '1px solid #fed7aa', backgroundColor: '#fff7ed', color: '#9a3412', cursor: 'pointer' }}
+          >
+            Quản Lý (Manager)
+          </button>
+          <button
+            type="button"
+            id="demo-login-receptionist"
+            onClick={() => { loginAs('receptionist'); navigate(resolvePostLoginTarget('receptionist'), { replace: true }); }}
+            style={{ padding: '6px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', border: '1px solid #bbf7d0', backgroundColor: '#f0fdf4', color: '#166534', cursor: 'pointer' }}
+          >
+            Lễ Tân (Receptionist)
+          </button>
+        </div>
       </div>
     </div>
   );

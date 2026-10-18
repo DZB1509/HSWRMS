@@ -22,11 +22,13 @@ import type { StaffAccount, StaffStatus } from '../../types/staff';
 import type { Role } from '../../types/auth';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
+import { useGovernance } from '../../hooks/useGovernance';
 
 export const StaffAccountDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation(['operations', 'common']);
   const { showToast } = useToast();
+  const { logAuditEvent } = useGovernance();
 
   const [staff, setStaff] = useState<StaffAccount>(INITIAL_STAFF_ACCOUNTS[0]);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -46,6 +48,19 @@ export const StaffAccountDetailPage: React.FC = () => {
     const nextStatus: StaffStatus = staff.status === 'active' ? 'suspended' : 'active';
     try {
       const updated = await staffAccountsApi.setStatus(staff.id, nextStatus === 'active');
+      logAuditEvent({
+        actorId: 'usr-adm-01',
+        actorName: 'Alexander Wright',
+        actorRole: 'admin',
+        action: 'UPDATE',
+        dataCategory: 'STAFF_IDENTITY',
+        targetRef: staff.id,
+        result: 'SUCCESS',
+        detailsKey: 'governance.audit.details.staffStatusChanged',
+        detailsFallback: nextStatus === 'active'
+          ? `Khôi phục quyền truy cập hoạt động cho nhân viên: ${staff.name}`
+          : `Tạm khóa quyền truy cập tài khoản nhân viên: ${staff.name}`
+      });
       setStaff(updated);
       setStatusModalOpen(false);
       showToast(
