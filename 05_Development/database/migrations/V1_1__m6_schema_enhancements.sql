@@ -187,17 +187,30 @@ END
 GO
 
 -- Performance Indices
-CREATE NONCLUSTERED INDEX IX_User_AccountStatus_LockedAt
-    ON dbo.[User](account_status, locked_at)
-    WHERE locked_at IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_User_AccountStatus_LockedAt')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_User_AccountStatus_LockedAt
+        ON dbo.[User](account_status, locked_at)
+        WHERE locked_at IS NOT NULL;
+END
 GO
 
-CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
-    ON dbo.RightDelegation(status, starts_at, expires_at);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_RightDelegation_Status_Expiry')
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.RightDelegation') AND name = 'valid_from')
+        CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
+            ON dbo.RightDelegation(delegation_status, valid_from, valid_until);
+    ELSE IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.RightDelegation') AND name = 'starts_at')
+        CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
+            ON dbo.RightDelegation(status, starts_at, expires_at);
+END
 GO
 
-CREATE NONCLUSTERED INDEX IX_AuditLog_ScreenModule_CreatedAt
-    ON dbo.AuditLog(screen_or_module, created_at DESC);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AuditLog_ScreenModule_CreatedAt')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_AuditLog_ScreenModule_CreatedAt
+        ON dbo.AuditLog(screen_or_module, created_at DESC);
+END
 GO
 
 PRINT 'HSWRMS V1.1 Module 6 Schema Enhancements applied successfully.';
