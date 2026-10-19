@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
+import { isItemDietaryCompatible } from '../../utils/dietaryFilter';
 import type { MealPeriod, LocalizedString } from '../../types/dining';
-import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
@@ -11,7 +12,7 @@ import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 export const DailyMealSelectionPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const { menuItems, getDietaryProjection, saveMealSelection, getMealSelection } = useDining();
-  const { activeBooking } = useCustomer();
+  const { activeBooking, wellnessProfile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -23,6 +24,13 @@ export const DailyMealSelectionPage: React.FC = () => {
 
   const customerId = 'usr-cust-01';
   const dietaryInfo = getDietaryProjection(customerId);
+
+  const dietaryRestrictions = wellnessProfile?.dietaryProfile?.dietaryRestrictions?.length
+    ? wellnessProfile.dietaryProfile.dietaryRestrictions
+    : dietaryInfo.dietaryRestrictions;
+  const allergies = wellnessProfile?.dietaryProfile?.allergies?.length
+    ? wellnessProfile.dietaryProfile.allergies
+    : dietaryInfo.allergies;
 
   const [activeDate, setActiveDate] = useState<string>('');
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
@@ -88,11 +96,14 @@ export const DailyMealSelectionPage: React.FC = () => {
   }, [activeDate, activePeriod, activeBooking, getMealSelection]);
 
   const availableItems = menuItems.filter(
-    (item) => !item.isExtra && (item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day'))
+    (item) =>
+      !item.isExtra &&
+      (item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day')) &&
+      isItemDietaryCompatible(item, dietaryRestrictions, allergies)
   );
 
   const hasAllergyWarning = (item: any) => {
-    return item.allergenTags.some((tag: string) => dietaryInfo.allergies.includes(tag.toLowerCase()));
+    return item.allergenTags.some((tag: string) => allergies.includes(tag.toLowerCase()));
   };
 
   const handleSave = () => {
@@ -323,6 +334,38 @@ export const DailyMealSelectionPage: React.FC = () => {
             >
               {t('dining.select.viewPlan', 'View My Plan')}
             </button>
+          </div>
+
+          {/* Dietary Safeguard Notice */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              backgroundColor: 'rgba(46, 125, 50, 0.08)',
+              border: '1px solid rgba(46, 125, 50, 0.25)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 14px',
+              marginBottom: 'var(--space-4)',
+              fontSize: '12px',
+              color: 'var(--text-primary)',
+            }}
+          >
+            <ShieldCheck size={18} style={{ color: '#2e7d32', flexShrink: 0 }} />
+            <div>
+              <span style={{ fontWeight: 600 }}>
+                {t('dining.select.safeguardTitle', 'Tự động lọc theo hồ sơ dưỡng sinh')}:
+              </span>{' '}
+              <span style={{ color: 'var(--accent-forest, #2e7d32)' }}>
+                {dietaryRestrictions.join(', ') || 'Ăn chay'}
+              </span>
+              {allergies.length > 0 && (
+                <span style={{ color: 'var(--text-danger, #d32f2f)', marginLeft: '6px' }}>
+                  (Dị ứng: {allergies.join(', ')})
+                </span>
+              )}
+              . {t('dining.select.safeguardDesc', 'Chỉ những món phù hợp với chế độ ăn chay và không gây dị ứng mới được hiển thị.')}
+            </div>
           </div>
 
           {availableItems.length === 0 ? (

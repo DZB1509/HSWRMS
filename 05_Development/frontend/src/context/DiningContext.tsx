@@ -167,7 +167,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         bookingReference: 'HSW-88192',
         villaNumber: profile.assignedVilla || 'Villa #102 (Tranquil Garden)',
         allergies: wellnessProfile.dietaryProfile?.allergies || ['Crustaceans & Shellfish', 'Peanuts'],
-        dietaryRestrictions: wellnessProfile.dietaryProfile?.dietaryRestrictions || ['Pescatarian', 'Gluten-Conscious'],
+        dietaryRestrictions: wellnessProfile.dietaryProfile?.dietaryRestrictions || ['Vegetarian', 'Gluten-Conscious'],
       };
     }
     
@@ -177,7 +177,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       bookingReference: 'HSW-88192',
       villaNumber: 'Villa #102 (Tranquil Garden)',
       allergies: ['Crustaceans & Shellfish', 'Peanuts'],
-      dietaryRestrictions: ['Pescatarian', 'Gluten-Conscious'],
+      dietaryRestrictions: ['Vegetarian', 'Gluten-Conscious'],
     };
   };
 

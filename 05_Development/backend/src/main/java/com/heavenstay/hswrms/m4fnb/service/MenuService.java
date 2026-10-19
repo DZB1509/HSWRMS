@@ -310,30 +310,65 @@ public class MenuService {
     }
 
     private boolean hasDietaryConflict(MenuItem item, List<String> preferences) {
+        if (preferences == null || preferences.isEmpty()) {
+            return false;
+        }
         String tags = compact(item.getDietaryTags());
-        for (String preference : preferences == null ? List.<String>of() : preferences) {
+        for (String preference : preferences) {
+            if (preference == null || preference.isBlank()) {
+                continue;
+            }
             String normalizedPreference = compact(preference);
-            if (normalizedPreference.contains("vegan") && !tags.contains("vegan"))
+            if ((normalizedPreference.contains("vegan") || normalizedPreference.contains("thuanchay"))
+                    && !(tags.contains("vegan") || tags.contains("thuanchay"))) {
                 return true;
-            if (normalizedPreference.contains("vegetarian")
-                    && !(tags.contains("vegetarian") || tags.contains("vegan")))
+            }
+            if ((normalizedPreference.contains("vegetarian") || normalizedPreference.contains("anchay") || normalizedPreference.contains("chay"))
+                    && !(tags.contains("vegetarian") || tags.contains("vegan") || tags.contains("anchay") || tags.contains("thuanchay") || tags.contains("lactoovo"))) {
                 return true;
-            if (normalizedPreference.contains("glutenfree") && !tags.contains("glutenfree"))
+            }
+            if ((normalizedPreference.contains("glutenfree") || normalizedPreference.contains("glutenconscious") || normalizedPreference.contains("khonggluten") || normalizedPreference.contains("gluten"))
+                    && !(tags.contains("glutenfree") || tags.contains("glutenconscious") || tags.contains("khonggluten"))) {
                 return true;
-            if (normalizedPreference.contains("dairyfree") && !tags.contains("dairyfree"))
+            }
+            if ((normalizedPreference.contains("dairyfree") || normalizedPreference.contains("lactosefree") || normalizedPreference.contains("khongsua"))
+                    && !(tags.contains("dairyfree") || tags.contains("lactosefree") || tags.contains("khongsua"))) {
                 return true;
-            if (normalizedPreference.contains("pescatarian")
-                    && !(tags.contains("pescatarian") || tags.contains("vegetarian") || tags.contains("vegan")))
+            }
+            if ((normalizedPreference.contains("pescatarian") || normalizedPreference.contains("chaycoca"))
+                    && !(tags.contains("pescatarian") || tags.contains("vegetarian") || tags.contains("vegan") || tags.contains("anchay") || tags.contains("thuanchay"))) {
                 return true;
-            if (normalizedPreference.contains("keto") && !tags.contains("keto"))
+            }
+            if ((normalizedPreference.contains("keto") || normalizedPreference.contains("lowcarb"))
+                    && !(tags.contains("keto") || tags.contains("lowcarb"))) {
                 return true;
+            }
+            if (normalizedPreference.contains("halal") && !tags.contains("halal")) {
+                return true;
+            }
+            if (normalizedPreference.contains("kosher") && !tags.contains("kosher")) {
+                return true;
+            }
         }
         return false;
     }
 
+    private String stripAccents(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{M}", "")
+                .replace("đ", "d").replace("Đ", "d")
+                .toLowerCase(Locale.ROOT);
+    }
+
     private Set<String> words(String value) {
         Set<String> result = new HashSet<>();
-        String normalized = value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
+        if (value == null) {
+            return result;
+        }
+        String normalized = stripAccents(value).replaceAll("[^a-z0-9]+", " ").trim();
         if (normalized.isEmpty()) {
             return result;
         }
@@ -349,14 +384,16 @@ public class MenuService {
         Set<String> result = new HashSet<>();
         for (String word : words(value)) {
             String allergen = switch (word) {
-                case "peanut", "almond", "cashew", "walnut", "hazelnut", "pistachio", "pecan", "macadamia", "nut" ->
-                    "nut";
-                case "milk", "lactose", "dairy" -> "dairy";
-                case "shrimp", "prawn", "crab", "lobster", "shellfish" -> "shellfish";
-                case "soya", "soy" -> "soy";
-                case "egg" -> "egg";
-                case "wheat", "barley", "rye", "gluten" -> "gluten";
-                case "fish" -> "fish";
+                case "peanut", "almond", "cashew", "walnut", "hazelnut", "pistachio", "pecan", "macadamia", "nut",
+                     "dauphong", "lac", "hatdieu", "occho", "hanhnhan", "hat" -> "nut";
+                case "milk", "lactose", "dairy", "cheese", "butter", "cream",
+                     "sua", "phomai", "bo", "kem" -> "dairy";
+                case "shrimp", "prawn", "crab", "lobster", "shellfish", "crustacean", "crustaceans", "seafood",
+                     "tom", "cua", "haisan", "muc", "so", "ngheu", "oc", "giapxac" -> "shellfish";
+                case "soya", "soy", "tofu", "daunanh", "dautuong", "dauhu", "dauphu" -> "soy";
+                case "egg", "eggs", "trung" -> "egg";
+                case "wheat", "barley", "rye", "gluten", "luami", "luamach" -> "gluten";
+                case "fish", "salmon", "tuna", "ca", "cahoi", "cang" -> "fish";
                 default -> word;
             };
             result.add(allergen);
@@ -382,7 +419,10 @@ public class MenuService {
     }
 
     private String compact(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        if (value == null) {
+            return "";
+        }
+        return stripAccents(value).replaceAll("[^a-z0-9]", "");
     }
 
     private List<MenuItemIngredient> recipesFor(Integer menuItemId, List<MenuItemIngredient> allRecipes) {

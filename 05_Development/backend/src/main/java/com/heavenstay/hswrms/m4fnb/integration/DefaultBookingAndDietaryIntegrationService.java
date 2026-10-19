@@ -3,6 +3,9 @@ package com.heavenstay.hswrms.m4fnb.integration;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import java.time.LocalDate;
 import java.util.List;
+import com.heavenstay.hswrms.m1identity.dto.HealthProfileResponse;
+import com.heavenstay.hswrms.m1identity.service.HealthProfileService;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -12,10 +15,13 @@ import org.springframework.stereotype.Component;
  * ============================================================================
  * [TRACEABILITY HEADER]
  * Module: M4 - Dietary F&B Management <-> Boundary Integration Adapter
- * Requirement: SR-FNB-001 / US-FNB-003 (Booking Synchronization & Dietary Profile Integration)
- * Compliance: Decree 13/2023 & 356/2025/ND-CP PII Data Minimization (F&B staff sees only food allergies & dietary restrictions)
- * Business Rule: BR-FNB-001 (Validates stay dates from today onwards; prevents past date ordering)
- *                BR-FNB-002 (Package-based F&B entitlement and dietary synchronization)
+ * Requirement: SR-FNB-001 / US-FNB-003 (Booking Synchronization & Dietary
+ * Profile Integration)
+ * Compliance: Decree 13/2023 & 356/2025/ND-CP PII Data Minimization (F&B staff
+ * sees only food allergies & dietary restrictions)
+ * Business Rule: BR-FNB-001 (Validates stay dates from today onwards; prevents
+ * past date ordering)
+ * BR-FNB-002 (Package-based F&B entitlement and dietary synchronization)
  * ============================================================================
  */
 @Component
@@ -23,7 +29,15 @@ import org.springframework.stereotype.Component;
 @ConditionalOnMissingBean(name = "customBookingAndDietaryIntegrationService")
 public class DefaultBookingAndDietaryIntegrationService implements BookingContextPort, DietaryProfilePort {
 
+    private final ObjectProvider<HealthProfileService> healthProfileServiceProvider;
+
+    public DefaultBookingAndDietaryIntegrationService(
+            ObjectProvider<HealthProfileService> healthProfileServiceProvider) {
+        this.healthProfileServiceProvider = healthProfileServiceProvider;
+    }
+
     public DefaultBookingAndDietaryIntegrationService() {
+        this(null);
     }
 
     @Override
@@ -43,8 +57,7 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
                 guestName,
                 "Villa #102 (Tranquil Garden)",
                 packageCode,
-                packageName
-        );
+                packageName);
     }
 
     @Override
@@ -78,18 +91,39 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
                 guestName,
                 "Villa #102 (Tranquil Garden)",
                 packageCode,
-                packageName
-        );
+                packageName);
     }
 
     @Override
     public FoodProfileProjection getFoodProfileForUser(Integer userId) {
-        // PII Data Minimization: Returns only culinary-relevant food allergies and dietary preferences.
-        // Sensitive medical history or treatment notes are strictly excluded from F&B staff view.
+        // PII Data Minimization: Returns only culinary-relevant food allergies and
+        // dietary preferences.
+        // Sensitive medical history or treatment notes are strictly excluded from F&B
+        // staff view.
+        if (userId != null && healthProfileServiceProvider != null) {
+            HealthProfileService service = healthProfileServiceProvider.getIfAvailable();
+            if (service != null) {
+                try {
+                    HealthProfileResponse profile = service.getMyHealthProfile(userId);
+                    if (profile != null) {
+                        List<String> allergies = profile.getFoodAllergies() != null ? profile.getFoodAllergies()
+                                : List.of();
+                        List<String> requirements = profile.getDietaryRequirements() != null
+                                ? profile.getDietaryRequirements()
+                                : List.of();
+                        if (!allergies.isEmpty() || !requirements.isEmpty()) {
+                            return new FoodProfileProjection(allergies, requirements);
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // Fall through to default fallback if lookup fails
+                }
+            }
+        }
         return new FoodProfileProjection(
                 List.of("Crustaceans & Shellfish", "Peanuts"),
-                List.of("Pescatarian", "Gluten-Conscious")
-        );
+
+                List.of("Vegetarian", "Gluten-Conscious"));
     }
 
     private String resolveCustomerName(Integer userId, String fallback) {

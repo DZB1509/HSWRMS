@@ -35,12 +35,17 @@ public class MenuController {
     @PreAuthorize("hasAnyAuthority('ROLE_CUSTOMER','ROLE_F&B STAFF','ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<MenuItemResponse>>> getMenu(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @RequestParam(required = false) LocalDate asOfDate) {
+            @RequestParam(required = false) LocalDate asOfDate,
+            @RequestParam(required = false) Integer customerId,
+            @RequestParam(required = false) Boolean filterByDietary) {
         LocalDate date = asOfDate == null ? LocalDate.now() : asOfDate;
-        boolean customer = currentUser.getAuthorities().stream()
+        boolean isCustomer = currentUser != null && currentUser.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()));
-        List<MenuItemResponse> menu = customer
-                ? menuService.getPersonalizedMenu(currentUser.getUserId(), date)
+        Integer targetUserId = isCustomer ? currentUser.getUserId() : customerId;
+        boolean shouldFilter = isCustomer ? (filterByDietary == null || Boolean.TRUE.equals(filterByDietary))
+                                          : (targetUserId != null && Boolean.TRUE.equals(filterByDietary));
+        List<MenuItemResponse> menu = shouldFilter && targetUserId != null
+                ? menuService.getPersonalizedMenu(targetUserId, date)
                 : menuService.getManagementMenu(date);
         return ResponseEntity.ok(ApiResponse.ok(menu));
     }

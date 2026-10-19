@@ -52,7 +52,7 @@ export const INITIAL_WELLNESS_PROFILE: WellnessProfile = {
   },
   dietaryProfile: {
     allergies: ['Crustaceans & Shellfish', 'Peanuts'],
-    dietaryRestrictions: ['Pescatarian', 'Gluten-Conscious'],
+    dietaryRestrictions: ['Vegetarian', 'Gluten-Conscious'],
     intolerances: ['Lactose (mild — prefers oat/almond milk)'],
     dislikedIngredients: ['Coriander leaves', 'Excessive chili heat'],
     specialInstructions: 'Dedicated clean preparation station free of shellfish contact. Prefers warm ginger-lemongrass tea with all meals.',
