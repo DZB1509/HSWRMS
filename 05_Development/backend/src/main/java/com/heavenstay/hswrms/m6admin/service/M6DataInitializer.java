@@ -92,6 +92,30 @@ public class M6DataInitializer implements ApplicationRunner {
             log.debug("Consolidation of FNB_STAFF role skipped or not applicable: {}", ex.getMessage());
         }
 
+        try {
+            // Ensure S12 (Master Data Management) is not admin-only and MANAGER role has S12 permissions
+            jdbc.execute("""
+                IF OBJECT_ID(N'dbo.Permission', N'U') IS NOT NULL
+                BEGIN
+                    UPDATE dbo.Permission SET is_admin_only = 0 WHERE module_or_screen = 'S12';
+
+                    IF EXISTS (SELECT 1 FROM dbo.[Role] WHERE role_name = 'MANAGER')
+                    BEGIN
+                        INSERT INTO dbo.RolePermission (role_id, permission_id)
+                        SELECT r.role_id, p.permission_id
+                        FROM dbo.[Role] r, dbo.Permission p
+                        WHERE r.role_name = 'MANAGER' AND p.module_or_screen = 'S12'
+                          AND NOT EXISTS (
+                              SELECT 1 FROM dbo.RolePermission rp
+                              WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id
+                          );
+                    END
+                END
+            """);
+        } catch (Exception ex) {
+            log.debug("Grant of S12 to MANAGER skipped: {}", ex.getMessage());
+        }
+
         // 1. Roles
         Map<String, Role> roles = new HashMap<>();
         for (Map.Entry<String, String> entry : PermissionCatalog.ROLE_DESCRIPTIONS.entrySet()) {

@@ -365,7 +365,7 @@ export const AddVillaCategoryModal: React.FC<AddVillaCategoryModalProps> = ({
                 <input
                   type="number"
                   min="0"
-                  step="100000"
+                  step="any"
                   value={priceModifier}
                   onChange={(e) => setPriceModifier(Number(e.target.value))}
                   style={{

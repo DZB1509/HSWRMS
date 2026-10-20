@@ -260,7 +260,7 @@ export const AddSpaTreatmentModal: React.FC<AddSpaTreatmentModalProps> = ({
                 <input
                   type="number"
                   min="0"
-                  step="50000"
+                  step="any"
                   value={basePrice}
                   onChange={(e) => setBasePrice(Number(e.target.value))}
                   style={{

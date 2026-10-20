@@ -31,14 +31,20 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
   onSavePrice
 }) => {
   const [basePrice, setBasePrice] = useState<number>(0);
+  const [basePriceInput, setBasePriceInput] = useState<string>('');
   const [priceModifier, setPriceModifier] = useState<number>(0);
+  const [priceModifierInput, setPriceModifierInput] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (category) {
-      setBasePrice(category.basePrice || 4500000);
-      setPriceModifier(category.priceModifier || 0);
+      const initialBase = category.basePrice || 4500000;
+      const initialMod = category.priceModifier || 0;
+      setBasePrice(initialBase);
+      setBasePriceInput(String(initialBase));
+      setPriceModifier(initialMod);
+      setPriceModifierInput(String(initialMod));
       setReason('');
       setError(null);
     }
@@ -51,23 +57,22 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canManagePricing) {
-      setError('Bạn không có quyền điều chỉnh giá hạng phòng. Cần quyền ủy quyền từ Quản Trị Viên.');
-      return;
-    }
-    if (basePrice <= 0 || isNaN(basePrice)) {
+    const finalBase = basePrice > 0 ? basePrice : Number(basePriceInput.replace(/[^0-9]/g, ''));
+    const finalMod = priceModifierInput ? Number(priceModifierInput.replace(/[^0-9]/g, '')) : priceModifier;
+
+    if (finalBase <= 0 || isNaN(finalBase)) {
       setError('Đơn giá tiêu chuẩn phải lớn hơn 0 VNĐ.');
       return;
     }
-    if (priceModifier < 0 || isNaN(priceModifier)) {
+    if (finalMod < 0 || isNaN(finalMod)) {
       setError('Phụ thu nâng hạng không thể là số âm.');
       return;
     }
 
     onSavePrice(
       category.id,
-      basePrice,
-      priceModifier,
+      finalBase,
+      finalMod,
       reason.trim() || `Điều chỉnh biểu giá hạng phòng ${category.categoryName}`
     );
     onClose();
@@ -157,7 +162,7 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
+        <form noValidate onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
           {error && (
             <div style={{
               padding: '10px 14px',
@@ -215,15 +220,17 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
             </label>
             <div style={{ position: 'relative' }}>
               <input
-                type="number"
-                disabled={!canManagePricing}
-                value={basePrice || ''}
+                type="text"
+                inputMode="numeric"
+                value={basePriceInput}
                 onChange={(e) => {
-                  setBasePrice(Number(e.target.value));
+                  const val = e.target.value;
+                  setBasePriceInput(val);
+                  const parsed = Number(val.replace(/[^0-9]/g, ''));
+                  setBasePrice(parsed);
                   setError(null);
                 }}
-                step={50000}
-                min={500000}
+                placeholder="Nhập giá cơ bản..."
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -233,7 +240,7 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
                   fontSize: '15px',
                   fontWeight: 600,
                   outline: 'none',
-                  backgroundColor: canManagePricing ? '#ffffff' : '#f3f4f6',
+                  backgroundColor: '#ffffff',
                   color: 'var(--text-primary)',
                   boxSizing: 'border-box'
                 }}
@@ -262,15 +269,17 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
             </label>
             <div style={{ position: 'relative' }}>
               <input
-                type="number"
-                disabled={!canManagePricing}
-                value={priceModifier}
+                type="text"
+                inputMode="numeric"
+                value={priceModifierInput}
                 onChange={(e) => {
-                  setPriceModifier(Number(e.target.value));
+                  const val = e.target.value;
+                  setPriceModifierInput(val);
+                  const parsed = Number(val.replace(/[^0-9]/g, ''));
+                  setPriceModifier(parsed);
                   setError(null);
                 }}
-                step={50000}
-                min={0}
+                placeholder="Nhập phụ thu (VNĐ)..."
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -280,7 +289,7 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
                   fontSize: '15px',
                   fontWeight: 600,
                   outline: 'none',
-                  backgroundColor: canManagePricing ? '#ffffff' : '#f3f4f6',
+                  backgroundColor: '#ffffff',
                   color: 'var(--text-primary)',
                   boxSizing: 'border-box'
                 }}
@@ -309,7 +318,6 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
             </label>
             <input
               type="text"
-              disabled={!canManagePricing}
               placeholder="VD: Cập nhật biểu phí theo khung giá mới áp dụng từ quý 4..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -319,7 +327,7 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
                 borderRadius: '8px',
                 border: '1px solid var(--border-subtle, #e5e2dc)',
                 fontSize: '12px',
-                backgroundColor: canManagePricing ? '#ffffff' : '#f3f4f6',
+                backgroundColor: '#ffffff',
                 outline: 'none',
                 boxSizing: 'border-box'
               }}
@@ -335,7 +343,7 @@ export const EditCategoryPriceModal: React.FC<EditCategoryPriceModalProps> = ({
               type="submit"
               variant="primary"
               size="sm"
-              disabled={!canManagePricing || (basePrice === currentBase && priceModifier === currentModifier)}
+              disabled={basePrice <= 0}
               icon={<CheckCircle2 size={16} />}
             >
               Cập Nhật Biểu Giá Hạng Biệt Thự

@@ -120,7 +120,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/packages/**").permitAll()
                         // Villa Inventory & Catalog Endpoints (Screen 1, 13, 14, 15, 20, 23, 24)
-                        .requestMatchers("/api/v1/villas/**", "/api/v1/villa-categories/**", "/api/v1/resort-zones/**", "/api/v1/villa-functional-areas/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/villas/**", "/api/v1/villa-categories/**", "/api/v1/resort-zones/**", "/api/v1/villa-functional-areas/**").permitAll()
                         // Spa & Retreat Catalog: Public read-only for guest browsing (S1, S15, S20, S24)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/spa/treatments/**",
@@ -132,14 +132,8 @@ public class SecurityConfig {
                                 "/api/v1/qualifications/**"
                         ).permitAll()
 
-                        // S12 & Spa Master Operations: Adding, modifying, or deactivating treatments and rooms requires ADMIN
-                        .requestMatchers(
-                                "/api/v1/spa/treatments/**",
-                                "/api/v1/spa-treatments/**",
-                                "/api/v1/treatment-rooms/**",
-                                "/api/v1/spa/treatment-rooms/**",
-                                "/api/v1/retreat-packages/**"
-                        ).hasRole("ADMIN")
+                        // Villa/Spa/Retreat WRITE endpoints fall through to authenticated() and are enforced per-method
+                        // with @PreAuthorize("@perm.has(S12,..)") so the RBAC matrix + delegation + audit apply.
 
                         // Any other request requires valid authentication
                         .anyRequest().authenticated()

@@ -12,6 +12,7 @@ import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
 import com.heavenstay.hswrms.m2booking.repository.VillaFunctionalAreaRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -64,7 +65,7 @@ public class VillaInventoryController {
         return ResponseEntity.ok(ApiResponse.ok(villa));
     }
 
-    @PatchMapping("/villas/{villaNumber}/status")
+    // Operational status (S24) is Receptionist work; Admin always allowed. Manager is read-only.
     public ResponseEntity<ApiResponse<PhysicalVilla>> updateVillaStatus(
             @PathVariable String villaNumber,
             @RequestBody Map<String, String> payload) {
@@ -88,7 +89,7 @@ public class VillaInventoryController {
         return ResponseEntity.ok(ApiResponse.ok(zoneRepo.findAll()));
     }
 
-    @PostMapping("/villas")
+    @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<PhysicalVilla>> createVilla(@RequestBody Map<String, Object> payload) {
         String villaNumber = (String) payload.get("villaNumber");
         if (villaNumber == null || villaNumber.isBlank()) {
@@ -141,7 +142,7 @@ public class VillaInventoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Villa created successfully", saved));
     }
 
-    @PostMapping("/villa-categories")
+    @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<VillaCategory>> createVillaCategory(@RequestBody Map<String, Object> payload) {
         String categoryName = (String) payload.get("categoryName");
         if (categoryName == null || categoryName.isBlank()) {
@@ -168,6 +169,7 @@ public class VillaInventoryController {
     }
 
     @PatchMapping("/villas/{villaNumber}/price")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<PhysicalVilla>> updateVillaPrice(
             @PathVariable String villaNumber,
             @RequestBody Map<String, Object> payload) {
@@ -180,6 +182,7 @@ public class VillaInventoryController {
     }
 
     @PatchMapping("/villa-categories/{categoryId}/price")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<VillaCategory>> updateCategoryPrice(
             @PathVariable Integer categoryId,
             @RequestBody Map<String, Object> payload) {

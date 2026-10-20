@@ -55,6 +55,7 @@ import { AddRetreatPackageModal } from '../../components/operations/AddRetreatPa
 import { EditVillaPriceModal } from '../../components/operations/EditVillaPriceModal';
 import { EditPackagePriceModal } from '../../components/operations/EditPackagePriceModal';
 import { EditCategoryPriceModal } from '../../components/operations/EditCategoryPriceModal';
+import { getAuthToken } from '../../api/client/apiClient';
 
 type TabKey = 'villas' | 'categories' | 'packages' | 'zones' | 'functional_areas';
 
@@ -62,6 +63,14 @@ export const VillaManagementPage: React.FC = () => {
   const { role } = useAuth();
   const { hasCapability, managerDelegatedCapabilities, logAuditEvent } = useGovernance();
   const { showToast } = useToast();
+
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+  };
 
   const [activeTab, setActiveTab] = useState<TabKey>('villas');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -429,7 +438,7 @@ export const VillaManagementPage: React.FC = () => {
     }
   };
 
-  const handleSaveVillaPrice = (villaId: string, newRate: number, reason: string) => {
+  const handleSaveVillaPrice = async (villaId: string, newRate: number, reason: string) => {
     setVillas((prev) =>
       prev.map((v) => (v.id === villaId ? { ...v, nightlyRate: newRate } : v))
     );
@@ -438,11 +447,21 @@ export const VillaManagementPage: React.FC = () => {
     }
 
     // Persist to Database via backend API
-    fetch(`http://localhost:8080/api/v1/villas/${villaId}/price`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nightlyRate: newRate })
-    }).catch((err) => console.warn('Failed to persist villa price to DB:', err));
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/villas/${villaId}/price`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ nightlyRate: newRate })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã lưu giá thuê biệt thự ${villaId} vào cơ sở dữ liệu thành công (${formatVND(newRate)}/đêm)!`, 'success');
+    } catch (err: any) {
+      console.warn('Failed to persist villa price to DB:', err);
+      showToast(`Không thể lưu vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+    }
 
     logAuditEvent({
       actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
@@ -455,23 +474,29 @@ export const VillaManagementPage: React.FC = () => {
       detailsKey: 'operations.audit.villaPriceUpdated',
       detailsFallback: `Đã cập nhật giá thuê đêm biệt thự ${villaId} thành ${formatVND(newRate)}/đêm. Lý do: ${reason}`
     });
-
-    showToast(`Đã lưu giá thuê biệt thự ${villaId} vào cơ sở dữ liệu thành công (${formatVND(newRate)}/đêm)!`, 'success');
   };
 
-  const handleSavePackagePrice = (pkgId: string, newBasePrice: number, reason: string) => {
+  const handleSavePackagePrice = async (pkgId: string, newBasePrice: number, reason: string) => {
     setPackages((prev) =>
       prev.map((p) => (p.id === pkgId ? { ...p, basePrice: newBasePrice } : p))
     );
 
     // Extract numeric ID if pkgId is PKG-1 or similar
-    const numId = pkgId.replace(/\D/g, '');
-    if (numId) {
-      fetch(`http://localhost:8080/api/v1/retreat-packages/${numId}/price`, {
+    const numId = pkgId.replace(/\D/g, '') || pkgId;
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(numId)}/price`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ basePrice: newBasePrice })
-      }).catch((err) => console.warn('Failed to persist package price to DB:', err));
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã lưu đơn giá gói nghỉ dưỡng vào cơ sở dữ liệu thành công!`, 'success');
+    } catch (err: any) {
+      console.warn('Failed to persist package price to DB:', err);
+      showToast(`Không thể lưu vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
     }
 
     logAuditEvent({
@@ -485,11 +510,9 @@ export const VillaManagementPage: React.FC = () => {
       detailsKey: 'operations.audit.packagePriceUpdated',
       detailsFallback: `Đã cập nhật đơn giá gói ${pkgId} thành ${formatVND(newBasePrice)}. Lý do: ${reason}`
     });
-
-    showToast(`Đã lưu đơn giá gói nghỉ dưỡng vào cơ sở dữ liệu thành công!`, 'success');
   };
 
-  const handleSaveCategoryPrice = (
+  const handleSaveCategoryPrice = async (
     categoryId: number,
     newBasePrice: number,
     newModifier: number,
@@ -504,11 +527,21 @@ export const VillaManagementPage: React.FC = () => {
     );
 
     // Persist to Database via backend API
-    fetch(`http://localhost:8080/api/v1/villa-categories/${categoryId}/price`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ basePrice: newBasePrice, priceModifier: newModifier })
-    }).catch((err) => console.warn('Failed to persist category price to DB:', err));
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/villa-categories/${categoryId}/price`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ basePrice: newBasePrice, priceModifier: newModifier })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã lưu biểu giá và phụ thu hạng biệt thự vào cơ sở dữ liệu thành công!`, 'success');
+    } catch (err: any) {
+      console.warn('Failed to persist category price to DB:', err);
+      showToast(`Không thể lưu vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+    }
 
     logAuditEvent({
       actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
@@ -521,8 +554,6 @@ export const VillaManagementPage: React.FC = () => {
       detailsKey: 'operations.audit.categoryPriceUpdated',
       detailsFallback: `Đã điều chỉnh biểu giá hạng phòng ID ${categoryId}: Giá chuẩn ${formatVND(newBasePrice)}/đêm, Phụ thu ${formatVND(newModifier)}. Lý do: ${reason}`
     });
-
-    showToast(`Đã lưu biểu giá và phụ thu hạng biệt thự vào cơ sở dữ liệu thành công!`, 'success');
   };
 
   const handleAddPackage = (newPkg: RetreatPackageMaster) => {
@@ -1400,18 +1431,18 @@ export const VillaManagementPage: React.FC = () => {
                             fontSize: '11px',
                             fontWeight: 600,
                             borderRadius: '6px',
-                            border: canManagePricing ? '1px solid var(--accent-forest, #2d4a3e)' : '1px solid #cbd5e1',
-                            backgroundColor: canManagePricing ? '#ffffff' : '#f1f5f9',
-                            color: canManagePricing ? 'var(--accent-forest, #2d4a3e)' : '#94a3b8',
+                            border: '1px solid var(--accent-forest, #2d4a3e)',
+                            backgroundColor: '#ffffff',
+                            color: 'var(--accent-forest, #2d4a3e)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '4px'
                           }}
-                          title={canManagePricing ? 'Chỉnh sửa giá thuê đêm căn villa này' : 'Cần Admin ủy quyền quyền manage_pricing để sửa giá'}
+                          title="Chỉnh sửa giá thuê đêm căn villa này"
                         >
-                          {canManagePricing ? <DollarSign size={12} /> : <Lock size={12} />}
-                          {canManagePricing ? 'Sửa Giá' : 'Khóa'}
+                          <DollarSign size={12} />
+                          Sửa Giá
                         </button>
                       </div>
 
@@ -1502,13 +1533,13 @@ export const VillaManagementPage: React.FC = () => {
                                 fontWeight: 600,
                                 borderRadius: '4px',
                                 border: '1px solid #cbd5e1',
-                                backgroundColor: canManagePricing ? '#ffffff' : '#f1f5f9',
+                                backgroundColor: '#ffffff',
                                 cursor: 'pointer',
-                                color: canManagePricing ? 'var(--accent-forest, #2d4a3e)' : '#94a3b8'
+                                color: 'var(--accent-forest, #2d4a3e)'
                               }}
-                              title={canManagePricing ? 'Chỉnh sửa giá' : 'Cần ủy quyền Admin'}
+                              title="Chỉnh sửa giá thuê đêm"
                             >
-                              {canManagePricing ? 'Sửa' : <Lock size={10} />}
+                              Sửa
                             </button>
                           </div>
                         </td>
@@ -1735,10 +1766,10 @@ export const VillaManagementPage: React.FC = () => {
                     <Button
                       size="sm"
                       variant="secondary"
-                      icon={canManagePricing ? <DollarSign size={13} /> : <Lock size={13} />}
+                      icon={<DollarSign size={13} />}
                       onClick={() => setEditingPriceCategory(cat)}
                     >
-                      {canManagePricing ? 'Sửa Giá & Phụ Thu' : 'Khóa Giá'}
+                      Sửa Giá & Phụ Thu
                     </Button>
                   </div>
 
@@ -1912,11 +1943,11 @@ export const VillaManagementPage: React.FC = () => {
 
                   <Button
                     size="sm"
-                    variant={canManagePricing ? 'primary' : 'secondary'}
-                    icon={canManagePricing ? <DollarSign size={13} /> : <Lock size={13} />}
+                    variant="primary"
+                    icon={<DollarSign size={13} />}
                     onClick={() => setEditingPricePackage(pkg)}
                   >
-                    {canManagePricing ? 'Sửa Giá Gói' : 'Xem Giá (Khóa)'}
+                    Sửa Giá Gói
                   </Button>
                 </div>
               </div>
@@ -2292,13 +2323,13 @@ export const VillaManagementPage: React.FC = () => {
                   <Button
                     type="button"
                     size="sm"
-                    variant={canManagePricing ? 'primary' : 'secondary'}
-                    icon={canManagePricing ? <DollarSign size={13} /> : <Lock size={13} />}
+                    variant="primary"
+                    icon={<DollarSign size={13} />}
                     onClick={() => {
                       setEditingPriceVilla(selectedVilla);
                     }}
                   >
-                    {canManagePricing ? 'Chỉnh Sửa Giá Biệt Thự' : 'Xem Chi Tiết Giá (Khóa)'}
+                    Chỉnh Sửa Giá Biệt Thự
                   </Button>
                 </div>
               </div>

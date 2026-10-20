@@ -116,7 +116,7 @@ public class SpaMasterController {
     }
 
     @PostMapping({"/spa/treatments", "/spa-treatments"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<SpaTreatment>> createTreatment(@RequestBody Map<String, Object> payload) {
         String treatmentName = (String) payload.get("treatmentName");
         if (treatmentName == null || treatmentName.isBlank()) {
@@ -154,7 +154,7 @@ public class SpaMasterController {
     }
 
     @PutMapping({"/spa/treatments/{idOrCode}", "/spa-treatments/{idOrCode}"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<SpaTreatment>> updateTreatment(
             @PathVariable String idOrCode,
             @RequestBody Map<String, Object> payload) {
@@ -205,7 +205,7 @@ public class SpaMasterController {
     }
 
     @PatchMapping({"/spa/treatments/{idOrCode}/status", "/spa-treatments/{idOrCode}/status"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<SpaTreatment>> toggleTreatmentStatus(
             @PathVariable String idOrCode,
             @RequestBody(required = false) Map<String, Object> payload) {
@@ -221,7 +221,7 @@ public class SpaMasterController {
     }
 
     @DeleteMapping({"/spa/treatments/{idOrCode}", "/spa-treatments/{idOrCode}"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','D')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> deleteTreatment(
             @PathVariable String idOrCode,
@@ -258,7 +258,7 @@ public class SpaMasterController {
     }
 
     @PostMapping("/retreat-packages")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<RetreatPackage>> createPackage(@RequestBody Map<String, Object> payload) {
         String packageName = (String) payload.get("packageName");
         if (packageName == null || packageName.isBlank()) {
@@ -292,7 +292,7 @@ public class SpaMasterController {
     }
 
     @PutMapping("/retreat-packages/{idOrCode}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<RetreatPackage>> updatePackage(
             @PathVariable String idOrCode,
             @RequestBody Map<String, Object> payload) {
@@ -340,7 +340,7 @@ public class SpaMasterController {
     }
 
     @PatchMapping("/retreat-packages/{idOrCode}/price")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<RetreatPackage>> updatePackagePrice(
             @PathVariable String idOrCode,
             @RequestBody Map<String, Object> payload) {
@@ -352,7 +352,7 @@ public class SpaMasterController {
     }
 
     @PatchMapping("/retreat-packages/{idOrCode}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<RetreatPackage>> togglePackageStatus(
             @PathVariable String idOrCode,
             @RequestBody(required = false) Map<String, Object> payload) {
@@ -365,7 +365,7 @@ public class SpaMasterController {
     }
 
     @DeleteMapping("/retreat-packages/{idOrCode}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','D')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> deletePackage(
             @PathVariable String idOrCode,
@@ -393,7 +393,7 @@ public class SpaMasterController {
     }
 
     @PostMapping("/retreat-packages/{idOrCode}/treatments")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','C')")
     @Transactional
     public ResponseEntity<ApiResponse<RetreatPackageSpaTreatment>> addTreatmentToPackage(
             @PathVariable String idOrCode,
@@ -416,7 +416,7 @@ public class SpaMasterController {
     }
 
     @PutMapping("/retreat-packages/{idOrCode}/treatments/{treatmentIdOrCode}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     @Transactional
     public ResponseEntity<ApiResponse<RetreatPackageSpaTreatment>> updatePackageTreatment(
             @PathVariable String idOrCode,
@@ -444,7 +444,7 @@ public class SpaMasterController {
     }
 
     @DeleteMapping("/retreat-packages/{idOrCode}/treatments/{treatmentIdOrCode}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','D')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> removeTreatmentFromPackage(
             @PathVariable String idOrCode,
@@ -469,7 +469,7 @@ public class SpaMasterController {
     }
 
     @PutMapping("/retreat-packages/{idOrCode}/fnb")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     @Transactional
     public ResponseEntity<ApiResponse<PackageFnBEntitlement>> updatePackageFnB(
             @PathVariable String idOrCode,
@@ -512,7 +512,7 @@ public class SpaMasterController {
     }
 
     @PostMapping({"/spa/treatment-rooms", "/treatment-rooms"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<TreatmentRoom>> createTreatmentRoom(@RequestBody Map<String, Object> payload) {
         String roomName = (String) payload.get("roomName");
         if (roomName == null || roomName.isBlank()) {
@@ -528,7 +528,7 @@ public class SpaMasterController {
     }
 
     @PutMapping({"/spa/treatment-rooms/{roomId}", "/treatment-rooms/{roomId}"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perm.has('S12','U')")
     public ResponseEntity<ApiResponse<TreatmentRoom>> updateTreatmentRoom(
             @PathVariable Integer roomId,
             @RequestBody Map<String, Object> payload) {

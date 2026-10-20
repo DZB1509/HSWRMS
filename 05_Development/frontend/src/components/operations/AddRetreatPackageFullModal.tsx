@@ -151,7 +151,7 @@ export const AddRetreatPackageFullModal: React.FC<AddRetreatPackageFullModalProp
               <input
                 type="number"
                 min="0"
-                step="500000"
+                step="any"
                 className="hsw-input"
                 value={formData.basePrice}
                 onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}

@@ -87,8 +87,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       defaultHeading: 'Điều Hành Quản Lý',
       items: [
         { labelKey: 'operations.sidebar.managerDashboard', defaultLabel: 'Bảng Điều Khiển Quản Lý', path: '/manager/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Quản Lý Villa & Buồng Phòng', path: '/manager/villas', icon: Home },
-        { labelKey: 'operations.sidebar.spaManagement', defaultLabel: 'Quản Lý Gói Spa & Trị Liệu', path: '/manager/spa', icon: Sparkles },
+        { labelKey: 'operations.sidebar.managerVillaView', defaultLabel: 'Villa & Buồng Phòng', path: '/manager/villas', icon: Home },
+        { labelKey: 'operations.sidebar.managerSpaView', defaultLabel: 'Gói Spa & Trị Liệu', path: '/manager/spa', icon: Sparkles },
         { labelKey: 'operations.sidebar.revenueAnalytics', defaultLabel: 'Phân Tích Doanh Thu', path: '/manager/revenue', icon: BarChart3 },
         { labelKey: 'operations.sidebar.occupancyReports', defaultLabel: 'Báo Cáo Công Suất Phòng', path: '/manager/occupancy', icon: TrendingUp },
         { labelKey: 'operations.sidebar.therapistUtilization', defaultLabel: 'Hiệu Suất Kỹ Thuật Viên', path: '/manager/therapist-utilization', icon: Users2 }
@@ -104,25 +104,31 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
   ],
   admin: [
     {
-      headingKey: 'operations.sidebar.administration',
-      defaultHeading: 'Quản Trị Hệ Thống',
+      headingKey: 'operations.sidebar.adminOverview',
+      defaultHeading: 'Tổng Quan',
       items: [
         { labelKey: 'operations.sidebar.adminDashboard', defaultLabel: 'Bảng Điều Khiển Quản Trị', path: '/admin/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Quản Lý Villa & Buồng Phòng', path: '/admin/villas', icon: Home },
-        { labelKey: 'operations.sidebar.spaManagement', defaultLabel: 'Quản Lý Gói Spa & Trị Liệu', path: '/admin/spa', icon: Sparkles },
-        { labelKey: 'operations.sidebar.staffAccounts', defaultLabel: 'Tài Khoản Nhân Viên', path: '/admin/staff', icon: UserPlus },
-        { labelKey: 'operations.sidebar.masterDataManagement', defaultLabel: 'Quản Lý Dữ Liệu Gốc', path: '/admin/master-data', icon: Database }
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/admin/system-overview', icon: Activity }
       ]
     },
     {
-      headingKey: 'operations.sidebar.securityGovernance',
-      defaultHeading: 'Bảo Mật & Quản Trị Quy Định',
+      headingKey: 'operations.sidebar.usersSecurity',
+      defaultHeading: 'Người Dùng & Bảo Mật',
       items: [
-        { labelKey: 'operations.sidebar.businessParameters', defaultLabel: 'Tham Số Nghiệp Vụ', path: '/admin/business-params', icon: Settings2 },
+        { labelKey: 'operations.sidebar.staffAccounts', defaultLabel: 'Tài Khoản Nhân Viên', path: '/admin/staff', icon: UserPlus },
         { labelKey: 'operations.sidebar.permissionMatrix', defaultLabel: 'Ma Trận Phân Quyền (RBAC)', path: '/admin/permissions', icon: Shield },
         { labelKey: 'operations.sidebar.managerDelegation', defaultLabel: 'Ủy Quyền Cho Quản Lý', path: '/admin/delegation', icon: Users2 },
-        { labelKey: 'operations.sidebar.sensitiveDataAuditLog', defaultLabel: 'Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm', path: '/admin/audit-log', icon: History },
-        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/admin/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.sensitiveDataAuditLog', defaultLabel: 'Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm', path: '/admin/audit-log', icon: History }
+      ]
+    },
+    {
+      headingKey: 'operations.sidebar.dataConfiguration',
+      defaultHeading: 'Dữ Liệu & Cấu Hình',
+      items: [
+        { labelKey: 'operations.sidebar.adminVillaMaster', defaultLabel: 'Quản Lý Villa & Buồng Phòng', path: '/admin/villas', icon: Home },
+        { labelKey: 'operations.sidebar.adminSpaMaster', defaultLabel: 'Quản Lý Gói Spa & Trị Liệu', path: '/admin/spa', icon: Sparkles },
+        { labelKey: 'operations.sidebar.masterDataManagement', defaultLabel: 'Quản Lý Dữ Liệu Gốc', path: '/admin/master-data', icon: Database },
+        { labelKey: 'operations.sidebar.businessParameters', defaultLabel: 'Tham Số Nghiệp Vụ', path: '/admin/business-params', icon: Settings2 }
       ]
     }
   ]

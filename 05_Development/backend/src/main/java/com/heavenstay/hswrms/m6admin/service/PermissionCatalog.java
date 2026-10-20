@@ -53,8 +53,8 @@ public final class PermissionCatalog {
                 d("S10", "U", false, true, ADMIN), d("S10", "D", false, true, ADMIN),
                 d("S11", "V", false, true, ADMIN), d("S11", "C", false, true, ADMIN),
                 d("S11", "U", false, true, ADMIN), d("S11", "D", false, true, ADMIN),
-                d("S12", "V", true, true, ADMIN), d("S12", "C", false, true, ADMIN),
-                d("S12", "U", false, true, ADMIN), d("S12", "D", false, true, ADMIN),
+                d("S12", "V", true, false, ADMIN, MANAGER), d("S12", "C", false, false, ADMIN, MANAGER),
+                d("S12", "U", false, false, ADMIN, MANAGER), d("S12", "D", false, false, ADMIN, MANAGER),
                 // M6 – dashboards, parameters, matrix, delegation, audit
                 d("S49", "V", false, true, ADMIN),
                 d("S50", "V", true, true, ADMIN), d("S50", "U", true, true, ADMIN),

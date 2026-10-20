@@ -18,10 +18,12 @@ export const EditSpaTreatmentModal: React.FC<EditSpaTreatmentModalProps> = ({
   onSave,
 }) => {
   const [formData, setFormData] = useState<SpaTreatmentItem | null>(null);
+  const [priceInput, setPriceInput] = useState<string>('');
 
   useEffect(() => {
     if (treatment) {
       setFormData({ ...treatment });
+      setPriceInput(String(treatment.basePrice || 0));
     }
   }, [treatment]);
 
@@ -111,12 +113,17 @@ export const EditSpaTreatmentModal: React.FC<EditSpaTreatmentModalProps> = ({
                 Đơn Giá Niêm Yết (VND) *
               </label>
               <input
-                type="number"
-                min="0"
-                step="10000"
+                type="text"
+                inputMode="numeric"
                 className="hsw-input"
-                value={formData.basePrice}
-                onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
+                value={priceInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPriceInput(val);
+                  const parsed = Number(val.replace(/[^0-9]/g, ''));
+                  setFormData({ ...formData, basePrice: parsed });
+                }}
+                placeholder="Nhập đơn giá niêm yết (VNĐ)..."
                 required
               />
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>

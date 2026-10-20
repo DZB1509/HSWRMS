@@ -250,7 +250,11 @@ export const AppRouter: React.FC = () => {
       </Route>
 
       {/* ====================================================================
-          8. Admin System Administration (ManagerAdminLayout - Guard: Admin / Delegated Manager)
+          8. Admin System Administration (ManagerAdminLayout)
+          Parent admits admin + manager ONLY so a Manager holding a valid delegation can reach
+          the delegated business-params screen. Every child is individually guarded:
+          admin-only, except business-params (capability-gated). Backend @PreAuthorize is the
+          source of truth; these guards are UX protection.
           ==================================================================== */}
       <Route
         path="/admin"
@@ -260,10 +264,9 @@ export const AppRouter: React.FC = () => {
           </RoleGuard>
         }
       >
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<RoleGuard allowedRoles={['admin']}><AdminDashboardPage /></RoleGuard>} />
-        <Route path="villas" element={<VillaManagementPage />} />
-        <Route path="spa" element={<SpaManagementPage />} />
+        <Route path="villas" element={<RoleGuard allowedRoles={['admin']}><VillaManagementPage /></RoleGuard>} />
+        <Route path="spa" element={<RoleGuard allowedRoles={['admin']}><SpaManagementPage /></RoleGuard>} />
         <Route path="staff" element={<RoleGuard allowedRoles={['admin']}><StaffAccountListPage /></RoleGuard>} />
         <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']}><StaffAccountDetailPage /></RoleGuard>} />
         <Route path="master-data" element={<RoleGuard allowedRoles={['admin']}><MasterDataPage /></RoleGuard>} />
@@ -278,7 +281,7 @@ export const AppRouter: React.FC = () => {
         <Route path="permissions" element={<RoleGuard allowedRoles={['admin']}><PermissionMatrixPage /></RoleGuard>} />
         <Route path="delegation" element={<RoleGuard allowedRoles={['admin']}><AdminDelegationPage /></RoleGuard>} />
         <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']}><SensitiveAuditLogPage /></RoleGuard>} />
-        <Route path="system-overview" element={<SystemOverviewPage />} />
+        <Route path="system-overview" element={<RoleGuard allowedRoles={['admin']}><SystemOverviewPage /></RoleGuard>} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 

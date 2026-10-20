@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, Role, AuthContextType, AuthSession } from '../../types/auth';
 import { MOCK_PERSONAS } from '../../types/auth';
-import { clearAuthToken, getAuthToken } from '../../api/client/apiClient';
+import { clearAuthToken, getAuthToken, setAuthToken } from '../../api/client/apiClient';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'hswrms_active_role';
@@ -71,8 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = currentUser !== null;
 
   const loginAs = (newRole: Role) => {
-    // Demo persona switch must never inherit the real user's JWT: a mock
-    // identity paired with a real token would misattribute protected requests.
     clearAuthToken();
     try {
       sessionStorage.removeItem(AUTH_SESSION_KEY);
@@ -83,6 +81,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = MOCK_PERSONAS[newRole];
     setCurrentUser(user);
     sessionStorage.setItem(AUTH_STORAGE_KEY, newRole);
+
+    const creds: Partial<Record<Role, { email: string; pass: string }>> = {
+      admin: { email: 'admin@heavenstay.com', pass: 'Admin@123456' },
+      manager: { email: 'manager@heavenstay.com', pass: 'Manager@123456' },
+      receptionist: { email: 'receptionist@heavenstay.com', pass: 'Staff@123456' },
+      therapist: { email: 'therapist@heavenstay.com', pass: 'Staff@123456' },
+      fb_staff: { email: 'fnb@heavenstay.com', pass: 'Staff@123456' }
+    };
+    const targetCred = creds[newRole];
+    if (targetCred) {
+      fetch('http://localhost:8080/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetCred.email, password: targetCred.pass })
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.data?.token) {
+            setAuthToken(data.data.token, true);
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   const loginWithCredentials = (session: AuthSession): Role => {

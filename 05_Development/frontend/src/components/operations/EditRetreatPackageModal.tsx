@@ -18,10 +18,12 @@ export const EditRetreatPackageModal: React.FC<EditRetreatPackageModalProps> = (
   onSave,
 }) => {
   const [formData, setFormData] = useState<RetreatPackageItem | null>(null);
+  const [priceInput, setPriceInput] = useState<string>('');
 
   useEffect(() => {
     if (pkg) {
       setFormData({ ...pkg });
+      setPriceInput(String(pkg.basePrice || 0));
     }
   }, [pkg]);
 
@@ -111,12 +113,17 @@ export const EditRetreatPackageModal: React.FC<EditRetreatPackageModalProps> = (
                 Giá Gói Trọn Gói (VND/khách) *
               </label>
               <input
-                type="number"
-                min="0"
-                step="500000"
+                type="text"
+                inputMode="numeric"
                 className="hsw-input"
-                value={formData.basePrice}
-                onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
+                value={priceInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPriceInput(val);
+                  const parsed = Number(val.replace(/[^0-9]/g, ''));
+                  setFormData({ ...formData, basePrice: parsed });
+                }}
+                placeholder="Nhập giá gói (VNĐ)..."
                 required
               />
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>

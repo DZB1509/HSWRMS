@@ -26,12 +26,15 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
   onSavePrice
 }) => {
   const [rate, setRate] = useState<number>(0);
+  const [rateInput, setRateInput] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (villa) {
-      setRate(villa.nightlyRate || 4500000);
+      const initialRate = villa.nightlyRate || 4500000;
+      setRate(initialRate);
+      setRateInput(String(initialRate));
       setReason('');
       setError(null);
     }
@@ -44,28 +47,25 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
   const diffPercent = currentRate > 0 ? ((diff / currentRate) * 100).toFixed(1) : '0';
 
   const handleApplyPreset = (multiplier: number) => {
-    if (!canManagePricing) return;
     const newRate = Math.round(currentRate * multiplier / 10000) * 10000;
     setRate(newRate);
+    setRateInput(String(newRate));
   };
 
   const handleApplyDelta = (deltaVND: number) => {
-    if (!canManagePricing) return;
     const newRate = Math.max(500000, rate + deltaVND);
     setRate(newRate);
+    setRateInput(String(newRate));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canManagePricing) {
-      setError('Bạn không có quyền cập nhật giá. Cần quyền ủy quyền từ Quản Trị Viên.');
-      return;
-    }
-    if (rate <= 0 || isNaN(rate)) {
+    const finalRate = rate > 0 ? rate : Number(rateInput.replace(/[^0-9]/g, ''));
+    if (finalRate <= 0 || isNaN(finalRate)) {
       setError('Giá tiền thuê đêm phải lớn hơn 0 VNĐ.');
       return;
     }
-    onSavePrice(villa.id, rate, reason.trim() || 'Điều chỉnh bảng giá thuê đêm biệt thự');
+    onSavePrice(villa.id, finalRate, reason.trim() || 'Điều chỉnh bảng giá thuê đêm biệt thự');
     onClose();
   };
 
@@ -153,7 +153,7 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
+        <form noValidate onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
           {error && (
             <div style={{
               padding: '10px 14px',
@@ -226,15 +226,17 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
             </label>
             <div style={{ position: 'relative' }}>
               <input
-                type="number"
-                disabled={!canManagePricing}
-                value={rate || ''}
+                type="text"
+                inputMode="numeric"
+                value={rateInput}
                 onChange={(e) => {
-                  setRate(Number(e.target.value));
+                  const val = e.target.value;
+                  setRateInput(val);
+                  const parsed = Number(val.replace(/[^0-9]/g, ''));
+                  setRate(parsed);
                   setError(null);
                 }}
-                step={50000}
-                min={500000}
+                placeholder="Nhập giá mới (VNĐ)..."
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -244,7 +246,7 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
                   fontSize: '15px',
                   fontWeight: 600,
                   outline: 'none',
-                  backgroundColor: canManagePricing ? '#ffffff' : '#f3f4f6',
+                  backgroundColor: '#ffffff',
                   color: 'var(--text-primary)',
                   boxSizing: 'border-box'
                 }}
@@ -380,7 +382,6 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
             </label>
             <input
               type="text"
-              disabled={!canManagePricing}
               placeholder="VD: Điều chỉnh giá cho giai đoạn Lễ Hội Mùa Thu / Khách đoàn VIP..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -390,7 +391,7 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
                 borderRadius: '8px',
                 border: '1px solid var(--border-subtle, #e5e2dc)',
                 fontSize: '12px',
-                backgroundColor: canManagePricing ? '#ffffff' : '#f3f4f6',
+                backgroundColor: '#ffffff',
                 outline: 'none',
                 boxSizing: 'border-box'
               }}
@@ -406,7 +407,7 @@ export const EditVillaPriceModal: React.FC<EditVillaPriceModalProps> = ({
               type="submit"
               variant="primary"
               size="sm"
-              disabled={!canManagePricing || rate <= 0 || rate === currentRate}
+              disabled={rate <= 0}
               icon={<CheckCircle2 size={16} />}
             >
               Lưu & Áp Dụng Giá Mới

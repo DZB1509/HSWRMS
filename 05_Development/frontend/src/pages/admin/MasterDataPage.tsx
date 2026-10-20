@@ -667,15 +667,21 @@ export const MasterDataPage: React.FC = () => {
                     {t('operations.masterData.colBenchmarkPrice', 'Giá Cơ Bản / Đơn Giá (VND)')}
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    step="50000"
-                    min="0"
-                    value={editingItem.price}
-                    onChange={(e) => setEditingItem({ ...editingItem, price: Number(e.target.value) })}
+                    value={editingItem.price || ''}
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value.replace(/[^0-9]/g, ''));
+                      setEditingItem({ ...editingItem, price: parsed });
+                    }}
+                    placeholder="Nhập giá cơ bản (VNĐ)..."
                     className="hsw-filter-input"
                     style={{ width: '100%' }}
                   />
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {formatVND(editingItem.price, i18n.language)}
+                  </div>
                 </div>
 
                 <div>

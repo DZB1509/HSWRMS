@@ -302,7 +302,7 @@ export const AddRetreatPackageModal: React.FC<AddRetreatPackageModalProps> = ({
                 <input
                   type="number"
                   min="0"
-                  step="500000"
+                  step="any"
                   value={basePrice}
                   onChange={(e) => setBasePrice(Number(e.target.value))}
                   style={{
