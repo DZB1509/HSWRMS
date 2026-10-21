@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class SsoTicketServiceTest {
 
-    private final SsoTicketService service = new SsoTicketService(60_000, 60_000);
+    private final SsoTicketService service = new SsoTicketService(60_000, 60_000, 300_000);
 
     @Test
     @DisplayName("Login ticket round-trips and can only be consumed once")
@@ -71,7 +71,7 @@ class SsoTicketServiceTest {
     @Test
     @DisplayName("Expired tickets are rejected with a controlled error and purged")
     void expiredTicket_isRejectedAndPurged() throws InterruptedException {
-        SsoTicketService shortLived = new SsoTicketService(20, 20);
+        SsoTicketService shortLived = new SsoTicketService(20, 20, 20);
         String token = shortLived.createLoginTicket(205, "GOOGLE", "sub-4");
         Thread.sleep(80);
 

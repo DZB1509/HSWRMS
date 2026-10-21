@@ -31,7 +31,11 @@ export const registerRequest = (body: RegisterRequestBody): Promise<RegisterApiS
 
 // ── Google SSO ─────────────────────────────────────────────────────────
 
-export type SsoProvider = 'google';
+export type SsoProvider = 'google' | 'facebook';
+
+/** Display name for SSO toasts (provider id is lowercase in URLs/tickets). */
+export const ssoProviderLabel = (provider: SsoProvider): string =>
+  provider === 'facebook' ? 'Facebook' : 'Google';
 
 /**
  * Absolute URL of the backend OAuth authorization start endpoint
@@ -70,14 +74,35 @@ export const ssoResolveTicket = (body: SsoTicketRequestBody): Promise<SsoRegistr
   apiClient.post<SsoRegistrationPrefillApiSuccess>('/auth/sso/tickets/resolve', body);
 
 /**
+ * Request body for POST /api/v1/auth/sso/tickets/link.
+ * Ticket is the single-use LINK token; otp is the code sent to the existing
+ * account's email to prove mailbox ownership before binding the Facebook identity.
+ */
+export interface SsoLinkRequestBody {
+  ticket: string;
+  otp: string;
+}
+
+/**
+ * Completes a Facebook account link: verifies the OTP, binds the Facebook identity
+ * to the existing Customer account, and returns the standard login envelope (JWT).
+ * Consumes the LINK ticket server-side.
+ */
+export const ssoLinkTicket = (body: SsoLinkRequestBody): Promise<LoginApiSuccess> =>
+  apiClient.post<LoginApiSuccess>('/auth/sso/tickets/link', body);
+
+/**
  * Request body for POST /api/v1/auth/register/sso. Email is deliberately absent —
  * the backend takes it from the server-bound registration ticket. Password is
- * optional for SSO-only accounts; consent remains mandatory.
+ * optional for Google (verified-email) accounts; it is REQUIRED for Facebook
+ * registrations (which always verify the mailbox via OTP). Consent remains
+ * mandatory.
  */
 export interface SsoRegisterRequestBody {
   ssoTicket: string;
   fullName: string;
   phone?: string;
+  password?: string;
   consent: boolean;
 }
 

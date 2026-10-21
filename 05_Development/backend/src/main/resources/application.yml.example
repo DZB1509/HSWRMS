@@ -36,14 +36,18 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: http://localhost:5173,http://localhost:4173
-  # Google SSO (M1 FR-M1-05). Set the credentials through environment variables —
-  # never commit them:
+  # Google + Facebook SSO (M1 FR-M1-05). Set the credentials through environment
+  # variables — never commit them:
   #   GOOGLE_CLIENT_ID=<OAuth 2.0 Client ID (Web application) from Google Cloud Console>
   #   GOOGLE_CLIENT_SECRET=<client secret>
-  # Authorized redirect URI registered in Google Cloud Console (must match exactly):
+  #   FACEBOOK_CLIENT_ID=<Facebook App ID from Meta Developers Console>
+  #   FACEBOOK_CLIENT_SECRET=<Facebook App Secret>
+  # Authorized redirect URIs registered in each provider console (must match exactly):
   #   http://localhost:8080/api/v1/auth/sso/callback/google
-  # When unset, the backend still starts and the Google buttons show a controlled
-  # "not configured" message instead of a broken Google redirect.
+  #   http://localhost:8080/api/v1/auth/sso/callback/facebook
+  # When a provider's credentials are unset, the backend still starts and that
+  # provider's button shows a controlled "not configured" message instead of a
+  # broken provider redirect.
   sso:
     frontend-base-url: ${SSO_FRONTEND_BASE_URL:http://localhost:5173}
     login-ticket-ttl-ms: 300000

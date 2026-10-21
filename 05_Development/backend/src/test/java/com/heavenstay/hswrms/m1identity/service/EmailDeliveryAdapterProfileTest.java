@@ -1,5 +1,7 @@
 package com.heavenstay.hswrms.m1identity.service;
 
+import com.heavenstay.hswrms.common.exception.EmailDeliveryException;
+import com.heavenstay.hswrms.m1identity.service.EmailDeliveryAdapter;
 import com.heavenstay.hswrms.m1identity.service.impl.DevEmailDeliveryAdapter;
 import com.heavenstay.hswrms.m1identity.service.impl.NoOpEmailDeliveryAdapter;
 import com.heavenstay.hswrms.m1identity.service.impl.SmtpEmailDeliveryAdapter;
@@ -9,6 +11,7 @@ import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EmailDeliveryAdapterProfileTest {
 
@@ -27,6 +30,16 @@ class EmailDeliveryAdapterProfileTest {
             assertThat(context).hasSingleBean(NoOpEmailDeliveryAdapter.class);
             assertThat(context).doesNotHaveBean(DevEmailDeliveryAdapter.class);
             assertThat(context).doesNotHaveBean(SmtpEmailDeliveryAdapter.class);
+        });
+    }
+
+    @Test
+    void noOpAdapter_throwsEmailDeliveryException_whenUnconfigured() {
+        runner.run(context -> {
+            EmailDeliveryAdapter adapter = context.getBean(NoOpEmailDeliveryAdapter.class);
+            assertThatThrownBy(() -> adapter.sendVerificationOtp("any@example.com", "123456"))
+                    .isInstanceOf(EmailDeliveryException.class)
+                    .hasMessageContaining("not configured");
         });
     }
 

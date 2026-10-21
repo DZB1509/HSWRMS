@@ -3,6 +3,7 @@ package com.heavenstay.hswrms.config;
 import com.heavenstay.hswrms.m1identity.sso.SsoAvailabilityFilter;
 import com.heavenstay.hswrms.m1identity.sso.SsoOAuth2FailureHandler;
 import com.heavenstay.hswrms.m1identity.sso.SsoOAuth2SuccessHandler;
+import com.heavenstay.hswrms.m1identity.sso.SsoUserInfoDiagnosticsService;
 import com.heavenstay.hswrms.security.JwtAuthenticationFilter;
 import com.heavenstay.hswrms.security.RestAccessDeniedHandler;
 import com.heavenstay.hswrms.security.RestAuthenticationEntryPoint;
@@ -17,8 +18,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -34,6 +33,7 @@ public class SecurityConfig {
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final SsoOAuth2SuccessHandler ssoOAuth2SuccessHandler;
     private final SsoOAuth2FailureHandler ssoOAuth2FailureHandler;
+    private final SsoUserInfoDiagnosticsService ssoUserInfoDiagnosticsService;
     private final ClientRegistrationRepository clientRegistrationRepository;
 
     @Value("${app.sso.frontend-base-url:http://localhost:5173}")
@@ -45,18 +45,15 @@ public class SecurityConfig {
             RestAccessDeniedHandler accessDeniedHandler,
             SsoOAuth2SuccessHandler ssoOAuth2SuccessHandler,
             SsoOAuth2FailureHandler ssoOAuth2FailureHandler,
+            SsoUserInfoDiagnosticsService ssoUserInfoDiagnosticsService,
             ClientRegistrationRepository clientRegistrationRepository) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.ssoOAuth2SuccessHandler = ssoOAuth2SuccessHandler;
         this.ssoOAuth2FailureHandler = ssoOAuth2FailureHandler;
+        this.ssoUserInfoDiagnosticsService = ssoUserInfoDiagnosticsService;
         this.clientRegistrationRepository = clientRegistrationRepository;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     /**
@@ -88,6 +85,11 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint -> endpoint.baseUri("/api/v1/auth/sso"))
                         .redirectionEndpoint(endpoint -> endpoint.baseUri("/api/v1/auth/sso/callback/*"))
+                        // TEMPORARY: logs granted scopes + returned field names (never
+                        // values) during SSO userinfo loading to diagnose provider-side
+                        // missing-email responses. Behavior is identical to Spring's
+                        // default user services. See SsoUserInfoDiagnosticsService.
+                        .userInfoEndpoint(endpoint -> endpoint.userService(ssoUserInfoDiagnosticsService))
                         .successHandler(ssoOAuth2SuccessHandler)
                         .failureHandler(ssoOAuth2FailureHandler))
                 .addFilterBefore(

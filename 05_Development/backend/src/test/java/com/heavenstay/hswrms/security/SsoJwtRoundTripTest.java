@@ -6,6 +6,7 @@ import com.heavenstay.hswrms.m1identity.entity.User;
 import com.heavenstay.hswrms.m1identity.entity.UserRole;
 import com.heavenstay.hswrms.m1identity.repository.AuthIdentityRepository;
 import com.heavenstay.hswrms.m1identity.repository.UserRepository;
+import com.heavenstay.hswrms.m1identity.service.AuthService;
 import com.heavenstay.hswrms.m1identity.sso.SsoService;
 import com.heavenstay.hswrms.m1identity.sso.SsoTicketService;
 import java.util.Collections;
@@ -59,9 +60,10 @@ class SsoJwtRoundTripTest {
         UserRepository userRepository = mock(UserRepository.class);
         when(userRepository.findByIdWithRoles(205)).thenReturn(Optional.of(user));
 
-        SsoTicketService ticketService = new SsoTicketService(60_000, 60_000);
+        SsoTicketService ticketService = new SsoTicketService(60_000, 60_000, 300_000);
         SsoService ssoService = new SsoService(
-                userRepository, mock(AuthIdentityRepository.class), tokenProvider, ticketService);
+                userRepository, mock(AuthIdentityRepository.class), tokenProvider, ticketService,
+                mock(AuthService.class));
 
         String ticket = ticketService.createLoginTicket(205, "GOOGLE", "sub-jwt");
         LoginResponse response = ssoService.exchangeLoginTicket(ticket);
