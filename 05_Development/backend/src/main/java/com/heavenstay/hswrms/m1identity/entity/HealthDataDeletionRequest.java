@@ -8,6 +8,13 @@ import java.util.Objects;
  * HealthDataDeletionRequest entity tracking post-retreat deletion and
  * anonymization requests for sensitive customer health records.
  * Mapped to dbo.HealthDataDeletionRequest.
+ *
+ * <p>Per the M1 ERD and API_CONTRACT.md §5.4, the request is linked to the
+ * customer via {@code customer_profile_id} (FK to CustomerProfile), not via
+ * HealthProfile. {@code request_type} expresses the request scope (currently
+ * only {@code HEALTH_DATA}). Actual deletion/anonymization execution is out of
+ * M1 scope — the record lifecycle is create PENDING → read status → cancel
+ * while PENDING/DEFERRED.
  */
 @Entity
 @Table(name = "\"HealthDataDeletionRequest\"", schema = "dbo")
@@ -19,12 +26,15 @@ public class HealthDataDeletionRequest {
     private Integer deletionRequestId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "health_profile_id", nullable = false)
-    private HealthProfile healthProfile;
+    @JoinColumn(name = "customer_profile_id", nullable = false)
+    private CustomerProfile customerProfile;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by_user_id", nullable = false)
     private User requestedByUser;
+
+    @Column(name = "request_type", nullable = false, length = 50)
+    private String requestType;
 
     @Column(name = "request_status", nullable = false, length = 20)
     private String requestStatus = "PENDING"; // PENDING, DEFERRED, COMPLETED, CANCELLED
@@ -35,14 +45,20 @@ public class HealthDataDeletionRequest {
     @Column(name = "processed_at")
     private Instant processedAt;
 
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
     public HealthDataDeletionRequest() {
     }
 
-    public HealthDataDeletionRequest(HealthProfile healthProfile, User requestedByUser) {
-        this.healthProfile = healthProfile;
+    public HealthDataDeletionRequest(CustomerProfile customerProfile, User requestedByUser, String requestType) {
+        this.customerProfile = customerProfile;
         this.requestedByUser = requestedByUser;
+        this.requestType = requestType;
         this.requestStatus = "PENDING";
-        this.requestedAt = Instant.now();
+        Instant now = Instant.now();
+        this.requestedAt = now;
+        this.updatedAt = now;
     }
 
     @PrePersist
@@ -50,9 +66,17 @@ public class HealthDataDeletionRequest {
         if (this.requestedAt == null) {
             this.requestedAt = Instant.now();
         }
+        if (this.updatedAt == null) {
+            this.updatedAt = Instant.now();
+        }
         if (this.requestStatus == null) {
             this.requestStatus = "PENDING";
         }
+    }
+
+    @PreUpdate
+    public void onPreUpdate() {
+        this.updatedAt = Instant.now();
     }
 
     public Integer getDeletionRequestId() {
@@ -63,12 +87,12 @@ public class HealthDataDeletionRequest {
         this.deletionRequestId = deletionRequestId;
     }
 
-    public HealthProfile getHealthProfile() {
-        return healthProfile;
+    public CustomerProfile getCustomerProfile() {
+        return customerProfile;
     }
 
-    public void setHealthProfile(HealthProfile healthProfile) {
-        this.healthProfile = healthProfile;
+    public void setCustomerProfile(CustomerProfile customerProfile) {
+        this.customerProfile = customerProfile;
     }
 
     public User getRequestedByUser() {
@@ -77,6 +101,14 @@ public class HealthDataDeletionRequest {
 
     public void setRequestedByUser(User requestedByUser) {
         this.requestedByUser = requestedByUser;
+    }
+
+    public String getRequestType() {
+        return requestType;
+    }
+
+    public void setRequestType(String requestType) {
+        this.requestType = requestType;
     }
 
     public String getRequestStatus() {
@@ -101,6 +133,14 @@ public class HealthDataDeletionRequest {
 
     public void setProcessedAt(Instant processedAt) {
         this.processedAt = processedAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     @Override

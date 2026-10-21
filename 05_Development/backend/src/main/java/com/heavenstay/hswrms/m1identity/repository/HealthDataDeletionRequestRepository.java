@@ -12,12 +12,14 @@ import java.util.Optional;
 @Repository
 public interface HealthDataDeletionRequestRepository extends JpaRepository<HealthDataDeletionRequest, Integer> {
 
-    List<HealthDataDeletionRequest> findByRequestedByUserUserIdOrderByRequestedAtDesc(Integer userId);
+    List<HealthDataDeletionRequest> findByCustomerProfileCustomerProfileIdOrderByRequestedAtDesc(Integer customerProfileId);
 
-    Optional<HealthDataDeletionRequest> findFirstByRequestedByUserUserIdOrderByRequestedAtDesc(Integer userId);
+    Optional<HealthDataDeletionRequest> findFirstByCustomerProfileCustomerProfileIdOrderByRequestedAtDesc(Integer customerProfileId);
 
-    @Query("SELECT r FROM HealthDataDeletionRequest r WHERE r.requestedByUser.userId = :userId AND r.requestStatus IN ('PENDING', 'DEFERRED') ORDER BY r.requestedAt DESC")
-    List<HealthDataDeletionRequest> findActiveRequestsByUserId(@Param("userId") Integer userId);
+    @Query("SELECT r FROM HealthDataDeletionRequest r WHERE r.customerProfile.customerProfileId = :customerProfileId AND r.requestStatus IN ('PENDING', 'DEFERRED') ORDER BY r.requestedAt DESC")
+    List<HealthDataDeletionRequest> findActiveRequestsByCustomerProfileId(@Param("customerProfileId") Integer customerProfileId);
 
-    boolean existsByRequestedByUserUserIdAndRequestStatusIn(Integer userId, List<String> statuses);
+    boolean existsByCustomerProfileCustomerProfileIdAndRequestStatusIn(Integer customerProfileId, List<String> statuses);
+
+    Optional<HealthDataDeletionRequest> findByDeletionRequestIdAndCustomerProfileCustomerProfileId(Integer deletionRequestId, Integer customerProfileId);
 }
