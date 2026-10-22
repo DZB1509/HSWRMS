@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class MenuItemMapper {
     public MenuItem toEntity(CreateMenuItemRequest request) {
-        return new MenuItem(request.itemName().trim(), normalize(request.category()),
+        String cleanName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(request.itemName());
+        return new MenuItem(cleanName != null ? cleanName.trim() : null, normalize(request.category()),
                 normalize(request.mealType()), request.price(), normalize(request.dietaryTags()),
                 normalize(request.allergenInformation()), request.availabilityStatus().trim().toUpperCase(Locale.ROOT));
     }
@@ -28,7 +29,8 @@ public class MenuItemMapper {
                 }
             }
         }
-        return new MenuItemResponse(item.getId(), item.getItemName(), item.getCategory(), item.getMealType(),
+        String cleanName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(item.getItemName());
+        return new MenuItemResponse(item.getId(), cleanName, item.getCategory(), item.getMealType(),
                 item.getPrice(), tags, item.getAllergenInformation(), available, servingsAvailable, allergyWarning);
     }
 

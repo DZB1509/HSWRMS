@@ -104,4 +104,17 @@ public class MealOrderController {
         return ResponseEntity.ok(ApiResponse.ok("ORDER_LINE_PREPARATION_STATUS_UPDATED",
                 mealOrderService.updateItemPreparationStatus(orderId, orderLineId, request.status())));
     }
+
+    /**
+     * Revenue Audit & Folio Reconciliation Endpoint:
+     * Accessible by F&B Staff, Receptionists, and Managers to view all A-la-carte orders
+     * that have not yet been posted to guest billing folios before checkout.
+     */
+    @GetMapping("/unposted-folio")
+    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF', 'ROLE_RECEPTIONIST', 'ROLE_ADMIN', 'ROLE_MANAGER')")
+    public ResponseEntity<ApiResponse<List<MealOrderResponse>>> getUnpostedAlaCarteOrders(
+            @RequestParam(required = false) Integer bookingId) {
+        return ResponseEntity.ok(ApiResponse.ok("UNPOSTED_ALA_CARTE_ORDERS",
+                mealOrderService.listUnpostedAlaCarteOrders(bookingId)));
+    }
 }

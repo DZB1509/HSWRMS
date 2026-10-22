@@ -4,12 +4,31 @@ import java.util.List;
 
 /** Public M1-facing projection; it must never include diagnoses or treatment notes. */
 public interface DietaryProfilePort {
+
+    enum DietaryVerificationStatus {
+        VERIFIED,            // Health & dietary profile confirmed by M1/medical staff
+        UNVERIFIED,          // Profile unconfirmed or survey pending
+        NO_PROFILE_ATTACHED  // Guest has no health profile record
+    }
+
     FoodProfileProjection getFoodProfileForUser(Integer userId);
 
-    record FoodProfileProjection(List<String> foodAllergies, List<String> dietaryPreferences) {
+    record FoodProfileProjection(
+            DietaryVerificationStatus verificationStatus,
+            List<String> foodAllergies,
+            List<String> dietaryPreferences
+    ) {
         public FoodProfileProjection {
+            verificationStatus = verificationStatus == null ? DietaryVerificationStatus.UNVERIFIED : verificationStatus;
             foodAllergies = foodAllergies == null ? List.of() : List.copyOf(foodAllergies);
             dietaryPreferences = dietaryPreferences == null ? List.of() : List.copyOf(dietaryPreferences);
+        }
+
+        /**
+         * Backward-compatible 2-argument constructor for legacy callers and unit test fixtures.
+         */
+        public FoodProfileProjection(List<String> foodAllergies, List<String> dietaryPreferences) {
+            this(DietaryVerificationStatus.VERIFIED, foodAllergies, dietaryPreferences);
         }
     }
 }

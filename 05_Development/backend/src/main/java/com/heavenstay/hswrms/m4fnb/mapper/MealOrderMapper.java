@@ -17,16 +17,38 @@ public class MealOrderMapper {
         List<MealOrderLineResponse> lines = orderItems.stream().map(line -> {
             MenuItem menuItem = menuItems.get(line.getMenuItemId());
             BigDecimal lineTotal = line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
-            return new MealOrderLineResponse(line.getId(), line.getMenuItemId(),
-                    menuItem == null ? "Menu item unavailable" : menuItem.getItemName(),
+            String rawName = menuItem == null ? "Menu item unavailable" : menuItem.getItemName();
+            String cleanName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(rawName);
+            return new MealOrderLineResponse(line.getId(), line.getMenuItemId(), cleanName,
                     line.getQuantity(), line.getUnitPrice(), lineTotal, line.getPreparationStatus());
         }).toList();
         BigDecimal subtotal = BigDecimal.ZERO;
         for (MealOrderLineResponse line : lines) {
             subtotal = subtotal.add(line.lineTotal());
         }
+        String cleanNotes = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(order.getSpecialNotes());
         return new MealOrderResponse(order.getId(), order.getRetreatBookingId(), order.getOrderDate(),
-                order.getMealType(), order.getOrderType(), order.getOrderStatus(), order.getSpecialNotes(), order.getCreatedAt(),
+                order.getMealType(), order.getOrderType(), order.getOrderStatus(), cleanNotes, order.getCreatedAt(),
                 subtotal, lines);
+    }
+
+    public MealOrderResponse toResponse(MealOrder order, List<MealOrderItem> orderItems,
+                                        Map<Integer, MenuItem> menuItems, String folioPostingStatus) {
+        List<MealOrderLineResponse> lines = orderItems.stream().map(line -> {
+            MenuItem menuItem = menuItems.get(line.getMenuItemId());
+            BigDecimal lineTotal = line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
+            String rawName = menuItem == null ? "Menu item unavailable" : menuItem.getItemName();
+            String cleanName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(rawName);
+            return new MealOrderLineResponse(line.getId(), line.getMenuItemId(), cleanName,
+                    line.getQuantity(), line.getUnitPrice(), lineTotal, line.getPreparationStatus());
+        }).toList();
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (MealOrderLineResponse line : lines) {
+            subtotal = subtotal.add(line.lineTotal());
+        }
+        String cleanNotes = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(order.getSpecialNotes());
+        return new MealOrderResponse(order.getId(), order.getRetreatBookingId(), order.getOrderDate(),
+                order.getMealType(), order.getOrderType(), order.getOrderStatus(), cleanNotes, order.getCreatedAt(),
+                subtotal, lines, folioPostingStatus);
     }
 }

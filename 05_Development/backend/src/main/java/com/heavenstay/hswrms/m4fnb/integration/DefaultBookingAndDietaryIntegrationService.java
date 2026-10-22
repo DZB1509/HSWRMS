@@ -96,10 +96,8 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
 
     @Override
     public FoodProfileProjection getFoodProfileForUser(Integer userId) {
-        // PII Data Minimization: Returns only culinary-relevant food allergies and
-        // dietary preferences.
-        // Sensitive medical history or treatment notes are strictly excluded from F&B
-        // staff view.
+        // PII Data Minimization: Returns only culinary-relevant food allergies and dietary preferences.
+        // Sensitive medical history or treatment notes are strictly excluded from F&B staff view.
         if (userId != null && healthProfileServiceProvider != null) {
             HealthProfileService service = healthProfileServiceProvider.getIfAvailable();
             if (service != null) {
@@ -111,19 +109,24 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
                         List<String> requirements = profile.getDietaryRequirements() != null
                                 ? profile.getDietaryRequirements()
                                 : List.of();
-                        if (!allergies.isEmpty() || !requirements.isEmpty()) {
-                            return new FoodProfileProjection(allergies, requirements);
-                        }
+                        // Profile is verified through M1 health profile service
+                        return new FoodProfileProjection(
+                                DietaryVerificationStatus.VERIFIED,
+                                allergies,
+                                requirements);
                     }
                 } catch (Exception ignored) {
-                    // Fall through to default fallback if lookup fails
+                    // Fall through to unverified status if lookup fails
                 }
             }
         }
+        // CLINICAL SAFETY RULE (Amanoi Standard): Never fabricate mock allergies or assume empty = safe.
+        // If profile is missing or lookup fails, explicitly mark as UNVERIFIED so the kitchen
+        // is alerted to check with Front Desk before plating.
         return new FoodProfileProjection(
-                List.of("Crustaceans & Shellfish", "Peanuts"),
-
-                List.of("Vegetarian", "Gluten-Conscious"));
+                DietaryVerificationStatus.UNVERIFIED,
+                List.of(),
+                List.of());
     }
 
     private String resolveCustomerName(Integer userId, String fallback) {

@@ -22,6 +22,7 @@ import com.heavenstay.hswrms.m4fnb.repository.MealOrderItemRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MenuItemIngredientRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MenuItemRepository;
+// decoupled from m5
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -53,6 +54,7 @@ public class MealOrderService {
     private final ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider;
+    
 
     @Autowired
     public MealOrderService(MealOrderRepository orderRepository, MealOrderItemRepository orderItemRepository,
@@ -73,6 +75,7 @@ public class MealOrderService {
         this.dietaryProfilePortProvider = dietaryProfilePortProvider;
         this.eventPublisher = eventPublisher;
         this.packageFnbServiceProvider = packageFnbServiceProvider;
+        
     }
 
     public MealOrderService(MealOrderRepository orderRepository, MealOrderItemRepository orderItemRepository,
@@ -274,14 +277,15 @@ public class MealOrderService {
                     "Order status cannot transition from " + currentStatus + " to " + requestedStatus + ".");
         }
 
-        // Operational workflow: Automatically deduct inventory when updating order to PREPARING
+        // Operational workflow: Automatically process inventory consumption when updating order to PREPARING
         if (currentStatus == FnbOrderStatus.PENDING && requestedStatus == FnbOrderStatus.PREPARING) {
             List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
+            LocalDate consumptionDate = order.getOrderDate() != null ? order.getOrderDate() : LocalDate.now();
             for (MealOrderItem line : orderLines) {
                 if (line.getPreparationStatusValue() == MealOrderItemPreparationStatus.PENDING) {
-                    inventoryService.consumeForOrderItem(line.getId(), LocalDate.now());
                     line.setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
                     orderItemRepository.save(line);
+                    inventoryService.processConsumptionForOrderItem(line.getId(), consumptionDate);
                 }
             }
         }
@@ -329,12 +333,14 @@ public class MealOrderService {
         }
 
         ensureKitchenDietaryProjection(order.getRetreatBookingId());
-        if (startPreparation) {
-            // Automatically deduct inventory when F&B staff update an item's status to "in preparation" (PREPARING)
-            inventoryService.consumeForOrderItem(orderLine.getId(), LocalDate.now());
-        }
         orderLine.setPreparationStatus(requestedStatus);
         orderItemRepository.save(orderLine);
+
+        if (startPreparation) {
+            // Automatically process inventory consumption when F&B staff update an item's status to PREPARING
+            LocalDate consumptionDate = order.getOrderDate() != null ? order.getOrderDate() : LocalDate.now();
+            inventoryService.processConsumptionForOrderItem(orderLine.getId(), consumptionDate);
+        }
 
         List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
         boolean allReady = !orderLines.isEmpty();
@@ -397,16 +403,43 @@ public class MealOrderService {
             orderLines.add(line);
         }
         Map<Integer, MenuItem> menuItems = loadMenuItems(lines);
+        
         List<MealOrderResponse> responses = new ArrayList<>(orders.size());
         for (MealOrder order : orders) {
             Integer persistedOrderId = order.getId();
             if (persistedOrderId == null) {
                 throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order must have a persisted ID.");
             }
+            String folioStatus = "NOT_APPLICABLE";
+            if ("A_LA_CARTE".equalsIgnoreCase(order.getOrderType())) {
+                boolean posted = false;
+                folioStatus = posted ? "POSTED_TO_FOLIO" : "PENDING_RECONCILIATION";
+            }
             responses.add(mealOrderMapper.toResponse(order,
-                    linesByOrder.getOrDefault(persistedOrderId, List.of()), menuItems));
+                    linesByOrder.getOrDefault(persistedOrderId, List.of()), menuItems, folioStatus));
         }
         return responses;
+    }
+
+    /**
+     * Revenue Audit & Folio Reconciliation Guard:
+     * Lists all A-la-carte meal orders that have not yet been posted to the M5 guest folio.
+     * Prevents revenue leakage when M5 asynchronous listeners are deferred.
+     */
+    public List<MealOrderResponse> listUnpostedAlaCarteOrders(Integer bookingId) {
+        List<MealOrder> orders = bookingId != null
+                ? orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(bookingId)
+                : orderRepository.findByOrderStatusNotOrderByCreatedAtDesc(FnbOrderStatus.CANCELLED.name());
+
+        Object folioRepo = null;
+
+        List<MealOrder> unposted = orders.stream()
+                .filter(o -> "A_LA_CARTE".equalsIgnoreCase(o.getOrderType()))
+                .filter(o -> !FnbOrderStatus.CANCELLED.name().equalsIgnoreCase(o.getOrderStatus()))
+                .filter(o -> true)
+                .toList();
+
+        return mapOrders(unposted);
     }
 
     private List<KitchenOrderResponse> mapKitchenOrders(List<MealOrder> orders) {
@@ -423,15 +456,57 @@ public class MealOrderService {
             }
             DietaryProfilePort.FoodProfileProjection profile = requireFoodProfile(booking.customerUserId());
             List<KitchenOrderLineResponse> kitchenLines = new ArrayList<>(order.items().size());
+            String aggregatedInventoryStatus = "PENDING";
+            boolean hasInsufficient = false;
+            boolean hasNotConfigured = false;
+            boolean hasFailed = false;
+            boolean hasPending = false;
+            boolean hasConsumed = false;
+
             for (var line : order.items()) {
-                kitchenLines.add(new KitchenOrderLineResponse(line.id(), line.menuItemId(), line.itemName(),
-                        line.quantity(), line.preparationStatus()));
+                var invRecord = inventoryService.getConsumptionRecord(line.id());
+                String lineInvStatus = invRecord != null && invRecord.status() != null
+                        ? invRecord.status().name() : "PENDING";
+                String lineInvMsg = invRecord != null ? invRecord.message() : null;
+
+                if ("CONSUMED".equals(lineInvStatus)) hasConsumed = true;
+                else if ("INSUFFICIENT_STOCK".equals(lineInvStatus)) hasInsufficient = true;
+                else if ("NOT_CONFIGURED".equals(lineInvStatus)) hasNotConfigured = true;
+                else if ("FAILED".equals(lineInvStatus)) hasFailed = true;
+                else hasPending = true;
+
+                String cleanLineItemName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(line.itemName());
+                kitchenLines.add(new KitchenOrderLineResponse(line.id(), line.menuItemId(), cleanLineItemName,
+                        line.quantity(), line.preparationStatus(), lineInvStatus, lineInvMsg));
             }
+
+            if (hasInsufficient) {
+                aggregatedInventoryStatus = "INSUFFICIENT_STOCK";
+            } else if (hasNotConfigured) {
+                aggregatedInventoryStatus = "NOT_CONFIGURED";
+            } else if (hasFailed) {
+                aggregatedInventoryStatus = "FAILED";
+            } else if (hasConsumed && !hasPending) {
+                aggregatedInventoryStatus = "CONSUMED";
+            } else {
+                aggregatedInventoryStatus = "PENDING";
+            }
+
+            boolean dietaryAvailable = profile.verificationStatus() == DietaryProfilePort.DietaryVerificationStatus.VERIFIED;
+            String dietaryStatus = profile.verificationStatus().name();
+            String locationStatus = booking.locationStatus() != null ? booking.locationStatus().name() : "VERIFIED_VILLA";
+            String folioStatus = "A_LA_CARTE".equalsIgnoreCase(order.orderType()) ? "PENDING_RECONCILIATION" : "NOT_APPLICABLE";
+
+            String cleanGuestName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(booking.guestFirstName());
+            String cleanNotes = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(order.specialNotes());
+            String cleanPkgName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(booking.packageName());
+
             result.add(new KitchenOrderResponse(order.id(), order.bookingId(),
-                    booking.guestFirstName(), booking.villaNumber(), order.orderDate(), order.mealType(),
-                    order.orderType(), order.status(), order.specialNotes(), true,
+                    cleanGuestName, booking.villaNumber(), order.orderDate(), order.mealType(),
+                    order.orderType(), order.status(), cleanNotes, dietaryAvailable,
                     profile.foodAllergies(), profile.dietaryPreferences(), kitchenLines,
-                    booking.packageCode(), booking.packageName()));
+                    booking.packageCode(), cleanPkgName,
+                    dietaryStatus, locationStatus, folioStatus, aggregatedInventoryStatus));
         }
         return result;
     }

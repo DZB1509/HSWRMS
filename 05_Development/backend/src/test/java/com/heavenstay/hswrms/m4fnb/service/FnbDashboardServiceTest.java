@@ -56,4 +56,28 @@ class FnbDashboardServiceTest {
         assertEquals(0, BigDecimal.ZERO.compareTo(demand.get(0).shortfall()));
         assertEquals("g", demand.get(0).unitOfMeasure());
     }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Dashboard returns empty demand when there are no recipes or ingredients, without fabricating data")
+    void dashboardReturnsEmptyDemandWhenNoRecipesOrIngredients() {
+        LocalDate businessDate = LocalDate.of(2026, 10, 13);
+        MealOrderService orderService = mock(MealOrderService.class);
+        MenuItemIngredientRepository recipeRepository = mock(MenuItemIngredientRepository.class);
+        IngredientRepository ingredientRepository = mock(IngredientRepository.class);
+        InventoryService inventoryService = mock(InventoryService.class);
+        MenuService menuService = mock(MenuService.class);
+        IngredientUnitRegistry unitRegistry = new IngredientUnitRegistry();
+
+        when(orderService.listKitchenOrders(businessDate)).thenReturn(List.of());
+        when(ingredientRepository.findAll()).thenReturn(List.of());
+        when(menuService.getAvailability(businessDate)).thenReturn(List.of());
+
+        FnbDashboardService service = new FnbDashboardService(orderService, recipeRepository,
+                ingredientRepository, inventoryService, menuService, unitRegistry);
+
+        var dashboard = service.getDashboard(businessDate);
+
+        assertEquals(0, dashboard.ingredientDemand().size());
+        assertEquals(0, dashboard.menuAvailability().size());
+    }
 }

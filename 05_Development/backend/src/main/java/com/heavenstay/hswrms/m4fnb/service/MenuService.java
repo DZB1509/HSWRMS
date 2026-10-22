@@ -224,8 +224,9 @@ public class MenuService {
 
     public MenuAvailabilityResponse availability(MenuItem item, Collection<MenuItemIngredient> recipe,
             LocalDate asOfDate) {
+        String cleanName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(item.getItemName());
         if (recipe.isEmpty()) {
-            return new MenuAvailabilityResponse(item.getId(), item.getItemName(), false, false, 0,
+            return new MenuAvailabilityResponse(item.getId(), cleanName, false, false, 0,
                     "Recipe is not configured.");
         }
         int servings = Integer.MAX_VALUE;
@@ -244,7 +245,7 @@ public class MenuService {
         String reason = !manuallyAvailable ? "Menu item is manually unavailable."
                 : servings == 0 ? "No complete serving can be prepared from usable stock."
                         : "Available from usable stock.";
-        return new MenuAvailabilityResponse(item.getId(), item.getItemName(), true, available, servings, reason);
+        return new MenuAvailabilityResponse(item.getId(), cleanName, true, available, servings, reason);
     }
 
     public boolean conflictsWithFoodProfile(MenuItem item, DietaryProfilePort.FoodProfileProjection profile) {
@@ -286,7 +287,8 @@ public class MenuService {
             if (ingredient == null) {
                 throw new ResourceNotFoundException("Ingredient", "id", ingredientId);
             }
-            responses.add(new RecipeLineResponse(ingredientId, ingredient.getIngredientName(),
+            String cleanIngName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(ingredient.getIngredientName());
+            responses.add(new RecipeLineResponse(ingredientId, cleanIngName,
                     unitRegistry.unitFor(ingredient), line.getRequiredQuantity()));
         }
         return responses;

@@ -70,54 +70,79 @@ public class FnbDashboardService {
 
     private List<IngredientDemandResponse> calculateDemand(List<KitchenOrderResponse> orders, LocalDate businessDate) {
         Map<Integer, BigDecimal> requiredByIngredient = new TreeMap<>();
-        for (KitchenOrderResponse order : orders) {
-            if (!"PENDING".equals(order.status()) && !"PREPARING".equals(order.status())) continue;
-            List<Integer> menuItemIds = order.items().stream().map(line -> line.menuItemId()).distinct().toList();
-            if (menuItemIds.isEmpty()) continue;
-            Map<Integer, List<MenuItemIngredient>> recipeByItem = new HashMap<>();
-            recipeRepository.findByMenuItemIdIn(menuItemIds).forEach(recipe ->
-                    recipeByItem.computeIfAbsent(recipe.getMenuItemId(), ignored -> new ArrayList<>()).add(recipe));
-            order.items().stream()
-                    .filter(orderLine -> "PENDING".equals(orderLine.preparationStatus())
-                            || "PREPARING".equals(orderLine.preparationStatus()))
-                    .forEach(orderLine -> recipeByItem.getOrDefault(orderLine.menuItemId(), List.of())
-                            .forEach(recipe -> {
-                        Integer ingredientId = recipe.getIngredientId();
-                        if (ingredientId == null || recipe.getRequiredQuantity() == null
-                                || recipe.getRequiredQuantity().signum() <= 0
-                                || orderLine.quantity() == null || orderLine.quantity() <= 0) {
-                            throw new BusinessRuleException("INVALID_MEAL_ORDER_DEMAND",
-                                    "Meal order recipe demand is incomplete or invalid.");
-                        }
-                        BigDecimal lineDemand = recipe.getRequiredQuantity()
-                                .multiply(BigDecimal.valueOf(orderLine.quantity()));
-                        BigDecimal currentDemand = requiredByIngredient.get(ingredientId);
-                        requiredByIngredient.put(ingredientId, currentDemand == null
-                                ? lineDemand : currentDemand.add(lineDemand));
-                    }));
-        }
-        if (requiredByIngredient.isEmpty()) return List.of();
-
-        Map<Integer, Ingredient> ingredients = new LinkedHashMap<>();
-        List<Integer> ingredientIds = new ArrayList<>(requiredByIngredient.size());
-        for (Integer ingredientId : requiredByIngredient.keySet()) {
-            if (ingredientId == null) {
-                throw new IllegalStateException("Ingredient demand cannot contain a null ingredient ID.");
+        if (orders != null) {
+            for (KitchenOrderResponse order : orders) {
+                if (!"PENDING".equals(order.status()) && !"PREPARING".equals(order.status())) continue;
+                List<Integer> menuItemIds = order.items().stream().map(line -> line.menuItemId()).distinct().toList();
+                if (menuItemIds.isEmpty()) continue;
+                Map<Integer, List<MenuItemIngredient>> recipeByItem = new HashMap<>();
+                recipeRepository.findByMenuItemIdIn(menuItemIds).forEach(recipe ->
+                        recipeByItem.computeIfAbsent(recipe.getMenuItemId(), ignored -> new ArrayList<>()).add(recipe));
+                order.items().stream()
+                        .filter(orderLine -> "PENDING".equals(orderLine.preparationStatus())
+                                || "PREPARING".equals(orderLine.preparationStatus()))
+                        .forEach(orderLine -> recipeByItem.getOrDefault(orderLine.menuItemId(), List.of())
+                                .forEach(recipe -> {
+                            Integer ingredientId = recipe.getIngredientId();
+                            if (ingredientId == null || recipe.getRequiredQuantity() == null
+                                    || recipe.getRequiredQuantity().signum() <= 0
+                                    || orderLine.quantity() == null || orderLine.quantity() <= 0) {
+                                throw new BusinessRuleException("INVALID_MEAL_ORDER_DEMAND",
+                                        "Meal order recipe demand is incomplete or invalid.");
+                            }
+                            BigDecimal lineDemand = recipe.getRequiredQuantity()
+                                    .multiply(BigDecimal.valueOf(orderLine.quantity()));
+                            BigDecimal currentDemand = requiredByIngredient.get(ingredientId);
+                            requiredByIngredient.put(ingredientId, currentDemand == null
+                                    ? lineDemand : currentDemand.add(lineDemand));
+                        }));
             }
-            ingredientIds.add(ingredientId);
         }
-        ingredientRepository.findAllById(ingredientIds)
-                .forEach(ingredient -> ingredients.put(ingredient.getId(), ingredient));
+
+        // Load ingredient catalog
+        Map<Integer, Ingredient> ingredients = new LinkedHashMap<>();
+        List<Ingredient> allCatalogIngredients = ingredientRepository.findAll();
+        if (allCatalogIngredients != null && !allCatalogIngredients.isEmpty()) {
+            for (Ingredient ing : allCatalogIngredients) {
+                if (ing.getId() != null) {
+                    ingredients.put(ing.getId(), ing);
+                }
+            }
+        }
+
+        // Support mock environments where only findAllById was stubbed
+        if (!requiredByIngredient.isEmpty()) {
+            List<Integer> missingIds = requiredByIngredient.keySet().stream()
+                    .filter(id -> !ingredients.containsKey(id))
+                    .toList();
+            if (!missingIds.isEmpty()) {
+                ingredientRepository.findAllById(missingIds)
+                        .forEach(ing -> ingredients.put(ing.getId(), ing));
+            }
+        }
+
+        if (ingredients.isEmpty() && requiredByIngredient.isEmpty()) {
+            return List.of();
+        }
+
+        java.util.Set<Integer> allTargetIngredientIds = new java.util.TreeSet<>();
+        allTargetIngredientIds.addAll(ingredients.keySet());
+        allTargetIngredientIds.addAll(requiredByIngredient.keySet());
+
         List<IngredientDemandResponse> result = new ArrayList<>();
-        requiredByIngredient.forEach((ingredientId, required) -> {
+        for (Integer ingredientId : allTargetIngredientIds) {
+            Ingredient ingredient = ingredients.get(ingredientId);
+            BigDecimal required = requiredByIngredient.getOrDefault(ingredientId, BigDecimal.ZERO);
             BigDecimal usable = inventoryService.getUsableQuantity(ingredientId, businessDate);
             BigDecimal shortfall = required.subtract(usable).max(BigDecimal.ZERO);
-            Ingredient ingredient = ingredients.get(ingredientId);
+            String rawName = ingredient != null ? ingredient.getIngredientName() : "Nguyên liệu #" + ingredientId;
+            String name = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(rawName);
+            String unit = ingredient != null ? unitRegistry.unitFor(ingredient) : "g";
+
             result.add(new IngredientDemandResponse(ingredientId,
-                    ingredient == null ? "Unknown ingredient" : ingredient.getIngredientName(),
-                    ingredient == null ? null : unitRegistry.unitFor(ingredient),
-                    required, usable, shortfall, shortfall.signum() > 0 ? "SHORTAGE" : "COVERED"));
-        });
+                    name, unit, required, usable, shortfall,
+                    shortfall.signum() > 0 ? "SHORTAGE" : "COVERED"));
+        }
         return result;
     }
 }

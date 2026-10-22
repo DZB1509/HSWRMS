@@ -15,6 +15,12 @@ import java.time.LocalDate;
  * ============================================================================
  */
 public interface BookingContextPort {
+
+    enum LocationVerificationStatus {
+        VERIFIED_VILLA,       // Confirmed occupied villa from M2
+        UNVERIFIED_LOCATION   // Fallback / guest-entered room needing Front Desk confirmation
+    }
+
     FnbBookingContext requireOwnedCustomerBooking(Integer userId, Integer bookingId);
     FnbBookingContext requireEligibleCustomerBooking(Integer userId, Integer bookingId, LocalDate orderDate);
     FnbBookingContext getKitchenBookingContext(Integer bookingId);
@@ -28,15 +34,38 @@ public interface BookingContextPort {
             String guestFirstName,
             String villaNumber,
             String packageCode,
-            String packageName
+            String packageName,
+            LocationVerificationStatus locationStatus
     ) {
+        public FnbBookingContext {
+            locationStatus = locationStatus == null ? LocationVerificationStatus.UNVERIFIED_LOCATION : locationStatus;
+        }
+
+        public FnbBookingContext(
+                Integer bookingId,
+                Integer customerUserId,
+                String bookingStatus,
+                LocalDate checkInDate,
+                LocalDate checkOutDate,
+                String guestFirstName,
+                String villaNumber,
+                String packageCode,
+                String packageName
+        ) {
+            this(bookingId, customerUserId, bookingStatus, checkInDate, checkOutDate,
+                    guestFirstName, villaNumber, packageCode, packageName,
+                    villaNumber != null && !villaNumber.isBlank() && !villaNumber.contains("UNVERIFIED")
+                            ? LocationVerificationStatus.VERIFIED_VILLA : LocationVerificationStatus.UNVERIFIED_LOCATION);
+        }
+
         /**
          * Backward-compatible constructor for existing test suites and legacy callers.
          */
         public FnbBookingContext(Integer bookingId, Integer customerUserId, String bookingStatus,
                 LocalDate checkInDate, LocalDate checkOutDate, String guestFirstName, String villaNumber) {
             this(bookingId, customerUserId, bookingStatus, checkInDate, checkOutDate,
-                    guestFirstName, villaNumber, "RET-DETOX-03", "3D2N Thải Độc & Thanh Lọc Tinh Khiết (Pure Detox)");
+                    guestFirstName, villaNumber, "RET-DETOX-03", "3D2N Thải Độc & Thanh Lọc Tinh Khiết (Pure Detox)",
+                    LocationVerificationStatus.VERIFIED_VILLA);
         }
     }
 }

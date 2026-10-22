@@ -1,8 +1,10 @@
 package com.heavenstay.hswrms.m4fnb.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
+import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderStatus;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderType;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrder;
@@ -284,8 +287,8 @@ class MealOrderServiceTest {
 
         mealOrderService.updateStatus(orderId, "PREPARING");
 
-        // Verify inventory service was called to consume stock for order line 99
-        verify(inventoryService).consumeForOrderItem(eq(99), any(LocalDate.class));
+        // Verify inventory service was called to process stock consumption for order line 99
+        verify(inventoryService).processConsumptionForOrderItem(eq(99), any(LocalDate.class));
         // Verify line preparation status set to PREPARING and saved
         verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
         verify(orderItemRepository).save(item);
@@ -307,5 +310,193 @@ class MealOrderServiceTest {
                 mealOrderService.updateStatus(orderId, "PENDING"));
 
         assertEquals("INVALID_ORDER_TRANSITION", exception.getConflictCode());
+    }
+
+    @Test
+    @DisplayName("Kitchen projection reflects UNVERIFIED dietary status and UNVERIFIED location when applicable")
+    void kitchenOrderReflectsUnverifiedDietaryAndLocationStatus() {
+        Integer orderId = 3001;
+        MealOrder order = mock(MealOrder.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(10);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("DINNER");
+        when(order.getOrderType()).thenReturn("DAILY_MEAL");
+        when(order.getOrderStatus()).thenReturn("PREPARING");
+        when(order.getSpecialNotes()).thenReturn("[VENUE:IN_VILLA] Note");
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+
+        when(orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(eq(LocalDate.now()), any()))
+                .thenReturn(List.of(order));
+
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of());
+
+        // Location is unverified (guest entered fallback)
+        when(bookingPort.getKitchenBookingContext(10)).thenReturn(new BookingContextPort.FnbBookingContext(
+                10, 5, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Guest", "Room 404 (Unverified)",
+                "RET-DETOX-03", "Pure Detox", BookingContextPort.LocationVerificationStatus.UNVERIFIED_LOCATION
+        ));
+
+        // Dietary profile is UNVERIFIED
+        when(dietaryProfilePort.getFoodProfileForUser(5)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                DietaryProfilePort.DietaryVerificationStatus.UNVERIFIED, List.of(), List.of()
+        ));
+
+        List<KitchenOrderResponse> kitchenOrders = mealOrderService.listKitchenOrders(LocalDate.now());
+        assertEquals(1, kitchenOrders.size());
+        KitchenOrderResponse ko = kitchenOrders.get(0);
+
+        assertEquals("UNVERIFIED", ko.dietaryVerificationStatus());
+        assertFalse(ko.dietaryProfileAvailable());
+        assertEquals("UNVERIFIED_LOCATION", ko.locationVerificationStatus());
+        assertEquals("NOT_APPLICABLE", ko.folioPostingStatus());
+        assertTrue(ko.isVillaDelivery());
+    }
+
+    @Test
+    @DisplayName("listUnpostedAlaCarteOrders correctly filters unposted A-la-carte orders for folio reconciliation")
+    void listUnpostedAlaCarteOrdersFiltersCorrectly() {
+        Integer orderId = 4001;
+        MealOrder order = mock(MealOrder.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("DINNER");
+        when(order.getOrderType()).thenReturn("A_LA_CARTE");
+        when(order.getOrderStatus()).thenReturn("DELIVERED");
+        when(order.getSpecialNotes()).thenReturn("Extra order");
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+
+        when(orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(1))
+                .thenReturn(List.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(50);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(new BigDecimal("150000.00"));
+        when(item.getPreparationStatus()).thenReturn("READY");
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Bào Ngư");
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        List<MealOrderResponse> unposted = mealOrderService.listUnpostedAlaCarteOrders(1);
+        assertEquals(1, unposted.size());
+        assertEquals("PENDING_RECONCILIATION", unposted.get(0).folioPostingStatus());
+        assertEquals(new BigDecimal("300000.00"), unposted.get(0).subtotal());
+    }
+
+    @Test
+    @DisplayName("Meal preparation status PREPARING is preserved when inventory returns NOT_CONFIGURED")
+    void updateStatusToPreparingPersistsWhenRecipeNotConfigured() {
+        Integer orderId = 5001;
+        MealOrder order = mock(MealOrder.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(150);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(20);
+        when(item.getQuantity()).thenReturn(1);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(20);
+        when(menuItem.getItemName()).thenReturn("Món Mới Chưa Công Thức");
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        when(inventoryService.processConsumptionForOrderItem(eq(150), any(LocalDate.class)))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.NOT_CONFIGURED,
+                        "Recipe not configured", LocalDateTime.now()));
+        when(inventoryService.getConsumptionRecord(150))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.NOT_CONFIGURED,
+                        "Recipe not configured", LocalDateTime.now()));
+
+        KitchenOrderResponse response = mealOrderService.updateStatus(orderId, "PREPARING");
+
+        // Verify line and order preparation status were persisted as PREPARING
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+        verify(orderItemRepository).save(item);
+        verify(order).setOrderStatus(FnbOrderStatus.PREPARING);
+        verify(orderRepository).save(order);
+
+        // Verify inventory status reflects NOT_CONFIGURED
+        assertEquals("NOT_CONFIGURED", response.inventoryStatus());
+        assertEquals("NOT_CONFIGURED", response.items().get(0).inventoryStatus());
+    }
+
+    @Test
+    @DisplayName("Meal preparation status PREPARING is preserved when inventory returns INSUFFICIENT_STOCK")
+    void updateStatusToPreparingPersistsWhenInventoryInsufficient() {
+        Integer orderId = 5002;
+        MealOrder order = mock(MealOrder.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(151);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(21);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(21);
+        when(menuItem.getItemName()).thenReturn("Cá Hồi Hấp");
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        when(inventoryService.processConsumptionForOrderItem(eq(151), any(LocalDate.class)))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.INSUFFICIENT_STOCK,
+                        "Insufficient stock", LocalDateTime.now()));
+        when(inventoryService.getConsumptionRecord(151))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.INSUFFICIENT_STOCK,
+                        "Insufficient stock", LocalDateTime.now()));
+
+        KitchenOrderResponse response = mealOrderService.updateStatus(orderId, "PREPARING");
+
+        // Verify line and order preparation status were persisted as PREPARING
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+        verify(orderItemRepository).save(item);
+        verify(order).setOrderStatus(FnbOrderStatus.PREPARING);
+        verify(orderRepository).save(order);
+
+        // Verify inventory status reflects INSUFFICIENT_STOCK
+        assertEquals("INSUFFICIENT_STOCK", response.inventoryStatus());
+        assertEquals("INSUFFICIENT_STOCK", response.items().get(0).inventoryStatus());
     }
 }
