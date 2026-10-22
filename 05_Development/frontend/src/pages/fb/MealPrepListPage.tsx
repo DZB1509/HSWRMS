@@ -4,10 +4,15 @@ import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 import { useNavigate } from 'react-router-dom';
-import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, Scale, ChevronDown, ChevronUp, UtensilsCrossed } from 'lucide-react';
+import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, Scale, ChevronDown, ChevronUp, UtensilsCrossed, CheckCircle } from 'lucide-react';
 import { MENU_ITEM_RECIPES } from '../../data/mockDining';
+import { AmanoiServiceLocationBadge } from '../../components/dining/AmanoiServiceLocationBadge';
+import { parseDiningNotes } from '../../utils/diningServiceHelper';
+
+import { cleanMojibake } from '../../utils/textEncodingHelper';
 
 const CANONICAL_RESORT_DATE = '2026-09-24';
+
 
 export const MealPrepListPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'customer']);
@@ -17,8 +22,9 @@ export const MealPrepListPage: React.FC = () => {
   const currentLang = (i18n.language || 'vi') as 'vi' | 'en';
   const localize = (obj: any): string => {
     if (!obj) return '';
-    if (typeof obj === 'string') return obj;
-    return obj[currentLang] || obj.vi || obj.en || Object.values(obj)[0] || '';
+    if (typeof obj === 'string') return cleanMojibake(obj);
+    const val = obj[currentLang] || obj.vi || obj.en || Object.values(obj)[0] || '';
+    return cleanMojibake(val);
   };
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -44,6 +50,7 @@ export const MealPrepListPage: React.FC = () => {
   const [date, setDate] = useState(CANONICAL_RESORT_DATE);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterLocation, setFilterLocation] = useState('all');
   const [filterDietaryOnly, setFilterDietaryOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -71,6 +78,11 @@ export const MealPrepListPage: React.FC = () => {
     const matchesType = filterType === 'all' || item.type === filterType;
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
     const matchesDietary = !filterDietaryOnly || item.dietaryNotes.length > 0;
+    const parsedNotes = parseDiningNotes(item.customerNotes);
+    const matchesLocation =
+      filterLocation === 'all' ||
+      (filterLocation === 'IN_VILLA' && parsedNotes.isVillaDelivery) ||
+      (filterLocation === 'DINING_PAVILION' && !parsedNotes.isVillaDelivery);
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -91,7 +103,7 @@ export const MealPrepListPage: React.FC = () => {
         return matchesDishName || matchesIngredient;
       });
 
-    return matchesType && matchesStatus && matchesDietary && matchesSearch;
+    return matchesType && matchesStatus && matchesLocation && matchesDietary && matchesSearch;
   });
 
   const totalItems = filteredList.length;
@@ -114,10 +126,12 @@ export const MealPrepListPage: React.FC = () => {
     setDate(CANONICAL_RESORT_DATE);
     setFilterType('all');
     setFilterStatus('all');
+    setFilterLocation('all');
     setFilterDietaryOnly(false);
     setSearchQuery('');
     setCurrentPage(1);
   };
+
 
   const formatVilla = (villa?: string) => {
     if (!villa) return '—';
@@ -136,6 +150,112 @@ export const MealPrepListPage: React.FC = () => {
       n.includes('shrimp') ||
       n.includes('crab') ||
       n.includes('dairy')
+    );
+  };
+
+  const renderInventoryBadge = (status?: string, msg?: string | null) => {
+    if (!status || status === 'PENDING') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 600,
+            backgroundColor: 'var(--bg-soft)',
+            color: 'var(--text-tertiary)',
+            border: '1px solid var(--border-subtle)',
+          }}
+          title={msg || 'Chờ xác nhận chuẩn bị để xuất kho'}
+        >
+          Kho: Chờ xuất
+        </span>
+      );
+    }
+    if (status === 'CONSUMED') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 600,
+            backgroundColor: '#f6ffed',
+            color: '#389e0d',
+            border: '1px solid #b7eb8f',
+          }}
+          title={msg || 'Đã xuất kho nguyên liệu thành công'}
+        >
+          <CheckCircle size={10} /> Kho: Đã xuất
+        </span>
+      );
+    }
+    if (status === 'NOT_CONFIGURED') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 600,
+            backgroundColor: '#fffbe6',
+            color: '#d46b08',
+            border: '1px solid #ffe58f',
+          }}
+          title={msg || 'Món ăn chưa có công thức định lượng trong kho'}
+        >
+          <AlertTriangle size={10} /> Kho: Chưa có công thức
+        </span>
+      );
+    }
+    if (status === 'INSUFFICIENT_STOCK') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 700,
+            backgroundColor: '#fff1f0',
+            color: '#cf1322',
+            border: '1px solid #ffa39e',
+          }}
+          title={msg || 'Tồn kho khả dụng không đủ để xuất'}
+        >
+          <AlertTriangle size={10} /> Kho: Thiếu nguyên liệu
+        </span>
+      );
+    }
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontSize: '10px',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          fontWeight: 600,
+          backgroundColor: '#fff1f0',
+          color: '#cf1322',
+          border: '1px solid #ffa39e',
+        }}
+        title={msg || 'Lỗi xuất kho'}
+      >
+        <AlertTriangle size={10} /> Kho: Lỗi
+      </span>
     );
   };
 
@@ -273,6 +393,24 @@ export const MealPrepListPage: React.FC = () => {
               <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
             </select>
           </div>
+
+          <div style={{ flex: '1 1 160px', minWidth: '150px' }}>
+            <select
+              className="hsw-select"
+              style={{ width: '100%', height: '34px', fontSize: '12px' }}
+              value={filterLocation}
+              onChange={(e) => {
+                setFilterLocation(e.target.value);
+                setCurrentPage(1);
+              }}
+              id="filter-service-location"
+            >
+              <option value="all">📍 {currentLang === 'vi' ? 'Tất cả điểm phục vụ' : 'All Dining Venues'}</option>
+              <option value="DINING_PAVILION">🍽️ {currentLang === 'vi' ? 'Nhà hàng Trung tâm' : 'Dining Pavilion'}</option>
+              <option value="IN_VILLA">🏡 {currentLang === 'vi' ? 'Giao Biệt thự (In-Villa)' : 'In-Villa Delivery'}</option>
+            </select>
+          </div>
+
 
           {/* Dietary Attention toggle */}
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', userSelect: 'none' }}>
@@ -669,14 +807,58 @@ export const MealPrepListPage: React.FC = () => {
                     <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px', fontWeight: 600 }}>
                       {item.type === 'retreat_meal' ? 'RETREAT' : 'EXTRA A-LA-CARTE'}
                     </div>
+                    {item.type === 'a_la_carte' && (
+                      <div style={{ marginTop: '3px' }}>
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontWeight: 600,
+                            backgroundColor: item.folioPostingStatus === 'POSTED_TO_FOLIO' ? '#f6ffed' : '#fff7e6',
+                            color: item.folioPostingStatus === 'POSTED_TO_FOLIO' ? '#389e0d' : '#d46b08',
+                            border: `1px solid ${item.folioPostingStatus === 'POSTED_TO_FOLIO' ? '#b7eb8f' : '#ffd591'}`
+                          }}
+                        >
+                          {item.folioPostingStatus === 'POSTED_TO_FOLIO' ? 'Folio: Đã tính' : 'Folio: Chờ soát'}
+                        </span>
+                      </div>
+                    )}
                   </td>
 
-                  {/* Customer & Villa (Fixed "Villa Villa" duplication) */}
+                  {/* Customer & Villa & Amanoi Service Point */}
                   <td onClick={() => navigate(`/fb/orders/${item.id}`)} style={{ cursor: 'pointer' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.customerName}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--accent-olive)' }}>
-                      {formatVilla(item.villaNumber)}
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.customerName)}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--accent-olive)', marginBottom: '4px' }}>
+                      {cleanMojibake(formatVilla(item.villaNumber))}
                     </div>
+                    <AmanoiServiceLocationBadge
+                      notes={item.customerNotes}
+                      villaNumber={item.villaNumber}
+                      compact={true}
+                      lang={currentLang}
+                    />
+                    {item.locationVerificationStatus === 'UNVERIFIED_LOCATION' && (
+                      <div style={{ marginTop: '3px' }}>
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontWeight: 600,
+                            backgroundColor: '#fffbe6',
+                            color: '#d46b08',
+                            border: '1px solid #ffe58f',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                          }}
+                          title="Số Villa do khách tự nhập hoặc chưa xác nhận trạng thái M2"
+                        >
+                          <AlertTriangle size={9} /> Chưa xác minh Villa
+                        </span>
+                      </div>
+                    )}
                   </td>
 
                   {/* Items list */}
@@ -690,8 +872,11 @@ export const MealPrepListPage: React.FC = () => {
                         return (
                           <li key={idx} style={{ marginBottom: '4px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                              <span>
-                                <strong>{lineItem.quantity}x</strong> {menuItem ? localize(menuItem.name) : 'Culinary Item'}
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span><strong>{lineItem.quantity}x</strong> {menuItem ? localize(menuItem.name) : 'Culinary Item'}</span>
+                                {lineItem.inventoryStatus && lineItem.inventoryStatus !== 'PENDING' && (
+                                  renderInventoryBadge(lineItem.inventoryStatus, lineItem.inventoryMessage)
+                                )}
                               </span>
                               {recipes.length > 0 && (
                                 <button
@@ -741,27 +926,48 @@ export const MealPrepListPage: React.FC = () => {
                       })}
                     </ul>
                     {item.customerNotes && (
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          color: 'var(--text-secondary)',
-                          backgroundColor: 'var(--bg-soft)',
-                          padding: '2px 6px',
-                          borderRadius: 'var(--radius-xs)',
-                          marginTop: '4px',
-                          display: 'inline-block',
-                          fontStyle: 'italic',
-                        }}
-                      >
-                        "{item.customerNotes}"
+                      <div style={{ marginTop: '6px' }}>
+                        <AmanoiServiceLocationBadge
+                          notes={item.customerNotes}
+                          villaNumber={item.villaNumber}
+                          showInstructions={true}
+                          compact={false}
+                          lang={currentLang}
+                        />
+                        {(() => {
+                          const parsed = parseDiningNotes(item.customerNotes);
+                          return parsed.cleanNotes ? (
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                color: 'var(--text-secondary)',
+                                backgroundColor: 'var(--bg-soft)',
+                                padding: '3px 6px',
+                                borderRadius: 'var(--radius-xs)',
+                                marginTop: '4px',
+                                display: 'inline-block',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              "{parsed.cleanNotes}"
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </td>
 
-                  {/* Dietary vs Allergy Semantics (Requirement 32) */}
+
+                  {/* Dietary vs Allergy Semantics (Requirement 32 & Revision 2.0.3 Blocker 1) */}
                   <td onClick={() => navigate(`/fb/orders/${item.id}`)} style={{ cursor: 'pointer' }}>
                     {item.dietaryNotes.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {item.dietaryVerificationStatus !== 'VERIFIED' && (
+                          <span className="hsw-alert-allergy" style={{ backgroundColor: '#fff1f0', borderColor: '#ffa39e', color: '#cf1322', fontWeight: 700 }} title="CẢNH BÁO: Hồ sơ y tế chưa được M1 xác nhận!">
+                            <AlertTriangle size={11} />
+                            <span>Chưa xác minh</span>
+                          </span>
+                        )}
                         {item.dietaryNotes.map((note, idx) => {
                           const allergy = isAllergy(note);
                           return allergy ? (
@@ -777,14 +983,20 @@ export const MealPrepListPage: React.FC = () => {
                           );
                         })}
                       </div>
+                    ) : item.dietaryVerificationStatus === 'VERIFIED' ? (
+                      <span style={{ color: 'var(--accent-forest)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 500 }}>
+                        <CheckCircle size={12} />
+                        <span>Đã xác minh</span>
+                      </span>
                     ) : (
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                        {t('fnb.prepList.noAlerts', 'Standard')}
+                      <span className="hsw-alert-allergy" style={{ backgroundColor: '#fff1f0', borderColor: '#ffa39e', color: '#cf1322', fontWeight: 700 }} title="CẢNH BÁO AN TOÀN LÂM SÀNG: Chưa có hồ sơ y tế M1">
+                        <AlertTriangle size={11} />
+                        <span>⚠️ Chưa xác minh</span>
                       </span>
                     )}
                   </td>
 
-                  {/* Status Dropdown */}
+                  {/* Status Dropdown & Inventory Status */}
                   <td>
                     <select
                       className="hsw-ops-status-select"
@@ -817,6 +1029,9 @@ export const MealPrepListPage: React.FC = () => {
                       <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
                       <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
                     </select>
+                    <div style={{ marginTop: '5px' }}>
+                      {renderInventoryBadge(item.inventoryStatus, item.inventoryMessage)}
+                    </div>
                   </td>
 
                   {/* Action CTA (Requirement 33) */}

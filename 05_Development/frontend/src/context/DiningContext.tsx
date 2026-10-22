@@ -142,9 +142,10 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       bookingId: numericBookingId,
       orderDate: new Date().toISOString().split('T')[0],
       mealType: 'DINNER',
-      specialNotes: order.location ? `Delivery villa/seat: ${order.location}` : undefined,
+      specialNotes: order.lines.map(l => l.notes).filter(Boolean)[0] || (order.location ? `[${order.location}]` : undefined),
       items: parsedItems,
     }).then((res) => {
+
       if (res && res.id) {
         setAlaCarteOrders(prev => prev.map(o => o.id === tempId ? {
           ...o,
@@ -199,12 +200,37 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Also update live kitchen prep state
     setLiveKitchenOrders(prev => prev.map(item => item.id === id ? { ...item, status } : item));
 
-    // Try synchronizing with backend
+    // Synchronize with backend and capture real inventory consumption outcome
     const numericId = parseInt(id.replace(/\D/g, ''), 10);
     if (!isNaN(numericId) && numericId > 0) {
-      fnbApi.updateOrderStatus(numericId, status.toUpperCase()).catch(() => {
-        // Backend offline / mock fallback
-      });
+      fnbApi.updateOrderStatus(numericId, status.toUpperCase())
+        .then((updatedKo) => {
+          if (updatedKo) {
+            setLiveKitchenOrders(prev => prev.map(item => {
+              if (item.id === id) {
+                return {
+                  ...item,
+                  status: (updatedKo.status?.toLowerCase() as FnbFulfillmentStatus) || status,
+                  inventoryStatus: updatedKo.inventoryStatus,
+                  items: item.items.map((it, idx) => {
+                    const matchedLine = updatedKo.lines?.[idx] || updatedKo.lines?.find(l => String(l.menuItemId) === it.menuItemId);
+                    return {
+                      ...it,
+                      orderLineId: matchedLine?.orderLineId || matchedLine?.id,
+                      preparationStatus: matchedLine?.preparationStatus,
+                      inventoryStatus: matchedLine?.inventoryStatus,
+                      inventoryMessage: matchedLine?.inventoryMessage,
+                    };
+                  }),
+                };
+              }
+              return item;
+            }));
+          }
+        })
+        .catch(() => {
+          // Backend offline / mock fallback
+        });
     }
   };
 
@@ -222,13 +248,21 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           customerName: ko.customerFirstName ? `${ko.customerFirstName} (Villa ${ko.villaNumber})` : 'Resort Guest',
           villaNumber: ko.villaNumber,
           items: (ko.lines || []).map((line) => ({
+            orderLineId: line.orderLineId || line.id,
             menuItemId: String(line.menuItemId),
             quantity: line.quantity,
             notes: undefined,
+            preparationStatus: line.preparationStatus,
+            inventoryStatus: line.inventoryStatus,
+            inventoryMessage: line.inventoryMessage,
           })),
           customerNotes: ko.specialNotes || undefined,
           dietaryNotes: [...(ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
+          dietaryVerificationStatus: (ko.dietaryVerificationStatus as any) || 'UNVERIFIED',
+          locationVerificationStatus: (ko.locationVerificationStatus as any) || 'VERIFIED_VILLA',
+          folioPostingStatus: (ko.folioPostingStatus as any) || (ko.orderType === 'A_LA_CARTE' ? 'PENDING_RECONCILIATION' : 'NOT_APPLICABLE'),
           status: (ko.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+          inventoryStatus: ko.inventoryStatus || 'PENDING',
         }));
         setLiveKitchenOrders(mapped);
         setSyncStatus('synced');

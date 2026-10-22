@@ -4,10 +4,14 @@ import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
 import type { LocalizedString } from '../../types/dining';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Coffee, Info, MapPin, Receipt, ListOrdered } from 'lucide-react';
+import { Calendar, Coffee, Info, Receipt, ListOrdered } from 'lucide-react';
+
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
+import { AmanoiServiceLocationBadge } from '../../components/dining/AmanoiServiceLocationBadge';
+import { parseDiningNotes } from '../../utils/diningServiceHelper';
+
 
 export const MyMealPlanPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
@@ -108,12 +112,8 @@ export const MyMealPlanPage: React.FC = () => {
     }
   };
 
-  const formatVilla = (villa?: string) => {
-    if (!villa) return 'Villa #102';
-    return villa.toLowerCase().startsWith('villa') ? villa : `Villa ${villa}`;
-  };
-
   return (
+
     <div className="hsw-dining-container" id="screen-37-my-meal-plan">
       {/* Header */}
       <div className="hsw-dining-header">
@@ -302,22 +302,36 @@ export const MyMealPlanPage: React.FC = () => {
                               </h3>
                               <DietaryBadgeList item={item} maxBadges={2} />
 
-                              {sel.notes && (
-                                <p
-                                  style={{
-                                    fontSize: '12px',
-                                    fontStyle: 'italic',
-                                    color: 'var(--text-secondary)',
-                                    margin: '4px 0 0 0',
-                                    backgroundColor: 'var(--bg-soft)',
-                                    padding: '4px 8px',
-                                    borderRadius: 'var(--radius-xs)',
-                                  }}
-                                >
-                                  "{sel.notes}"
-                                </p>
-                              )}
+                              {/* Amanoi Service Location & Requests Badge */}
+                              <div style={{ marginTop: '6px' }}>
+                                <AmanoiServiceLocationBadge
+                                  notes={sel.notes}
+                                  villaNumber={activeBooking?.villaNumber}
+                                  compact={false}
+                                  lang={currentLang === 'vi' ? 'vi' : 'en'}
+                                />
+                              </div>
+
+                              {(() => {
+                                const parsed = parseDiningNotes(sel.notes);
+                                return parsed.cleanNotes ? (
+                                  <p
+                                    style={{
+                                      fontSize: '11px',
+                                      fontStyle: 'italic',
+                                      color: 'var(--text-secondary)',
+                                      margin: '4px 0 0 0',
+                                      backgroundColor: 'var(--bg-soft)',
+                                      padding: '3px 6px',
+                                      borderRadius: 'var(--radius-xs)',
+                                    }}
+                                  >
+                                    "{parsed.cleanNotes}"
+                                  </p>
+                                ) : null;
+                              })()}
                             </div>
+
                           </div>
                         );
                       })}
@@ -472,17 +486,22 @@ export const MyMealPlanPage: React.FC = () => {
                         padding: '8px 12px',
                         borderRadius: 'var(--radius-xs)',
                         fontSize: '12px',
+                        flexWrap: 'wrap',
+                        gap: '8px',
                       }}
                     >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
-                        <MapPin size={13} style={{ color: 'var(--accent-olive)' }} />
-                        <span>Delivery Destination: <strong>{formatVilla(order.location)}</strong></span>
-                      </span>
+                      <AmanoiServiceLocationBadge
+                        notes={order.location}
+                        villaNumber={activeBooking?.villaNumber}
+                        compact={true}
+                        lang={currentLang === 'vi' ? 'vi' : 'en'}
+                      />
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-tertiary)' }}>
                         <Receipt size={13} />
                         <span>Will be settled at reception checkout</span>
                       </span>
                     </div>
+
                   </div>
                 );
               })}

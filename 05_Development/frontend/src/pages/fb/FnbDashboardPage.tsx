@@ -23,106 +23,26 @@ import type {
   FnbDashboardResponse,
 } from '../../features/m4-fnb/types/fnbDto';
 
+import { cleanMojibake } from '../../utils/textEncodingHelper';
+
 const CANONICAL_RESORT_DATE = '2026-09-24';
 
-// Standard demo fallback when backend is in initial prototype mode
-const DEFAULT_DEMAND_DATA: IngredientDemandResponse[] = [
-  {
-    ingredientId: 101,
-    ingredientName: 'Organic Wild Salmon Fillet',
-    unitOfMeasure: 'g',
-    requiredQuantity: 1200,
-    usableQuantity: 800,
-    shortfall: 400,
-    status: 'SHORTAGE',
-  },
-  {
-    ingredientId: 102,
-    ingredientName: 'Cold-Pressed Extra Virgin Olive Oil',
-    unitOfMeasure: 'ml',
-    requiredQuantity: 450,
-    usableQuantity: 200,
-    shortfall: 250,
-    status: 'SHORTAGE',
-  },
-  {
-    ingredientId: 103,
-    ingredientName: 'Brown Jasmine Rice (Organic)',
-    unitOfMeasure: 'g',
-    requiredQuantity: 2500,
-    usableQuantity: 5000,
-    shortfall: 0,
-    status: 'COVERED',
-  },
-  {
-    ingredientId: 104,
-    ingredientName: 'Organic Free-Range Eggs',
-    unitOfMeasure: 'piece',
-    requiredQuantity: 24,
-    usableQuantity: 60,
-    shortfall: 0,
-    status: 'COVERED',
-  },
-  {
-    ingredientId: 105,
-    ingredientName: 'Fresh Hass Avocado',
-    unitOfMeasure: 'piece',
-    requiredQuantity: 18,
-    usableQuantity: 20,
-    shortfall: 0,
-    status: 'COVERED',
-  },
-];
-
-const DEFAULT_AVAILABILITY_DATA: MenuAvailabilityResponse[] = [
-  {
-    menuItemId: 1,
-    itemName: 'Oatmeal with Fresh Berries',
-    recipeConfigured: true,
-    available: true,
-    servingsAvailable: 15,
-    reason: 'Available from usable stock.',
-  },
-  {
-    menuItemId: 2,
-    itemName: 'Organic Poached Eggs & Avocado',
-    recipeConfigured: true,
-    available: true,
-    servingsAvailable: 10,
-    reason: 'Available from usable stock.',
-  },
-  {
-    menuItemId: 3,
-    itemName: 'Wellness Quinoa & Peanut Bowl',
-    recipeConfigured: true,
-    available: true,
-    servingsAvailable: 4,
-    reason: 'Stock nearing reorder threshold.',
-  },
-  {
-    menuItemId: 6,
-    itemName: 'Pan-Seared Wild Salmon & Asparagus',
-    recipeConfigured: true,
-    available: false,
-    servingsAvailable: 0,
-    reason: 'Shortage of fresh Salmon fillet.',
-  },
-];
-
 export const FnbDashboardPage: React.FC = () => {
-  const { t } = useTranslation('operations');
+  const { t, i18n } = useTranslation('operations');
   const { getDailyPrepList, menuItems, fetchKitchenOrders } = useDining();
   const navigate = useNavigate();
 
+  const currentLang = (i18n.language?.startsWith('vi') ? 'vi' : 'en') as 'vi' | 'en';
+
   const [resortDate, setResortDate] = useState(CANONICAL_RESORT_DATE);
   const [demandFilter, setDemandFilter] = useState<'all' | 'shortage' | 'covered'>('all');
-  const [ingredientDemand, setIngredientDemand] = useState<IngredientDemandResponse[]>(DEFAULT_DEMAND_DATA);
-  const [menuAvailability, setMenuAvailability] = useState<MenuAvailabilityResponse[]>(DEFAULT_AVAILABILITY_DATA);
+  const [ingredientDemand, setIngredientDemand] = useState<IngredientDemandResponse[]>([]);
+  const [menuAvailability, setMenuAvailability] = useState<MenuAvailabilityResponse[]>([]);
   const [dashboardMetrics, setDashboardMetrics] = useState<FnbDashboardResponse | null>(null);
   const [apiOnline, setApiOnline] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Load real backend dashboard if connected, fallback smoothly to realistic state
+  // Load real backend dashboard if connected, do not simulate fake inventory
   const loadDashboardData = useCallback(async (date: string) => {
     setIsRefreshing(true);
     try {
@@ -130,18 +50,14 @@ export const FnbDashboardPage: React.FC = () => {
       if (response) {
         setDashboardMetrics(response);
         setApiOnline(true);
-        if (response.ingredientDemand && response.ingredientDemand.length > 0) {
-          setIngredientDemand(response.ingredientDemand);
-        }
-        if (response.menuAvailability && response.menuAvailability.length > 0) {
-          setMenuAvailability(response.menuAvailability);
-        }
+        setIngredientDemand(response.ingredientDemand || []);
+        setMenuAvailability(response.menuAvailability || []);
       }
       if (fetchKitchenOrders) {
         await fetchKitchenOrders(date);
       }
     } catch {
-      // Backend not running or in offline prototype mode - preserve populated demo data
+      // Backend not running or in offline prototype mode
       setApiOnline(false);
     } finally {
       setIsRefreshing(false);
@@ -491,113 +407,129 @@ export const FnbDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="ops-table-wrap">
-          <table className="ops-table">
-            <thead>
-              <tr>
-                <th>Raw Material / Ingredient</th>
-                <th>Unit</th>
-                <th style={{ textAlign: 'right' }}>Required for Today</th>
-                <th style={{ textAlign: 'right' }}>Usable Stock</th>
-                <th style={{ textAlign: 'right' }}>Deficit / Shortfall</th>
-                <th style={{ textAlign: 'center' }}>Stock Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDemand.map((item) => {
-                const isShortage = item.status === 'SHORTAGE' || item.shortfall > 0;
-                return (
-                  <tr
-                    key={item.ingredientId}
-                    style={{
-                      backgroundColor: isShortage ? 'rgba(239, 68, 68, 0.03)' : undefined,
-                    }}
-                  >
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.ingredientName}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>ID: #{item.ingredientId}</div>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          fontSize: '12px',
-                          color: 'var(--text-secondary)',
-                          backgroundColor: 'var(--bg-soft)',
-                          padding: '2px 6px',
-                          borderRadius: 'var(--radius-xs)',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {item.unitOfMeasure}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {item.requiredQuantity.toLocaleString()} {item.unitOfMeasure}
-                    </td>
-                    <td style={{ textAlign: 'right', color: isShortage ? '#b91c1c' : 'var(--accent-forest)' }}>
-                      {item.usableQuantity.toLocaleString()} {item.unitOfMeasure}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                      {isShortage ? (
-                        <span style={{ color: '#b91c1c' }}>
-                          -{item.shortfall.toLocaleString()} {item.unitOfMeasure}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-tertiary)' }}>0 {item.unitOfMeasure}</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {isShortage ? (
+        {ingredientDemand.length === 0 ? (
+          <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <Boxes size={32} style={{ margin: '0 auto 8px auto', opacity: 0.5, display: 'block' }} />
+            <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              {apiOnline
+                ? 'Chưa ghi nhận nhu cầu nguyên liệu cho ngày này'
+                : 'Chưa có dữ liệu kho nguyên liệu'}
+            </div>
+            <div style={{ fontSize: '12px', maxWidth: '500px', margin: '0 auto' }}>
+              {apiOnline
+                ? 'Hệ thống tính toán nhu cầu nguyên liệu tự động dựa trên thực đơn các đơn ăn cần chuẩn bị và danh mục kho khả dụng (FEFO).'
+                : 'Vui lòng kiểm tra kết nối Backend hoặc cấu hình định mức nguyên liệu trong cơ sở dữ liệu.'}
+            </div>
+          </div>
+        ) : (
+          <div className="ops-table-wrap">
+            <table className="ops-table">
+              <thead>
+                <tr>
+                  <th>Raw Material / Ingredient</th>
+                  <th>Unit</th>
+                  <th style={{ textAlign: 'right' }}>Required for Today</th>
+                  <th style={{ textAlign: 'right' }}>Usable Stock</th>
+                  <th style={{ textAlign: 'right' }}>Deficit / Shortfall</th>
+                  <th style={{ textAlign: 'center' }}>Stock Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDemand.map((item) => {
+                  const isShortage = item.status === 'SHORTAGE' || item.shortfall > 0;
+                  return (
+                    <tr
+                      key={item.ingredientId}
+                      style={{
+                        backgroundColor: isShortage ? 'rgba(239, 68, 68, 0.03)' : undefined,
+                      }}
+                    >
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.ingredientName)}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>ID: #{item.ingredientId}</div>
+                      </td>
+                      <td>
                         <span
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '3px 9px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            backgroundColor: '#fee2e2',
-                            color: '#b91c1c',
-                            border: '1px solid #fca5a5',
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)',
+                            backgroundColor: 'var(--bg-soft)',
+                            padding: '2px 6px',
+                            borderRadius: 'var(--radius-xs)',
+                            fontFamily: 'monospace',
                           }}
                         >
-                          <AlertTriangle size={12} />
-                          SHORTAGE
+                          {item.unitOfMeasure}
                         </span>
-                      ) : (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '3px 9px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            backgroundColor: '#edf3ee',
-                            color: 'var(--accent-forest)',
-                            border: '1px solid #cce0d0',
-                          }}
-                        >
-                          <CheckCircle2 size={12} />
-                          COVERED
-                        </span>
-                      )}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        {item.requiredQuantity.toLocaleString()} {item.unitOfMeasure}
+                      </td>
+                      <td style={{ textAlign: 'right', color: isShortage ? '#b91c1c' : 'var(--accent-forest)' }}>
+                        {item.usableQuantity.toLocaleString()} {item.unitOfMeasure}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                        {isShortage ? (
+                          <span style={{ color: '#b91c1c' }}>
+                            -{item.shortfall.toLocaleString()} {item.unitOfMeasure}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-tertiary)' }}>0 {item.unitOfMeasure}</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {isShortage ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '3px 9px',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              backgroundColor: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fca5a5',
+                            }}
+                          >
+                            <AlertTriangle size={12} />
+                            SHORTAGE
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '3px 9px',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              backgroundColor: '#edf3ee',
+                              color: 'var(--accent-forest)',
+                              border: '1px solid #cce0d0',
+                            }}
+                          >
+                            <CheckCircle2 size={12} />
+                            COVERED
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredDemand.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-tertiary)' }}>
+                      No raw materials match the selected filter.
                     </td>
                   </tr>
-                );
-              })}
-              {filteredDemand.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-tertiary)' }}>
-                    No raw materials match the selected filter.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 4. MENU ITEM AVAILABILITY & SERVING CAPACITY */}
@@ -629,39 +561,49 @@ export const FnbDashboardPage: React.FC = () => {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 'var(--space-3)' }}>
-          {menuAvailability.map((menu) => (
-            <div
-              key={menu.menuItemId}
-              style={{
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-                padding: 'var(--space-3)',
-                background: menu.available ? 'var(--bg-soft)' : '#fff8f7',
-                borderLeft: menu.available ? '3px solid var(--accent-forest)' : '3px solid #ef4444',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{menu.itemName}</span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 6px',
-                    borderRadius: 'var(--radius-xs)',
-                    backgroundColor: menu.available ? '#edf3ee' : '#fee2e2',
-                    color: menu.available ? 'var(--accent-forest)' : '#b91c1c',
-                  }}
-                >
-                  {menu.available ? `${menu.servingsAvailable} Servings` : 'UNAVAILABLE'}
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                {menu.reason}
-              </div>
+        {menuAvailability.length === 0 ? (
+          <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-soft)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {apiOnline
+                ? 'Chưa có thực đơn nào được cấu hình công thức nguyên liệu trong hệ thống'
+                : 'Chưa có dữ liệu công thức món ăn'}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 'var(--space-3)' }}>
+            {menuAvailability.map((menu) => (
+              <div
+                key={menu.menuItemId}
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: 'var(--space-3)',
+                  background: menu.available ? 'var(--bg-soft)' : '#fff8f7',
+                  borderLeft: menu.available ? '3px solid var(--accent-forest)' : '3px solid #ef4444',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(menu.itemName)}</span>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: 'var(--radius-xs)',
+                      backgroundColor: menu.available ? '#edf3ee' : '#fee2e2',
+                      color: menu.available ? 'var(--accent-forest)' : '#b91c1c',
+                    }}
+                  >
+                    {menu.available ? `${menu.servingsAvailable} Servings` : 'UNAVAILABLE'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                  {menu.reason}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 5. Urgent Prep Queue Preview Section */}
@@ -718,7 +660,8 @@ export const FnbDashboardPage: React.FC = () => {
                 const itemsSummary = item.items
                   .map((i) => {
                     const menuItem = menuItems.find((m) => m.id === i.menuItemId);
-                    return `${i.quantity}x ${menuItem ? menuItem.name.en : 'Item'}`;
+                    const nameStr = menuItem ? (menuItem.name[currentLang] || menuItem.name.en) : 'Item';
+                    return `${i.quantity}x ${cleanMojibake(nameStr)}`;
                   })
                   .join(', ');
 
@@ -735,14 +678,14 @@ export const FnbDashboardPage: React.FC = () => {
                     <td style={{ fontWeight: 600, color: 'var(--accent-forest)' }}>
                       {item.targetTime ||
                         t(
-                          `dining.periods.${item.mealPeriod}`,
+                           `dining.periods.${item.mealPeriod}`,
                           item.mealPeriod ? item.mealPeriod.toUpperCase() : 'ALL DAY'
                         )}
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.customerName}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.customerName)}</div>
                       <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {formatVilla(item.villaNumber)}
+                        {cleanMojibake(formatVilla(item.villaNumber))}
                       </div>
                     </td>
                     <td>

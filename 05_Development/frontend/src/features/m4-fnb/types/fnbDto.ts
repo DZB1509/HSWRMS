@@ -104,10 +104,13 @@ export interface MealOrderResponse {
 // --- Kitchen Display System (KDS) ---
 export interface KitchenOrderLineResponse {
   id: number;
+  orderLineId?: number;
   menuItemId: number;
   itemName: string;
   quantity: number;
   preparationStatus: string;
+  inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
+  inventoryMessage?: string | null;
 }
 
 export interface KitchenOrderResponse {
@@ -123,6 +126,11 @@ export interface KitchenOrderResponse {
   delivered: boolean;
   allergyTags: string[];
   dietaryPreferences: string[];
+  dietaryVerificationStatus?: 'VERIFIED' | 'UNVERIFIED' | 'NO_PROFILE_ATTACHED' | string;
+  locationVerificationStatus?: 'VERIFIED_VILLA' | 'UNVERIFIED_LOCATION' | string;
+  folioPostingStatus?: 'NOT_APPLICABLE' | 'PENDING_RECONCILIATION' | 'POSTED_TO_FOLIO' | string;
+  inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
+  inventoryMessage?: string | null;
   lines: KitchenOrderLineResponse[];
 }
 

@@ -1,7 +1,9 @@
 export type MealPeriod = 'breakfast' | 'lunch' | 'dinner' | 'all_day';
 export type FnbFulfillmentStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
 export type AlaCarteChargeType = 'fnb_extra';
-export type FolioPostingStatus = 'pending_checkout_folio' | 'settled';
+export type FolioPostingStatus = 'pending_checkout_folio' | 'settled' | 'NOT_APPLICABLE' | 'PENDING_RECONCILIATION' | 'POSTED_TO_FOLIO';
+export type DietaryVerificationStatus = 'VERIFIED' | 'UNVERIFIED' | 'NO_PROFILE_ATTACHED';
+export type LocationVerificationStatus = 'VERIFIED_VILLA' | 'UNVERIFIED_LOCATION';
 
 export interface LocalizedString {
   vi: string;
@@ -81,13 +83,22 @@ export interface MealPrepEntry {
   customerName: string;
   villaNumber?: string;
   items: {
+    orderLineId?: number;
     menuItemId: string;
     quantity: number;
     notes?: string;
+    preparationStatus?: string;
+    inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
+    inventoryMessage?: string | null;
   }[];
   customerNotes?: string;
   dietaryNotes: string[]; // Combined relevant dietary tags from the minimal projection
+  dietaryVerificationStatus?: DietaryVerificationStatus;
+  locationVerificationStatus?: LocationVerificationStatus;
+  folioPostingStatus?: FolioPostingStatus;
   status: FnbFulfillmentStatus;
+  inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
+  inventoryMessage?: string | null;
 }
 
 export interface DiningContextType {

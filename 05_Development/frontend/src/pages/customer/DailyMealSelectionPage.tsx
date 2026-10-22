@@ -8,6 +8,12 @@ import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee, Sh
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
+import { AmanoiDiningLocationPicker } from '../../components/dining/AmanoiDiningLocationPicker';
+import {
+  parseDiningNotes,
+  buildAmanoiDiningNotes,
+  type DiningServiceLocation,
+} from '../../utils/diningServiceHelper';
 
 export const DailyMealSelectionPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
@@ -36,8 +42,11 @@ export const DailyMealSelectionPage: React.FC = () => {
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [portionCount, setPortionCount] = useState<number>(1);
-  const [notes, setNotes] = useState('');
+  const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('DINING_PAVILION');
+  const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
+  const [customNotes, setCustomNotes] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+
 
   const todayStr = React.useMemo(() => {
     const now = new Date();
@@ -85,11 +94,16 @@ export const DailyMealSelectionPage: React.FC = () => {
       if (existing) {
         setSelectedItemId(existing.menuItemIds[0] || null);
         setPortionCount(existing.quantity || (existing.items && existing.items[0]?.quantity) || 1);
-        setNotes(existing.notes || '');
+        const parsed = parseDiningNotes(existing.notes);
+        setDiningLocation(parsed.location);
+        setSelectedWellnessTags(parsed.wellnessTags);
+        setCustomNotes(parsed.cleanNotes);
       } else {
         setSelectedItemId(null);
         setPortionCount(1);
-        setNotes('');
+        setDiningLocation('DINING_PAVILION');
+        setSelectedWellnessTags([]);
+        setCustomNotes('');
       }
       setSaveSuccess(false);
     }
@@ -106,8 +120,21 @@ export const DailyMealSelectionPage: React.FC = () => {
     return item.allergenTags.some((tag: string) => allergies.includes(tag.toLowerCase()));
   };
 
+  const handleToggleTag = (tag: string) => {
+    setSelectedWellnessTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   const handleSave = () => {
     if (!activeBooking || !selectedItemId) return;
+    const finalNotes = buildAmanoiDiningNotes(
+      diningLocation,
+      selectedWellnessTags,
+      customNotes,
+      activeBooking.villaNumber
+    );
+
     saveMealSelection({
       bookingId: activeBooking.id,
       customerId,
@@ -115,14 +142,15 @@ export const DailyMealSelectionPage: React.FC = () => {
       mealPeriod: activePeriod,
       menuItemIds: [selectedItemId],
       quantity: portionCount,
-      items: [{ menuItemId: selectedItemId, quantity: portionCount, notes }],
-      notes,
+      items: [{ menuItemId: selectedItemId, quantity: portionCount, notes: finalNotes }],
+      notes: finalNotes,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3500);
   };
 
   const selectedItem = menuItems.find((m) => m.id === selectedItemId);
+
 
   if (!activeBooking) {
     return (
@@ -570,36 +598,32 @@ export const DailyMealSelectionPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Notes & Save Section (Requirement 15) */}
+              {/* Amanoi Luxury Wellness Dining Venue & Requests Section */}
+              <AmanoiDiningLocationPicker
+                location={diningLocation}
+                onLocationChange={setDiningLocation}
+                selectedTags={selectedWellnessTags}
+                onToggleTag={handleToggleTag}
+                customNotes={customNotes}
+                onCustomNotesChange={setCustomNotes}
+                villaNumber={activeBooking.villaNumber}
+                lang={currentLang === 'vi' ? 'vi' : 'en'}
+              />
+
               <div className="hsw-meal-save-card">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 'var(--space-3)',
-                    flexWrap: 'wrap',
-                    gap: 'var(--space-2)',
-                  }}
-                >
-                  <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, margin: 0 }}>
-                    {t('dining.select.specialRequests', 'Culinary Preparation Notes (Optional)')}
-                  </h3>
-                  {selectedItem && (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 600 }}>
+                {selectedItem && (
+                  <div style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--accent-forest)', fontWeight: 700 }}>
                       {t('dining.select.selectedBadge', 'Selected')}: {portionCount}x {localize(selectedItem.name)}
                     </span>
-                  )}
-                </div>
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                      {diningLocation === 'IN_VILLA'
+                        ? '🏡 Phục vụ riêng tại Biệt thự'
+                        : '🍽️ Phục vụ tại Nhà hàng Trung tâm'}
+                    </span>
+                  </div>
+                )}
 
-                <textarea
-                  className="hsw-input"
-                  style={{ width: '100%', minHeight: '80px', marginBottom: 'var(--space-4)', resize: 'vertical' }}
-                  placeholder={t('dining.select.requestsPlaceholder', 'e.g., dressing on the side, hot water with lemon')}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  id="meal-selection-notes"
-                />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                   <button
