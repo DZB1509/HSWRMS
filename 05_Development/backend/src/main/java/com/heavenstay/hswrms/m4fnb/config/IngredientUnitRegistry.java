@@ -45,17 +45,39 @@ public class IngredientUnitRegistry {
 
     public String unitFor(Ingredient ingredient) {
         if (ingredient == null || ingredient.getIngredientName() == null) {
-            return "kg";
+            return "g";
         }
         return unitForName(ingredient.getIngredientName());
     }
 
     public String unitForName(String ingredientName) {
         if (ingredientName == null || ingredientName.isBlank()) {
-            return "kg";
+            return "g";
         }
-        String unit = normalizedUnits.get(normalize(ingredientName));
-        return (unit != null && !unit.isBlank()) ? unit : "kg";
+        String normalized = normalize(ingredientName);
+        String unit = normalizedUnits.get(normalized);
+        if (unit != null && !unit.isBlank()) {
+            return unit;
+        }
+
+        // Canonical standard units when not explicitly configured
+        if (normalized.contains("trứng") || normalized.contains("egg")) {
+            return "quả";
+        }
+        if (normalized.contains("bánh mì") || normalized.contains("bread") || normalized.contains("sourdough")) {
+            return "lát";
+        }
+        if (normalized.contains("sữa") || normalized.contains("milk")
+                || normalized.contains("dầu") || normalized.contains("oil")
+                || normalized.contains("mật ong") || normalized.contains("honey")
+                || normalized.contains("nước ép") || normalized.contains("juice")
+                || normalized.contains("sốt") || normalized.contains("sauce")
+                || normalized.contains("dressing") || normalized.contains("giấm")
+                || normalized.contains("vinegar") || normalized.contains("nước dừa")) {
+            return "ml";
+        }
+
+        return "g";
     }
 
     private String normalize(String value) {

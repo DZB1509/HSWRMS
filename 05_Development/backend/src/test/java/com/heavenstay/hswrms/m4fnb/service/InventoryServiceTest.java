@@ -199,4 +199,98 @@ class InventoryServiceTest {
 
         assertEquals("INVALID_BATCH_DATES", exception.getErrorCode());
     }
+
+    @Test
+    @DisplayName("processConsumptionForOrderItem returns CONSUMED and deducts batches in FEFO order")
+    void processConsumptionForOrderItemReturnsConsumed() {
+        LocalDate asOfDate = LocalDate.of(2026, 10, 18);
+        Integer orderLineId = 601;
+        Integer menuItemId = 1;
+        int orderQuantity = 2; // 2 servings * 0.250 = 0.500 kg
+
+        MealOrderItem orderLine = mock(MealOrderItem.class);
+        when(orderLine.getId()).thenReturn(orderLineId);
+        when(orderLine.getMenuItemId()).thenReturn(menuItemId);
+        when(orderLine.getQuantity()).thenReturn(orderQuantity);
+        when(orderItemRepository.findById(orderLineId)).thenReturn(Optional.of(orderLine));
+
+        MenuItemIngredient recipeLine = new MenuItemIngredient(menuItemId, 10, new BigDecimal("0.250"));
+        when(recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(menuItemId))
+                .thenReturn(List.of(recipeLine));
+
+        Ingredient ingredient = mock(Ingredient.class);
+        when(ingredient.getId()).thenReturn(10);
+        when(ingredient.getIngredientName()).thenReturn("Yến Mạch");
+        when(ingredientRepository.findById(10)).thenReturn(Optional.of(ingredient));
+
+        IngredientBatch batch1 = new IngredientBatch(10, asOfDate.minusDays(2), asOfDate.plusDays(10),
+                new BigDecimal("2.000"), "FRESH");
+        when(batchRepository.findUsableBatchesForUpdate(eq(10), eq(asOfDate), any(Set.class)))
+                .thenReturn(List.of(batch1));
+
+        var result = inventoryService.processConsumptionForOrderItem(orderLineId, asOfDate);
+
+        assertEquals(com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.CONSUMED, result.status());
+        assertEquals(0, new BigDecimal("1.500").compareTo(batch1.getRemainingQuantity()));
+
+        // Repeated call should NOT deduct again (duplicate prevention)
+        var repeated = inventoryService.processConsumptionForOrderItem(orderLineId, asOfDate);
+        assertEquals(com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.CONSUMED, repeated.status());
+        assertEquals(0, new BigDecimal("1.500").compareTo(batch1.getRemainingQuantity()));
+    }
+
+    @Test
+    @DisplayName("processConsumptionForOrderItem returns NOT_CONFIGURED when recipe is missing without throwing")
+    void processConsumptionForOrderItemReturnsNotConfiguredWhenRecipeMissing() {
+        LocalDate asOfDate = LocalDate.of(2026, 10, 18);
+        Integer orderLineId = 602;
+        Integer menuItemId = 99;
+
+        MealOrderItem orderLine = mock(MealOrderItem.class);
+        when(orderLine.getId()).thenReturn(orderLineId);
+        when(orderLine.getMenuItemId()).thenReturn(menuItemId);
+        when(orderLine.getQuantity()).thenReturn(1);
+        when(orderItemRepository.findById(orderLineId)).thenReturn(Optional.of(orderLine));
+
+        when(recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(menuItemId)).thenReturn(List.of());
+
+        var result = inventoryService.processConsumptionForOrderItem(orderLineId, asOfDate);
+
+        assertEquals(com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.NOT_CONFIGURED, result.status());
+    }
+
+    @Test
+    @DisplayName("processConsumptionForOrderItem returns INSUFFICIENT_STOCK when usable quantity is lower than required")
+    void processConsumptionForOrderItemReturnsInsufficientStock() {
+        LocalDate asOfDate = LocalDate.of(2026, 10, 18);
+        Integer orderLineId = 603;
+        Integer menuItemId = 1;
+        int orderQuantity = 10; // 10 * 0.250 = 2.500 kg
+
+        MealOrderItem orderLine = mock(MealOrderItem.class);
+        when(orderLine.getId()).thenReturn(orderLineId);
+        when(orderLine.getMenuItemId()).thenReturn(menuItemId);
+        when(orderLine.getQuantity()).thenReturn(orderQuantity);
+        when(orderItemRepository.findById(orderLineId)).thenReturn(Optional.of(orderLine));
+
+        MenuItemIngredient recipeLine = new MenuItemIngredient(menuItemId, 10, new BigDecimal("0.250"));
+        when(recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(menuItemId))
+                .thenReturn(List.of(recipeLine));
+
+        Ingredient ingredient = mock(Ingredient.class);
+        when(ingredient.getId()).thenReturn(10);
+        when(ingredient.getIngredientName()).thenReturn("Yến Mạch");
+        when(ingredientRepository.findById(10)).thenReturn(Optional.of(ingredient));
+
+        IngredientBatch batch1 = new IngredientBatch(10, asOfDate.minusDays(2), asOfDate.plusDays(10),
+                new BigDecimal("0.500"), "FRESH");
+        when(batchRepository.findUsableBatchesForUpdate(eq(10), eq(asOfDate), any(Set.class)))
+                .thenReturn(List.of(batch1));
+
+        var result = inventoryService.processConsumptionForOrderItem(orderLineId, asOfDate);
+
+        assertEquals(com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.INSUFFICIENT_STOCK, result.status());
+        // Batch remaining should NOT have been deducted
+        assertEquals(0, new BigDecimal("0.500").compareTo(batch1.getRemainingQuantity()));
+    }
 }

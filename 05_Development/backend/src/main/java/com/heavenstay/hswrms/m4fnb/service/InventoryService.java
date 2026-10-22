@@ -25,6 +25,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.time.LocalDateTime;
+import com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord;
+import com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderItemPreparationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,6 +43,9 @@ public class InventoryService {
     private static final Set<String> USABLE_CONDITIONS = Set.of("FRESH", "GOOD", "NEAR_EXPIRY");
     private static final Set<String> ALLOWED_CONDITIONS = Set.of("FRESH", "GOOD", "NEAR_EXPIRY", "HOLD", "EXPIRED",
             "DISCARDED");
+
+    private final ConcurrentMap<Integer, InventoryConsumptionRecord> consumptionRecords = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Integer, Object> orderLineLocks = new ConcurrentHashMap<>();
 
     private final IngredientRepository ingredientRepository;
     private final IngredientBatchRepository batchRepository;
@@ -161,91 +170,158 @@ public class InventoryService {
                 : servings.intValue();
     }
 
+    public InventoryConsumptionRecord getConsumptionRecord(Integer orderLineId) {
+        if (orderLineId == null) {
+            return InventoryConsumptionRecord.pending();
+        }
+        InventoryConsumptionRecord record = consumptionRecords.get(orderLineId);
+        if (record != null) {
+            return record;
+        }
+        MealOrderItem item = orderItemRepository.findById(orderLineId).orElse(null);
+        if (item == null || item.getPreparationStatusValue() == MealOrderItemPreparationStatus.PENDING) {
+            return InventoryConsumptionRecord.pending();
+        }
+        return InventoryConsumptionRecord.pending();
+    }
+
     /**
-     * Deducts recipe quantities directly from usable batches when one order line is
-     * marked READY.
-     * This runs in the caller's transaction with the line-status update; no
-     * consumption-history
-     * entity or history record is created. Batch rows are locked in ingredient/FEFO
-     * order.
+     * Processes inventory consumption for an order line item upon transitioning to PREPARING.
+     * Manages inventory status independently without failing or rolling back the meal status update.
+     * Idempotent and thread-safe: guarantees that an order line is consumed at most once.
+     */
+    @Transactional
+    public InventoryConsumptionRecord processConsumptionForOrderItem(Integer orderLineId, LocalDate asOfDate) {
+        Integer safeOrderLineId = Objects.requireNonNull(orderLineId, "orderLineId");
+        LocalDate safeAsOfDate = Objects.requireNonNull(asOfDate, "asOfDate");
+
+        Object lock = orderLineLocks.computeIfAbsent(safeOrderLineId, k -> new Object());
+        synchronized (lock) {
+            InventoryConsumptionRecord existing = consumptionRecords.get(safeOrderLineId);
+            if (existing != null && existing.status() == InventoryConsumptionStatus.CONSUMED) {
+                log.info("INVENTORY_ALREADY_CONSUMED | OrderLine: {} | Keeping existing CONSUMED status", safeOrderLineId);
+                return existing;
+            }
+
+            MealOrderItem orderLine = orderItemRepository.findById(safeOrderLineId).orElse(null);
+            if (orderLine == null) {
+                InventoryConsumptionRecord record = new InventoryConsumptionRecord(
+                        InventoryConsumptionStatus.FAILED, "MealOrderItem not found: " + safeOrderLineId, LocalDateTime.now());
+                consumptionRecords.put(safeOrderLineId, record);
+                return record;
+            }
+
+            Integer menuItemId = orderLine.getMenuItemId();
+            Integer quantity = orderLine.getQuantity();
+            if (menuItemId == null || quantity == null || quantity <= 0) {
+                InventoryConsumptionRecord record = new InventoryConsumptionRecord(
+                        InventoryConsumptionStatus.FAILED,
+                        "Meal order line has invalid item ID or non-positive quantity", LocalDateTime.now());
+                consumptionRecords.put(safeOrderLineId, record);
+                return record;
+            }
+
+            List<MenuItemIngredient> recipeLines = recipeRepository.findByMenuItemIdOrderByIngredientIdAsc(menuItemId);
+            if (recipeLines == null || recipeLines.isEmpty()) {
+                log.warn("RECIPE_NOT_CONFIGURED | OrderLine: {} | MenuItem: {}", safeOrderLineId, menuItemId);
+                InventoryConsumptionRecord record = new InventoryConsumptionRecord(
+                        InventoryConsumptionStatus.NOT_CONFIGURED,
+                        "Món ăn chưa cấu hình công thức định lượng (Recipe not configured).", LocalDateTime.now());
+                consumptionRecords.put(safeOrderLineId, record);
+                return record;
+            }
+
+            Map<Integer, BigDecimal> requirementsByIngredient = new TreeMap<>();
+            for (MenuItemIngredient recipeLine : recipeLines) {
+                Integer ingredientId = recipeLine.getIngredientId();
+                BigDecimal requiredQuantity = recipeLine.getRequiredQuantity();
+                if (ingredientId == null || requiredQuantity == null || requiredQuantity.signum() <= 0) {
+                    InventoryConsumptionRecord record = new InventoryConsumptionRecord(
+                            InventoryConsumptionStatus.FAILED,
+                            "Recipe ingredient quantity must be positive.", LocalDateTime.now());
+                    consumptionRecords.put(safeOrderLineId, record);
+                    return record;
+                }
+                BigDecimal required = requiredQuantity.multiply(BigDecimal.valueOf(quantity));
+                requirementsByIngredient.merge(ingredientId, required, BigDecimal::add);
+            }
+
+            // Verify stock sufficiency for ALL ingredients before deducting anything
+            Map<Integer, List<IngredientBatch>> batchesByIngredient = new HashMap<>();
+            for (Map.Entry<Integer, BigDecimal> entry : requirementsByIngredient.entrySet()) {
+                Integer ingredientId = entry.getKey();
+                BigDecimal totalRequired = entry.getValue();
+
+                List<IngredientBatch> batches = batchRepository.findUsableBatchesForUpdate(
+                        ingredientId, safeAsOfDate, USABLE_CONDITIONS);
+                BigDecimal totalUsable = BigDecimal.ZERO;
+                for (IngredientBatch batch : batches) {
+                    BigDecimal remaining = batch.getRemainingQuantity();
+                    if (remaining != null && remaining.signum() > 0) {
+                        totalUsable = totalUsable.add(remaining);
+                    }
+                }
+
+                if (totalUsable.compareTo(totalRequired) < 0) {
+                    String ingredientName = ingredientRepository.findById(ingredientId)
+                            .map(Ingredient::getIngredientName)
+                            .orElse("Nguyên liệu #" + ingredientId);
+                    log.warn("INSUFFICIENT_STOCK | OrderLine: {} | Ingredient: {} | Required: {} | Usable: {}",
+                            safeOrderLineId, ingredientName, totalRequired, totalUsable);
+                    InventoryConsumptionRecord record = new InventoryConsumptionRecord(
+                            InventoryConsumptionStatus.INSUFFICIENT_STOCK,
+                            "Thiếu tồn kho khả dụng cho: " + ingredientName + " (Cần " + totalRequired + ", có sẵn " + totalUsable + ")",
+                            LocalDateTime.now());
+                    consumptionRecords.put(safeOrderLineId, record);
+                    return record;
+                }
+                batchesByIngredient.put(ingredientId, batches);
+            }
+
+            // Deduct from batches using FEFO
+            for (Map.Entry<Integer, BigDecimal> entry : requirementsByIngredient.entrySet()) {
+                Integer ingredientId = entry.getKey();
+                BigDecimal quantityLeft = entry.getValue();
+                List<IngredientBatch> batches = batchesByIngredient.get(ingredientId);
+
+                int batchIndex = 0;
+                while (quantityLeft.signum() > 0 && batchIndex < batches.size()) {
+                    IngredientBatch batch = batches.get(batchIndex);
+                    BigDecimal allocation = batch.getRemainingQuantity().min(quantityLeft);
+                    batch.setRemainingQuantity(batch.getRemainingQuantity().subtract(allocation));
+                    quantityLeft = quantityLeft.subtract(allocation);
+                    batchRepository.save(batch);
+                    log.info("STOCK_DEDUCTED | OrderLine: {} | ItemId: {} | BatchId: {} | IngredientId: {} | Quantity: {}",
+                            safeOrderLineId, menuItemId, batch.getId(), ingredientId, allocation);
+                    if (batch.getRemainingQuantity().signum() == 0) {
+                        batchIndex++;
+                    }
+                }
+            }
+
+            InventoryConsumptionRecord successRecord = new InventoryConsumptionRecord(
+                    InventoryConsumptionStatus.CONSUMED,
+                    "Đã xuất kho nguyên liệu thành công.",
+                    LocalDateTime.now());
+            consumptionRecords.put(safeOrderLineId, successRecord);
+            return successRecord;
+        }
+    }
+
+    /**
+     * Backward-compatible direct deduction method for unit tests and caller code expecting exceptions.
      */
     @Transactional
     public void consumeForOrderItem(Integer orderLineId, LocalDate asOfDate) {
-        Integer safeOrderLineId = Objects.requireNonNull(orderLineId, "orderLineId");
-        LocalDate safeAsOfDate = Objects.requireNonNull(asOfDate, "asOfDate");
-        MealOrderItem orderLine = orderItemRepository.findById(safeOrderLineId)
-                .orElseThrow(() -> new ResourceNotFoundException("MealOrderItem", "id", safeOrderLineId));
-        Integer menuItemId = orderLine.getMenuItemId();
-        Integer quantity = orderLine.getQuantity();
-        if (menuItemId == null || quantity == null || quantity <= 0) {
-            throw new BusinessRuleException("INVALID_ORDER_LINE",
-                    "Meal order line must reference a menu item and have a positive quantity.");
+        InventoryConsumptionRecord record = processConsumptionForOrderItem(orderLineId, asOfDate);
+        if (record.status() == InventoryConsumptionStatus.NOT_CONFIGURED) {
+            throw new BusinessRuleException("RECIPE_NOT_CONFIGURED", record.message());
         }
-        List<MenuItemIngredient> recipeLines = recipeRepository
-                .findByMenuItemIdOrderByIngredientIdAsc(menuItemId);
-        if (recipeLines.isEmpty()) {
-            throw new BusinessRuleException("RECIPE_NOT_CONFIGURED",
-                    "A menu item has no recipe; inventory cannot be consumed safely.");
+        if (record.status() == InventoryConsumptionStatus.INSUFFICIENT_STOCK) {
+            throw new BusinessRuleException("INSUFFICIENT_USABLE_STOCK", record.message());
         }
-
-        Map<Integer, BigDecimal> requirementsByIngredient = new TreeMap<>();
-        for (MenuItemIngredient recipeLine : recipeLines) {
-            Integer ingredientId = recipeLine.getIngredientId();
-            BigDecimal requiredQuantity = recipeLine.getRequiredQuantity();
-            if (ingredientId == null || requiredQuantity == null || requiredQuantity.signum() <= 0) {
-                throw new BusinessRuleException("INVALID_RECIPE_QUANTITY",
-                        "Recipe ingredient and required quantity must be configured with positive values.");
-            }
-            Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient", "id", ingredientId));
-            unitRegistry.unitFor(ingredient);
-            BigDecimal required = requiredQuantity.multiply(BigDecimal.valueOf(quantity));
-            BigDecimal currentRequired = requirementsByIngredient.get(ingredientId);
-            requirementsByIngredient.put(ingredientId,
-                    currentRequired == null ? required : currentRequired.add(required));
-        }
-
-        for (Map.Entry<Integer, BigDecimal> entry : requirementsByIngredient.entrySet()) {
-            Integer ingredientId = entry.getKey();
-            if (ingredientId == null) {
-                throw new BusinessRuleException("INVALID_RECIPE_INGREDIENT",
-                        "Recipe ingredient ID cannot be null.");
-            }
-            List<IngredientBatch> batches = batchRepository.findUsableBatchesForUpdate(
-                    ingredientId, safeAsOfDate, USABLE_CONDITIONS);
-            BigDecimal totalRequired = entry.getValue();
-            BigDecimal totalUsable = BigDecimal.ZERO;
-            for (IngredientBatch batch : batches) {
-                BigDecimal remaining = batch.getRemainingQuantity();
-                if (remaining == null || remaining.signum() < 0) {
-                    throw new BusinessRuleException("INVALID_BATCH_QUANTITY",
-                            "Ingredient batch has an invalid remaining quantity.");
-                }
-                totalUsable = totalUsable.add(remaining);
-            }
-            if (totalUsable.compareTo(totalRequired) < 0) {
-                Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Ingredient", "id", ingredientId));
-                String name = ingredient.getIngredientName();
-                throw new BusinessRuleException("INSUFFICIENT_USABLE_STOCK",
-                        "Insufficient usable stock for " + name + ". Required " + totalRequired + ", available "
-                                + totalUsable + ".");
-            }
-
-            BigDecimal quantityLeft = totalRequired;
-            int batchIndex = 0;
-            while (quantityLeft.signum() > 0) {
-                IngredientBatch batch = batches.get(batchIndex);
-                BigDecimal allocation = batch.getRemainingQuantity().min(quantityLeft);
-                batch.setRemainingQuantity(batch.getRemainingQuantity().subtract(allocation));
-                quantityLeft = quantityLeft.subtract(allocation);
-                log.info("STOCK_DEDUCTED | OrderLine: {} | ItemId: {} | BatchId: {} | IngredientId: {} | Quantity: {}",
-                        safeOrderLineId, menuItemId, batch.getId(), ingredientId, allocation);
-                if (batch.getRemainingQuantity().signum() == 0)
-                    batchIndex++;
-            }
-            // These batches were loaded and locked in this transaction; JPA dirty checking
-            // persists the remaining-quantity updates when the transaction commits.
+        if (record.status() == InventoryConsumptionStatus.FAILED) {
+            throw new BusinessRuleException("INVENTORY_CONSUMPTION_FAILED", record.message());
         }
     }
 
