@@ -7,6 +7,8 @@ public class AssignVillaRequest {
     @NotNull(message = "Physical Villa ID is required")
     private Integer physicalVillaId;
 
+    private Boolean healthProfileConfirmed = false;
+
     public AssignVillaRequest() {
     }
 
@@ -16,5 +18,13 @@ public class AssignVillaRequest {
 
     public void setPhysicalVillaId(Integer physicalVillaId) {
         this.physicalVillaId = physicalVillaId;
+    }
+
+    public Boolean getHealthProfileConfirmed() {
+        return healthProfileConfirmed;
+    }
+
+    public void setHealthProfileConfirmed(Boolean healthProfileConfirmed) {
+        this.healthProfileConfirmed = healthProfileConfirmed;
     }
 }

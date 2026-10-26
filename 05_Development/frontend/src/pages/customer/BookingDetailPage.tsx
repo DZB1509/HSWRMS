@@ -1,41 +1,142 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Building2,
   Sparkles,
   Utensils,
-  HeartHandshake,
   ArrowLeft,
   ShieldCheck,
+  Loader2,
+  AlertCircle,
+  X,
+  Edit3,
+  AlertTriangle,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
 import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader';
-import { BookingStatusChip } from '../../components/customer/BookingStatusChip';
 import { PaymentSummary } from '../../components/customer/PaymentSummary';
-import { TimelineItinerary } from '../../components/customer/TimelineItinerary';
-import { useCustomer } from '../../context/CustomerContext';
-
-type SupportedLanguage = 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr';
+import {
+  getCustomerBookingDetail,
+  cancelCustomerBooking,
+  updateCustomerBooking,
+  getVillaCategories,
+  type BookingSummaryResponse,
+  type VillaCategoryDto,
+} from '../../api/booking/retreatBookingApi';
 
 export const BookingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language as SupportedLanguage;
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { getBookingById, activeBooking, bookings } = useCustomer();
 
-  // Find booking by ID or Reference, or fallback to active/first booking
-  const booking = (id ? getBookingById(id) : null) || activeBooking || bookings[0];
+  const [booking, setBooking] = useState<BookingSummaryResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  if (!booking) {
+  // Modify Modal State
+  const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
+  const [categories, setCategories] = useState<VillaCategoryDto[]>([]);
+  const [modStartDate, setModStartDate] = useState('');
+  const [modEndDate, setModEndDate] = useState('');
+  const [modCategoryId, setModCategoryId] = useState<number>(1);
+  const [modGuestCount, setModGuestCount] = useState<number>(1);
+  const [modSpecialRequest, setModSpecialRequest] = useState('');
+  const [modSubmitting, setModSubmitting] = useState(false);
+  const [modError, setModError] = useState<string | null>(null);
+
+  // Cancel Modal State
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const fetchDetail = async () => {
+    if (!id) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const bId = parseInt(id, 10);
+      const res = await getCustomerBookingDetail(bId);
+      setBooking(res);
+      // Pre-fill modify state
+      setModStartDate(res.checkInDate);
+      setModEndDate(res.checkOutDate);
+      setModCategoryId(res.requestedVillaCategoryId);
+      setModGuestCount(res.guestCount || 1);
+      setModSpecialRequest(res.specialRequest || '');
+    } catch (err: any) {
+      setLoadError(err?.message || 'Failed to load booking details from server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDetail();
+    // Load categories for modify modal
+    getVillaCategories().then(setCategories).catch(() => {});
+  }, [id]);
+
+  const handleCancelBooking = async () => {
+    if (!booking) return;
+    setCancelSubmitting(true);
+    setCancelError(null);
+    try {
+      await cancelCustomerBooking(booking.retreatBookingId, cancelReason);
+      setIsCancelModalOpen(false);
+      await fetchDetail();
+      alert('Reservation has been cancelled successfully.');
+    } catch (err: any) {
+      setCancelError(err?.message || 'Unable to cancel booking.');
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
+
+  const handleModifyBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!booking) return;
+    setModSubmitting(true);
+    setModError(null);
+    try {
+      await updateCustomerBooking(booking.retreatBookingId, {
+        checkInDate: modStartDate,
+        checkOutDate: modEndDate,
+        requestedVillaCategoryId: modCategoryId,
+        guestCount: modGuestCount,
+        specialRequest: modSpecialRequest,
+      });
+      setIsModifyModalOpen(false);
+      await fetchDetail();
+      alert('Reservation updated successfully in SQL Server.');
+    } catch (err: any) {
+      setModError(err?.message || 'Failed to update reservation.');
+    } finally {
+      setModSubmitting(false);
+    }
+  };
+
+  if (loading) {
     return (
       <div style={{ padding: 'var(--space-16) 0', textAlign: 'center' }}>
         <Container size="standard">
+          <Loader2 className="animate-spin" size={36} style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-4)' }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Loading reservation details from SQL Server...</p>
+        </Container>
+      </div>
+    );
+  }
+
+  if (loadError || !booking) {
+    return (
+      <div style={{ padding: 'var(--space-16) 0', textAlign: 'center' }}>
+        <Container size="standard">
+          <AlertCircle size={40} style={{ color: '#b91c1c', margin: '0 auto var(--space-4)' }} />
           <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 'var(--space-4)' }}>
             Booking Not Found
           </h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)' }}>{loadError || 'Reservation record does not exist.'}</p>
           <Button variant="primary" onClick={() => navigate('/customer/bookings')}>
             {t('customer.bookingDetail.backToList', 'Back to My Bookings')}
           </Button>
@@ -44,8 +145,10 @@ export const BookingDetailPage: React.FC = () => {
     );
   }
 
-  const pkgTitle = booking.retreatName[lang] || booking.retreatName.en || booking.retreatName.vi;
-  const villaTitle = booking.villaType[lang] || booking.villaType.en || booking.villaType.vi;
+  const pkgTitle = booking.packageName;
+  const villaTitle = booking.requestedCategoryName;
+  const canModifyOrCancel = booking.bookingStatus === 'PENDING' || booking.bookingStatus === 'CONFIRMED';
+
 
   return (
     <div className="hsw-booking-detail-page" style={{ padding: 'var(--space-6) 0 var(--space-16)' }}>
@@ -69,20 +172,67 @@ export const BookingDetailPage: React.FC = () => {
           </Link>
         </div>
 
-        {/* Header with Status */}
+        {/* Header with Status & Action Buttons */}
         <CustomerPageHeader
-          badge={`${t('customer.depositResult.bookingRef', 'Ref')}: ${booking.bookingReference}`}
+          badge={`${t('customer.depositResult.bookingRef', 'Ref')}: #${booking.retreatBookingId}`}
           title={pkgTitle}
-          subtitle={`${booking.startDate} → ${booking.endDate} · ${booking.days} ${t('labels.days', 'Days')} / ${booking.nights} ${t('labels.nights', 'Nights')}`}
+          subtitle={`${booking.checkInDate} → ${booking.checkOutDate} · ${booking.guestCount || 1} Guests`}
           action={
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <BookingStatusChip status={booking.status} />
-              <BookingStatusChip depositStatus={booking.depositStatus} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  backgroundColor:
+                    booking.bookingStatus === 'CONFIRMED'
+                      ? 'rgba(44, 76, 56, 0.1)'
+                      : booking.bookingStatus === 'CHECKED_IN'
+                      ? 'rgba(37, 99, 235, 0.1)'
+                      : booking.bookingStatus === 'CANCELLED'
+                      ? 'rgba(185, 28, 28, 0.1)'
+                      : 'rgba(217, 119, 6, 0.1)',
+                  color:
+                    booking.bookingStatus === 'CONFIRMED'
+                      ? 'var(--accent-forest)'
+                      : booking.bookingStatus === 'CHECKED_IN'
+                      ? '#2563eb'
+                      : booking.bookingStatus === 'CANCELLED'
+                      ? '#b91c1c'
+                      : '#d97706',
+                }}
+              >
+                {booking.bookingStatus}
+              </span>
+
+              {canModifyOrCancel && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setIsModifyModalOpen(true)}
+                    icon={<Edit3 size={13} />}
+                  >
+                    Modify Stay
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setIsCancelModalOpen(true)}
+                    style={{ borderColor: 'rgba(185, 28, 28, 0.3)', color: '#b91c1c' }}
+                    icon={<X size={13} />}
+                  >
+                    Cancel Booking
+                  </Button>
+                </>
+              )}
             </div>
           }
         />
 
-        {/* Main Grid: Details & Itinerary */}
+        {/* Main Grid: Details */}
         <div
           style={{
             display: 'grid',
@@ -91,7 +241,7 @@ export const BookingDetailPage: React.FC = () => {
             alignItems: 'flex-start',
           }}
         >
-          {/* Left Column: Sanctuary Villa & Daily Itinerary */}
+          {/* Left Column: Sanctuary Villa & Schedule Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
             {/* 1. Sanctuary Villa Card */}
             <div
@@ -103,140 +253,61 @@ export const BookingDetailPage: React.FC = () => {
                 boxShadow: 'var(--shadow-card)',
               }}
             >
-              <div style={{ position: 'relative', height: '200px' }}>
-                <img
-                  src={booking.heroImage}
-                  alt={villaTitle}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'var(--space-3)',
-                    right: 'var(--space-3)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-                    backdropFilter: 'blur(4px)',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: 'var(--accent-forest)',
-                  }}
-                >
-                  {booking.villaNumber || 'Villa #102'}
+              <div
+                style={{
+                  padding: 'var(--space-6)',
+                  backgroundColor: 'var(--accent-forest)',
+                  color: '#ffffff',
+                }}
+              >
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.85 }}>
+                  Reserved Accommodation
                 </div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: '4px 0 0' }}>
+                  {villaTitle} {booking.assignedVillaNumber ? `(${booking.assignedVillaNumber})` : ''}
+                </h3>
               </div>
 
               <div style={{ padding: 'var(--space-6)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-2)' }}>
-                  <Building2 size={16} style={{ color: 'var(--accent-forest)' }} />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
-                    {villaTitle}
-                  </h3>
-                </div>
-
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 var(--space-4)' }}>
-                  Private eco-luxury sanctuary nestled among pine woods and tranquil waters. Features an infinity plunge pool, herbal steam shower, and dedicated mindfulness pavilion.
-                </p>
-
                 <div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                    gap: 'var(--space-3)',
-                    fontSize: '11px',
-                    color: 'var(--text-muted)',
-                    backgroundColor: 'var(--bg-soft)',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-sm)',
+                    gap: 'var(--space-4)',
+                    marginBottom: 'var(--space-4)',
+                    paddingBottom: 'var(--space-4)',
+                    borderBottom: '1px solid var(--border-subtle)',
                   }}
                 >
-                  <div>✓ King Organic Bed</div>
-                  <div>✓ Private Pool & Deck</div>
-                  <div>✓ Herbal Tea Bar</div>
-                  <div>✓ Daily Turndown Ritual</div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Check-in Date</div>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.checkInDate}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Check-out Date</div>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.checkOutDate}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Guests</div>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.guestCount || 1} Guests</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Physical Villa</div>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent-forest)' }}>
+                      {booking.assignedVillaNumber || 'Assigned upon check-in'}
+                    </div>
+                  </div>
                 </div>
 
-                {booking.specialRequests && (
-                  <div style={{ marginTop: 'var(--space-4)', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    <strong>Special Requests on File:</strong> {booking.specialRequests}
+                {booking.specialRequest && (
+                  <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                    <strong>Special Requests on Record:</strong> {booking.specialRequest}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 2. Daily Itinerary Timeline */}
-            <div>
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, color: 'var(--accent-forest)' }}>
-                  {t('customer.bookingDetail.badge', 'Retreat Itinerary')}
-                </div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', fontWeight: 500, margin: '2px 0 0', color: 'var(--text-primary)' }}>
-                  {t('customer.bookingDetail.itinerarySection', 'Personalized Retreat Itinerary')}
-                </h2>
-              </div>
-
-              <TimelineItinerary days={booking.itinerary} />
-            </div>
-          </div>
-
-          {/* Right Column: Financial Breakdown & Cross-Module Portals */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', position: 'sticky', top: '90px' }}>
-            {/* Payment Summary */}
-            <PaymentSummary
-              totalPrice={booking.totalPrice}
-              depositAmount={booking.depositAmount}
-              highlightDeposit={false}
-            />
-
-            {/* Transaction Verification Info */}
-            <div
-              style={{
-                backgroundColor: 'var(--surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-5)',
-                boxShadow: 'var(--shadow-card)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
-                <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
-                <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  {t('customer.depositResult.paymentDate', 'Payment Details')}
-                </h4>
-              </div>
-
-              <div style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
-                <div>
-                  <strong>{t('customer.depositResult.transactionId', 'Transaction ID')}:</strong>{' '}
-                  <span style={{ fontFamily: 'monospace' }}>
-                    {booking.paymentDetails?.transactionId || 'VNPAY-98421038'}
-                  </span>
-                </div>
-                <div>
-                  <strong>{t('customer.depositResult.paymentMethod', 'Channel')}:</strong>{' '}
-                  {booking.paymentDetails?.paymentMethod || 'VNPay Hospitality Gateway'}
-                </div>
-                <div>
-                  <strong>{t('customer.depositResult.paymentDate', 'Paid Date')}:</strong>{' '}
-                  {booking.paymentDetails?.paidAt ? new Date(booking.paymentDetails.paidAt).toLocaleDateString() : 'Confirmed'}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 'var(--space-4)',
-                  paddingTop: 'var(--space-3)',
-                  borderTop: '1px dashed var(--border-subtle)',
-                  fontSize: '11px',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                {t('customer.depositResult.importantNotice', 'Deposit payment secures your reservation. The remaining 70% balance is settled comfortably at resort reception upon check-in.')}
-              </div>
-            </div>
-
-            {/* Cross-Module Integration Actions (M3 & M4 Placeholders) */}
+            {/* Cross-Module Integration Actions */}
             <div
               style={{
                 backgroundColor: 'var(--surface)',
@@ -247,7 +318,7 @@ export const BookingDetailPage: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, color: 'var(--accent-forest)', marginBottom: 'var(--space-3)' }}>
-                {t('customer.bookingDetail.crossModuleTitle', 'Complementary Wellness Modules')}
+                Integrated Wellness Itinerary
               </div>
 
               {/* Spa Link */}
@@ -280,7 +351,7 @@ export const BookingDetailPage: React.FC = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    <span>{t('customer.bookingDetail.crossSpaBtn', 'View Spa Sessions')}</span>
+                    <span>View Spa Sessions</span>
                     <ArrowLeft size={10} style={{ transform: 'rotate(180deg)' }} />
                   </Link>
                 </div>
@@ -293,7 +364,6 @@ export const BookingDetailPage: React.FC = () => {
                   alignItems: 'flex-start',
                   gap: 'var(--space-3)',
                   padding: 'var(--space-3) 0',
-                  borderBottom: '1px solid var(--border-subtle)',
                 }}
               >
                 <Utensils size={16} style={{ color: 'var(--accent-forest)', marginTop: '2px', flexShrink: 0 }} />
@@ -316,48 +386,279 @@ export const BookingDetailPage: React.FC = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    <span>{t('customer.bookingDetail.crossDiningBtn', 'View Dining Menu')}</span>
-                    <ArrowLeft size={10} style={{ transform: 'rotate(180deg)' }} />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Health Profile Link */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 'var(--space-3)',
-                  paddingTop: 'var(--space-3)',
-                }}
-              >
-                <HeartHandshake size={16} style={{ color: 'var(--accent-forest)', marginTop: '2px', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {t('customer.bookingDetail.healthProfileHint', 'Your treatments and meals are prepared according to your confidential Wellness Profile.')}
-                  </div>
-                  <Link
-                    to="/customer/health-profile"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: 'var(--accent-forest)',
-                      textDecoration: 'none',
-                      marginTop: '4px',
-                    }}
-                  >
-                    <span>{t('customer.dashboard.wellnessJourney.updateProfile', 'Review Profile')}</span>
+                    <span>View Dining Menu</span>
                     <ArrowLeft size={10} style={{ transform: 'rotate(180deg)' }} />
                   </Link>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Right Column: Financial Breakdown & Verification */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', position: 'sticky', top: '90px' }}>
+            <PaymentSummary
+              totalPrice={booking.totalEstimatedAmount}
+              depositAmount={booking.depositAmount}
+              highlightDeposit={false}
+            />
+
+            {booking.bookingStatus === 'PENDING' && (
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => navigate(`/customer/booking/summary?bookingId=${booking.retreatBookingId}`)}
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                Complete 30% VNPay Deposit
+              </Button>
+            )}
+
+            {/* Transaction Verification Info */}
+            <div
+              style={{
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-5)',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
+                <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
+                <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                  Financial Verification
+                </h4>
+              </div>
+
+              <div style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                <div>
+                  <strong>Transaction Ref:</strong>{' '}
+                  <span style={{ fontFamily: 'monospace' }}>
+                    {booking.transactionReference || 'VNPay Deposit Channel'}
+                  </span>
+                </div>
+                <div>
+                  <strong>Payment Status:</strong>{' '}
+                  <span>{booking.paymentStatus || (booking.bookingStatus === 'CONFIRMED' ? 'SUCCESSFUL' : 'PENDING')}</span>
+                </div>
+                <div>
+                  <strong>Booked On:</strong>{' '}
+                  <span>{new Date(booking.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 'var(--space-4)',
+                  paddingTop: 'var(--space-3)',
+                  borderTop: '1px dashed var(--border-subtle)',
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                The remaining 70% balance is settled comfortably at resort reception upon check-in.
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Modify Modal */}
+        {isModifyModalOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(15, 23, 19, 0.65)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 'var(--space-4)',
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderRadius: 'var(--radius-md)',
+                maxWidth: '500px',
+                width: '100%',
+                padding: 'var(--space-6)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>
+                  Modify Reservation ({booking.bookingReference || `#${booking.retreatBookingId}`})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsModifyModalOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {modError && (
+                <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(185, 28, 28, 0.08)', color: '#b91c1c', fontSize: 'var(--text-xs)', marginBottom: 'var(--space-4)' }}>
+                  {modError}
+                </div>
+              )}
+
+              <form onSubmit={handleModifyBooking}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Check-in Date</label>
+                    <input
+                      type="date"
+                      value={modStartDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setModStartDate(e.target.value)}
+                      style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Check-out Date</label>
+                    <input
+                      type="date"
+                      value={modEndDate}
+                      min={modStartDate || new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setModEndDate(e.target.value)}
+                      style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Villa Category</label>
+                  <select
+                    value={modCategoryId}
+                    onChange={(e) => setModCategoryId(parseInt(e.target.value, 10))}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  >
+                    {categories.map((c) => (
+                      <option key={c.villaCategoryId} value={c.villaCategoryId}>
+                        {c.categoryName} (Max {c.maxOccupancy} Guests)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Guest Count</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={modGuestCount}
+                    onChange={(e) => setModGuestCount(parseInt(e.target.value, 10) || 1)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                    required
+                  />
+                </div>
+
+                <div style={{ marginBottom: 'var(--space-5)' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Special Request</label>
+                  <textarea
+                    rows={2}
+                    value={modSpecialRequest}
+                    onChange={(e) => setModSpecialRequest(e.target.value)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+                  <Button variant="secondary" size="sm" type="button" onClick={() => setIsModifyModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" size="sm" type="submit" disabled={modSubmitting}>
+                    {modSubmitting ? 'Saving Changes...' : 'Save & Update'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Cancel Modal */}
+        {isCancelModalOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(15, 23, 19, 0.65)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 'var(--space-4)',
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderRadius: 'var(--radius-md)',
+                maxWidth: '460px',
+                width: '100%',
+                padding: 'var(--space-6)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
+                <AlertTriangle size={20} style={{ color: '#b91c1c' }} />
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0, color: '#b91c1c' }}>
+                  Cancel Reservation
+                </h3>
+              </div>
+
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-4)' }}>
+                Per Resort Cancellation Policy (FR-M2-07), cancellations made at least 48 hours prior to check-in qualify for a 100% refund of the deposit. Less than 48 hours incurs a forfeit.
+              </p>
+
+              {cancelError && (
+                <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(185, 28, 28, 0.08)', color: '#b91c1c', fontSize: 'var(--text-xs)', marginBottom: 'var(--space-4)' }}>
+                  {cancelError}
+                </div>
+              )}
+
+              <div style={{ marginBottom: 'var(--space-5)' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Reason for Cancellation</label>
+                <textarea
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Please state your reason for cancelling..."
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+                <Button variant="secondary" size="sm" onClick={() => setIsCancelModalOpen(false)}>
+                  Keep Reservation
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCancelBooking}
+                  disabled={cancelSubmitting}
+                  style={{ backgroundColor: '#b91c1c', color: '#ffffff' }}
+                >
+                  {cancelSubmitting ? 'Cancelling...' : 'Confirm Cancellation'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </Container>
     </div>
   );
 };
+

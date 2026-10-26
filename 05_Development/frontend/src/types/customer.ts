@@ -153,4 +153,6 @@ export interface CustomerContextType {
   createBooking: (bookingData: Omit<RetreatBooking, 'id' | 'bookingReference' | 'createdAt'>) => RetreatBooking;
   getBookingById: (idOrReference: string) => RetreatBooking | undefined;
   updateBookingDeposit: (bookingId: string, transactionId: string, status: DepositStatus) => void;
+  isLoadingBookings?: boolean;
+  refreshBookings?: () => Promise<void>;
 }

@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, Role, AuthContextType } from '../../types/auth';
 import { MOCK_PERSONAS } from '../../types/auth';
+import { setAuthToken, clearAuthToken, getAuthToken } from '../../api/client/apiClient';
+import { switchAuthRole } from '../../api/booking/retreatBookingApi';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -17,27 +19,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return MOCK_PERSONAS.customer;
   });
 
-  const role = currentUser ? currentUser.role : null;
-  const isAuthenticated = currentUser !== null;
+  const acquireBackendToken = useCallback(async (targetRole: Role) => {
+    try {
+      const authData = await switchAuthRole(targetRole);
+      if (authData && authData.token) {
+        setAuthToken(authData.token);
+      }
+    } catch (err) {
+      console.warn('Failed to acquire backend JWT for role:', targetRole, err);
+    }
+  }, []);
 
   const loginAs = (newRole: Role) => {
     const user = MOCK_PERSONAS[newRole];
     setCurrentUser(user);
     sessionStorage.setItem(AUTH_STORAGE_KEY, newRole);
+    acquireBackendToken(newRole);
   };
 
   const logout = () => {
     setCurrentUser(null);
+    clearAuthToken();
     sessionStorage.setItem(AUTH_STORAGE_KEY, 'public');
   };
 
   useEffect(() => {
     if (currentUser) {
       sessionStorage.setItem(AUTH_STORAGE_KEY, currentUser.role);
+      // Ensure backend JWT token is present in apiClient session
+      if (!getAuthToken()) {
+        acquireBackendToken(currentUser.role);
+      }
     } else {
       sessionStorage.setItem(AUTH_STORAGE_KEY, 'public');
+      clearAuthToken();
     }
-  }, [currentUser]);
+  }, [currentUser, acquireBackendToken]);
+
+  const role = currentUser ? currentUser.role : null;
+  const isAuthenticated = currentUser !== null;
 
   return (
     <AuthContext.Provider value={{ currentUser, role, isAuthenticated, loginAs, logout }}>

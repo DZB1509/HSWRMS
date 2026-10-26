@@ -111,4 +111,6 @@ export interface OperationsContextType {
   completeCheckIn: (bookingRef: string, identityData: CustomerIdentityVerification, villaId: string) => { success: boolean; message: string };
   submitDailyResidenceDeclarations: () => { count: number; message: string };
   markResidenceDeclaration: (bookingRef: string, status: ResidenceDeclarationStatus) => void;
+  isLoading: boolean;
+  refreshOperationsData: () => Promise<void>;
 }

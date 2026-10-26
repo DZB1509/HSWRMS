@@ -22,6 +22,9 @@ public class BookingSummaryResponse {
     private String specialRequest;
     private LocalDateTime createdAt;
     private Boolean hasResidenceRecord;
+    private Integer guestCount = 1;
+    private String paymentStatus;
+    private String transactionReference;
 
     public BookingSummaryResponse() {
     }
@@ -152,5 +155,29 @@ public class BookingSummaryResponse {
 
     public void setHasResidenceRecord(Boolean hasResidenceRecord) {
         this.hasResidenceRecord = hasResidenceRecord;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
     }
 }

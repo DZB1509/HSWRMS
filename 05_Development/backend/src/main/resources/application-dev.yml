@@ -3,7 +3,7 @@
 
 spring:
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=HSWRMS;encrypt=true;trustServerCertificate=true
+    url: jdbc:sqlserver://localhost:1433;databaseName=HSWRMS;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true
     username: sa
     password: 123
   jpa:

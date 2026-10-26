@@ -316,6 +316,13 @@ export const ReceptionistDashboardPage: React.FC = () => {
                     </tr>
                   );
                 })}
+                {arrivals.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>
+                      {t('operations.arrivals.noArrivals', 'Không có khách đến trong ngày này (SQL Server: 0 records)')}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

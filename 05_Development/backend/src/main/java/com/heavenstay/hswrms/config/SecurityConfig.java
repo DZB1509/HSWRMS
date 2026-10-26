@@ -58,8 +58,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/packages/**", "/api/v1/retreat-packages/**").permitAll()
                         // VNPay Webhooks & Redirect Callbacks
                         .requestMatchers("/api/v1/payments/**").permitAll()
-                        // Customer and Receptionist prototype endpoints
-                        .requestMatchers("/api/v1/customer/**", "/api/v1/receptionist/**").permitAll()
+                        // Customer endpoints require authenticated CUSTOMER, RECEPTIONIST, or ADMIN
+                        .requestMatchers("/api/v1/customer/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        // Receptionist endpoints require RECEPTIONIST or ADMIN
+                        .requestMatchers("/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "ADMIN")
                         // Any other request requires valid authentication
                         .anyRequest().authenticated()
                 )

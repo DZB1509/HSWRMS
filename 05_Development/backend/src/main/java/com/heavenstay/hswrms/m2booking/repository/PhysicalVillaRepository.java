@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +24,9 @@ public interface PhysicalVillaRepository extends JpaRepository<PhysicalVilla, In
     Optional<PhysicalVilla> findByVillaNumber(String villaNumber);
 
     long countByVillaCategory_VillaCategoryIdAndVillaStatusNot(Integer categoryId, String status);
+
+    /** Villas that can host guests (excludes INACTIVE and MAINTENANCE — SRS FR-M2-04). */
+    long countByVillaCategory_VillaCategoryIdAndVillaStatusNotIn(Integer categoryId, Collection<String> statuses);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT pv FROM PhysicalVilla pv WHERE pv.villaId = :villaId")

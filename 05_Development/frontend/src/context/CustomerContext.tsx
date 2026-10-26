@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type {
   CustomerProfile,
   WellnessProfile,
@@ -7,24 +7,35 @@ import type {
   CustomerContextType,
   DepositStatus,
   DeletionRequestStatus,
+  BookingStatus,
 } from '../types/customer';
 import {
   INITIAL_CUSTOMER_PROFILE,
   INITIAL_WELLNESS_PROFILE,
-  INITIAL_BOOKINGS,
   INITIAL_DELETION_REQUEST,
 } from '../data/mockCustomer';
+import {
+  getCustomerBookings,
+} from '../api/booking/retreatBookingApi';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
   PROFILE: 'hsw_customer_profile_v1',
   WELLNESS: 'hsw_wellness_profile_v1',
-  BOOKINGS: 'hsw_customer_bookings_v1',
   DELETION: 'hsw_deletion_request_v1',
 };
 
 export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Clear any legacy mocked bookings key from localStorage
+  useEffect(() => {
+    try {
+      localStorage.removeItem('hsw_customer_bookings_v1');
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   const [profile, setProfile] = useState<CustomerProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
@@ -43,14 +54,9 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   });
 
-  const [bookings, setBookings] = useState<RetreatBooking[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.BOOKINGS);
-      return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
-    } catch {
-      return INITIAL_BOOKINGS;
-    }
-  });
+  // Strict Database-Only Policy: Initialize bookings state strictly as empty array []
+  const [bookings, setBookings] = useState<RetreatBooking[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState<boolean>(true);
 
   const [deletionRequest, setDeletionRequest] = useState<HealthDataDeletionRequest | null>(() => {
     try {
@@ -61,12 +67,90 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   });
 
-  // Save to localStorage on changes
+  // Fetch bookings directly from SQL Server Backend API
+  const fetchCustomerBookingsFromBackend = useCallback(async () => {
+    setIsLoadingBookings(true);
+    try {
+      const summaries = await getCustomerBookings();
+      if (summaries && summaries.length > 0) {
+        const mapped: RetreatBooking[] = summaries.map((s) => {
+          let status: BookingStatus = 'upcoming';
+          const bStatus = (s.bookingStatus || '').toUpperCase();
+          if (bStatus === 'CHECKED_IN') status = 'in_stay';
+          else if (bStatus === 'COMPLETED') status = 'completed';
+          else if (bStatus === 'CANCELLED') status = 'cancelled';
+          else status = 'upcoming';
+
+          const depositStatus: DepositStatus =
+            bStatus === 'CONFIRMED' || bStatus === 'CHECKED_IN' || bStatus === 'COMPLETED'
+              ? 'paid'
+              : 'pending';
+
+          const packageTitle = s.packageName || 'Retreat Journey';
+          const villaTitle = s.requestedCategoryName || '—';
+          const bookingRef = s.bookingReference || `HSW-BK-${s.retreatBookingId}`;
+
+          const start = new Date(s.checkInDate).getTime();
+          const end = new Date(s.checkOutDate).getTime();
+          const nights = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+          const days = nights + 1;
+
+          return {
+            id: String(s.retreatBookingId),
+            bookingReference: bookingRef,
+            retreatSlug: (s.packageName || 'retreat').toLowerCase().replace(/\s+/g, '-'),
+            retreatName: {
+              vi: packageTitle,
+              en: packageTitle,
+              'zh-CN': packageTitle,
+              ja: packageTitle,
+              fr: packageTitle,
+            },
+            heroImage: '/images/hero-resort-cliff.jpg',
+            startDate: s.checkInDate,
+            endDate: s.checkOutDate,
+            days,
+            nights,
+            villaType: {
+              vi: villaTitle,
+              en: villaTitle,
+              'zh-CN': villaTitle,
+              ja: villaTitle,
+              fr: villaTitle,
+            },
+            villaNumber: s.assignedVillaNumber || undefined,
+            status,
+            totalPrice: s.totalEstimatedAmount,
+            depositAmount: s.depositAmount,
+            remainingBalance: Math.max(0, s.totalEstimatedAmount - s.depositAmount),
+            depositStatus,
+            specialRequests: s.specialRequest || undefined,
+            itinerary: [],
+            createdAt: s.checkInDate,
+          };
+        });
+        setBookings(mapped);
+      } else {
+        setBookings([]);
+      }
+    } catch (err) {
+      console.error('Error fetching bookings from SQL Server:', err);
+      setBookings([]);
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomerBookingsFromBackend();
+  }, [fetchCustomerBookingsFromBackend]);
+
+  // Save profile and wellness to localStorage on changes
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
     } catch {
-      // Ignore storage errors in sandbox
+      // Ignore
     }
   }, [profile]);
 
@@ -74,17 +158,9 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       localStorage.setItem(STORAGE_KEYS.WELLNESS, JSON.stringify(wellnessProfile));
     } catch {
-      // Ignore storage errors
+      // Ignore
     }
   }, [wellnessProfile]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
-    } catch {
-      // Ignore storage errors
-    }
-  }, [bookings]);
 
   useEffect(() => {
     try {
@@ -94,7 +170,7 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.removeItem(STORAGE_KEYS.DELETION);
       }
     } catch {
-      // Ignore storage errors
+      // Ignore
     }
   }, [deletionRequest]);
 
@@ -116,7 +192,6 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     reason: string,
     acknowledged: boolean
   ): { success: boolean; status: DeletionRequestStatus; message: string } => {
-    // Check if customer has an active or upcoming retreat requiring health data
     const hasActiveRetreat = bookings.some(
       (b) => b.status === 'upcoming' || b.status === 'in_stay'
     );
@@ -217,6 +292,8 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createBooking,
         getBookingById,
         updateBookingDeposit,
+        isLoadingBookings,
+        refreshBookings: fetchCustomerBookingsFromBackend,
       }}
     >
       {children}

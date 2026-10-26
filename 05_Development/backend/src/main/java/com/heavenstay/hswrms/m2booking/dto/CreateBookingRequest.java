@@ -21,6 +21,9 @@ public class CreateBookingRequest {
 
     private String specialRequest;
 
+    @jakarta.validation.constraints.Min(value = 1, message = "Guest count must be at least 1")
+    private Integer guestCount = 1;
+
     public CreateBookingRequest() {
     }
 
@@ -62,5 +65,13 @@ public class CreateBookingRequest {
 
     public void setSpecialRequest(String specialRequest) {
         this.specialRequest = specialRequest;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
     }
 }

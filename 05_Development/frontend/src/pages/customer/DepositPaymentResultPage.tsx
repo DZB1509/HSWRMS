@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,10 +9,15 @@ import {
   ShieldCheck,
   LayoutDashboard,
   FileText,
+  Loader2,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
-import { useCustomer } from '../../context/CustomerContext';
+import {
+  getCustomerBookingDetail,
+  verifyVNPayReturn,
+  type BookingSummaryResponse,
+} from '../../api/booking/retreatBookingApi';
 import { formatVND } from '../../i18n';
 
 type SupportedLanguage = 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr';
@@ -22,14 +27,66 @@ export const DepositPaymentResultPage: React.FC = () => {
   const lang = i18n.language as SupportedLanguage;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { getBookingById } = useCustomer();
 
-  const ref = searchParams.get('ref') || 'HSW-84920';
-  const statusParam = searchParams.get('status') || 'success';
-  const isSuccess = statusParam === 'success';
+  const refParam = searchParams.get('ref') || '';
+  const bookingIdParam = searchParams.get('bookingId');
+  const statusParam = searchParams.get('status') || '';
 
-  // Look up booking if available
-  const booking = getBookingById(ref);
+  const [booking, setBooking] = useState<BookingSummaryResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [verifiedSuccess, setVerifiedSuccess] = useState<boolean>(statusParam === 'success');
+  const [transactionRef, setTransactionRef] = useState<string>(refParam);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const verifyAndLoad = async () => {
+      setLoading(true);
+      try {
+        // If VNPay query string is present (e.g., vnp_SecureHash), call server verification
+        if (searchParams.has('vnp_SecureHash')) {
+          try {
+            const verifyRes = await verifyVNPayReturn(window.location.search);
+            if (verifyRes.success) {
+              setVerifiedSuccess(true);
+              if (verifyRes.data?.vnp_TxnRef) setTransactionRef(verifyRes.data.vnp_TxnRef);
+            } else {
+              setVerifiedSuccess(false);
+            }
+          } catch {
+            setVerifiedSuccess(false);
+          }
+        }
+
+        // Load booking details from SQL Server
+        const bId = bookingIdParam ? parseInt(bookingIdParam, 10) : null;
+        if (bId) {
+          const detail = await getCustomerBookingDetail(bId);
+          if (!isCancelled) {
+            setBooking(detail);
+            if (detail.bookingStatus === 'CONFIRMED' || detail.bookingStatus === 'CHECKED_IN') {
+              setVerifiedSuccess(true);
+            }
+            if (detail.transactionReference) {
+              setTransactionRef(detail.transactionReference);
+            }
+          }
+        }
+      } catch (err) {
+        // If loading by ID fails, fallback gracefully
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+
+    verifyAndLoad();
+    return () => {
+      isCancelled = true;
+    };
+  }, [bookingIdParam, searchParams]);
+
+  const isSuccess = verifiedSuccess || booking?.bookingStatus === 'CONFIRMED';
+  const ref = transactionRef || (booking ? `HSW-BK-${booking.retreatBookingId}` : 'HSW-DEP-VERIFIED');
 
   const formattedDate = new Date().toLocaleDateString(
     lang === 'vi' ? 'vi-VN' : lang === 'fr' ? 'fr-FR' : lang === 'ja' ? 'ja-JP' : lang === 'zh-CN' ? 'zh-CN' : 'en-US',
@@ -43,8 +100,24 @@ export const DepositPaymentResultPage: React.FC = () => {
   );
 
   const depositAmount = booking?.depositAmount || 14100000;
-  const remainingBalance = booking?.remainingBalance || 32900000;
-  const transactionId = booking?.paymentDetails?.transactionId || `VNPAY-${Date.now().toString().slice(-8)}`;
+  const remainingBalance = booking ? booking.totalEstimatedAmount - booking.depositAmount : 32900000;
+  const transactionId = transactionRef || (booking?.transactionReference) || `VNPAY-${Date.now().toString().slice(-8)}`;
+
+
+  if (loading) {
+    return (
+      <div style={{ padding: 'var(--space-12) 0 var(--space-20)', textAlign: 'center' }}>
+        <Container size="narrow">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '3rem' }}>
+            <Loader2 style={{ width: '2.5rem', height: '2.5rem', animation: 'spin 1s linear infinite', color: '#2d5a43' }} />
+            <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+              {t('booking.verifyingDeposit', 'Verifying transaction and retrieving reservation...')}
+            </p>
+          </div>
+        </Container>
+      </div>
+    );
+  }
 
   return (
     <div className="hsw-deposit-result-page" style={{ padding: 'var(--space-12) 0 var(--space-20)' }}>
@@ -270,7 +343,7 @@ export const DepositPaymentResultPage: React.FC = () => {
                   <Button
                     variant="primary"
                     size="lg"
-                    onClick={() => navigate(booking ? `/customer/bookings/${booking.id}` : `/customer/bookings`)}
+                    onClick={() => navigate(booking ? `/customer/bookings/${booking.retreatBookingId}` : `/customer/bookings`)}
                     icon={<ArrowRight size={16} />}
                     style={{
                       width: '100%',
