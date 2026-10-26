@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public class BookingSummaryResponse {
 
     private Integer retreatBookingId;
+    private String bookingReference;
     private Integer customerProfileId;
     private Integer retreatPackageId;
     private String packageName;
@@ -35,6 +36,14 @@ public class BookingSummaryResponse {
 
     public void setRetreatBookingId(Integer retreatBookingId) {
         this.retreatBookingId = retreatBookingId;
+    }
+
+    public String getBookingReference() {
+        return bookingReference;
+    }
+
+    public void setBookingReference(String bookingReference) {
+        this.bookingReference = bookingReference;
     }
 
     public Integer getCustomerProfileId() {

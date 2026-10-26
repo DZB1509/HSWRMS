@@ -11,5 +11,7 @@ public interface ResidenceRecordRepository extends JpaRepository<ResidenceRecord
 
     Optional<ResidenceRecord> findByRetreatBooking_RetreatBookingId(Integer retreatBookingId);
 
+    java.util.List<ResidenceRecord> findByRetreatBooking_RetreatBookingIdIn(java.util.Collection<Integer> retreatBookingIds);
+
     boolean existsByRetreatBooking_RetreatBookingId(Integer retreatBookingId);
 }

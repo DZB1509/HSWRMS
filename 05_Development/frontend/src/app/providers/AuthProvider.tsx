@@ -24,6 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const authData = await switchAuthRole(targetRole);
       if (authData && authData.token) {
         setAuthToken(authData.token);
+        window.dispatchEvent(new CustomEvent('hswrms_auth_changed', { detail: { role: targetRole } }));
       }
     } catch (err) {
       console.warn('Failed to acquire backend JWT for role:', targetRole, err);

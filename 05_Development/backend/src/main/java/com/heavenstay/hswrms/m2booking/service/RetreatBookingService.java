@@ -119,6 +119,15 @@ public class RetreatBookingService {
         booking.setSpecialRequest(request.getSpecialRequest());
         booking.setCreatedAt(bookingClock.utcNow());
 
+        if (request.getFullName() != null || request.getPhoneNumber() != null || request.getEmergencyContact() != null) {
+            customerIdentityPort.updateCustomerContactAndProfile(
+                    resolvedCustomerProfileId,
+                    request.getFullName(),
+                    request.getPhoneNumber(),
+                    request.getEmergencyContact()
+            );
+        }
+
         RetreatBooking saved = bookingRepository.save(booking);
 
         bookingAuditService.record(
@@ -129,6 +138,10 @@ public class RetreatBookingService {
         );
 
         return toSummaryResponse(saved);
+    }
+
+    public int getOrCreateCustomerProfile(String fullName, String email, String phone) {
+        return customerIdentityPort.getOrCreateCustomerProfile(fullName, email, phone);
     }
 
     @Transactional(readOnly = true)
@@ -307,6 +320,7 @@ public class RetreatBookingService {
     public BookingSummaryResponse toSummaryResponse(RetreatBooking entity) {
         BookingSummaryResponse res = new BookingSummaryResponse();
         res.setRetreatBookingId(entity.getRetreatBookingId());
+        res.setBookingReference("HSW-BK-" + entity.getRetreatBookingId());
         res.setCustomerProfileId(entity.getCustomerProfileId());
         res.setRetreatPackageId(entity.getRetreatPackage().getRetreatPackageId());
         res.setPackageName(entity.getRetreatPackage().getPackageName());

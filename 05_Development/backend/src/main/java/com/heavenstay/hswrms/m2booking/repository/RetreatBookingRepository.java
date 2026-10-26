@@ -68,4 +68,10 @@ public interface RetreatBookingRepository extends JpaRepository<RetreatBooking, 
 
     @Query("SELECT rb FROM RetreatBooking rb WHERE rb.bookingStatus = :status ORDER BY rb.checkInDate ASC, rb.retreatBookingId ASC")
     List<RetreatBooking> findByStatus(@Param("status") String status);
+
+    @Query("SELECT rb FROM RetreatBooking rb ORDER BY rb.createdAt DESC, rb.retreatBookingId DESC")
+    List<RetreatBooking> findAllBookingsOrdered();
+
+    @Query("SELECT rb FROM RetreatBooking rb WHERE rb.bookingStatus = :status ORDER BY rb.createdAt DESC, rb.retreatBookingId DESC")
+    List<RetreatBooking> findByStatusOrdered(@Param("status") String status);
 }

@@ -37,7 +37,7 @@ public class RetreatBookingController {
             @Valid @RequestBody CreateBookingRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer customerId) {
-        Integer resolvedCustomerId = resolveCustomerProfileId(userDetails, customerId);
+        Integer resolvedCustomerId = resolveCustomerProfileId(userDetails, customerId, request);
         Integer actorUserId = userDetails != null ? userDetails.getUserId() : null;
         BookingSummaryResponse response = bookingService.createBooking(request, resolvedCustomerId, actorUserId);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -48,7 +48,7 @@ public class RetreatBookingController {
     public ResponseEntity<ApiResponse<List<BookingSummaryResponse>>> getCustomerBookings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer customerId) {
-        Integer resolvedCustomerId = resolveCustomerProfileId(userDetails, customerId);
+        Integer resolvedCustomerId = resolveCustomerProfileId(userDetails, customerId, null);
         List<BookingSummaryResponse> list = bookingService.getCustomerBookings(resolvedCustomerId);
         return ResponseEntity.ok(ApiResponse.ok("Customer bookings retrieved successfully", list));
     }
@@ -58,7 +58,7 @@ public class RetreatBookingController {
             @PathVariable Integer id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer customerId) {
-        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId);
+        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId, null);
         BookingSummaryResponse response = bookingService.getBookingDetail(id, resolvedCustomerId);
         return ResponseEntity.ok(ApiResponse.ok("Booking details retrieved successfully", response));
     }
@@ -69,7 +69,7 @@ public class RetreatBookingController {
             @Valid @RequestBody UpdateBookingRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer customerId) {
-        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId);
+        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId, null);
         Integer actorUserId = userDetails != null ? userDetails.getUserId() : null;
         BookingSummaryResponse response = bookingService.updateBooking(id, request, resolvedCustomerId, actorUserId);
         return ResponseEntity.ok(ApiResponse.ok("Booking modified successfully", response));
@@ -82,7 +82,7 @@ public class RetreatBookingController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer customerId,
             HttpServletRequest request) {
-        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId);
+        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId, null);
         // Verify ownership before issuing payment URL
         bookingService.getBookingDetail(id, resolvedCustomerId);
 
@@ -96,13 +96,13 @@ public class RetreatBookingController {
             @PathVariable Integer id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer customerId) {
-        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId);
+        Integer resolvedCustomerId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails, customerId, null);
         Integer actorUserId = userDetails != null ? userDetails.getUserId() : null;
         BookingSummaryResponse response = bookingService.cancelBooking(id, resolvedCustomerId, actorUserId);
         return ResponseEntity.ok(ApiResponse.ok("Booking cancelled successfully", response));
     }
 
-    private Integer resolveCustomerProfileId(CustomUserDetails userDetails, Integer customerIdParam) {
+    private Integer resolveCustomerProfileId(CustomUserDetails userDetails, Integer customerIdParam, CreateBookingRequest bookingReq) {
         if (userDetails != null && userDetails.getUserId() != null) {
             // Check if user is staff/receptionist/admin acting on behalf of a customerIdParam
             if (isStaffOrAdmin(userDetails) && customerIdParam != null) {
@@ -112,6 +112,13 @@ public class RetreatBookingController {
         }
         if (customerIdParam != null) {
             return customerIdParam;
+        }
+        if (bookingReq != null && (bookingReq.getEmail() != null || bookingReq.getFullName() != null)) {
+            return bookingService.getOrCreateCustomerProfile(
+                    bookingReq.getFullName(),
+                    bookingReq.getEmail(),
+                    bookingReq.getPhoneNumber()
+            );
         }
         throw new BusinessRuleException("Unauthenticated: Please log in to perform this action");
     }

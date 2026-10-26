@@ -102,4 +102,30 @@ public class ReceptionistOperationController {
         List<CustomerIdentityPort.CustomerContact> results = receptionistService.searchCustomers(query, limit);
         return ResponseEntity.ok(ApiResponse.ok("Customer lookup completed", results));
     }
+
+    @GetMapping("/bookings")
+    public ResponseEntity<ApiResponse<List<ReceptionistBookingResponse>>> getAllBookings(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkInFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkInTo,
+            @RequestParam(required = false) String query) {
+        List<ReceptionistBookingResponse> list = receptionistService.getBookings(status, checkInFrom, checkInTo, query);
+        return ResponseEntity.ok(ApiResponse.ok("Receptionist booking history retrieved successfully", list));
+    }
+
+    @GetMapping("/bookings/{bookingId}")
+    public ResponseEntity<ApiResponse<ReceptionistBookingDetailResponse>> getBookingDetail(
+            @PathVariable Integer bookingId) {
+        ReceptionistBookingDetailResponse detail = receptionistService.getBookingDetail(bookingId);
+        return ResponseEntity.ok(ApiResponse.ok("Booking details retrieved successfully", detail));
+    }
+
+    @PostMapping("/bookings/{bookingId}/cancel")
+    public ResponseEntity<ApiResponse<BookingSummaryResponse>> cancelBooking(
+            @PathVariable Integer bookingId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Integer actorUserId = userDetails != null ? userDetails.getUserId() : 2;
+        BookingSummaryResponse response = receptionistService.cancelBooking(bookingId, actorUserId);
+        return ResponseEntity.ok(ApiResponse.ok("Booking cancelled successfully by front desk", response));
+    }
 }

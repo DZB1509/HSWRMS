@@ -72,6 +72,101 @@ export interface CreateBookingRequest {
   checkOutDate: string;
   guestCount?: number;
   specialRequest?: string;
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  emergencyContact?: string;
+}
+
+export interface CustomerFullDetailsDto {
+  customerProfileId: number;
+  userId: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  emergencyContact?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  dateOfBirth?: string;
+  residentialAddress?: string;
+}
+
+export interface CustomerHealthSummaryDto {
+  healthProfileId?: number;
+  customerProfileId: number;
+  allergies?: string;
+  dietaryRequirements?: string;
+  treatmentSafetyNotes?: string;
+  currentHealthCondition?: string;
+  injurySurgeryHistory?: string;
+  mobilityJointNotes?: string;
+  currentMedications?: string;
+  stressFatigueLevel?: string;
+  foodIntoleranceNotes?: string;
+  dislikedIngredients?: string;
+  kitchenNotes?: string;
+  anonymizationStatus?: string;
+}
+
+export interface PaymentTransactionDto {
+  transactionId?: number;
+  retreatBookingId: number;
+  paymentType: string;
+  paymentMethod: string;
+  transactionReference: string;
+  amountPaid: number;
+  paymentStatus: string;
+  transactionDate: string;
+}
+
+export interface ReceptionistBookingResponseDto {
+  retreatBookingId: number;
+  bookingReference: string;
+  customerProfileId: number;
+  userId?: number;
+  customerFullName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  emergencyContact?: string;
+  retreatPackageId: number;
+  packageCode: string;
+  packageName: string;
+  durationNights: number;
+  requestedVillaCategoryId: number;
+  requestedCategoryName: string;
+  assignedVillaId?: number;
+  assignedVillaNumber?: string;
+  checkInDate: string;
+  checkOutDate: string;
+  bookingStatus: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | string;
+  depositAmount: number;
+  totalEstimatedAmount: number;
+  guestCount: number;
+  specialRequest?: string;
+  createdAt: string;
+  hasResidenceRecord: boolean;
+  hasHealthProfile: boolean;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  transactionReference?: string;
+}
+
+export interface ResidenceRecordDto {
+  recordId?: number;
+  retreatBookingId: number;
+  identificationNumber: string;
+  identificationType: string;
+  nationality: string;
+  permanentAddress?: string;
+  collectedAt?: string;
+}
+
+export interface ReceptionistBookingDetailResponseDto extends ReceptionistBookingResponseDto {
+  customerProfile?: CustomerFullDetailsDto;
+  residenceRecord?: ResidenceRecordDto;
+  healthProfile?: CustomerHealthSummaryDto;
+  paymentTransactions?: PaymentTransactionDto[];
 }
 
 export interface UpdateBookingRequest {
@@ -498,6 +593,45 @@ export async function simulateSandboxVNPayPayment(
 ): Promise<any> {
   const res = await apiClient.post<ApiResponse<any>>(
     `/payments/simulate-sandbox?txnRef=${encodeURIComponent(txnRef)}&amount=${amount}&responseCode=${responseCode}`
+  );
+  return res.data;
+}
+
+/**
+ * Receptionist: All booking history from SQL Server
+ */
+export async function getReceptionistBookings(params?: {
+  status?: string;
+  checkInFrom?: string;
+  checkInTo?: string;
+  query?: string;
+}): Promise<ReceptionistBookingResponseDto[]> {
+  const res = await apiClient.get<ApiResponse<ReceptionistBookingResponseDto[]>>('/receptionist/bookings', {
+    params,
+  });
+  return res.data;
+}
+
+/**
+ * Receptionist: Booking details with customer profile, residence record, and health profile
+ */
+export async function getReceptionistBookingDetail(
+  bookingId: number
+): Promise<ReceptionistBookingDetailResponseDto> {
+  const res = await apiClient.get<ApiResponse<ReceptionistBookingDetailResponseDto>>(
+    `/receptionist/bookings/${bookingId}`
+  );
+  return res.data;
+}
+
+/**
+ * Receptionist: Cancel booking
+ */
+export async function cancelReceptionistBooking(
+  bookingId: number
+): Promise<BookingSummaryResponse> {
+  const res = await apiClient.post<ApiResponse<BookingSummaryResponse>>(
+    `/receptionist/bookings/${bookingId}/cancel`
   );
   return res.data;
 }

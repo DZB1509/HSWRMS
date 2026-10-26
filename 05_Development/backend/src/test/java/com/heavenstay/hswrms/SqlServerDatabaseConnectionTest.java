@@ -71,4 +71,15 @@ public class SqlServerDatabaseConnectionTest {
         assertFalse(villas.isEmpty(), "Physical villas should be seeded in database");
         System.out.println(">>> Total Physical Villas loaded from SQL Server: " + villas.size());
     }
+
+    @Autowired
+    private com.heavenstay.hswrms.m2booking.service.ReceptionistOperationService receptionistService;
+
+    @Test
+    @DisplayName("Verify ReceptionistOperationService getBookings against SQL Server")
+    void testGetBookings() {
+        var list = receptionistService.getBookings(null, null, null, null);
+        assertNotNull(list);
+        System.out.println(">>> Total Receptionist Bookings loaded: " + list.size());
+    }
 }

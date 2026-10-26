@@ -268,7 +268,7 @@ export const RetreatDetailPage: React.FC = () => {
             </div>
 
             <MagneticButton distance={0.2} maxOffset={6}>
-              <Link to={`/customer/booking?packageId=${dbPackage.retreatPackageId}`}>
+              <Link to={`/customer/booking/new?packageId=${dbPackage.retreatPackageId}`}>
                 <Button
                   variant="primary"
                   size="lg"
@@ -602,7 +602,7 @@ export const RetreatDetailPage: React.FC = () => {
             </p>
 
             <MagneticButton distance={0.2} maxOffset={6}>
-              <Link to={`/customer/booking?packageId=${dbPackage.retreatPackageId}`}>
+              <Link to={`/customer/booking/new?packageId=${dbPackage.retreatPackageId}`}>
                 <Button
                   variant="primary"
                   size="lg"

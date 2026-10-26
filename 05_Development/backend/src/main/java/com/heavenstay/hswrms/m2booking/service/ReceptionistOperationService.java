@@ -392,6 +392,231 @@ public class ReceptionistOperationService {
         return customerIdentityPort.searchCustomers(query, limit);
     }
 
+    @Transactional(readOnly = true)
+    public List<ReceptionistBookingResponse> getBookings(String status, LocalDate checkInFrom, LocalDate checkInTo, String query) {
+        List<RetreatBooking> bookings;
+        if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status.trim())) {
+            bookings = bookingRepository.findByStatusOrdered(status.trim().toUpperCase());
+        } else {
+            bookings = bookingRepository.findAllBookingsOrdered();
+        }
+
+        if (checkInFrom != null) {
+            bookings = bookings.stream().filter(b -> !b.getCheckInDate().isBefore(checkInFrom)).collect(Collectors.toList());
+        }
+        if (checkInTo != null) {
+            bookings = bookings.stream().filter(b -> !b.getCheckInDate().isAfter(checkInTo)).collect(Collectors.toList());
+        }
+
+        Set<Integer> profileIds = bookings.stream().map(RetreatBooking::getCustomerProfileId).collect(Collectors.toSet());
+        Map<Integer, CustomerIdentityPort.CustomerContact> contacts = customerIdentityPort.findContacts(profileIds);
+
+        List<Integer> bookingIds = bookings.stream().map(RetreatBooking::getRetreatBookingId).collect(Collectors.toList());
+        Map<Integer, ResidenceRecord> residenceMap = residenceRecordRepository.findByRetreatBooking_RetreatBookingIdIn(bookingIds)
+                .stream().collect(Collectors.toMap(r -> r.getRetreatBooking().getRetreatBookingId(), r -> r, (a, b) -> a));
+
+        Map<Integer, PaymentTransaction> txnMap = paymentTransactionRepository.findByRetreatBookingIdInAndPaymentType(bookingIds, PaymentTransaction.TYPE_DEPOSIT)
+                .stream().collect(Collectors.toMap(PaymentTransaction::getRetreatBookingId, t -> t, (a, b) -> a));
+
+        String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim().toLowerCase() : null;
+
+        return bookings.stream()
+                .filter(b -> {
+                    if (cleanQuery == null) return true;
+                    CustomerIdentityPort.CustomerContact contact = contacts.get(b.getCustomerProfileId());
+                    String ref = ("HSW-BK-" + b.getRetreatBookingId()).toLowerCase();
+                    String idStr = String.valueOf(b.getRetreatBookingId());
+                    boolean matchId = ref.contains(cleanQuery) || idStr.contains(cleanQuery);
+                    boolean matchName = contact != null && contact.fullName() != null && contact.fullName().toLowerCase().contains(cleanQuery);
+                    boolean matchEmail = contact != null && contact.email() != null && contact.email().toLowerCase().contains(cleanQuery);
+                    boolean matchPhone = contact != null && contact.phone() != null && contact.phone().toLowerCase().contains(cleanQuery);
+                    return matchId || matchName || matchEmail || matchPhone;
+                })
+                .map(b -> {
+                    CustomerIdentityPort.CustomerContact contact = contacts.get(b.getCustomerProfileId());
+                    ResidenceRecord resRec = residenceMap.get(b.getRetreatBookingId());
+                    PaymentTransaction txn = txnMap.get(b.getRetreatBookingId());
+                    return toReceptionistBookingResponse(b, contact, resRec != null, txn);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ReceptionistBookingDetailResponse getBookingDetail(Integer bookingId) {
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking #" + bookingId + " not found"));
+
+        CustomerIdentityPort.CustomerFullDetails profile = customerIdentityPort.findFullDetails(booking.getCustomerProfileId())
+                .orElse(null);
+
+        ResidenceRecord resRec = residenceRecordRepository.findByRetreatBooking_RetreatBookingId(bookingId)
+                .orElse(null);
+
+        CustomerIdentityPort.CustomerHealthSummary healthProfile = customerIdentityPort.findHealthProfile(booking.getCustomerProfileId())
+                .orElse(null);
+
+        List<PaymentTransaction> txns = paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT);
+
+        CustomerIdentityPort.CustomerContact contact = profile != null
+                ? new CustomerIdentityPort.CustomerContact(profile.customerProfileId(), profile.userId(), profile.fullName(), profile.email(), profile.phone())
+                : null;
+
+        PaymentTransaction latestTxn = txns.isEmpty() ? null : txns.get(0);
+
+        ReceptionistBookingResponse base = toReceptionistBookingResponse(booking, contact, resRec != null, latestTxn);
+
+        ReceptionistBookingDetailResponse detail = new ReceptionistBookingDetailResponse();
+        copyBaseToDetail(base, detail);
+        detail.setCustomerProfile(profile);
+        if (resRec != null) {
+            ResidenceRecordResponse rRes = new ResidenceRecordResponse();
+            rRes.setRecordId(resRec.getResidenceRecordId());
+            rRes.setRetreatBookingId(bookingId);
+            rRes.setIdentificationNumber(resRec.getIdentificationNumber());
+            rRes.setIdentificationType(resRec.getIdentificationType());
+            rRes.setNationality(resRec.getNationality());
+            rRes.setPermanentAddress(resRec.getPermanentAddress());
+            rRes.setCollectedAt(resRec.getCollectedAt());
+            detail.setResidenceRecord(rRes);
+        }
+        detail.setHealthProfile(healthProfile);
+        detail.setPaymentTransactions(txns);
+
+        return detail;
+    }
+
+    public BookingSummaryResponse cancelBooking(Integer bookingId, Integer actorUserId) {
+        RetreatBooking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking #" + bookingId + " not found"));
+
+        if ("COMPLETED".equalsIgnoreCase(booking.getBookingStatus())) {
+            throw new BusinessRuleException("Cannot cancel completed booking #" + bookingId);
+        }
+        if ("CANCELLED".equalsIgnoreCase(booking.getBookingStatus())) {
+            throw new BusinessRuleException("Booking #" + bookingId + " is already cancelled");
+        }
+
+        if (booking.getAssignedVilla() != null) {
+            PhysicalVilla villa = booking.getAssignedVilla();
+            if ("OCCUPIED".equalsIgnoreCase(villa.getVillaStatus())) {
+                villa.setVillaStatus("AVAILABLE");
+                physicalVillaRepository.save(villa);
+            }
+            booking.setAssignedVilla(null);
+        }
+
+        booking.setBookingStatus("CANCELLED");
+        RetreatBooking saved = bookingRepository.save(booking);
+
+        bookingAuditService.record(
+                actorUserId != null ? actorUserId : 2,
+                "CANCEL_BOOKING",
+                "Receptionist cancelled booking #" + bookingId,
+                "SUCCESS"
+        );
+
+        BookingSummaryResponse res = new BookingSummaryResponse();
+        res.setRetreatBookingId(saved.getRetreatBookingId());
+        res.setCustomerProfileId(saved.getCustomerProfileId());
+        res.setPackageName(saved.getRetreatPackage().getPackageName());
+        res.setRequestedCategoryName(saved.getRequestedVillaCategory().getCategoryName());
+        res.setCheckInDate(saved.getCheckInDate());
+        res.setCheckOutDate(saved.getCheckOutDate());
+        res.setBookingStatus(saved.getBookingStatus());
+        res.setDepositAmount(saved.getDepositAmount());
+        res.setTotalEstimatedAmount(saved.getTotalEstimatedAmount());
+        res.setCreatedAt(saved.getCreatedAt());
+        return res;
+    }
+
+    private ReceptionistBookingResponse toReceptionistBookingResponse(
+            RetreatBooking rb,
+            CustomerIdentityPort.CustomerContact contact,
+            boolean hasResidence,
+            PaymentTransaction txn) {
+        ReceptionistBookingResponse res = new ReceptionistBookingResponse();
+        res.setRetreatBookingId(rb.getRetreatBookingId());
+        res.setBookingReference("HSW-BK-" + rb.getRetreatBookingId());
+        res.setCustomerProfileId(rb.getCustomerProfileId());
+        if (contact != null) {
+            res.setUserId(contact.userId());
+            res.setCustomerFullName(contact.fullName());
+            res.setCustomerEmail(contact.email());
+            res.setCustomerPhone(contact.phone());
+        }
+        res.setRetreatPackageId(rb.getRetreatPackage().getRetreatPackageId());
+        res.setPackageCode(rb.getRetreatPackage().getPackageCode());
+        res.setPackageName(rb.getRetreatPackage().getPackageName());
+        res.setDurationNights(rb.getRetreatPackage().getDurationNights());
+
+        res.setRequestedVillaCategoryId(rb.getRequestedVillaCategory().getVillaCategoryId());
+        res.setRequestedCategoryName(rb.getRequestedVillaCategory().getCategoryName());
+
+        if (rb.getAssignedVilla() != null) {
+            res.setAssignedVillaId(rb.getAssignedVilla().getVillaId());
+            res.setAssignedVillaNumber(rb.getAssignedVilla().getVillaNumber());
+        }
+
+        res.setCheckInDate(rb.getCheckInDate());
+        res.setCheckOutDate(rb.getCheckOutDate());
+        res.setBookingStatus(rb.getBookingStatus());
+        res.setDepositAmount(rb.getDepositAmount());
+        res.setTotalEstimatedAmount(rb.getTotalEstimatedAmount());
+        res.setGuestCount(rb.getGuestCount() != null ? rb.getGuestCount() : 1);
+        res.setSpecialRequest(rb.getSpecialRequest());
+        res.setCreatedAt(rb.getCreatedAt());
+
+        res.setHasResidenceRecord(hasResidence);
+        res.setHasHealthProfile(customerIdentityPort.hasHealthProfile(rb.getCustomerProfileId()));
+
+        if (txn != null) {
+            res.setPaymentStatus(txn.getPaymentStatus());
+            res.setPaymentMethod(txn.getPaymentMethod());
+            res.setTransactionReference(txn.getTransactionReference());
+        } else {
+            boolean isPaid = "CONFIRMED".equalsIgnoreCase(rb.getBookingStatus())
+                    || "CHECKED_IN".equalsIgnoreCase(rb.getBookingStatus())
+                    || "COMPLETED".equalsIgnoreCase(rb.getBookingStatus());
+            res.setPaymentStatus(isPaid ? "SUCCESSFUL" : "PENDING");
+            res.setPaymentMethod("VNPAY");
+            res.setTransactionReference(null);
+        }
+
+        return res;
+    }
+
+    private void copyBaseToDetail(ReceptionistBookingResponse src, ReceptionistBookingDetailResponse dest) {
+        dest.setRetreatBookingId(src.getRetreatBookingId());
+        dest.setBookingReference(src.getBookingReference());
+        dest.setCustomerProfileId(src.getCustomerProfileId());
+        dest.setUserId(src.getUserId());
+        dest.setCustomerFullName(src.getCustomerFullName());
+        dest.setCustomerEmail(src.getCustomerEmail());
+        dest.setCustomerPhone(src.getCustomerPhone());
+        dest.setEmergencyContact(src.getEmergencyContact());
+        dest.setRetreatPackageId(src.getRetreatPackageId());
+        dest.setPackageCode(src.getPackageCode());
+        dest.setPackageName(src.getPackageName());
+        dest.setDurationNights(src.getDurationNights());
+        dest.setRequestedVillaCategoryId(src.getRequestedVillaCategoryId());
+        dest.setRequestedCategoryName(src.getRequestedCategoryName());
+        dest.setAssignedVillaId(src.getAssignedVillaId());
+        dest.setAssignedVillaNumber(src.getAssignedVillaNumber());
+        dest.setCheckInDate(src.getCheckInDate());
+        dest.setCheckOutDate(src.getCheckOutDate());
+        dest.setBookingStatus(src.getBookingStatus());
+        dest.setDepositAmount(src.getDepositAmount());
+        dest.setTotalEstimatedAmount(src.getTotalEstimatedAmount());
+        dest.setGuestCount(src.getGuestCount());
+        dest.setSpecialRequest(src.getSpecialRequest());
+        dest.setCreatedAt(src.getCreatedAt());
+        dest.setHasResidenceRecord(src.getHasResidenceRecord());
+        dest.setHasHealthProfile(src.getHasHealthProfile());
+        dest.setPaymentStatus(src.getPaymentStatus());
+        dest.setPaymentMethod(src.getPaymentMethod());
+        dest.setTransactionReference(src.getTransactionReference());
+    }
+
     private DailyArrivalResponse toArrivalResponse(RetreatBooking rb, CustomerIdentityPort.CustomerContact contact) {
         DailyArrivalResponse res = new DailyArrivalResponse();
         res.setRetreatBookingId(rb.getRetreatBookingId());

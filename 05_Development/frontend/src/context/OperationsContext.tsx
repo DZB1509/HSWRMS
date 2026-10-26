@@ -17,6 +17,8 @@ import {
   assignPhysicalVilla,
 } from '../api/booking/retreatBookingApi';
 
+import { useAuth } from '../hooks/useAuth';
+
 const OperationsContext = createContext<OperationsContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
@@ -24,12 +26,13 @@ const STORAGE_KEYS = {
 };
 
 export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role } = useAuth();
   const [villas, setVillas] = useState<Villa[]>([]);
   const [arrivals, setArrivals] = useState<ArrivalRecord[]>([]);
   const [alerts, setAlerts] = useState<OperationalAlert[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const todayDate = new Date().toLocaleDateString('en-US', {
+  const todayDate = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
     day: 'numeric',
     month: 'short',
@@ -166,7 +169,16 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   useEffect(() => {
     syncWithBackend();
-  }, []);
+
+    const handleAuthChange = () => {
+      syncWithBackend();
+    };
+
+    window.addEventListener('hswrms_auth_changed', handleAuthChange);
+    return () => {
+      window.removeEventListener('hswrms_auth_changed', handleAuthChange);
+    };
+  }, [role]);
 
   const getVillaById = (id: string): Villa | undefined => {
     return villas.find((v) => v.id === id || v.code === id);

@@ -153,7 +153,7 @@ export const BookingSummaryPage: React.FC = () => {
           <AlertCircle size={40} style={{ color: '#b91c1c', margin: '0 auto var(--space-4)' }} />
           <h2 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>No Active Booking Found</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)' }}>{loadError || 'Reservation session not found.'}</p>
-          <Button variant="primary" onClick={() => navigate('/customer/booking')}>
+          <Button variant="primary" onClick={() => navigate('/customer/booking/new')}>
             Start New Reservation
           </Button>
         </Container>
@@ -351,7 +351,7 @@ export const BookingSummaryPage: React.FC = () => {
             {/* Back link */}
             <div>
               <Link
-                to="/customer/booking"
+                to="/customer/booking/new"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

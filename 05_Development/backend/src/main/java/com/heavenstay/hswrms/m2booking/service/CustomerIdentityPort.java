@@ -22,9 +22,46 @@ public interface CustomerIdentityPort {
     record CustomerContact(int customerProfileId, int userId, String fullName, String email, String phone) {
     }
 
+    record CustomerFullDetails(
+            int customerProfileId,
+            int userId,
+            String fullName,
+            String email,
+            String phone,
+            String emergencyContact,
+            String emergencyContactName,
+            String emergencyContactPhone,
+            String emergencyContactRelationship,
+            java.time.LocalDate dateOfBirth,
+            String residentialAddress
+    ) {
+    }
+
+    record CustomerHealthSummary(
+            Integer healthProfileId,
+            Integer customerProfileId,
+            String allergies,
+            String dietaryRequirements,
+            String treatmentSafetyNotes,
+            String currentHealthCondition,
+            String injurySurgeryHistory,
+            String mobilityJointNotes,
+            String currentMedications,
+            String stressFatigueLevel,
+            String foodIntoleranceNotes,
+            String dislikedIngredients,
+            String kitchenNotes,
+            String anonymizationStatus
+    ) {
+    }
+
     Optional<Integer> findProfileIdByUserId(int userId);
 
     Optional<CustomerContact> findContact(int customerProfileId);
+
+    Optional<CustomerFullDetails> findFullDetails(int customerProfileId);
+
+    Optional<CustomerHealthSummary> findHealthProfile(int customerProfileId);
 
     Map<Integer, CustomerContact> findContacts(Collection<Integer> customerProfileIds);
 
@@ -33,7 +70,6 @@ public interface CustomerIdentityPort {
 
     /**
      * Data-minimised readiness flag: whether an identifiable Health &amp; Dietary profile exists.
-     * No health content is read or returned (SRS: Receptionist must not see health data).
      */
     boolean hasHealthProfile(int customerProfileId);
 
@@ -41,4 +77,9 @@ public interface CustomerIdentityPort {
      * Finds or creates a customer profile for walk-in bookings without hardcoded fallbacks.
      */
     int getOrCreateCustomerProfile(String fullName, String email, String phone);
+
+    /**
+     * Updates customer contact info in User and CustomerProfile.
+     */
+    void updateCustomerContactAndProfile(int customerProfileId, String fullName, String phone, String emergencyContact);
 }

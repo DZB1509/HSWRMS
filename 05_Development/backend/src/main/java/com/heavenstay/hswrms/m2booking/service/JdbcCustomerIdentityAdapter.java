@@ -130,6 +130,74 @@ public class JdbcCustomerIdentityAdapter implements CustomerIdentityPort {
                 "SELECT customer_profile_id FROM dbo.CustomerProfile WHERE user_id = ?", Integer.class, newUserId);
     }
 
+    @Override
+    public Optional<CustomerFullDetails> findFullDetails(int customerProfileId) {
+        String sql = "SELECT cp.customer_profile_id, u.user_id, u.full_name, u.email, u.phone_number, " +
+                     "cp.emergency_contact, cp.emergency_contact_name, cp.emergency_contact_phone, " +
+                     "cp.emergency_contact_relationship, cp.date_of_birth, cp.residential_address " +
+                     "FROM dbo.CustomerProfile cp JOIN dbo.[User] u ON u.user_id = cp.user_id " +
+                     "WHERE cp.customer_profile_id = ?";
+        List<CustomerFullDetails> list = jdbc.query(sql, (rs, i) -> new CustomerFullDetails(
+                rs.getInt("customer_profile_id"),
+                rs.getInt("user_id"),
+                rs.getString("full_name"),
+                rs.getString("email"),
+                rs.getString("phone_number"),
+                rs.getString("emergency_contact"),
+                rs.getString("emergency_contact_name"),
+                rs.getString("emergency_contact_phone"),
+                rs.getString("emergency_contact_relationship"),
+                rs.getDate("date_of_birth") != null ? rs.getDate("date_of_birth").toLocalDate() : null,
+                rs.getString("residential_address")
+        ), customerProfileId);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
+
+    @Override
+    public Optional<CustomerHealthSummary> findHealthProfile(int customerProfileId) {
+        String sql = "SELECT health_profile_id, customer_profile_id, allergies, dietary_requirements, " +
+                     "treatment_safety_notes, current_health_condition, injury_surgery_history, " +
+                     "mobility_joint_notes, current_medications, stress_fatigue_level, " +
+                     "food_intolerance_notes, disliked_ingredients, kitchen_notes, anonymization_status " +
+                     "FROM dbo.HealthProfile WHERE customer_profile_id = ?";
+        List<CustomerHealthSummary> list = jdbc.query(sql, (rs, i) -> new CustomerHealthSummary(
+                rs.getInt("health_profile_id"),
+                rs.getInt("customer_profile_id"),
+                rs.getString("allergies"),
+                rs.getString("dietary_requirements"),
+                rs.getString("treatment_safety_notes"),
+                rs.getString("current_health_condition"),
+                rs.getString("injury_surgery_history"),
+                rs.getString("mobility_joint_notes"),
+                rs.getString("current_medications"),
+                rs.getString("stress_fatigue_level"),
+                rs.getString("food_intolerance_notes"),
+                rs.getString("disliked_ingredients"),
+                rs.getString("kitchen_notes"),
+                rs.getString("anonymization_status")
+        ), customerProfileId);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
+
+    @Override
+    public void updateCustomerContactAndProfile(int customerProfileId, String fullName, String phone, String emergencyContact) {
+        List<Integer> userIds = jdbc.queryForList(
+                "SELECT user_id FROM dbo.CustomerProfile WHERE customer_profile_id = ?", Integer.class, customerProfileId);
+        if (!userIds.isEmpty()) {
+            int userId = userIds.get(0);
+            if (fullName != null && !fullName.trim().isEmpty()) {
+                jdbc.update("UPDATE dbo.[User] SET full_name = ? WHERE user_id = ?", fullName.trim(), userId);
+            }
+            if (phone != null && !phone.trim().isEmpty()) {
+                jdbc.update("UPDATE dbo.[User] SET phone_number = ? WHERE user_id = ?", phone.trim(), userId);
+            }
+        }
+        if (emergencyContact != null && !emergencyContact.trim().isEmpty()) {
+            jdbc.update("UPDATE dbo.CustomerProfile SET emergency_contact = ?, updated_at = SYSUTCDATETIME() WHERE customer_profile_id = ?",
+                    emergencyContact.trim(), customerProfileId);
+        }
+    }
+
     private static CustomerContact map(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new CustomerContact(rs.getInt("customer_profile_id"), rs.getInt("user_id"),
                 rs.getString("full_name"), rs.getString("email"), rs.getString("phone_number"));

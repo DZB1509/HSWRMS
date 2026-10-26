@@ -24,6 +24,11 @@ public class CreateBookingRequest {
     @jakarta.validation.constraints.Min(value = 1, message = "Guest count must be at least 1")
     private Integer guestCount = 1;
 
+    private String fullName;
+    private String email;
+    private String phoneNumber;
+    private String emergencyContact;
+
     public CreateBookingRequest() {
     }
 
@@ -73,5 +78,37 @@ public class CreateBookingRequest {
 
     public void setGuestCount(Integer guestCount) {
         this.guestCount = guestCount;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmergencyContact() {
+        return emergencyContact;
+    }
+
+    public void setEmergencyContact(String emergencyContact) {
+        this.emergencyContact = emergencyContact;
     }
 }

@@ -92,7 +92,7 @@ export const MyBookingsPage: React.FC = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate('/customer/booking')}
+              onClick={() => navigate('/customer/booking/new')}
               icon={<Sparkles size={14} />}
               style={{
                 borderColor: 'var(--accent-forest)',
@@ -245,7 +245,7 @@ export const MyBookingsPage: React.FC = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => navigate('/customer/booking')}
+              onClick={() => navigate('/customer/booking/new')}
               style={{
                 backgroundColor: 'var(--accent-forest)',
                 color: '#ffffff',
