@@ -52,6 +52,9 @@ public class RetreatPackageFnbService {
         String normalizedCode = packageCode.trim().toUpperCase(Locale.ROOT);
         RetreatPackageFnbPlanResponse plan = packagePlanRegistry.get(normalizedCode);
         if (plan == null) {
+            plan = resolveUiPackagePlan(normalizedCode);
+        }
+        if (plan == null) {
             throw new ResourceNotFoundException("RetreatPackageFnbPlan", "packageCode", packageCode);
         }
         return plan;
@@ -69,8 +72,73 @@ public class RetreatPackageFnbService {
         if (booking == null || booking.packageCode() == null) {
             return getPackagePlan("RET-DETOX-03");
         }
-        return Optional.ofNullable(packagePlanRegistry.get(booking.packageCode().trim().toUpperCase(Locale.ROOT)))
+        String code = booking.packageCode().trim().toUpperCase(Locale.ROOT);
+        return Optional.ofNullable(packagePlanRegistry.get(code))
+                .or(() -> Optional.ofNullable(resolveUiPackagePlan(code)))
                 .orElseGet(() -> getPackagePlan("RET-DETOX-03"));
+    }
+
+    private RetreatPackageFnbPlanResponse resolveUiPackagePlan(String code) {
+        return switch (code) {
+            case "RET-MINDFUL-03", "MINDFUL-RENEWAL", "RET-01" -> new RetreatPackageFnbPlanResponse(
+                    "RET-MINDFUL-03",
+                    "3D2N Tái Tạo Tĩnh Thức (Mindful Renewal)",
+                    2,
+                    "Mental Rejuvenation & Herbal Detox",
+                    "Thực đơn dưỡng sinh tái tạo năng lượng & thanh lọc tâm trí",
+                    "1.300 - 1.500 kcal/ngày (Kháng viêm & Dưỡng tâm)",
+                    2, 2, 2,
+                    "02 bữa sáng hữu cơ nhẹ bụng, 02 bữa trưa thực dưỡng cân bằng Thân - Tâm, 02 bữa tối thanh đạm ngắm biển",
+                    "Trà thảo mộc bài độc tự nhiên, nước khoáng ấm hữu cơ",
+                    List.of("Rau củ hữu cơ Đà Lạt", "Hạt chia", "Yến mạch", "Táo xanh", "Trà thảo mộc"),
+                    List.of(
+                            "02 bữa sáng thanh lọc (Nước ép cần tây hạt chia, yến mạch nguyên cám)",
+                            "02 bữa trưa dinh dưỡng Thân - Tâm (Plant-based)",
+                            "02 bữa tối thực dưỡng hữu cơ nhẹ bụng"
+                    ),
+                    List.of("Đường tinh luyện", "Thực phẩm chiên rán", "Rượu bia"),
+                    List.of("Cháo yến mạch hạt sen", "Salad bơ sáp trái cây", "Soup nấm dưỡng sinh")
+            );
+            case "RET-RESET-05", "COMPLETE-RESET", "RET-02" -> new RetreatPackageFnbPlanResponse(
+                    "RET-RESET-05",
+                    "5D4N Chuyển Hóa Toàn Diện (Complete Reset)",
+                    4,
+                    "Immune Restoration & Metabolic Reset",
+                    "Thực đơn thanh lọc 5 màu tế bào & kháng viêm chuyên sâu",
+                    "1.400 - 1.600 kcal/ngày (Kích hoạt tự chữa lành)",
+                    4, 4, 4,
+                    "04 bữa sáng sinh tố thanh lọc, 04 bữa trưa dinh dưỡng cao, 04 bữa tối soup thảo dược ấm",
+                    "Nước ép ép lạnh nguyên chất & nước khoáng giàu Magie",
+                    List.of("Thực phẩm 5 màu thực vật", "Quả mọng", "Hạt quinoa", "Cải xoăn Kale", "Dầu ô-liu"),
+                    List.of(
+                            "04 bữa sáng sinh tố thải độc tế bào",
+                            "04 bữa trưa dinh dưỡng cao phục hồi thể trạng",
+                            "04 bữa tối dưỡng sinh ấm nhẹ bụng"
+                    ),
+                    List.of("Chất tạo ngọt nhân tạo", "Thịt đỏ công nghiệp", "Dầu mỡ chiên rán"),
+                    List.of("Sinh tố xanh 5 màu", "Salad cá hồi quinoa", "Soup bí ngòi hoa đậu biếc")
+            );
+            case "RET-BALANCE-07", "RESTORATIVE-BALANCE", "RET-03" -> new RetreatPackageFnbPlanResponse(
+                    "RET-BALANCE-07",
+                    "7D6N Cân Bằng Phục Hồi (Restorative Balance)",
+                    6,
+                    "Holistic Body-Mind-Soul Healing",
+                    "Thực dưỡng trường thọ cân bằng Âm - Dương đỉnh cao",
+                    "1.500 - 1.700 kcal/ngày (Trẻ hóa & Cân bằng chuyển hóa)",
+                    6, 6, 6,
+                    "06 bữa sáng năng lượng tích cực, 06 bữa trưa thực dưỡng chuyên sâu, 06 bữa tối Set Menu Bếp trưởng",
+                    "Trà đạo thảo mộc hoàng gia, nước khoáng núi nguyên bản",
+                    List.of("Hải sản đánh bắt bền vững Vĩnh Hy", "Nấm linh chi", "Kỷ tử", "Táo đỏ", "Gạo lứt huyết rồng"),
+                    List.of(
+                            "06 bữa sáng tự chọn năng lượng tích cực",
+                            "06 bữa trưa thực dưỡng bồi bổ ngũ tạng",
+                            "06 bữa tối Set Menu Fine-Dining do Bếp trưởng thiết kế riêng"
+                    ),
+                    List.of("Caffeine sau 14:00", "Thực phẩm biến đổi gen", "Gia vị cay nồng ban đêm"),
+                    List.of("Canh tiềm ngũ vị đại bổ", "Cá tuyết áp chảo kỷ tử", "Chè yến hạt sen dưỡng nhan")
+            );
+            default -> null;
+        };
     }
 
     /**

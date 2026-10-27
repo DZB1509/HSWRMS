@@ -3,51 +3,39 @@ import type { RetreatPackageMaster, SpaServiceMaster, VillaCategoryMaster } from
 export const INITIAL_PACKAGES_MASTER: RetreatPackageMaster[] = [
   {
     id: 'PKG-01',
-    code: 'RET-DETOX-01',
-    name: 'Holistic Detox & Cleansing Journey',
-    durationDays: 5,
-    durationNights: 4,
-    goal: 'Detoxification & Cellular Renewal',
-    includedSpaSessions: 4,
-    basePrice: 24500000,
+    code: 'RET-MINDFUL-03',
+    name: 'Tái Tạo Tĩnh Thức (Mindful Renewal)',
+    durationDays: 3,
+    durationNights: 2,
+    goal: 'Tái thiết năng lượng & Thanh lọc tâm trí',
+    includedSpaSessions: 2,
+    basePrice: 18500000,
     status: 'active',
-    description: 'A 5-day botanical cleansing program combining organic juices, hydrotherapy, and lymphatic drainage.'
+    description: 'Hành trình ngắn ngày được thiết kế riêng để tái thiết năng lượng, phục hồi giấc ngủ và thanh lọc tâm trí qua các liệu pháp thảo dược cổ truyền cùng yoga bình minh.'
   },
   {
     id: 'PKG-02',
-    code: 'RET-YOGA-02',
-    name: 'Mindfulness, Prana & Yoga Immersion',
-    durationDays: 7,
-    durationNights: 6,
-    goal: 'Mental Clarity & Emotional Balance',
-    includedSpaSessions: 6,
-    basePrice: 32000000,
+    code: 'RET-RESET-05',
+    name: 'Chuyển Hóa Toàn Diện (Complete Reset)',
+    durationDays: 5,
+    durationNights: 4,
+    goal: 'Tái lập nhịp sinh học & Kích hoạt tự chữa lành',
+    includedSpaSessions: 4,
+    basePrice: 36000000,
     status: 'active',
-    description: 'Daily sunrise meditation, private restorative yoga coaching, and sound bath alignment.'
+    description: 'Chương trình nghỉ dưỡng chuyên sâu kéo dài 5 ngày giúp tái lập nhịp sinh học tự nhiên, kích hoạt khả năng tự chữa lành của cơ thể và nuôi dưỡng tâm trí an lạc.'
   },
   {
     id: 'PKG-03',
-    code: 'RET-SLEEP-03',
-    name: 'Deep Sleep & Circadian Restoration',
-    durationDays: 4,
-    durationNights: 3,
-    goal: 'Insomnia Relief & Stress Alleviation',
-    includedSpaSessions: 3,
-    basePrice: 19500000,
+    code: 'RET-BALANCE-07',
+    name: 'Cân Bằng Phục Hồi (Restorative Balance)',
+    durationDays: 7,
+    durationNights: 6,
+    goal: 'Chữa lành Thân - Tâm - Trí toàn diện & Trẻ hóa',
+    includedSpaSessions: 6,
+    basePrice: 52000000,
     status: 'active',
-    description: 'Targeted sleep architecture recovery with evening herbal baths, valerian tea rituals, and reflexology.'
-  },
-  {
-    id: 'PKG-04',
-    code: 'RET-AYUR-04',
-    name: 'Ayurvedic Rejuvenation & Vitality',
-    durationDays: 6,
-    durationNights: 5,
-    goal: 'Dosha Balancing & Re-energization',
-    includedSpaSessions: 5,
-    basePrice: 28000000,
-    status: 'active',
-    description: 'Ancient Vedic bodywork, Shirodhara warm oil therapy, and customized tridoshic nutrition.'
+    description: 'Chương trình dưỡng sinh 7 ngày hoàn hảo dành cho những ai tìm kiếm sự chuyển hóa bền vững, cân bằng cảm xúc và tái thiết nền tảng sức khỏe trọn vẹn.'
   }
 ];
 

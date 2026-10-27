@@ -48,6 +48,7 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
         String packageCode = resolvePackageCode(safeBookingId);
         String packageName = resolvePackageName(packageCode);
         String guestName = resolveCustomerName(safeUserId, "Eleanor Vance");
+        String villa = resolveVillaName(packageCode);
         return new FnbBookingContext(
                 safeBookingId,
                 safeUserId,
@@ -55,7 +56,7 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
                 today,
                 today.plusDays(3),
                 guestName,
-                "Villa #102 (Tranquil Garden)",
+                villa,
                 packageCode,
                 packageName);
     }
@@ -82,6 +83,7 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
         String packageCode = resolvePackageCode(safeBookingId);
         String packageName = resolvePackageName(packageCode);
         String guestName = resolveCustomerName(1, "Eleanor Vance");
+        String villa = resolveVillaName(packageCode);
         return new FnbBookingContext(
                 safeBookingId,
                 1,
@@ -89,7 +91,7 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
                 today,
                 today.plusDays(3),
                 guestName,
-                "Villa #102 (Tranquil Garden)",
+                villa,
                 packageCode,
                 packageName);
     }
@@ -134,20 +136,19 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
     }
 
     private static String resolvePackageCode(int bookingId) {
-        return switch (Math.abs(bookingId) % 8) {
-            case 1 -> "RET-DETOX-03";
-            case 2 -> "RET-DETOX-05";
-            case 3 -> "RET-SLEEP-03";
-            case 4 -> "RET-STRESS-04";
-            case 5 -> "RET-AGING-04";
-            case 6 -> "RET-ALIGN-03";
-            case 7 -> "RET-VITAL-05";
-            default -> "RET-MOM-03";
+        return switch (Math.abs(bookingId) % 3) {
+            case 1 -> "RET-RESET-05";
+            case 2 -> "RET-BALANCE-07";
+            default -> "RET-MINDFUL-03";
         };
     }
 
     private static String resolvePackageName(String packageCode) {
-        return switch (packageCode) {
+        if (packageCode == null) return "3D2N Tái Tạo Tĩnh Thức (Mindful Renewal)";
+        return switch (packageCode.toUpperCase(java.util.Locale.ROOT)) {
+            case "RET-MINDFUL-03", "MINDFUL-RENEWAL", "RET-01" -> "3D2N Tái Tạo Tĩnh Thức (Mindful Renewal)";
+            case "RET-RESET-05", "COMPLETE-RESET", "RET-02" -> "5D4N Chuyển Hóa Toàn Diện (Complete Reset)";
+            case "RET-BALANCE-07", "RESTORATIVE-BALANCE", "RET-03" -> "7D6N Cân Bằng Phục Hồi (Restorative Balance)";
             case "RET-DETOX-03" -> "3D2N Thải Độc & Thanh Lọc Tinh Khiết (Pure Detox)";
             case "RET-DETOX-05" -> "5D4N Tái Tạo Năng Lượng & Thải Độc Sâu (Deep Reset Detox)";
             case "RET-SLEEP-03" -> "3D2N Khôi Phục Giấc Ngủ Sâu (Holistic Deep Sleep)";
@@ -156,7 +157,16 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
             case "RET-ALIGN-03" -> "3D2N Nắn Chỉnh Cột Sống & Cổ Vai Gáy (Spine & Posture Care)";
             case "RET-VITAL-05" -> "5D4N Quản Lý Vóc Dáng & Đốt Mỡ Tự Nhiên (Vitality Slimming)";
             case "RET-MOM-03" -> "3D2N Nghỉ Dưỡng Chữa Lành Mẹ Bầu (Gentle Prenatal Care)";
-            default -> "3D2N Thải Độc & Thanh Lọc Tinh Khiết (Pure Detox)";
+            default -> "3D2N Tái Tạo Tĩnh Thức (Mindful Renewal)";
+        };
+    }
+
+    private static String resolveVillaName(String packageCode) {
+        if (packageCode == null) return "Villa #102 (Ocean Cliff Mineral Pool Villa)";
+        return switch (packageCode.toUpperCase(java.util.Locale.ROOT)) {
+            case "RET-RESET-05", "COMPLETE-RESET", "RET-02" -> "Villa #205 (Lotus Water Sanctuary Villa)";
+            case "RET-BALANCE-07", "RESTORATIVE-BALANCE", "RET-03" -> "Estate #301 (Grand Forest Sanctuary Estate)";
+            default -> "Villa #102 (Ocean Cliff Mineral Pool Villa)";
         };
     }
 }
