@@ -2,7 +2,7 @@ package com.heavenstay.hswrms.m4fnb.mapper;
 
 import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderLineResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
-import com.heavenstay.hswrms.m4fnb.entity.MealOrder;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderItem;
 import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
 import java.math.BigDecimal;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MealOrderMapper {
-    public MealOrderResponse toResponse(MealOrder order, List<MealOrderItem> orderItems,
+    public MealOrderResponse toResponse(MealOrderEntity order, List<MealOrderItem> orderItems,
                                         Map<Integer, MenuItem> menuItems) {
         List<MealOrderLineResponse> lines = orderItems.stream().map(line -> {
             MenuItem menuItem = menuItems.get(line.getMenuItemId());
@@ -32,7 +32,7 @@ public class MealOrderMapper {
                 subtotal, lines);
     }
 
-    public MealOrderResponse toResponse(MealOrder order, List<MealOrderItem> orderItems,
+    public MealOrderResponse toResponse(MealOrderEntity order, List<MealOrderItem> orderItems,
                                         Map<Integer, MenuItem> menuItems, String folioPostingStatus) {
         List<MealOrderLineResponse> lines = orderItems.stream().map(line -> {
             MenuItem menuItem = menuItems.get(line.getMenuItemId());

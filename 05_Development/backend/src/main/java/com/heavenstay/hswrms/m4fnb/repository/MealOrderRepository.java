@@ -1,6 +1,6 @@
 package com.heavenstay.hswrms.m4fnb.repository;
 
-import com.heavenstay.hswrms.m4fnb.entity.MealOrder;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -15,39 +15,39 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MealOrderRepository extends JpaRepository<MealOrder, Integer> {
+public interface MealOrderRepository extends JpaRepository<MealOrderEntity, Integer> {
 
     // --- M4 Methods ---
-    List<MealOrder> findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(Integer bookingId);
-    List<MealOrder> findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(LocalDate orderDate, String excludedStatus);
-    List<MealOrder> findByOrderStatusNotOrderByCreatedAtDesc(String excludedStatus);
-    List<MealOrder> findByOrderDateAndOrderStatusNotOrderByCreatedAtAsc(LocalDate orderDate, String excludedStatus);
+    List<MealOrderEntity> findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(Integer bookingId);
+    List<MealOrderEntity> findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(LocalDate orderDate, String excludedStatus);
+    List<MealOrderEntity> findByOrderStatusNotOrderByCreatedAtDesc(String excludedStatus);
+    List<MealOrderEntity> findByOrderDateAndOrderStatusNotOrderByCreatedAtAsc(LocalDate orderDate, String excludedStatus);
     boolean existsByRetreatBookingIdAndOrderDateAndMealTypeAndOrderTypeAndOrderStatusNot(
             Integer retreatBookingId, LocalDate orderDate, String mealType, String orderType, String excludedStatus);
-    List<MealOrder> findByIdInOrderByCreatedAtDesc(Collection<Integer> ids);
-    List<MealOrder> findByIdInOrderByCreatedAtAsc(Collection<Integer> ids);
+    List<MealOrderEntity> findByIdInOrderByCreatedAtDesc(Collection<Integer> ids);
+    List<MealOrderEntity> findByIdInOrderByCreatedAtAsc(Collection<Integer> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select mealOrder from MealOrder mealOrder where mealOrder.id = :id")
-    Optional<MealOrder> findLockedById(@Param("id") Integer id);
+    @Query("select mealOrder from MealOrderEntity mealOrder where mealOrder.id = :id")
+    Optional<MealOrderEntity> findLockedById(@Param("id") Integer id);
 
     // --- Compatibility Methods for M5 Billing Settlement ---
-    @Query("SELECT m FROM MealOrder m WHERE m.retreatBookingId = :bookingId AND m.orderStatus IN ('PENDING', 'PREPARING')")
-    List<MealOrder> findUnsettledOrdersForBooking(@Param("bookingId") Integer bookingId);
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.retreatBookingId = :bookingId AND m.orderStatus IN ('PENDING', 'PREPARING')")
+    List<MealOrderEntity> findUnsettledOrdersForBooking(@Param("bookingId") Integer bookingId);
 
-    default List<MealOrder> findUnsettledOrdersForBooking(Long bookingId) {
+    default List<MealOrderEntity> findUnsettledOrdersForBooking(Long bookingId) {
         if (bookingId == null || bookingId > Integer.MAX_VALUE) return Collections.emptyList();
         return findUnsettledOrdersForBooking(bookingId.intValue());
     }
 
-    @Query("SELECT m FROM MealOrder m WHERE m.retreatBookingId = :bookingId")
-    List<MealOrder> findByRetreatBookingId(@Param("bookingId") Integer bookingId);
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.retreatBookingId = :bookingId")
+    List<MealOrderEntity> findByRetreatBookingId(@Param("bookingId") Integer bookingId);
 
-    default List<MealOrder> findByRetreatBookingId(Long bookingId) {
+    default List<MealOrderEntity> findByRetreatBookingId(Long bookingId) {
         if (bookingId == null || bookingId > Integer.MAX_VALUE) return Collections.emptyList();
         return findByRetreatBookingId(bookingId.intValue());
     }
 
-    @Query("SELECT m FROM MealOrder m WHERE m.orderDate >= :fromDate AND m.orderDate <= :toDate")
-    List<MealOrder> findOrdersInDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.orderDate >= :fromDate AND m.orderDate <= :toDate")
+    List<MealOrderEntity> findOrdersInDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 }
