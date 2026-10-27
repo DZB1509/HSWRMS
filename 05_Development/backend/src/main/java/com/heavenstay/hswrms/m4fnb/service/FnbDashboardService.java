@@ -79,8 +79,7 @@ public class FnbDashboardService {
                 recipeRepository.findByMenuItemIdIn(menuItemIds).forEach(recipe ->
                         recipeByItem.computeIfAbsent(recipe.getMenuItemId(), ignored -> new ArrayList<>()).add(recipe));
                 order.items().stream()
-                        .filter(orderLine -> "PENDING".equals(orderLine.preparationStatus())
-                                || "PREPARING".equals(orderLine.preparationStatus()))
+                        .filter(orderLine -> "PENDING".equals(orderLine.preparationStatus()))
                         .forEach(orderLine -> recipeByItem.getOrDefault(orderLine.menuItemId(), List.of())
                                 .forEach(recipe -> {
                             Integer ingredientId = recipe.getIngredientId();

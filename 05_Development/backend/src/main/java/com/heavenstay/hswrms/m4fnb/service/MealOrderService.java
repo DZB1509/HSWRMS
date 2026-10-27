@@ -10,7 +10,7 @@ import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderLineResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderStatus;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderType;
-import com.heavenstay.hswrms.m4fnb.entity.MealOrder;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderItem;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderItemPreparationStatus;
 import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
@@ -102,7 +102,7 @@ public class MealOrderService {
     @Transactional
     public MealOrderResponse updateDailyMealSelection(Integer userId, Integer orderId,
             CreateMealOrderRequest request) {
-        MealOrder order = orderRepository.findLockedById(orderId)
+        MealOrderEntity order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
         if (order.getOrderTypeValue() != FnbOrderType.DAILY_MEAL
                 || order.getOrderStatusValue() != FnbOrderStatus.PENDING) {
@@ -148,20 +148,30 @@ public class MealOrderService {
         BookingContextPort.FnbBookingContext booking = requireBookingPort()
                 .requireEligibleCustomerBooking(userId, request.bookingId(), request.orderDate());
         DietaryProfilePort.FoodProfileProjection profile = requireFoodProfile(userId);
-        if (orderType == FnbOrderType.DAILY_MEAL && orderRepository
-                .existsByRetreatBookingIdAndOrderDateAndMealTypeAndOrderTypeAndOrderStatusNot(
-                        request.bookingId(), request.orderDate(), request.mealType().toUpperCase(),
-                        orderType.name(), FnbOrderStatus.CANCELLED.name())) {
-            throw new ConflictException("DAILY_MEAL_ALREADY_SELECTED",
-                    "A daily meal selection already exists for this booking, date, and meal period.");
+        if (orderType == FnbOrderType.DAILY_MEAL) {
+            List<MealOrderEntity> existingList = orderRepository.findByRetreatBookingId(request.bookingId())
+                    .stream()
+                    .filter(o -> o.getOrderDate().equals(request.orderDate())
+                            && o.getMealType().equalsIgnoreCase(request.mealType())
+                            && o.getOrderTypeValue() == FnbOrderType.DAILY_MEAL
+                            && o.getOrderStatusValue() != FnbOrderStatus.CANCELLED)
+                    .toList();
+            if (!existingList.isEmpty()) {
+                MealOrderEntity existing = existingList.get(0);
+                if (existing.getOrderStatusValue() == FnbOrderStatus.PENDING) {
+                    return updateDailyMealSelection(userId, existing.getId(), request);
+                }
+                existing.setOrderStatus(FnbOrderStatus.CANCELLED);
+                orderRepository.save(existing);
+            }
         }
         List<MenuItem> selectedItems = validateOrderItems(request, orderType, profile, booking.packageCode());
 
         LocalDateTime createdAt = LocalDateTime.now();
-        MealOrder unsavedOrder = new MealOrder(request.bookingId(), request.orderDate(),
+        MealOrderEntity unsavedOrder = new MealOrderEntity(request.bookingId(), request.orderDate(),
                 request.mealType().toUpperCase(), orderType, FnbOrderStatus.PENDING, createdAt,
                 normalizeNotes(request.specialNotes()));
-        MealOrder order;
+        MealOrderEntity order;
         try {
             order = orderType == FnbOrderType.DAILY_MEAL
                     ? orderRepository.saveAndFlush(unsavedOrder)
@@ -235,18 +245,18 @@ public class MealOrderService {
 
     public List<MealOrderResponse> listCustomerOrders(Integer userId, Integer bookingId) {
         requireBookingPort().requireOwnedCustomerBooking(userId, bookingId);
-        List<MealOrder> orders = orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(bookingId);
+        List<MealOrderEntity> orders = orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(bookingId);
         return mapOrders(orders);
     }
 
     public MealOrderResponse getCustomerOrder(Integer userId, Integer orderId) {
-        MealOrder order = findOrder(orderId);
+        MealOrderEntity order = findOrder(orderId);
         requireBookingPort().requireOwnedCustomerBooking(userId, order.getRetreatBookingId());
         return mapOrders(List.of(order)).get(0);
     }
 
     public List<KitchenOrderResponse> listKitchenOrders(LocalDate orderDate) {
-        List<MealOrder> orders = orderDate != null
+        List<MealOrderEntity> orders = orderDate != null
                 ? orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(orderDate, "CANCELLED")
                 : orderRepository.findByOrderStatusNotOrderByCreatedAtDesc("CANCELLED");
         return mapKitchenOrders(orders);
@@ -267,7 +277,7 @@ public class MealOrderService {
         } catch (IllegalArgumentException ex) {
             throw new BusinessRuleException("INVALID_ORDER_STATUS", "Order status is not supported.");
         }
-        MealOrder order = orderRepository.findLockedById(orderId)
+        MealOrderEntity order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
         FnbOrderStatus currentStatus = order.getOrderStatusValue();
         if (currentStatus == requestedStatus)
@@ -277,15 +287,25 @@ public class MealOrderService {
                     "Order status cannot transition from " + currentStatus + " to " + requestedStatus + ".");
         }
 
-        // Operational workflow: Automatically process inventory consumption when updating order to PREPARING
+        // Operational workflow: Automatically process inventory consumption ONLY when updating order from PENDING to PREPARING
         if (currentStatus == FnbOrderStatus.PENDING && requestedStatus == FnbOrderStatus.PREPARING) {
             List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
             LocalDate consumptionDate = order.getOrderDate() != null ? order.getOrderDate() : LocalDate.now();
             for (MealOrderItem line : orderLines) {
                 if (line.getPreparationStatusValue() == MealOrderItemPreparationStatus.PENDING) {
+                    inventoryService.processConsumptionForOrderItem(line.getId(), consumptionDate);
                     line.setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
                     orderItemRepository.save(line);
-                    inventoryService.processConsumptionForOrderItem(line.getId(), consumptionDate);
+                }
+            }
+        } else if (requestedStatus == FnbOrderStatus.READY) {
+            // Advancing order to READY: updates line items to READY without deducting inventory again
+            List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
+            for (MealOrderItem line : orderLines) {
+                if (line.getPreparationStatusValue() == MealOrderItemPreparationStatus.PREPARING
+                        || line.getPreparationStatusValue() == MealOrderItemPreparationStatus.PENDING) {
+                    line.setPreparationStatus(MealOrderItemPreparationStatus.READY);
+                    orderItemRepository.save(line);
                 }
             }
         }
@@ -307,7 +327,7 @@ public class MealOrderService {
             throw new BusinessRuleException("INVALID_PREPARATION_STATUS", "Preparation status is not supported.");
         }
 
-        MealOrder order = orderRepository.findLockedById(orderId)
+        MealOrderEntity order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
         if (order.getOrderStatusValue() == FnbOrderStatus.CANCELLED
                 || order.getOrderStatusValue() == FnbOrderStatus.DELIVERED) {
@@ -333,14 +353,13 @@ public class MealOrderService {
         }
 
         ensureKitchenDietaryProjection(order.getRetreatBookingId());
-        orderLine.setPreparationStatus(requestedStatus);
-        orderItemRepository.save(orderLine);
-
         if (startPreparation) {
             // Automatically process inventory consumption when F&B staff update an item's status to PREPARING
             LocalDate consumptionDate = order.getOrderDate() != null ? order.getOrderDate() : LocalDate.now();
             inventoryService.processConsumptionForOrderItem(orderLine.getId(), consumptionDate);
         }
+        orderLine.setPreparationStatus(requestedStatus);
+        orderItemRepository.save(orderLine);
 
         List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
         boolean allReady = !orderLines.isEmpty();
@@ -363,12 +382,12 @@ public class MealOrderService {
         return switch (current) {
             case PENDING -> requested == FnbOrderStatus.PREPARING || requested == FnbOrderStatus.CANCELLED;
             case PREPARING -> requested == FnbOrderStatus.READY || requested == FnbOrderStatus.CANCELLED;
-            case READY -> requested == FnbOrderStatus.DELIVERED;
+            case READY -> requested == FnbOrderStatus.DELIVERED || requested == FnbOrderStatus.CANCELLED;
             case DELIVERED, CANCELLED -> false;
         };
     }
 
-    private MealOrder findOrder(Integer orderId) {
+    private MealOrderEntity findOrder(Integer orderId) {
         if (orderId == null) {
             throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order ID is required.");
         }
@@ -377,11 +396,11 @@ public class MealOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", safeOrderId));
     }
 
-    private List<MealOrderResponse> mapOrders(List<MealOrder> orders) {
+    private List<MealOrderResponse> mapOrders(List<MealOrderEntity> orders) {
         if (orders.isEmpty())
             return List.of();
         List<Integer> orderIds = new ArrayList<>(orders.size());
-        for (MealOrder order : orders) {
+        for (MealOrderEntity order : orders) {
             Integer persistedOrderId = order.getId();
             if (persistedOrderId == null) {
                 throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order must have a persisted ID.");
@@ -405,7 +424,7 @@ public class MealOrderService {
         Map<Integer, MenuItem> menuItems = loadMenuItems(lines);
         
         List<MealOrderResponse> responses = new ArrayList<>(orders.size());
-        for (MealOrder order : orders) {
+        for (MealOrderEntity order : orders) {
             Integer persistedOrderId = order.getId();
             if (persistedOrderId == null) {
                 throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order must have a persisted ID.");
@@ -427,13 +446,13 @@ public class MealOrderService {
      * Prevents revenue leakage when M5 asynchronous listeners are deferred.
      */
     public List<MealOrderResponse> listUnpostedAlaCarteOrders(Integer bookingId) {
-        List<MealOrder> orders = bookingId != null
+        List<MealOrderEntity> orders = bookingId != null
                 ? orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(bookingId)
                 : orderRepository.findByOrderStatusNotOrderByCreatedAtDesc(FnbOrderStatus.CANCELLED.name());
 
         Object folioRepo = null;
 
-        List<MealOrder> unposted = orders.stream()
+        List<MealOrderEntity> unposted = orders.stream()
                 .filter(o -> "A_LA_CARTE".equalsIgnoreCase(o.getOrderType()))
                 .filter(o -> !FnbOrderStatus.CANCELLED.name().equalsIgnoreCase(o.getOrderStatus()))
                 .filter(o -> true)
@@ -442,7 +461,7 @@ public class MealOrderService {
         return mapOrders(unposted);
     }
 
-    private List<KitchenOrderResponse> mapKitchenOrders(List<MealOrder> orders) {
+    private List<KitchenOrderResponse> mapKitchenOrders(List<MealOrderEntity> orders) {
         if (orders.isEmpty())
             return List.of();
         List<MealOrderResponse> baseOrders = mapOrders(orders);
