@@ -76,10 +76,10 @@ export const DailyArrivalsPage: React.FC = () => {
       });
 
       setIsWalkInModalOpen(false);
-      alert(`Walk-in booking created successfully! Reference: #${res.retreatBookingId}`);
+      alert(`Tạo đặt phòng trực tiếp thành công! Mã đặt chỗ: #${res.retreatBookingId}`);
       navigate(`/receptionist/check-in/${res.retreatBookingId}`);
     } catch (err: any) {
-      setWalkInError(err?.message || 'Failed to create walk-in booking.');
+      setWalkInError(err?.message || 'Không thể tạo đặt phòng trực tiếp.');
     } finally {
       setWalkInSubmitting(false);
     }

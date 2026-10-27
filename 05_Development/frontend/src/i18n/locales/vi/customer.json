@@ -250,6 +250,17 @@
     "depositRefunded": "Đã Hoàn Tiền Cọc"
   },
   "payment": {
+    "summaryTitle": "Chi Tiết Chi Phí & Tiền Cọc",
+    "packageRate": "Tổng Giá Gói Nghỉ Dưỡng",
+    "serviceTax": "Thuế VAT & Tiện Ích Nghỉ Dưỡng (Đã bao gồm)",
+    "included": "Đã bao gồm 100%",
+    "depositDueNow": "Tiền Cọc Cần Thanh Toán (30%)",
+    "depositPaidStatus": "✓ Đã Thanh Toán & Xác Nhận Thành Công",
+    "depositDueHint": "Thanh toán ngay để giữ biệt thự & lịch trình trị liệu",
+    "remainingAtResort": "Số Dư Còn Lại (70%)",
+    "remainingHint": "Thanh toán tại quầy lễ tân khi nhận phòng",
+    "cancellationPolicy": "Miễn phí hủy đặt chỗ và hoàn 100% tiền cọc khi thông báo trước ngày nhận phòng ít nhất 7 ngày.",
+    "sslGuarantee": "Giao dịch được mã hóa & bảo mật qua cổng VNPay",
     "title": "Thanh Toán Quyết Toán Kỳ Nghỉ",
     "subtitle": "Thanh toán các khoản chi phí còn lại của gói nghỉ dưỡng và dịch vụ phụ trội trước khi trả phòng.",
     "backToFolio": "Quay Lại Bảng Kê Chi Phí",

@@ -43,6 +43,7 @@ export const BookingSummaryPage: React.FC = () => {
   const [vnpayInitData, setVnpayInitData] = useState<{
     paymentUrl: string;
     transactionReference: string;
+    txnRef?: string;
     testCallbackUrl?: string;
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -110,8 +111,13 @@ export const BookingSummaryPage: React.FC = () => {
 
     try {
       const responseCode = outcome === 'success' ? '00' : '24';
+      const txnRef = vnpayInitData.transactionReference || vnpayInitData.txnRef;
+      if (!txnRef) {
+        throw new Error('Mã giao dịch VNPay không hợp lệ');
+      }
+
       await simulateSandboxVNPayPayment(
-        vnpayInitData.transactionReference,
+        txnRef,
         booking.depositAmount,
         responseCode
       );
@@ -120,18 +126,21 @@ export const BookingSummaryPage: React.FC = () => {
       sessionStorage.removeItem('hsw_active_draft_booking');
       setIsVnpayModalOpen(false);
 
+      // Notify operations and booking lists
+      window.dispatchEvent(new CustomEvent('hswrms_booking_deposit_success', { detail: { bookingId: booking.retreatBookingId } }));
+
       if (outcome === 'success') {
         navigate(
-          `/customer/booking/deposit-result?bookingId=${booking.retreatBookingId}&ref=${vnpayInitData.transactionReference}&status=success`
+          `/customer/booking/deposit-result?bookingId=${booking.retreatBookingId}&ref=${encodeURIComponent(txnRef)}&status=success`
         );
       } else {
         navigate(
-          `/customer/booking/deposit-result?bookingId=${booking.retreatBookingId}&ref=${vnpayInitData.transactionReference}&status=failed`
+          `/customer/booking/deposit-result?bookingId=${booking.retreatBookingId}&ref=${encodeURIComponent(txnRef)}&status=failed`
         );
       }
     } catch (err: any) {
       setSimulationState('idle');
-      setActionError(err?.message || 'Error processing VNPay verification with backend.');
+      setActionError(err?.message || 'Lỗi xử lý xác nhận thanh toán VNPay.');
     }
   };
 
@@ -169,9 +178,9 @@ export const BookingSummaryPage: React.FC = () => {
     <div className="hsw-booking-summary-page" style={{ padding: 'var(--space-6) 0 var(--space-16)' }}>
       <Container size="standard">
         <CustomerPageHeader
-          badge={t('customer.bookingSummary.badge', 'Step 2 of 3 · Review & Deposit')}
-          title={t('customer.bookingSummary.title', 'Booking Summary & Deposit')}
-          subtitle={t('customer.bookingSummary.subtitle', 'Review your retreat reservation details before confirming your 30% deposit.')}
+          badge={t('customer.bookingSummary.badge', 'Đặt Kỳ Nghỉ > Tóm Tắt & Đặt Cọc')}
+          title={t('customer.bookingSummary.title', 'Tóm Tắt Đặt Kỳ Nghỉ & Đặt Cọc')}
+          subtitle={t('customer.bookingSummary.subtitle', 'Kiểm tra thông tin chi tiết kỳ nghỉ của quý khách trước khi thanh toán 30% tiền cọc qua cổng VNPay.')}
         />
 
         <div
@@ -212,7 +221,7 @@ export const BookingSummaryPage: React.FC = () => {
                     marginBottom: '4px',
                   }}
                 >
-                  {t('customer.bookingSummary.retreatPackage', 'Retreat Package')} · Ref: #{booking.retreatBookingId}
+                  {t('customer.bookingSummary.retreatPackage', 'Gói Nghỉ Dưỡng')} · {booking.bookingReference || `#${booking.retreatBookingId}`}
                 </span>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0 }}>
                   {pkgTitle}
@@ -233,7 +242,7 @@ export const BookingSummaryPage: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <Calendar size={13} />
-                      <span>{t('customer.bookingForm.checkInDate', 'Arrival Date')}</span>
+                      <span>{t('customer.bookingForm.checkInDate', 'Ngày Nhận Phòng')}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {booking.checkInDate}
@@ -243,7 +252,7 @@ export const BookingSummaryPage: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <Calendar size={13} />
-                      <span>{t('customer.bookingForm.checkOutDate', 'Departure Date')}</span>
+                      <span>{t('customer.bookingForm.checkOutDate', 'Ngày Trả Phòng')}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {booking.checkOutDate}
@@ -253,17 +262,17 @@ export const BookingSummaryPage: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <User size={13} />
-                      <span>Guest Count</span>
+                      <span>Số Lượng Khách</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {booking.guestCount || 1} Guests
+                      {booking.guestCount || 1} Khách
                     </div>
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <Building2 size={13} />
-                      <span>{t('customer.bookingSummary.villa', 'Accommodation')}</span>
+                      <span>{t('customer.bookingSummary.villa', 'Hạng Biệt Thự')}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {villaTitle}
@@ -283,7 +292,7 @@ export const BookingSummaryPage: React.FC = () => {
                       color: 'var(--text-secondary)',
                     }}
                   >
-                    <strong>{t('customer.bookingForm.specialRequests', 'Special Requests')}:</strong> {booking.specialRequest}
+                    <strong>{t('customer.bookingForm.specialRequests', 'Yêu cầu đặc biệt')}:</strong> {booking.specialRequest}
                   </div>
                 )}
               </div>
@@ -302,11 +311,11 @@ export const BookingSummaryPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
                 <CreditCard size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  {t('customer.bookingSummary.depositSection', 'Deposit Payment Method')}
+                  {t('customer.bookingSummary.depositSection', 'Phương Thức Thanh Toán Đặt Cọc')}
                 </h3>
               </div>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 var(--space-4)' }}>
-                Pay 30% deposit securely via VNPay Hospitality Gateway. Holds booking inventory for 15 minutes.
+                Thanh toán khoản cọc 30% an toàn qua cổng VNPay. Hệ thống giữ chỗ biệt thự trong 15 phút.
               </p>
 
               <div
@@ -339,10 +348,10 @@ export const BookingSummaryPage: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    VNPay Hospitality Gateway
+                    Cổng Thanh Toán VNPay
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    QR Code · Domestic ATM Cards · Visa / MasterCard / JCB
+                    Mã QR · Thẻ ATM Nội Địa · Visa / MasterCard / JCB
                   </div>
                 </div>
               </div>
@@ -362,7 +371,7 @@ export const BookingSummaryPage: React.FC = () => {
                 }}
               >
                 <ArrowLeft size={14} />
-                <span>Modify reservation dates or villa category</span>
+                <span>← Thay đổi ngày lưu trú hoặc hạng biệt thự</span>
               </Link>
             </div>
           </div>
@@ -389,7 +398,7 @@ export const BookingSummaryPage: React.FC = () => {
                   boxShadow: 'var(--shadow-md)',
                 }}
               >
-                Pay Deposit via VNPay ({formatVND(booking.depositAmount, i18n.language)})
+                → Thanh Toán Tiền Cọc Qua VNPay ({formatVND(booking.depositAmount, i18n.language)})
               </Button>
 
               <div
@@ -404,7 +413,7 @@ export const BookingSummaryPage: React.FC = () => {
                 }}
               >
                 <Lock size={12} />
-                <span>{t('customer.payment.sslGuarantee', 'Encrypted & Certified VNPay Hospitality Transaction')}</span>
+                <span>{t('customer.payment.sslGuarantee', 'Giao dịch được mã hóa & bảo mật qua cổng VNPay')}</span>
               </div>
             </div>
           </div>
@@ -452,7 +461,7 @@ export const BookingSummaryPage: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontWeight: 800, letterSpacing: '1px' }}>VNPAY</span>
-                  <span style={{ fontSize: '11px', opacity: 0.85 }}>| Hospitality Payment Gateway</span>
+                  <span style={{ fontSize: '11px', opacity: 0.85 }}>| Cổng Thanh Toán Nghỉ Dưỡng</span>
                 </div>
                 <button
                   type="button"
@@ -468,7 +477,7 @@ export const BookingSummaryPage: React.FC = () => {
                     justifyContent: 'center',
                     padding: '4px',
                   }}
-                  aria-label={t('common.close', 'Close')}
+                  aria-label={t('common.close', 'Đóng')}
                 >
                   <X size={18} />
                 </button>
@@ -486,12 +495,12 @@ export const BookingSummaryPage: React.FC = () => {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  Retreat Deposit Confirmation
+                  Xác Nhận Thanh Toán Tiền Cọc Kỳ Nghỉ
                 </h3>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '0 0 var(--space-4)' }}>
-                  Deposit transaction reference in SQL Server:{' '}
+                  Mã tham chiếu giao dịch trên hệ thống:{' '}
                   <strong style={{ fontFamily: 'monospace', color: 'var(--accent-forest)' }}>
-                    {vnpayInitData.transactionReference}
+                    {vnpayInitData.transactionReference || vnpayInitData.txnRef}
                   </strong>
                 </p>
 
@@ -514,13 +523,13 @@ export const BookingSummaryPage: React.FC = () => {
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Amount to Deposit (30%)</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>SỐ TIỀN ĐẶT CỌC (30%)</div>
                     <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--accent-forest)' }}>
                       {formatVND(booking.depositAmount, i18n.language)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    Remaining 70% due at check-in:<br />
+                    70% còn lại thanh toán khi nhận phòng:<br />
                     <strong>{formatVND(remainingBalance, i18n.language)}</strong>
                   </div>
                 </div>
@@ -530,7 +539,7 @@ export const BookingSummaryPage: React.FC = () => {
                   <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
                     <Loader2 className="animate-spin" size={32} style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-2)' }} />
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent-forest)' }}>
-                      Verifying HMAC-SHA512 signature & updating SQL Server...
+                      Đang xác thực chữ ký HMAC-SHA512 & cập nhật SQL Server...
                     </div>
                   </div>
                 ) : (
@@ -557,7 +566,7 @@ export const BookingSummaryPage: React.FC = () => {
                       }}
                     >
                       <CheckCircle2 size={16} />
-                      <span>Confirm Deposit & Verify Signature (Dev Sandbox)</span>
+                      <span>Xác Nhận Thanh Toán Cọc & Xác Thực Chữ Ký (VNPay Sandbox)</span>
                     </button>
 
                     {/* Open VNPay Gateway Directly */}
@@ -582,7 +591,7 @@ export const BookingSummaryPage: React.FC = () => {
                         }}
                       >
                         <ExternalLink size={14} />
-                        <span>Open Official VNPay Gateway URL</span>
+                        <span>Mở Cổng Thanh Toán VNPay Chính Thức</span>
                       </a>
                     )}
 
@@ -607,7 +616,7 @@ export const BookingSummaryPage: React.FC = () => {
                       }}
                     >
                       <AlertTriangle size={14} />
-                      <span>Simulate Payment Failure / Cancellation</span>
+                      <span>Giả Lập Giao Dịch Thất Bại / Hủy Thanh Toán</span>
                     </button>
                   </div>
                 )}

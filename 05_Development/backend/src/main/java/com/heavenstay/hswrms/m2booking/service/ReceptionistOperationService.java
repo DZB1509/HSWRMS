@@ -72,8 +72,20 @@ public class ReceptionistOperationService {
 
         Map<Integer, CustomerIdentityPort.CustomerContact> contacts = customerIdentityPort.findContacts(profileIds);
 
+        List<Integer> bookingIds = arrivals.stream().map(RetreatBooking::getRetreatBookingId).collect(Collectors.toList());
+        Map<Integer, PaymentTransaction> txnMap = paymentTransactionRepository.findByRetreatBookingIdInAndPaymentType(bookingIds, PaymentTransaction.TYPE_DEPOSIT)
+                .stream().collect(Collectors.toMap(
+                        PaymentTransaction::getRetreatBookingId,
+                        t -> t,
+                        (a, b) -> {
+                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(a.getPaymentStatus())) return a;
+                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(b.getPaymentStatus())) return b;
+                            return (a.getTransactionId() != null && b.getTransactionId() != null && a.getTransactionId() > b.getTransactionId()) ? a : b;
+                        }
+                ));
+
         return arrivals.stream()
-                .map(rb -> toArrivalResponse(rb, contacts.get(rb.getCustomerProfileId())))
+                .map(rb -> toArrivalResponse(rb, contacts.get(rb.getCustomerProfileId()), txnMap.get(rb.getRetreatBookingId())))
                 .collect(Collectors.toList());
     }
 
@@ -416,7 +428,15 @@ public class ReceptionistOperationService {
                 .stream().collect(Collectors.toMap(r -> r.getRetreatBooking().getRetreatBookingId(), r -> r, (a, b) -> a));
 
         Map<Integer, PaymentTransaction> txnMap = paymentTransactionRepository.findByRetreatBookingIdInAndPaymentType(bookingIds, PaymentTransaction.TYPE_DEPOSIT)
-                .stream().collect(Collectors.toMap(PaymentTransaction::getRetreatBookingId, t -> t, (a, b) -> a));
+                .stream().collect(Collectors.toMap(
+                        PaymentTransaction::getRetreatBookingId,
+                        t -> t,
+                        (a, b) -> {
+                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(a.getPaymentStatus())) return a;
+                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(b.getPaymentStatus())) return b;
+                            return (a.getTransactionId() != null && b.getTransactionId() != null && a.getTransactionId() > b.getTransactionId()) ? a : b;
+                        }
+                ));
 
         String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim().toLowerCase() : null;
 
@@ -457,13 +477,16 @@ public class ReceptionistOperationService {
 
         List<PaymentTransaction> txns = paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT);
 
+        PaymentTransaction preferredTxn = txns.isEmpty() ? null : txns.stream()
+                .filter(t -> PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(t.getPaymentStatus()))
+                .findFirst()
+                .orElse(txns.get(0));
+
         CustomerIdentityPort.CustomerContact contact = profile != null
                 ? new CustomerIdentityPort.CustomerContact(profile.customerProfileId(), profile.userId(), profile.fullName(), profile.email(), profile.phone())
                 : null;
 
-        PaymentTransaction latestTxn = txns.isEmpty() ? null : txns.get(0);
-
-        ReceptionistBookingResponse base = toReceptionistBookingResponse(booking, contact, resRec != null, latestTxn);
+        ReceptionistBookingResponse base = toReceptionistBookingResponse(booking, contact, resRec != null, preferredTxn);
 
         ReceptionistBookingDetailResponse detail = new ReceptionistBookingDetailResponse();
         copyBaseToDetail(base, detail);
@@ -617,7 +640,7 @@ public class ReceptionistOperationService {
         dest.setTransactionReference(src.getTransactionReference());
     }
 
-    private DailyArrivalResponse toArrivalResponse(RetreatBooking rb, CustomerIdentityPort.CustomerContact contact) {
+    private DailyArrivalResponse toArrivalResponse(RetreatBooking rb, CustomerIdentityPort.CustomerContact contact, PaymentTransaction txn) {
         DailyArrivalResponse res = new DailyArrivalResponse();
         res.setRetreatBookingId(rb.getRetreatBookingId());
         res.setCustomerProfileId(rb.getCustomerProfileId());
@@ -647,6 +670,17 @@ public class ReceptionistOperationService {
         res.setBookingReference("HSW-BK-" + rb.getRetreatBookingId());
         res.setHasResidenceRecord(residenceRecordRepository.existsByRetreatBooking_RetreatBookingId(rb.getRetreatBookingId()));
         res.setHasHealthProfile(customerIdentityPort.hasHealthProfile(rb.getCustomerProfileId()));
+
+        if (txn != null) {
+            res.setPaymentStatus(txn.getPaymentStatus());
+            res.setTransactionReference(txn.getTransactionReference());
+        } else {
+            boolean isPaid = "CONFIRMED".equalsIgnoreCase(rb.getBookingStatus())
+                    || "CHECKED_IN".equalsIgnoreCase(rb.getBookingStatus())
+                    || "COMPLETED".equalsIgnoreCase(rb.getBookingStatus());
+            res.setPaymentStatus(isPaid ? "SUCCESSFUL" : "PENDING");
+            res.setTransactionReference(null);
+        }
 
         return res;
     }

@@ -86,7 +86,8 @@ export const DepositPaymentResultPage: React.FC = () => {
   }, [bookingIdParam, searchParams]);
 
   const isSuccess = verifiedSuccess || booking?.bookingStatus === 'CONFIRMED';
-  const ref = transactionRef || (booking ? `HSW-BK-${booking.retreatBookingId}` : 'HSW-DEP-VERIFIED');
+  const bookingRefDisplay = booking?.bookingReference || (booking ? `HSW-BK-${booking.retreatBookingId}` : (bookingIdParam ? `HSW-BK-${bookingIdParam}` : '—'));
+  const vnpayTxnRefDisplay = transactionRef || booking?.transactionReference || '—';
 
   const formattedDate = new Date().toLocaleDateString(
     lang === 'vi' ? 'vi-VN' : lang === 'fr' ? 'fr-FR' : lang === 'ja' ? 'ja-JP' : lang === 'zh-CN' ? 'zh-CN' : 'en-US',
@@ -99,10 +100,8 @@ export const DepositPaymentResultPage: React.FC = () => {
     }
   );
 
-  const depositAmount = booking?.depositAmount || 14100000;
-  const remainingBalance = booking ? booking.totalEstimatedAmount - booking.depositAmount : 32900000;
-  const transactionId = transactionRef || (booking?.transactionReference) || `VNPAY-${Date.now().toString().slice(-8)}`;
-
+  const depositAmount = booking?.depositAmount || 0;
+  const remainingBalance = booking ? (booking.totalEstimatedAmount - booking.depositAmount) : 0;
 
   if (loading) {
     return (
@@ -111,7 +110,7 @@ export const DepositPaymentResultPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '3rem' }}>
             <Loader2 style={{ width: '2.5rem', height: '2.5rem', animation: 'spin 1s linear infinite', color: '#2d5a43' }} />
             <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-              {t('booking.verifyingDeposit', 'Verifying transaction and retrieving reservation...')}
+              {t('booking.verifyingDeposit', 'Đang xác thực giao dịch và tải thông tin đặt phòng từ hệ thống...')}
             </p>
           </div>
         </Container>
@@ -168,7 +167,7 @@ export const DepositPaymentResultPage: React.FC = () => {
                 marginBottom: 'var(--space-2)',
               }}
             >
-              {t('customer.depositResult.badge', 'Step 3 of 3 · Transaction Confirmation')}
+              {t('customer.depositResult.badge', 'Đặt Kỳ Nghỉ > Kết Quả Đặt Cọc')}
             </div>
 
             <h1
@@ -181,8 +180,8 @@ export const DepositPaymentResultPage: React.FC = () => {
               }}
             >
               {isSuccess
-                ? t('customer.depositResult.successTitle', 'Retreat Deposit Confirmed')
-                : t('customer.depositResult.failureTitle', 'Deposit Payment Unsuccessful')}
+                ? t('customer.depositResult.successTitle', 'Đặt Cọc Kỳ Nghỉ Thành Công')
+                : t('customer.depositResult.failureTitle', 'Thanh Toán Đặt Cọc Không Thành Công')}
             </h1>
 
             <p
@@ -197,11 +196,11 @@ export const DepositPaymentResultPage: React.FC = () => {
               {isSuccess
                 ? t(
                     'customer.depositResult.successSubtitle',
-                    'Your 30% deposit has been processed successfully. Your villa and wellness sessions are reserved.'
+                    'Khoản đặt cọc 30% đã được ghi nhận. Biệt thự và các buổi trị liệu của quý khách đã được giữ chỗ an toàn.'
                   )
                 : t(
                     'customer.depositResult.failureSubtitle',
-                    'The payment transaction could not be completed. Your reservation remains on temporary hold for 24 hours.'
+                    'Giao dịch thanh toán chưa thể hoàn tất. Đặt chỗ của quý khách đang được tạm giữ trong vòng 24 giờ.'
                   )}
             </p>
           </div>
@@ -226,10 +225,10 @@ export const DepositPaymentResultPage: React.FC = () => {
               >
                 <div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {t('customer.depositResult.bookingRef', 'Booking Reference')}
+                    MÃ ĐẶT CHỖ
                   </div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
-                    {ref}
+                    {bookingRefDisplay}
                   </div>
                 </div>
 
@@ -237,16 +236,16 @@ export const DepositPaymentResultPage: React.FC = () => {
                   <>
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('customer.depositResult.transactionId', 'Transaction ID')}
+                        MÃ GIAO DỊCH VNPAY
                       </div>
                       <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-forest)', marginTop: '4px', fontFamily: 'monospace' }}>
-                        {transactionId}
+                        {vnpayTxnRefDisplay}
                       </div>
                     </div>
 
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('customer.depositResult.amountPaid', 'Deposit Amount Paid (30%)')}
+                        SỐ TIỀN ĐẶT CỌC (30%)
                       </div>
                       <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--accent-forest)', marginTop: '2px' }}>
                         {formatVND(depositAmount, i18n.language)}
@@ -255,7 +254,7 @@ export const DepositPaymentResultPage: React.FC = () => {
 
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('customer.payment.remainingAtResort', 'Remaining Balance (70%)')}
+                        SỐ DƯ CÒN LẠI (70%)
                       </div>
                       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px' }}>
                         {formatVND(remainingBalance, i18n.language)}
@@ -264,7 +263,7 @@ export const DepositPaymentResultPage: React.FC = () => {
 
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('customer.depositResult.paymentDate', 'Payment Date & Time')}
+                        THỜI GIAN GIAO DỊCH
                       </div>
                       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '4px' }}>
                         {formattedDate}
@@ -273,10 +272,10 @@ export const DepositPaymentResultPage: React.FC = () => {
 
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('customer.depositResult.paymentMethod', 'Payment Channel')}
+                        KÊNH THANH TOÁN
                       </div>
                       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                        VNPay Hospitality Gateway (Online)
+                        Cổng Thanh Toán VNPay (Trực Tuyến)
                       </div>
                     </div>
                   </>
@@ -305,10 +304,10 @@ export const DepositPaymentResultPage: React.FC = () => {
                 <ShieldCheck size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <strong style={{ color: 'var(--accent-forest)', display: 'block', marginBottom: '2px' }}>
-                    {t('customer.depositResult.importantNotice', 'Deposit payment secures your reservation. The remaining 70% balance is settled comfortably at resort reception upon check-in.')}
+                    {t('customer.depositResult.importantNotice', 'Khoản đặt cọc đảm bảo giữ chỗ cho kỳ nghỉ. Khoản tiền 70% còn lại sẽ được thanh toán thoải mái tại quầy lễ tân khi quý khách nhận phòng.')}
                   </strong>
                   <span>
-                    No further online deposit is required. Your villa host will have your welcome tea and customized schedule prepared upon arrival.
+                    Quý khách không cần thanh toán thêm khoản cọc trực tuyến nào khác. Quản gia biệt thự sẽ chuẩn bị sẵn trà chào mừng và lịch trình cá nhân hóa khi quý khách đến nhận phòng.
                   </span>
                 </div>
               </div>
@@ -331,7 +330,7 @@ export const DepositPaymentResultPage: React.FC = () => {
               >
                 <XCircle size={18} style={{ color: '#b91c1c', flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong>No funds were deducted.</strong> You may retry the payment with an alternative method (QR Code, ATM card, or international credit card).
+                  <strong>Tài khoản chưa bị trừ tiền.</strong> Quý khách có thể thử lại thanh toán với phương thức khác (Mã QR, thẻ ATM hoặc thẻ quốc tế).
                 </div>
               </div>
             )}
@@ -352,50 +351,42 @@ export const DepositPaymentResultPage: React.FC = () => {
                       fontWeight: 600,
                     }}
                   >
-                    {t('customer.depositResult.viewBookingBtn', 'View Booking Detail & Itinerary')}
+                    {t('customer.depositResult.viewBookingBtn', '→ Xem Chi Tiết Đặt Chỗ & Lịch Trình')}
                   </Button>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                     <Link
                       to="/customer/bookings"
+                      className="hsw-btn hsw-btn-secondary"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px',
-                        padding: '10px',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 600,
-                        color: 'var(--text-secondary)',
                         textDecoration: 'none',
-                        backgroundColor: 'var(--surface)',
+                        fontSize: 'var(--text-xs)',
+                        padding: '10px 14px',
                       }}
                     >
                       <FileText size={14} />
-                      <span>{t('customer.depositResult.myBookingsBtn', 'View All Bookings')}</span>
+                      <span>{t('customer.depositResult.myBookingsBtn', 'Xem Tất Cả Kỳ Nghỉ')}</span>
                     </Link>
 
                     <Link
                       to="/customer/dashboard"
+                      className="hsw-btn hsw-btn-secondary"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px',
-                        padding: '10px',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 600,
-                        color: 'var(--text-secondary)',
                         textDecoration: 'none',
-                        backgroundColor: 'var(--surface)',
+                        fontSize: 'var(--text-xs)',
+                        padding: '10px 14px',
                       }}
                     >
                       <LayoutDashboard size={14} />
-                      <span>{t('customer.depositResult.dashboardBtn', 'Customer Dashboard')}</span>
+                      <span>{t('customer.depositResult.dashboardBtn', 'Về Bảng Điều Khiển')}</span>
                     </Link>
                   </div>
                 </>
@@ -404,7 +395,7 @@ export const DepositPaymentResultPage: React.FC = () => {
                   <Button
                     variant="primary"
                     size="lg"
-                    onClick={() => navigate('/customer/booking/summary')}
+                    onClick={() => navigate(bookingIdParam ? `/customer/booking/summary?bookingId=${bookingIdParam}` : '/customer/booking/new')}
                     icon={<RotateCcw size={16} />}
                     style={{
                       width: '100%',
@@ -413,28 +404,24 @@ export const DepositPaymentResultPage: React.FC = () => {
                       fontWeight: 600,
                     }}
                   >
-                    {t('customer.depositResult.retryBtn', 'Retry Deposit Payment')}
+                    {t('customer.depositResult.retryBtn', 'Thử Lại Thanh Toán Đặt Cọc')}
                   </Button>
 
                   <Link
                     to="/customer/dashboard"
+                    className="hsw-btn hsw-btn-secondary"
                     style={{
-                      display: 'inline-flex',
+                      display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '10px',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
                       textDecoration: 'none',
-                      backgroundColor: 'var(--surface)',
+                      fontSize: 'var(--text-xs)',
+                      padding: '10px 14px',
                     }}
                   >
                     <LayoutDashboard size={14} />
-                    <span>{t('customer.depositResult.dashboardBtn', 'Customer Dashboard')}</span>
+                    <span>{t('customer.depositResult.dashboardBtn', 'Về Bảng Điều Khiển')}</span>
                   </Link>
                 </>
               )}
@@ -445,3 +432,4 @@ export const DepositPaymentResultPage: React.FC = () => {
     </div>
   );
 };
+

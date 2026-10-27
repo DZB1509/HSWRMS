@@ -30,7 +30,13 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [villas, setVillas] = useState<Villa[]>([]);
   const [arrivals, setArrivals] = useState<ArrivalRecord[]>([]);
   const [alerts, setAlerts] = useState<OperationalAlert[]>([]);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const dismissAlert = (alertId: string) => {
+    setDismissedAlertIds((prev) => new Set([...prev, alertId]));
+    setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+  };
 
   const todayDate = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
@@ -130,25 +136,17 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Derive alerts dynamically from real arrival records in SQL Server
         const realAlerts: OperationalAlert[] = [];
         mappedArrivals.forEach((arr) => {
-          if (!arr.assignedVillaId && arr.arrivalStatus !== 'checked_in') {
+          const alertId = `alert-unassigned-${arr.id}`;
+          // Only alert for unassigned villas if arrival is not checked-in and not dismissed
+          if (!arr.assignedVillaId && arr.arrivalStatus !== 'checked_in' && !dismissedAlertIds.has(alertId)) {
             realAlerts.push({
-              id: `alert-unassigned-${arr.id}`,
+              id: alertId,
               type: 'unassigned_villa',
               severity: 'warning',
-              title: `Unassigned Villa: ${arr.customerName}`,
-              description: `Booking ${arr.bookingReference} requires villa allocation for ${arr.villaCategory}.`,
+              title: `Chưa phân bổ biệt thự: ${arr.customerName}`,
+              description: `Chưa phân bổ biệt thự: Đặt chỗ ${arr.bookingReference} (${arr.customerName}) cần được gán biệt thự hạng ${arr.villaCategory}.`,
               bookingRef: arr.bookingReference,
               actionPath: `/receptionist/check-in/${arr.bookingReference}/villa`,
-            });
-          }
-          if (arr.depositStatus === 'pending') {
-            realAlerts.push({
-              id: `alert-deposit-${arr.id}`,
-              type: 'deposit_issue',
-              severity: 'info',
-              title: `Deposit Pending: ${arr.bookingReference}`,
-              description: `Deposit for ${arr.customerName} has not been completed.`,
-              bookingRef: arr.bookingReference,
             });
           }
         });
@@ -174,9 +172,15 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       syncWithBackend();
     };
 
+    const handleDepositSuccess = () => {
+      syncWithBackend();
+    };
+
     window.addEventListener('hswrms_auth_changed', handleAuthChange);
+    window.addEventListener('hswrms_booking_deposit_success', handleDepositSuccess);
     return () => {
       window.removeEventListener('hswrms_auth_changed', handleAuthChange);
+      window.removeEventListener('hswrms_booking_deposit_success', handleDepositSuccess);
     };
   }, [role]);
 
@@ -258,19 +262,22 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
 
     // Remove any unassigned_villa alert for this booking
-    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef));
+    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.id !== `alert-unassigned-${arrival.id}`));
+    setDismissedAlertIds((prev) => new Set([...prev, `alert-unassigned-${arrival.id}`]));
 
-    const numBookingId = parseInt(bookingRef, 10);
-    const numVillaId = parseInt(villaId, 10);
+    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    const numVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
     if (!isNaN(numBookingId) && !isNaN(numVillaId)) {
-      assignPhysicalVilla(numBookingId, numVillaId).catch((err) => {
-        console.warn('Sync assign villa to backend failed:', err);
-      });
+      assignPhysicalVilla(numBookingId, numVillaId)
+        .then(() => syncWithBackend())
+        .catch((err) => {
+          console.warn('Sync assign villa to backend failed:', err);
+        });
     }
 
     return {
       success: true,
-      message: `${villa.name.en} successfully assigned to booking ${bookingRef}.`,
+      message: `Đã phân bổ Biệt thự #${villa.code} cho đặt chỗ ${bookingRef}.`,
     };
   };
 
@@ -337,21 +344,24 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
 
     // Sync status with backend SQL Server
-    const numericVillaId = parseInt(villaId, 10);
+    const numericVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
     if (!isNaN(numericVillaId)) {
       let backendStatus = 'AVAILABLE';
       if (newStatus === 'cleaning') backendStatus = 'NEEDS_CLEANING';
       else if (newStatus === 'maintenance') backendStatus = 'MAINTENANCE';
       else if (newStatus === 'occupied') backendStatus = 'OCCUPIED';
 
-      updatePhysicalVillaStatus(numericVillaId, backendStatus).catch((err) => {
-        console.warn('Sync physical villa status to backend failed:', err);
-      });
+      updatePhysicalVillaStatus(numericVillaId, backendStatus)
+        .then(() => syncWithBackend())
+        .catch((err) => {
+          console.warn('Sync physical villa status to backend failed:', err);
+        });
     }
 
+    const viStatus = newStatus === 'ready' ? 'Sẵn sàng' : newStatus === 'cleaning' ? 'Đang dọn dẹp' : newStatus === 'maintenance' ? 'Bảo trì' : 'Đang sử dụng';
     return {
       success: true,
-      message: `Villa #${villa.code} status updated to ${newStatus}.`,
+      message: `Cập nhật trạng thái Biệt thự #${villa.code} thành ${viStatus}.`,
     };
   };
 
@@ -494,8 +504,8 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
 
     // Sync Residence declaration and Physical Villa assignment to backend SQL Server
-    const numBookingId = parseInt(bookingRef, 10);
-    const numVillaId = parseInt(villaId, 10);
+    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    const numVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
     if (!isNaN(numBookingId)) {
       recordResidenceDeclaration(numBookingId, {
         fullName: identityData.fullLegalName,
@@ -507,17 +517,20 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }).catch((err) => console.warn('Sync residence record to backend failed:', err));
     }
     if (!isNaN(numBookingId) && !isNaN(numVillaId)) {
-      assignPhysicalVilla(numBookingId, numVillaId).catch((err) => {
-        console.warn('Sync assign villa check-in to backend failed:', err);
-      });
+      assignPhysicalVilla(numBookingId, numVillaId)
+        .then(() => syncWithBackend())
+        .catch((err) => {
+          console.warn('Sync assign villa check-in to backend failed:', err);
+        });
     }
 
     // 3. Clear relevant operational alerts
-    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.villaId !== villa.id));
+    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.id !== `alert-unassigned-${arrival.id}`));
+    setDismissedAlertIds((prev) => new Set([...prev, `alert-unassigned-${arrival.id}`]));
 
     return {
       success: true,
-      message: `Check-in completed successfully for ${arrival.customerName}. Villa #${villa.code} key issued.`,
+      message: `Nhận phòng thành công cho khách hàng ${arrival.customerName}. Đã bàn giao chìa khóa Biệt thự #${villa.code}.`,
     };
   };
 
@@ -568,6 +581,7 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         markResidenceDeclaration,
         isLoading,
         refreshOperationsData: syncWithBackend,
+        dismissAlert,
       }}
     >
       {children}

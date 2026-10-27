@@ -54,10 +54,16 @@ public class VNPayDepositService {
         this.bookingClock = bookingClock;
     }
 
+    public record VNPayDepositInitResult(String paymentUrl, String transactionReference) {}
+
     /**
      * Initializes VNPay deposit payment URL and creates a tracked PaymentTransaction row.
      */
     public String generateDepositUrl(Integer bookingId, String customReturnUrl, HttpServletRequest request) {
+        return generateDepositUrlWithResult(bookingId, customReturnUrl, request).paymentUrl();
+    }
+
+    public VNPayDepositInitResult generateDepositUrlWithResult(Integer bookingId, String customReturnUrl, HttpServletRequest request) {
         RetreatBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking #" + bookingId + " not found"));
 
@@ -120,7 +126,8 @@ public class VNPayDepositService {
         String secureHash = hmacSHA512(hashSecret, hashData.toString());
         query.append("&vnp_SecureHash=").append(secureHash);
 
-        return payUrl + "?" + query.toString();
+        String paymentUrl = payUrl + "?" + query.toString();
+        return new VNPayDepositInitResult(paymentUrl, txnRef);
     }
 
     /**

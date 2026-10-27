@@ -113,4 +113,5 @@ export interface OperationsContextType {
   markResidenceDeclaration: (bookingRef: string, status: ResidenceDeclarationStatus) => void;
   isLoading: boolean;
   refreshOperationsData: () => Promise<void>;
+  dismissAlert: (alertId: string) => void;
 }

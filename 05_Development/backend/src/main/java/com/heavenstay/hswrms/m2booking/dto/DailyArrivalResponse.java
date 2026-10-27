@@ -23,6 +23,8 @@ public class DailyArrivalResponse {
     private Integer guestCount;
     private BigDecimal totalEstimatedAmount;
     private String bookingReference;
+    private String paymentStatus;
+    private String transactionReference;
 
     public DailyArrivalResponse() {
     }
@@ -169,5 +171,21 @@ public class DailyArrivalResponse {
 
     public void setBookingReference(String bookingReference) {
         this.bookingReference = bookingReference;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
     }
 }

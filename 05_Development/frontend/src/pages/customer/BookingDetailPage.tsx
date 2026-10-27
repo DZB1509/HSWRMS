@@ -149,6 +149,35 @@ export const BookingDetailPage: React.FC = () => {
   const villaTitle = booking.requestedCategoryName;
   const canModifyOrCancel = booking.bookingStatus === 'PENDING' || booking.bookingStatus === 'CONFIRMED';
 
+  const getBookingStatusText = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'PENDING':
+        return 'Chờ đặt cọc';
+      case 'CONFIRMED':
+        return 'Đã xác nhận';
+      case 'CHECKED_IN':
+        return 'Đã nhận phòng';
+      case 'COMPLETED':
+        return 'Đã hoàn tất';
+      case 'CANCELLED':
+        return 'Đã hủy';
+      default:
+        return status;
+    }
+  };
+
+  const getPaymentStatusText = (status?: string, bookingStatus?: string) => {
+    const effectiveStatus = status || (bookingStatus === 'CONFIRMED' || bookingStatus === 'CHECKED_IN' ? 'SUCCESSFUL' : 'PENDING');
+    switch (effectiveStatus.toUpperCase()) {
+      case 'SUCCESSFUL':
+        return 'Đã thanh toán cọc';
+      case 'FAILED':
+        return 'Thanh toán thất bại';
+      case 'PENDING':
+      default:
+        return 'Chờ thanh toán';
+    }
+  };
 
   return (
     <div className="hsw-booking-detail-page" style={{ padding: 'var(--space-6) 0 var(--space-16)' }}>
@@ -168,15 +197,15 @@ export const BookingDetailPage: React.FC = () => {
             }}
           >
             <ArrowLeft size={14} />
-            <span>{t('customer.bookingDetail.backToList', 'Back to My Bookings')}</span>
+            <span>{t('customer.bookingDetail.backToList', 'Quay Lại Danh Sách Kỳ Nghỉ')}</span>
           </Link>
         </div>
 
         {/* Header with Status & Action Buttons */}
         <CustomerPageHeader
-          badge={`${t('customer.depositResult.bookingRef', 'Ref')}: #${booking.retreatBookingId}`}
+          badge={`${t('customer.depositResult.bookingRef', 'Mã đặt chỗ')}: ${booking.bookingReference || `#${booking.retreatBookingId}`}`}
           title={pkgTitle}
-          subtitle={`${booking.checkInDate} → ${booking.checkOutDate} · ${booking.guestCount || 1} Guests`}
+          subtitle={`${booking.checkInDate} → ${booking.checkOutDate} · ${booking.guestCount || 1} Khách`}
           action={
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <span
@@ -204,7 +233,7 @@ export const BookingDetailPage: React.FC = () => {
                       : '#d97706',
                 }}
               >
-                {booking.bookingStatus}
+                {getBookingStatusText(booking.bookingStatus)}
               </span>
 
               {canModifyOrCancel && (
@@ -215,7 +244,7 @@ export const BookingDetailPage: React.FC = () => {
                     onClick={() => setIsModifyModalOpen(true)}
                     icon={<Edit3 size={13} />}
                   >
-                    Modify Stay
+                    Thay Đổi Kỳ Nghỉ
                   </Button>
                   <Button
                     variant="secondary"
@@ -224,7 +253,7 @@ export const BookingDetailPage: React.FC = () => {
                     style={{ borderColor: 'rgba(185, 28, 28, 0.3)', color: '#b91c1c' }}
                     icon={<X size={13} />}
                   >
-                    Cancel Booking
+                    Hủy Đặt Chỗ
                   </Button>
                 </>
               )}
@@ -261,7 +290,7 @@ export const BookingDetailPage: React.FC = () => {
                 }}
               >
                 <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.85 }}>
-                  Reserved Accommodation
+                  HẠNG BIỆT THỰ ĐÃ ĐẶT
                 </div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: '4px 0 0' }}>
                   {villaTitle} {booking.assignedVillaNumber ? `(${booking.assignedVillaNumber})` : ''}
@@ -280,28 +309,28 @@ export const BookingDetailPage: React.FC = () => {
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Check-in Date</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Ngày Nhận Phòng</div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.checkInDate}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Check-out Date</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Ngày Trả Phòng</div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.checkOutDate}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Guests</div>
-                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.guestCount || 1} Guests</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Số Lượng Khách</div>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{booking.guestCount || 1} Khách</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Physical Villa</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Biệt Thự Thực Tế</div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent-forest)' }}>
-                      {booking.assignedVillaNumber || 'Assigned upon check-in'}
+                      {booking.assignedVillaNumber || 'Phân bổ khi nhận phòng'}
                     </div>
                   </div>
                 </div>
 
                 {booking.specialRequest && (
                   <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                    <strong>Special Requests on Record:</strong> {booking.specialRequest}
+                    <strong>Yêu cầu đặc biệt được ghi nhận:</strong> {booking.specialRequest}
                   </div>
                 )}
               </div>
@@ -318,7 +347,7 @@ export const BookingDetailPage: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, color: 'var(--accent-forest)', marginBottom: 'var(--space-3)' }}>
-                Integrated Wellness Itinerary
+                LỊCH TRÌNH NGHỈ DƯỠNG & TRỊ LIỆU TÍCH HỢP
               </div>
 
               {/* Spa Link */}
@@ -334,10 +363,10 @@ export const BookingDetailPage: React.FC = () => {
                 <Sparkles size={16} style={{ color: 'var(--accent-forest)', marginTop: '2px', flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {t('customer.bookingDetail.crossSpaTitle', 'Spa & Holistic Therapies')}
+                    {t('customer.bookingDetail.crossSpaTitle', 'Spa & Liệu Pháp Toàn Diện')}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>
-                    {t('customer.bookingDetail.crossSpaDesc', 'Explore retreat-included treatments or reserve additional restorative sessions.')}
+                    {t('customer.bookingDetail.crossSpaDesc', 'Khám phá retreat-included treatments hoặc đặt thêm các phiên phục hồi.')}
                   </div>
                   <Link
                     to="/customer/spa"
@@ -351,8 +380,7 @@ export const BookingDetailPage: React.FC = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    <span>View Spa Sessions</span>
-                    <ArrowLeft size={10} style={{ transform: 'rotate(180deg)' }} />
+                    <span>Xem Lịch Trị Liệu Spa →</span>
                   </Link>
                 </div>
               </div>
@@ -369,10 +397,10 @@ export const BookingDetailPage: React.FC = () => {
                 <Utensils size={16} style={{ color: 'var(--accent-forest)', marginTop: '2px', flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {t('customer.bookingDetail.crossDiningTitle', 'Nourishing Dining & Meal Plans')}
+                    {t('customer.bookingDetail.crossDiningTitle', 'Ẩm Thực Dưỡng Sinh Cá Nhân')}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>
-                    {t('customer.bookingDetail.crossDiningDesc', 'Browse executive chef botanical menus aligned with your dietary profile.')}
+                    {t('customer.bookingDetail.crossDiningDesc', 'Xem thực đơn dinh dưỡng từ bếp trưởng phù hợp với hồ sơ ăn uống của quý khách.')}
                   </div>
                   <Link
                     to="/customer/dining/menu"
@@ -386,8 +414,7 @@ export const BookingDetailPage: React.FC = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    <span>View Dining Menu</span>
-                    <ArrowLeft size={10} style={{ transform: 'rotate(180deg)' }} />
+                    <span>Xem Thực Đơn Dưỡng Sinh →</span>
                   </Link>
                 </div>
               </div>
@@ -400,16 +427,17 @@ export const BookingDetailPage: React.FC = () => {
               totalPrice={booking.totalEstimatedAmount}
               depositAmount={booking.depositAmount}
               highlightDeposit={false}
+              depositPaid={booking.bookingStatus === 'CONFIRMED' || booking.paymentStatus === 'SUCCESSFUL'}
             />
 
-            {booking.bookingStatus === 'PENDING' && (
+            {booking.bookingStatus === 'PENDING' && booking.paymentStatus !== 'SUCCESSFUL' && (
               <Button
                 variant="primary"
                 size="lg"
                 onClick={() => navigate(`/customer/booking/summary?bookingId=${booking.retreatBookingId}`)}
                 style={{ width: '100%', justifyContent: 'center' }}
               >
-                Complete 30% VNPay Deposit
+                Thanh Toán 30% Tiền Cọc Qua VNPay
               </Button>
             )}
 
@@ -426,24 +454,26 @@ export const BookingDetailPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
                 <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  Financial Verification
+                  Xác Thực Giao Dịch Tài Chính
                 </h4>
               </div>
 
               <div style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
                 <div>
-                  <strong>Transaction Ref:</strong>{' '}
+                  <strong>Mã giao dịch:</strong>{' '}
                   <span style={{ fontFamily: 'monospace' }}>
                     {booking.transactionReference || 'VNPay Deposit Channel'}
                   </span>
                 </div>
                 <div>
-                  <strong>Payment Status:</strong>{' '}
-                  <span>{booking.paymentStatus || (booking.bookingStatus === 'CONFIRMED' ? 'SUCCESSFUL' : 'PENDING')}</span>
+                  <strong>Trạng thái thanh toán:</strong>{' '}
+                  <span style={{ fontWeight: 600, color: (booking.bookingStatus === 'CONFIRMED' || booking.paymentStatus === 'SUCCESSFUL') ? 'var(--accent-forest)' : '#d97706' }}>
+                    {getPaymentStatusText(booking.paymentStatus, booking.bookingStatus)}
+                  </span>
                 </div>
                 <div>
-                  <strong>Booked On:</strong>{' '}
-                  <span>{new Date(booking.createdAt).toLocaleString()}</span>
+                  <strong>Thời gian đặt chỗ:</strong>{' '}
+                  <span>{new Date(booking.createdAt).toLocaleString('vi-VN')}</span>
                 </div>
               </div>
 
@@ -456,7 +486,7 @@ export const BookingDetailPage: React.FC = () => {
                   color: 'var(--text-muted)',
                 }}
               >
-                The remaining 70% balance is settled comfortably at resort reception upon check-in.
+                70% chi phí còn lại sẽ được thanh toán tại quầy lễ tân khi quý khách nhận phòng.
               </div>
             </div>
           </div>

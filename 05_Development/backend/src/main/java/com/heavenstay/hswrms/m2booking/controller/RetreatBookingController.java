@@ -86,9 +86,22 @@ public class RetreatBookingController {
         // Verify ownership before issuing payment URL
         bookingService.getBookingDetail(id, resolvedCustomerId);
 
-        String paymentUrl = vnPayDepositService.generateDepositUrl(id, returnUrl, request);
-        return ResponseEntity.ok(ApiResponse.ok("VNPay payment URL generated successfully",
-                Collections.singletonMap("paymentUrl", paymentUrl)));
+        VNPayDepositService.VNPayDepositInitResult result = vnPayDepositService.generateDepositUrlWithResult(id, returnUrl, request);
+        Map<String, String> data = new java.util.HashMap<>();
+        data.put("paymentUrl", result.paymentUrl());
+        data.put("transactionReference", result.transactionReference());
+        data.put("txnRef", result.transactionReference());
+        return ResponseEntity.ok(ApiResponse.ok("VNPay payment URL generated successfully", data));
+    }
+
+    @PostMapping("/vnpay/simulate-sandbox-payment")
+    public ResponseEntity<ApiResponse<Map<String, String>>> simulateSandboxPayment(
+            @RequestParam String txnRef,
+            @RequestParam java.math.BigDecimal amount,
+            @RequestParam(defaultValue = "00") String responseCode) {
+        Map<String, String> signedParams = vnPayDepositService.createSignedCallbackParams(txnRef, amount, responseCode);
+        Map<String, String> result = vnPayDepositService.processIpn(signedParams);
+        return ResponseEntity.ok(ApiResponse.ok("Sandbox payment simulation completed", result));
     }
 
     @PostMapping("/{id}/cancel")

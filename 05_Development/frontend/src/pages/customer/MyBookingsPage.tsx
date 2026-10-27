@@ -171,7 +171,7 @@ export const MyBookingsPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search reference or package..."
+              placeholder="Tìm theo mã đặt chỗ hoặc tên gói kỳ nghỉ..."
               style={{
                 width: '100%',
                 padding: '8px 12px 8px 32px',
@@ -188,7 +188,7 @@ export const MyBookingsPage: React.FC = () => {
         {loading && (
           <div style={{ padding: 'var(--space-12) 0', textAlign: 'center' }}>
             <Loader2 className="animate-spin" size={36} style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-4)' }} />
-            <p style={{ color: 'var(--text-secondary)' }}>Loading reservations from SQL Server...</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Đang tải danh sách kỳ nghỉ từ hệ thống...</p>
           </div>
         )}
 
@@ -196,9 +196,9 @@ export const MyBookingsPage: React.FC = () => {
         {loadError && !loading && (
           <div style={{ padding: 'var(--space-8)', textAlign: 'center', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
             <AlertCircle size={36} style={{ color: '#b91c1c', margin: '0 auto var(--space-3)' }} />
-            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-2)' }}>Unable to Load Reservations</h3>
+            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-2)' }}>Không Thể Tải Danh Sách Kỳ Nghỉ</h3>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>{loadError}</p>
-            <Button variant="primary" size="sm" onClick={() => window.location.reload()}>Retry</Button>
+            <Button variant="primary" size="sm" onClick={() => window.location.reload()}>Thử Lại</Button>
           </div>
         )}
 
@@ -327,7 +327,15 @@ export const MyBookingsPage: React.FC = () => {
                                   : '#d97706',
                             }}
                           >
-                            {b.bookingStatus}
+                            {b.bookingStatus === 'CONFIRMED'
+                              ? 'Đã xác nhận'
+                              : b.bookingStatus === 'CHECKED_IN'
+                              ? 'Đã nhận phòng'
+                              : b.bookingStatus === 'COMPLETED'
+                              ? 'Đã hoàn tất'
+                              : b.bookingStatus === 'CANCELLED'
+                              ? 'Đã hủy'
+                              : 'Chờ đặt cọc'}
                           </span>
                           <span
                             style={{
@@ -340,7 +348,9 @@ export const MyBookingsPage: React.FC = () => {
                               color: (b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL') ? 'var(--accent-forest)' : '#d97706',
                             }}
                           >
-                            Deposit: {b.depositStatus || b.paymentStatus || 'PENDING'}
+                            {(b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL')
+                              ? 'Tiền cọc: Đã thanh toán'
+                              : 'Tiền cọc: Chờ thanh toán'}
                           </span>
                         </div>
 
@@ -373,18 +383,18 @@ export const MyBookingsPage: React.FC = () => {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <User size={14} style={{ color: 'var(--accent-forest)' }} />
-                            <span>Party: {b.guestCount || 1} Guests</span>
+                            <span>Số lượng: {b.guestCount || 1} Khách</span>
                           </div>
                         </div>
                       </div>
 
                       <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--border-subtle)' }}>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {t('customer.depositResult.amountPaid', 'Deposit Paid')}:{' '}
+                          {t('customer.depositResult.amountPaid', 'Tiền cọc')}:{' '}
                           <strong style={{ color: 'var(--accent-forest)' }}>
                             {formatVND(b.depositAmount, i18n.language)}
                           </strong>{' '}
-                          / Total {formatVND(b.totalAmount || b.totalEstimatedAmount, i18n.language)}
+                          / Tổng cộng: {formatVND(b.totalAmount || b.totalEstimatedAmount, i18n.language)}
                         </div>
                       </div>
                     </div>
@@ -404,14 +414,16 @@ export const MyBookingsPage: React.FC = () => {
                     >
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                         {b.bookingStatus === 'CONFIRMED'
-                          ? 'Schedule Confirmed'
+                          ? 'Lịch trình đã xác nhận'
                           : b.bookingStatus === 'CHECKED_IN'
-                          ? 'Welcome in Residence'
+                          ? 'Đang lưu trú tại khu nghỉ'
                           : b.bookingStatus === 'COMPLETED'
-                          ? 'Past Sanctuary Journey'
+                          ? 'Kỳ nghỉ đã hoàn tất'
                           : b.bookingStatus === 'CANCELLED'
-                          ? 'Reservation Cancelled'
-                          : 'Pending Deposit'}
+                          ? 'Đặt chỗ đã hủy'
+                          : (b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL')
+                          ? 'Đã thanh toán cọc'
+                          : 'Chờ thanh toán cọc'}
                       </div>
 
                       <Button
@@ -427,7 +439,7 @@ export const MyBookingsPage: React.FC = () => {
                           maxWidth: '220px',
                         }}
                       >
-                        {t('customer.bookingsList.viewDetails', 'View Details & Itinerary')}
+                        {t('customer.bookingsList.viewDetails', 'Xem Chi Tiết & Lịch Trình')}
                       </Button>
                     </div>
                   </div>

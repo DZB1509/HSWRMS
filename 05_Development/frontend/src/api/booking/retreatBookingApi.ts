@@ -221,6 +221,8 @@ export interface DailyArrivalResponse {
   hasHealthProfile?: boolean;
   guestCount?: number;
   totalEstimatedAmount?: number;
+  paymentStatus?: string;
+  transactionReference?: string;
 }
 
 export interface PhysicalVillaDto {
@@ -414,15 +416,19 @@ export async function updateCustomerBooking(
 export async function getVNPayDepositUrl(
   bookingId: number,
   returnUrl?: string
-): Promise<{ paymentUrl: string; transactionReference: string; testCallbackUrl?: string }> {
-  const res = await apiClient.post<ApiResponse<{ paymentUrl: string; transactionReference: string; testCallbackUrl?: string }>>(
+): Promise<{ paymentUrl: string; transactionReference: string; txnRef?: string; testCallbackUrl?: string }> {
+  const res = await apiClient.post<ApiResponse<{ paymentUrl: string; transactionReference: string; txnRef?: string; testCallbackUrl?: string }>>(
     `/customer/bookings/${bookingId}/vnpay-url`,
     null,
     {
       params: returnUrl ? { returnUrl } : undefined,
     }
   );
-  return res.data;
+  const data = res.data;
+  if (!data.transactionReference && data.txnRef) {
+    data.transactionReference = data.txnRef;
+  }
+  return data;
 }
 
 /**
@@ -591,10 +597,17 @@ export async function simulateSandboxVNPayPayment(
   amount: number,
   responseCode: string = '00'
 ): Promise<any> {
-  const res = await apiClient.post<ApiResponse<any>>(
-    `/payments/simulate-sandbox?txnRef=${encodeURIComponent(txnRef)}&amount=${amount}&responseCode=${responseCode}`
-  );
-  return res.data;
+  try {
+    const res = await apiClient.post<ApiResponse<any>>(
+      `/customer/bookings/vnpay/simulate-sandbox-payment?txnRef=${encodeURIComponent(txnRef)}&amount=${amount}&responseCode=${responseCode}`
+    );
+    return res.data;
+  } catch {
+    const fallbackRes = await apiClient.post<ApiResponse<any>>(
+      `/payments/simulate-sandbox?txnRef=${encodeURIComponent(txnRef)}&amount=${amount}&responseCode=${responseCode}`
+    );
+    return fallbackRes.data;
+  }
 }
 
 /**

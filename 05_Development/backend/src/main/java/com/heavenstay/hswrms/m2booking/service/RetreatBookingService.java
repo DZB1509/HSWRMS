@@ -347,9 +347,12 @@ public class RetreatBookingService {
                 .findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(entity.getRetreatBookingId(), PaymentTransaction.TYPE_DEPOSIT);
 
         if (!txns.isEmpty()) {
-            PaymentTransaction latest = txns.get(0);
-            res.setPaymentStatus(latest.getPaymentStatus());
-            res.setTransactionReference(latest.getTransactionReference());
+            PaymentTransaction preferred = txns.stream()
+                    .filter(t -> PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(t.getPaymentStatus()))
+                    .findFirst()
+                    .orElse(txns.get(0));
+            res.setPaymentStatus(preferred.getPaymentStatus());
+            res.setTransactionReference(preferred.getTransactionReference());
         } else {
             res.setPaymentStatus("UNPAID");
         }
