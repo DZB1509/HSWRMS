@@ -10,10 +10,14 @@ import {
   Send,
   Home,
   Receipt,
+  Coffee,
+  HeartHandshake,
+  RotateCw,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useCustomer } from '../../context/CustomerContext';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
 
 export const ReviewRatingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -36,7 +40,13 @@ export const ReviewRatingPage: React.FC = () => {
   const [overallRating, setOverallRating] = useState<number>(existingReview?.overallRating || 5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
+  // Category Ratings (Task 6.5.3)
+  const [villaRating, setVillaRating] = useState<number>(5);
+  const [spaRating, setSpaRating] = useState<number>(5);
+  const [diningRating, setDiningRating] = useState<number>(5);
+
   const [feedback, setFeedback] = useState<string>(existingReview?.feedback || '');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(!!existingReview);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -164,22 +174,46 @@ export const ReviewRatingPage: React.FC = () => {
   }
 
   // ── 3. POST-CHECKOUT REVIEW FORM ──────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setIsSubmitting(true);
 
-    const result = submitReview(targetBookingRef, {
-      bookingReference: targetBookingRef,
-      customerId: profile.id,
-      customerName: profile.fullName,
-      overallRating,
-      feedback,
-    });
+    try {
+      // Backend submission
+      try {
+        await billingApi.submitReview({
+          retreatBookingId: Number(bookingId) || 1,
+          overallRating,
+          roomRating: villaRating,
+          spaRating: spaRating,
+          diningRating: diningRating,
+          comments: feedback,
+        });
+      } catch (err: any) {
+        if (err?.code === 'DUPLICATE_REVIEW') {
+          setErrorMsg('A review has already been submitted for this stay.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
-    if (result.success) {
-      setIsSubmitted(true);
-    } else {
-      setErrorMsg(result.message);
+      // Context sync
+      const result = submitReview(targetBookingRef, {
+        bookingReference: targetBookingRef,
+        customerId: profile.id,
+        customerName: profile.fullName,
+        overallRating,
+        feedback,
+      });
+
+      if (result.success) {
+        setIsSubmitted(true);
+      } else {
+        setErrorMsg(result.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -248,7 +282,7 @@ export const ReviewRatingPage: React.FC = () => {
               {/* Overall Star Rating */}
               <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)', padding: 'var(--space-4)', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
                 <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--space-3)' }}>
-                  {t('review.overallLabel', 'How was your holistic stay experience?')}
+                  {t('review.overallLabel', 'Overall Sanctuary Stay Experience')}
                 </label>
                 <div className="hsw-rating-stars" role="radiogroup" aria-label="Overall Rating">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -274,17 +308,80 @@ export const ReviewRatingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Written reflections */}
+              {/* Category Ratings */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: 'var(--space-6)' }}>
+                {/* Villa Rating */}
+                <div style={{ padding: '10px', backgroundColor: '#fcfcfc', border: '1px solid #f0f0f0', borderRadius: '8px', textAlign: 'center' }}>
+                  <Home size={16} style={{ color: 'var(--accent-forest)', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '11px', fontWeight: 600, marginBottom: '6px' }}>Sanctuary Villa</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        size={14}
+                        fill={s <= villaRating ? '#f59e0b' : 'none'}
+                        color="#f59e0b"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setVillaRating(s)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Spa Rating */}
+                <div style={{ padding: '10px', backgroundColor: '#fcfcfc', border: '1px solid #f0f0f0', borderRadius: '8px', textAlign: 'center' }}>
+                  <HeartHandshake size={16} style={{ color: 'var(--accent-forest)', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '11px', fontWeight: 600, marginBottom: '6px' }}>Holistic Spa</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        size={14}
+                        fill={s <= spaRating ? '#f59e0b' : 'none'}
+                        color="#f59e0b"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setSpaRating(s)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dining Rating */}
+                <div style={{ padding: '10px', backgroundColor: '#fcfcfc', border: '1px solid #f0f0f0', borderRadius: '8px', textAlign: 'center' }}>
+                  <Coffee size={16} style={{ color: 'var(--accent-forest)', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '11px', fontWeight: 600, marginBottom: '6px' }}>Nourishing Dining</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        size={14}
+                        fill={s <= diningRating ? '#f59e0b' : 'none'}
+                        color="#f59e0b"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setDiningRating(s)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Written reflections with character counter */}
               <div style={{ marginBottom: 'var(--space-6)' }}>
-                <label
-                  htmlFor="txt-feedback"
-                  style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '8px' }}
-                >
-                  {t('review.writtenLabel', 'Written Reflections (Optional)')}
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label
+                    htmlFor="txt-feedback"
+                    style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)' }}
+                  >
+                    {t('review.writtenLabel', 'Written Reflections (Optional)')}
+                  </label>
+                  <span style={{ fontSize: '11px', color: feedback.length > 1900 ? '#dc2626' : 'var(--text-muted)' }}>
+                    {feedback.length} / 2,000 characters
+                  </span>
+                </div>
                 <textarea
                   id="txt-feedback"
                   rows={4}
+                  maxLength={2000}
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
                   placeholder={t(
@@ -315,11 +412,12 @@ export const ReviewRatingPage: React.FC = () => {
                 <button
                   type="submit"
                   className="hsw-btn hsw-btn-retreat-primary"
+                  disabled={isSubmitting}
                   style={{ width: '100%', justifyContent: 'center' }}
                   id="btn-submit-review"
                 >
-                  <Send size={16} />
-                  <span>{t('review.btnSubmit', 'Submit Reflections')}</span>
+                  {isSubmitting ? <RotateCw size={16} className="animate-spin" /> : <Send size={16} />}
+                  <span>{isSubmitting ? 'Submitting Reflections...' : t('review.btnSubmit', 'Submit Reflections')}</span>
                 </button>
 
                 <button

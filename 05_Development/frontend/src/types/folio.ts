@@ -122,7 +122,7 @@ export interface FolioContextType {
   processPayment: (
     bookingRef: string,
     amount: number,
-    simulateMode?: 'success' | 'failed' | 'cancelled'
+    simulateMode?: 'success' | 'failed' | 'cancelled' | 'pending'
   ) => Promise<PaymentTransaction>;
   latestTransaction: PaymentTransaction | null;
   getTransactionById: (id: string) => PaymentTransaction | undefined;
