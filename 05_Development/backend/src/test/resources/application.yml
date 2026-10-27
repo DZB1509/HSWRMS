@@ -1,12 +1,14 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS DBO
+    url: jdbc:h2:mem:testdb;MODE=MSSQLServer;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS DBO
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
   jpa:
     hibernate:
       ddl-auto: create-drop
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: false
 
 app:
@@ -20,3 +22,10 @@ app:
       # Test operating window for automated scheduling verification
       operating-open: "08:00"
       operating-close: "20:00"
+  billing:
+    vat-rate: 0.08
+  vnpay:
+    hash-secret: test-vnpay-secret
+    mock-auto-confirm: false
+  seed:
+    demo-data: false

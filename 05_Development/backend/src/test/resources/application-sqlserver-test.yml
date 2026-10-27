@@ -1,0 +1,62 @@
+# ==============================================================================
+# HSWRMS Dedicated Opt-In SQL Server Test Profile
+#
+# Activated ONLY when explicitly requested:
+#   -Dspring.profiles.active=sqlserver-test
+#
+# Requirements:
+# 1. Externalized credentials (zero secrets in tracked files).
+# 2. Strict non-destructive mode: spring.jpa.hibernate.ddl-auto: none.
+# 3. Targets a dedicated test database (HSWRMS_TEST) to prevent accidental
+#    interference with the primary development database (HSWRMS).
+# 4. No silent fallback to H2 if connectivity or credentials fail.
+# ==============================================================================
+
+spring:
+  config:
+    activate:
+      on-profile: sqlserver-test
+  datasource:
+    url: jdbc:sqlserver://${SQLSERVER_TEST_HOST:${DB_HOST:localhost}}:${SQLSERVER_TEST_PORT:${DB_PORT:1433}};databaseName=${SQLSERVER_TEST_DB:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: ${SQLSERVER_TEST_USERNAME:${DB_USERNAME:}}
+    password: ${SQLSERVER_TEST_PASSWORD:${DB_PASSWORD:}}
+    hikari:
+      pool-name: HSWRMS-SqlServerTestPool
+      connection-timeout: 5000
+      maximum-pool-size: 5
+      minimum-idle: 1
+      auto-commit: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+hswrms:
+  sqlserver:
+    test:
+      expected-database: ${SQLSERVER_TEST_DB:HSWRMS_TEST}
+
+# Safe test harness parameters
+app:
+  jwt:
+    secret: defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong
+    expiration-ms: 86400000
+  cors:
+    allowed-origins: http://localhost:5173
+  spa:
+    scheduling:
+      operating-open: "08:00"
+      operating-close: "20:00"
+  billing:
+    vat-rate: 0.08
+  vnpay:
+    hash-secret: test-vnpay-secret
+    mock-auto-confirm: false
+  seed:
+    demo-data: false
