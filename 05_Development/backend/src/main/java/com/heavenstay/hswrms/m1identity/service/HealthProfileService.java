@@ -30,7 +30,17 @@ public class HealthProfileService {
     private final DietaryRequirementRepository dietaryRequirementRepository;
     private final HealthProfileTherapyPreferenceRepository therapyPreferenceRepository;
     private final ConsentService consentService;
-    public HealthProfileService(UserRepository userRepository, CustomerProfileRepository customerProfileRepository, HealthProfileRepository healthProfileRepository, FoodAllergyRepository foodAllergyRepository, DietaryRequirementRepository dietaryRequirementRepository, HealthProfileTherapyPreferenceRepository therapyPreferenceRepository, ConsentService consentService) {
+    private final com.heavenstay.hswrms.m6admin.service.AuditLogService auditLogService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public HealthProfileService(UserRepository userRepository,
+                                CustomerProfileRepository customerProfileRepository,
+                                HealthProfileRepository healthProfileRepository,
+                                FoodAllergyRepository foodAllergyRepository,
+                                DietaryRequirementRepository dietaryRequirementRepository,
+                                HealthProfileTherapyPreferenceRepository therapyPreferenceRepository,
+                                ConsentService consentService,
+                                @org.springframework.beans.factory.annotation.Autowired(required = false) com.heavenstay.hswrms.m6admin.service.AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.healthProfileRepository = healthProfileRepository;
@@ -38,13 +48,30 @@ public class HealthProfileService {
         this.dietaryRequirementRepository = dietaryRequirementRepository;
         this.therapyPreferenceRepository = therapyPreferenceRepository;
         this.consentService = consentService;
+        this.auditLogService = auditLogService;
     }
+
+    public HealthProfileService(UserRepository userRepository,
+                                CustomerProfileRepository customerProfileRepository,
+                                HealthProfileRepository healthProfileRepository,
+                                FoodAllergyRepository foodAllergyRepository,
+                                DietaryRequirementRepository dietaryRequirementRepository,
+                                HealthProfileTherapyPreferenceRepository therapyPreferenceRepository,
+                                ConsentService consentService) {
+        this(userRepository, customerProfileRepository, healthProfileRepository, foodAllergyRepository,
+                dietaryRequirementRepository, therapyPreferenceRepository, consentService, null);
+    }
+
     @Transactional(readOnly = true)
     public HealthProfileResponse getMyHealthProfile(Integer userId) {
         User user = loadUser(userId);
         CustomerProfile customerProfile = loadOrCreateCustomerProfile(user);
         HealthProfile profile = healthProfileRepository.findByCustomerProfileId(customerProfile.getCustomerProfileId()).orElse(null);
         boolean consented = consentService.hasActiveConsent(userId, ConsentService.HEALTH_DATA_PROCESSING);
+        if (profile != null && auditLogService != null) {
+            auditLogService.record(userId, "CUSTOMER", "View Sensitive Health Profile", "DATA_HEALTH_FULL",
+                    String.valueOf(profile.getHealthProfileId()), com.heavenstay.hswrms.m6admin.service.AuditLogService.SUCCESS, null, null);
+        }
         if (profile == null) { return emptyResponse(consented); }
         return toResponse(profile, consented);
     }
@@ -66,7 +93,12 @@ public class HealthProfileService {
         if (request.getFoodAllergies() != null) { replaceAllergies(saved, request.getFoodAllergies()); }
         if (request.getDietaryRequirements() != null) { replaceRequirements(saved, request.getDietaryRequirements()); }
         if (request.getTherapyPreferences() != null) { replaceTherapies(saved, request.getTherapyPreferences(), request.getTherapyCode()); }
-        return toResponse(healthProfileRepository.save(saved), true);
+        HealthProfile updated = healthProfileRepository.save(saved);
+        if (auditLogService != null) {
+            auditLogService.record(userId, "CUSTOMER", "Update Sensitive Health Profile", "DATA_HEALTH_FULL",
+                    String.valueOf(updated.getHealthProfileId()), com.heavenstay.hswrms.m6admin.service.AuditLogService.SUCCESS, null, null);
+        }
+        return toResponse(updated, true);
     }
     private void replaceAllergies(HealthProfile profile, List<String> names) {
         foodAllergyRepository.deleteByHealthProfileHealthProfileId(profile.getHealthProfileId());

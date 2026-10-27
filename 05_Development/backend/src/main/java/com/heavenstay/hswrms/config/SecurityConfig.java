@@ -122,11 +122,45 @@ public class SecurityConfig {
                         // Public SPA treatment catalog from M3: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/spa/treatments", "/api/v1/spa/treatments/**").permitAll()
 
+                        // Public retreat packages and villa categories catalog from M2: GET only
+                        .requestMatchers(HttpMethod.GET, "/api/v1/retreat-packages", "/api/v1/retreat-packages/**").permitAll()
+
+                        // Public read-only booking calculation from M2: POST only
+                        .requestMatchers(HttpMethod.POST, "/api/v1/retreat-packages/calculate").permitAll()
+
+                        // Public VNPay IPN and return callbacks from M2: GET only with cryptographic HMAC-SHA512 verification in service
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay-return").permitAll()
+
+                        // Receptionist operations from M2: RECEPTIONIST, MANAGER, ADMIN
+                        .requestMatchers("/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "MANAGER", "ADMIN")
+
+                        // Customer retreat booking detail lookup: accessible to CUSTOMER (for own booking) and RECEPTIONIST, MANAGER, ADMIN
+                        .requestMatchers(HttpMethod.GET, "/api/v1/customer/bookings/*").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
+
+                        // Customer retreat bookings from M2: requires CUSTOMER, MANAGER or ADMIN
+                        .requestMatchers("/api/v1/customer/bookings/**").hasAnyRole("CUSTOMER", "MANAGER", "ADMIN")
+
                         // Therapist operations from M3
                         .requestMatchers("/api/v1/therapist/**").hasAnyRole("THERAPIST", "MANAGER", "ADMIN")
 
                         // Customer and receptionist SPA operations from M3
                         .requestMatchers("/api/v1/spa/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
+
+                        // Module 5: VNPay commerce IPN/webhook is authenticated by HMAC-SHA512 checksum, not by JWT
+                        .requestMatchers("/api/v1/commerce/payment/webhook/vnpay").permitAll()
+
+                        // Module 5: Management Analytics restricted to MANAGER and ADMIN
+                        .requestMatchers("/api/v1/analytics/**").hasAnyRole("MANAGER", "ADMIN")
+
+                        // Module 5: Customer Reviews (ownership and completion verified at service/method level)
+                        .requestMatchers("/api/v1/customer/reviews/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+
+                        // Module 5: Billing, Folio, Invoices and Payments (granular ownership evaluated via @billingAccess)
+                        .requestMatchers("/api/v1/billing/**").authenticated()
+
+                        // Module 6: Administration, Staff Management, Governance, Delegation & Sensitive Audit Logs
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "MANAGER")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

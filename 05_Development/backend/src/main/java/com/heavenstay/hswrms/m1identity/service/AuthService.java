@@ -44,6 +44,7 @@ public class AuthService {
     private final EmailDeliveryAdapter emailDeliveryAdapter;
     private final JwtTokenProvider jwtTokenProvider;
     private final SsoTicketService ssoTicketService;
+    private final AccountLockoutService accountLockoutService;
 
     private static final String EMAIL_VERIFICATION_PURPOSE = "EMAIL_VERIFICATION";
     private static final int MAX_OTP_ATTEMPTS = 5;
@@ -61,6 +62,20 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        EmailDeliveryAdapter emailDeliveryAdapter, JwtTokenProvider jwtTokenProvider,
                        SsoTicketService ssoTicketService) {
+        this(userRepository, roleRepository, userRoleRepository, customerProfileRepository,
+                consentRecordRepository, emailOtpRepository, authIdentityRepository,
+                passwordEncoder, emailDeliveryAdapter, jwtTokenProvider, ssoTicketService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository,
+                       UserRoleRepository userRoleRepository, CustomerProfileRepository customerProfileRepository,
+                       ConsentRecordRepository consentRecordRepository,
+                       EmailOtpRepository emailOtpRepository, AuthIdentityRepository authIdentityRepository,
+                       PasswordEncoder passwordEncoder,
+                       EmailDeliveryAdapter emailDeliveryAdapter, JwtTokenProvider jwtTokenProvider,
+                       SsoTicketService ssoTicketService,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) AccountLockoutService accountLockoutService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
@@ -72,6 +87,7 @@ public class AuthService {
         this.emailDeliveryAdapter = emailDeliveryAdapter;
         this.jwtTokenProvider = jwtTokenProvider;
         this.ssoTicketService = ssoTicketService;
+        this.accountLockoutService = accountLockoutService;
     }
 
     @Transactional
@@ -210,7 +226,26 @@ public class AuthService {
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            if (accountLockoutService != null && !"LOCKED".equalsIgnoreCase(user.getAccountStatus())) {
+                accountLockoutService.recordFailedAttempt(user.getUserId());
+            }
             throw new BadCredentialsException("Invalid email or password.");
+        }
+
+        if ("LOCKED".equalsIgnoreCase(user.getAccountStatus())) {
+            int lockoutMinutes = accountLockoutService != null ? accountLockoutService.getLockoutDurationMinutes() : 10;
+            Instant now = Instant.now();
+            if (user.getLockedAt() != null && user.getLockedAt().plus(java.time.Duration.ofMinutes(lockoutMinutes)).isBefore(now)) {
+                if (accountLockoutService != null) {
+                    accountLockoutService.unlockAccount(user.getUserId());
+                }
+                user.setAccountStatus("ACTIVE");
+                user.setFailedLoginCount(0);
+                user.setLockedAt(null);
+            } else {
+                throw new BusinessRuleException("ACCOUNT_NOT_ACTIVE",
+                        "Account is locked due to too many failed sign-in attempts. Please try again later or contact resort support.");
+            }
         }
 
         if (!user.isEmailVerified()) {
@@ -221,6 +256,10 @@ public class AuthService {
         if (!"ACTIVE".equals(user.getAccountStatus())) {
             throw new BusinessRuleException("ACCOUNT_NOT_ACTIVE",
                     "Account is not active. Please contact resort support.");
+        }
+
+        if (accountLockoutService != null) {
+            accountLockoutService.recordSuccessfulLogin(user.getUserId());
         }
 
         List<String> roles = user.getUserRoles().stream()

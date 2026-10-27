@@ -11,6 +11,13 @@ import java.util.Objects;
 @Table(name = "\"Role\"", schema = "dbo")
 public class Role {
 
+    public static final String ADMIN = "ADMIN";
+    public static final String MANAGER = "MANAGER";
+    public static final String RECEPTIONIST = "RECEPTIONIST";
+    public static final String THERAPIST = "THERAPIST";
+    public static final String FNB_STAFF = "FNB_STAFF";
+    public static final String CUSTOMER = "CUSTOMER";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "role_id", nullable = false)
@@ -52,6 +59,23 @@ public class Role {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isAdminRole() {
+        return "ADMIN".equalsIgnoreCase(roleName) || "ROLE_ADMIN".equalsIgnoreCase(roleName);
+    }
+
+    public boolean isStaffRole() {
+        return !isCustomerRole();
+    }
+
+    public boolean isCustomerRole() {
+        return "CUSTOMER".equalsIgnoreCase(roleName) || "ROLE_CUSTOMER".equalsIgnoreCase(roleName);
+    }
+
+    public String canonicalName() {
+        if (roleName == null) return "";
+        return roleName.startsWith("ROLE_") ? roleName.substring(5) : roleName;
     }
 
     @Override

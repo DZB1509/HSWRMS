@@ -49,6 +49,7 @@ public class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailDeliveryAdapter emailDeliveryAdapter;
     @Mock private JwtTokenProvider jwtTokenProvider;
+    @Mock private AccountLockoutService accountLockoutService;
 
     @InjectMocks
     private AuthService authService;
@@ -350,6 +351,7 @@ public class AuthServiceTest {
         assertEquals(List.of("Customer"), response.getRoles());
         assertEquals("ACTIVE", response.getAccountStatus());
         verify(jwtTokenProvider).generateToken(eq(205), eq("jane@example.com"), eq("Jane Doe"), eq(List.of("Customer")));
+        verify(accountLockoutService).recordSuccessfulLogin(205);
     }
 
     @Test
@@ -362,6 +364,7 @@ public class AuthServiceTest {
         assertEquals("Invalid email or password.", ex.getMessage());
         verify(passwordEncoder, never()).matches(anyString(), anyString());
         verifyNoInteractions(jwtTokenProvider);
+        verifyNoInteractions(accountLockoutService);
     }
 
     @Test
@@ -375,6 +378,7 @@ public class AuthServiceTest {
 
         assertEquals("Invalid email or password.", ex.getMessage());
         verifyNoInteractions(jwtTokenProvider);
+        verify(accountLockoutService).recordFailedAttempt(205);
     }
 
     @Test
