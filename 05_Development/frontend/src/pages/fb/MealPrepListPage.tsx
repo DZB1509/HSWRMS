@@ -26,7 +26,7 @@ export const MealPrepListPage: React.FC = () => {
   // Canonical operational resort date default (Requirement 28)
   const [date, setDate] = useState(CANONICAL_RESORT_DATE);
   const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('active');
   const [filterDietaryOnly, setFilterDietaryOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,8 +37,12 @@ export const MealPrepListPage: React.FC = () => {
 
   const filteredList = rawList.filter((item) => {
     const matchesType = filterType === 'all' || item.type === filterType;
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+    const matchesStatus =
+      filterStatus === 'active'
+        ? item.status === 'pending' || item.status === 'preparing' || item.status === 'ready'
+        : filterStatus === 'all' || item.status === filterStatus;
     const matchesDietary = !filterDietaryOnly || item.dietaryNotes.length > 0;
+
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -67,11 +71,12 @@ export const MealPrepListPage: React.FC = () => {
   const handleClearFilters = () => {
     setDate(CANONICAL_RESORT_DATE);
     setFilterType('all');
-    setFilterStatus('all');
+    setFilterStatus('active');
     setFilterDietaryOnly(false);
     setSearchQuery('');
     setCurrentPage(1);
   };
+
 
   const formatVilla = (villa?: string) => {
     if (!villa) return '—';
@@ -182,12 +187,14 @@ export const MealPrepListPage: React.FC = () => {
               }}
               id="filter-fulfillment-status"
             >
-              <option value="all">{t('fnb.prepList.allStatuses', 'All Statuses')}</option>
+              <option value="active">{t('fnb.prepList.statusActive', 'Active Queue (Pending, Preparing, Ready)')}</option>
+              <option value="all">{t('fnb.prepList.allStatuses', 'All Statuses (History)')}</option>
               <option value="pending">{t('fnb.status.pending', 'Pending')}</option>
               <option value="preparing">{t('fnb.status.preparing', 'Preparing')}</option>
               <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
               <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
             </select>
+
           </div>
 
           {/* Dietary Attention toggle */}

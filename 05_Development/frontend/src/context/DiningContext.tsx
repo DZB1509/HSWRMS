@@ -136,8 +136,8 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     });
 
-    // Ala Carte Orders (assuming same date matches the ISO created date, simplified)
-    alaCarteOrders.filter(o => o.createdAt.startsWith(date) || o.status !== 'delivered').forEach(o => {
+    // Ala Carte Orders (assuming same date matches the ISO created date, plus active unfulfilled orders)
+    alaCarteOrders.filter(o => o.createdAt.startsWith(date) || (o.status !== 'delivered' && o.status !== 'cancelled')).forEach(o => {
       const projection = getDietaryProjection(o.customerId);
       prepList.push({
         id: o.id,
@@ -160,6 +160,17 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return prepList;
   };
 
+  /**
+   * Returns only active kitchen preparation orders (PENDING, PREPARING, READY).
+   * Explicitly excludes terminal lifecycle statuses: DELIVERED and CANCELLED.
+   */
+  const getActiveKitchenQueue = (date?: string): MealPrepEntry[] => {
+    const targetDate = date || '2026-09-24';
+    return getDailyPrepList(targetDate).filter(
+      item => item.status === 'pending' || item.status === 'preparing' || item.status === 'ready'
+    );
+  };
+
   const value = useMemo(() => ({
     menuItems,
     getMenuItemsByPeriod,
@@ -173,7 +184,9 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateAlaCarteOrderStatus,
     updateFulfillmentStatus,
     getDailyPrepList,
+    getActiveKitchenQueue,
   }), [menuItems, mealSelections, alaCarteOrders]);
+
 
   return (
     <DiningContext.Provider value={value}>

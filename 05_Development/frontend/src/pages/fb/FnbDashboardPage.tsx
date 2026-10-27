@@ -9,17 +9,19 @@ const CANONICAL_RESORT_DATE = '2026-09-24';
 
 export const FnbDashboardPage: React.FC = () => {
   const { t } = useTranslation('operations');
-  const { getDailyPrepList, menuItems } = useDining();
+  const { getActiveKitchenQueue, menuItems } = useDining();
   const navigate = useNavigate();
 
-  // Canonical demo operational resort date
-  const todaysList = getDailyPrepList(CANONICAL_RESORT_DATE);
+  // Canonical demo operational resort date active preparation queue
+  const activeQueue = getActiveKitchenQueue(CANONICAL_RESORT_DATE);
 
-  const mealsToPrepare = todaysList.filter((item) => item.type === 'retreat_meal').length;
-  const extraOrders = todaysList.filter((item) => item.type === 'a_la_carte').length;
-  const dietaryAlerts = todaysList.filter((item) => item.dietaryNotes.length > 0).length;
-  const pendingCount = todaysList.filter((item) => item.status === 'pending').length;
-  const preparingCount = todaysList.filter((item) => item.status === 'preparing').length;
+
+  const mealsToPrepare = activeQueue.filter((item) => item.type === 'retreat_meal').length;
+  const extraOrders = activeQueue.filter((item) => item.type === 'a_la_carte').length;
+  const dietaryAlerts = activeQueue.filter((item) => item.dietaryNotes.length > 0).length;
+  const pendingCount = activeQueue.filter((item) => item.status === 'pending').length;
+  const preparingCount = activeQueue.filter((item) => item.status === 'preparing').length;
+
 
   const formatVilla = (villa?: string) => {
     if (!villa) return '—';
@@ -157,7 +159,15 @@ export const FnbDashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {todaysList.slice(0, 5).map((item) => {
+              {activeQueue.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
+                    {t('fnb.dashboard.noActiveOrders', 'No active kitchen prep orders pending. All orders fulfilled or delivered.')}
+                  </td>
+                </tr>
+              ) : (
+                activeQueue.slice(0, 5).map((item) => {
+
                 const statusBadge = getStatusBadge(item.status);
                 const itemsSummary = item.items
                   .map((i) => {
@@ -238,14 +248,7 @@ export const FnbDashboardPage: React.FC = () => {
                     </td>
                   </tr>
                 );
-              })}
-              {todaysList.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-tertiary)' }}>
-                    {t('fnb.dashboard.noQueue', 'No items in the prep queue for today.')}
-                  </td>
-                </tr>
-              )}
+              }))}
             </tbody>
           </table>
         </div>
