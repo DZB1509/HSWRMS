@@ -258,8 +258,8 @@ export const AppRouter: React.FC = () => {
         }
       >
         <Route path="dashboard" element={<RoleGuard allowedRoles={['admin']}><AdminDashboardPage /></RoleGuard>} />
-        <Route path="staff" element={<RoleGuard allowedRoles={['admin']}><StaffAccountListPage /></RoleGuard>} />
-        <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']}><StaffAccountDetailPage /></RoleGuard>} />
+        <Route path="staff" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S10:V"><StaffAccountListPage /></RoleGuard>} />
+        <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S11:V"><StaffAccountDetailPage /></RoleGuard>} />
         <Route path="master-data" element={<RoleGuard allowedRoles={['admin']}><MasterDataPage /></RoleGuard>} />
         <Route
           path="business-params"
@@ -277,9 +277,9 @@ export const AppRouter: React.FC = () => {
             </RoleGuard>
           }
         />
-        <Route path="permissions" element={<RoleGuard allowedRoles={['admin']}><PermissionMatrixPage /></RoleGuard>} />
-        <Route path="delegation" element={<RoleGuard allowedRoles={['admin']}><AdminDelegationPage /></RoleGuard>} />
-        <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']}><SensitiveAuditLogPage /></RoleGuard>} />
+        <Route path="permissions" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S51:V"><PermissionMatrixPage /></RoleGuard>} />
+        <Route path="delegation" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S52:V"><AdminDelegationPage /></RoleGuard>} />
+        <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S53:V"><SensitiveAuditLogPage /></RoleGuard>} />
         <Route path="system-overview" element={<SystemOverviewPage />} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>

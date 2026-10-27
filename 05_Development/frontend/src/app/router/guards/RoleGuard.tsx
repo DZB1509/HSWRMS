@@ -21,14 +21,16 @@ export interface RoleGuardProps {
   children: React.ReactNode;
   allowedRoles?: Role[];
   requiredCapability?: CapabilityKey;
+  requiredPermission?: string;
 }
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   children,
   allowedRoles,
-  requiredCapability
+  requiredCapability,
+  requiredPermission,
 }) => {
-  const { role, isAuthenticated, currentUser } = useAuth();
+  const { role, isAuthenticated, currentUser, hasPermission } = useAuth();
   const { hasCapability } = useGovernance();
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,8 +46,11 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // Role check if specified
   const isRoleDenied = allowedRoles && allowedRoles.length > 0 && role && !allowedRoles.includes(role);
 
-  // Unauthorized for role or capability
-  if (isRoleDenied || isCapabilityDenied) {
+  // Permission code check if specified (e.g. S10:V, S11:V)
+  const isPermissionDenied = requiredPermission ? !hasPermission(requiredPermission) : false;
+
+  // Unauthorized for role, capability, or permission
+  if (isRoleDenied || isCapabilityDenied || isPermissionDenied) {
     return (
       <div style={{
         maxWidth: '560px',
@@ -75,7 +80,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
           Your current session persona is <strong>{currentUser?.name}</strong> with role <code>{role}</code>.
-          This route strictly requires authorization clearance for: {allowedRoles && allowedRoles.length > 0 ? <code>{allowedRoles.join(' / ')}</code> : ''}{requiredCapability ? <span> with capability: <code>{requiredCapability}</code></span> : ''}.
+          This route strictly requires authorization clearance for: {allowedRoles && allowedRoles.length > 0 ? <code>{allowedRoles.join(' / ')}</code> : ''}{requiredCapability ? <span> with capability: <code>{requiredCapability}</code></span> : ''}{requiredPermission ? <span> with permission: <code>{requiredPermission}</code></span> : ''}.
         </p>
         <div style={{
           padding: 'var(--space-3)',

@@ -1,7 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, Role, AuthContextType, AuthSession } from '../../types/auth';
 import { MOCK_PERSONAS } from '../../types/auth';
-import { clearAuthToken, getAuthToken } from '../../api/client/apiClient';
+import { clearAuthToken, getAuthToken, apiClient } from '../../api/client/apiClient';
+import {
+  parseAuthMePermissions,
+  handleAuthMeError,
+  evaluatePermission,
+} from '../../features/m6-admin/api/staffAccountsApi';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'hswrms_active_role';
@@ -44,9 +49,10 @@ const userFromSession = (session: AuthSession, role: Role): User => ({
   name: session.fullName,
   email: session.email,
   role,
-  title: MOCK_PERSONAS[role].title,
-  department: MOCK_PERSONAS[role].department,
-  avatar: MOCK_PERSONAS[role].avatar,
+  title: MOCK_PERSONAS[role]?.title || 'Staff Member',
+  department: MOCK_PERSONAS[role]?.department || 'Resort Operations',
+  avatar: MOCK_PERSONAS[role]?.avatar || 'ST',
+  permissions: session.permissions || [],
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -69,6 +75,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const role = currentUser ? currentUser.role : null;
   const isAuthenticated = currentUser !== null;
+  const permissions = currentUser?.permissions || [];
+
+  const logout = useCallback(() => {
+    setCurrentUser(null);
+    clearAuthToken();
+    try {
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    } catch {
+      // Storage unavailable; in-memory logout already applied.
+    }
+    sessionStorage.setItem(AUTH_STORAGE_KEY, 'public');
+  }, []);
+
+  const fetchEffectivePermissions = useCallback(async (): Promise<string[] | null> => {
+    const token = getAuthToken();
+    if (!token) return null;
+    try {
+      const res = await apiClient.get<unknown>('/auth/me');
+      return parseAuthMePermissions(res);
+    } catch (err: unknown) {
+      handleAuthMeError(err, logout);
+      return null;
+    }
+  }, [logout]);
+
+  const hasPermission = useCallback((code: string): boolean => {
+    return evaluatePermission(currentUser, code);
+  }, [currentUser]);
+
+  const refreshPermissions = useCallback(async (): Promise<void> => {
+    const perms = await fetchEffectivePermissions();
+    if (perms !== null) {
+      setCurrentUser((prev) => (prev ? { ...prev, permissions: perms } : null));
+      const session = readStoredSession();
+      if (session) {
+        try {
+          sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ ...session, permissions: perms }));
+        } catch {
+          // Ignore storage quota
+        }
+      }
+    }
+  }, [fetchEffectivePermissions]);
 
   const loginAs = (newRole: Role) => {
     // Demo persona switch must never inherit the real user's JWT: a mock
@@ -95,20 +145,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Session storage unavailable; auth state remains in memory.
     }
     sessionStorage.setItem(AUTH_STORAGE_KEY, mapped);
+
+    // Asynchronously synchronize effective permissions from /auth/me
+    fetchEffectivePermissions().then((perms) => {
+      if (perms !== null) {
+        setCurrentUser((prev) => (prev ? { ...prev, permissions: perms } : null));
+        try {
+          const updated: AuthSession = { ...session, permissions: perms };
+          sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(updated));
+        } catch {
+          // Storage quota
+        }
+      }
+    });
+
     return mapped;
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    clearAuthToken();
-    try {
-      sessionStorage.removeItem(AUTH_SESSION_KEY);
-      localStorage.removeItem(AUTH_SESSION_KEY);
-    } catch {
-      // Storage unavailable; in-memory logout already applied.
+  // On mount: if authenticated with real token, refresh permissions from /auth/me
+  useEffect(() => {
+    const token = getAuthToken();
+    const session = readStoredSession();
+    if (token && session) {
+      fetchEffectivePermissions().then((perms) => {
+        if (perms !== null) {
+          setCurrentUser((prev) => (prev ? { ...prev, permissions: perms } : null));
+          try {
+            const updated: AuthSession = { ...session, permissions: perms };
+            sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(updated));
+          } catch {
+            // Storage quota
+          }
+        }
+      });
     }
-    sessionStorage.setItem(AUTH_STORAGE_KEY, 'public');
-  };
+  }, [fetchEffectivePermissions]);
 
   useEffect(() => {
     if (currentUser) {
@@ -119,7 +190,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   return (
-    <AuthContext.Provider value={{ currentUser, role, isAuthenticated, loginAs, loginWithCredentials, logout }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        role,
+        permissions,
+        hasPermission,
+        isAuthenticated,
+        loginAs,
+        loginWithCredentials,
+        logout,
+        refreshPermissions,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
