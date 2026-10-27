@@ -1,7 +1,7 @@
 import { AppApiError, type ApiErrorResponse } from '../errors/apiError';
 
 export const API_BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8080/api/v1';
+  (import.meta.env?.VITE_API_BASE_URL as string) || 'http://localhost:8080/api/v1';
 
 const AUTH_TOKEN_KEY = 'hswrms_jwt_token';
 
@@ -10,20 +10,25 @@ export interface RequestOptions extends RequestInit {
 }
 
 export const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
+    return null;
+  }
   return sessionStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_TOKEN_KEY);
 };
 
 export const setAuthToken = (token: string, persist: boolean = false): void => {
+  if (typeof window === 'undefined') return;
   if (persist) {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage?.setItem(AUTH_TOKEN_KEY, token);
   } else {
-    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+    sessionStorage?.setItem(AUTH_TOKEN_KEY, token);
   }
 };
 
 export const clearAuthToken = (): void => {
-  sessionStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  if (typeof window === 'undefined') return;
+  sessionStorage?.removeItem(AUTH_TOKEN_KEY);
+  localStorage?.removeItem(AUTH_TOKEN_KEY);
 };
 
 export async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
