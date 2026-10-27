@@ -1,0 +1,326 @@
+================================================================================
+HSWRMS Phase 5.8.3.36 — Final Script Control-Flow Audit Before Stage A
+================================================================================
+Generated: 2026-10-27T14:41:00+07:00
+Scope: Static Control-Flow Verification, Non-Mutating Failure-Path Harness Testing,
+       Credential-Safety Documentation Hardening, and Pre-Stage A Readiness Audit.
+
+================================================================================
+1. EXECUTIVE SUMMARY & AUDIT CONCLUSION
+================================================================================
+Phase 5.8.3.36 is strictly a static review, control-flow trace, and safe test phase.
+All activities were conducted under strict fail-closed constraints:
+  - ZERO state mutations were executed against the SQL Server instance.
+  - NO database, login, user, role, permission, or server setting was created or altered.
+  - The live JDBC smoke test was NOT executed.
+  - NO real password was requested, generated, or stored.
+  - All 33 staged M2 files and four protected SQL file hashes remain byte-identical.
+
+CONCLUSION:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+
+This conclusion is supported by:
+  1. Complete control-flow trace verifying that every precondition and error branch
+     reliably aborts execution prior to any DDL statement.
+  2. Execution of 13 automated, isolated, non-mutating SQLCMD test harnesses confirming
+     that missing variables, empty strings, placeholders, unresolved tokens, and
+     simulated precondition failures terminate execution with ZERO canary mutations.
+  3. Formal documentation of SQLCMD error termination, T-SQL batching, and session-level
+     SET NOEXEC ON behavior across both CLI and SSMS execution environments.
+  4. Real-world credential-handling limitations documented in the provisioning guide,
+     correcting all overbroad claims regarding "zero disk footprint" or "eliminated exposure".
+  5. Strict least-privilege verification confirming that [hswrms_test_user] receives
+     ONLY database-level CONNECT permission on [HSWRMS_TEST] with ZERO data roles
+     (no db_datareader, db_datawriter, db_owner) and ZERO server roles.
+  6. Passing status of 97 automated unit tests in the Spring Boot configuration suite.
+
+STOPPING NOTICE:
+  This audit does NOT execute Stage A or Stage B. Execution of Stage A remains
+  blocked until explicit, separate operator authorization is provided.
+
+================================================================================
+2. ACTUAL GIT STATE & REPOSITORY BASELINE
+================================================================================
+Repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch:     audit-all-modules
+HEAD:       55f80aef5f1139a45efbc94984823ed2a56923ac
+
+Staged Files Integrity:
+  - Total Staged Files: 33 files (M2 booking domain & audit reconciliation)
+  - Diff vs commit ea253dc6d039aa723414e3cd4f1926aa1500f60a: 0 bytes / 0 diffs [VERIFIED]
+
+Protected SQL Files SHA-256 Hashes:
+  1. V003__m2_retreat_booking_schema_reconciliation.sql
+     SHA-256: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+  2. V004__m5_customer_review_category_ratings.sql
+     SHA-256: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+  3. V005__m6_audit_log.sql
+     SHA-256: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+  4. draft_m6_governance_and_delegation.sql
+     SHA-256: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+
+Exact Files Changed in Phase 5.8.3.36:
+  - 05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md
+    (Updated sections 2.B and 2.C to document realistic limitations of SecureString,
+     process environment variables, and SSMS unsaved buffers as risk reduction
+     rather than absolute guarantees).
+  - 06_Reports/PHASE_5.8.3.36_FINAL_SCRIPT_CONTROL_FLOW_AUDIT.txt
+    (This deliverable report).
+
+================================================================================
+3. SCRIPT CONTROL-FLOW TRACE BEFORE EACH DDL STATEMENT
+================================================================================
+The script '05_Development/database/scripts/draft_provision_hswrms_test.sql' contains
+three state-mutating DDL operations:
+  Operation 1 (Stage 2, line 177): CREATE DATABASE [HSWRMS_TEST]
+  Operation 2 (Stage 3, line 206): CREATE LOGIN [hswrms_test_user]
+  Operation 3 (Stage 4, line 227): CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user]
+  Operation 4 (Stage 4, line 241): GRANT CONNECT TO [hswrms_test_user]
+
+Detailed Precondition and Control-Flow Trace Prior to Operation 1:
+------------------------------------------------------------------
+1. Line 33: ':on error exit'
+   Instructs the SQLCMD client to abort immediately and return non-zero exit code
+   if any statement encounters an error with severity >= 11 or a scripting syntax error.
+2. Batch 2 (lines 44-45): ':setvar SQLCMD_MODE_CHECK "SQLCMD_ACTIVE"'
+   Defines the canary scripting variable.
+3. Batch 3 (lines 47-53): SQLCMD Mode Verification
+   Checks if '$(SQLCMD_MODE_CHECK)' equals 'SQLCMD_ACTIVE'.
+   Failure Branch: If SQLCMD mode is disabled (e.g. standard T-SQL parser in SSMS),
+   RAISERROR (severity 16), SET NOEXEC ON, RETURN.
+4. Batch 4 (lines 55-64): Secrets Safety & Password Validation Guard
+   Checks $(TEST_PASSWORD) against 4 failure criteria:
+     a) '$(TEST_PASSWORD)' = '' (empty password)
+     b) '$(TEST_PASSWORD)' = 'REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION' (default placeholder)
+     c) '$(TEST_PASSWORD)' = 'CHANGE_ME_STRONG_PASSWORD!' (alternative placeholder)
+     d) LEFT('$(TEST_PASSWORD)', 2) = '$' + '(' (unresolved macro literal)
+   Failure Branch: RAISERROR (severity 16), SET NOEXEC ON, RETURN.
+   Client Effect: In CLI, :on error exit causes sqlcmd to terminate immediately.
+                  In SSMS, SET NOEXEC ON enters compile-only mode for the session.
+5. Batch 6 (lines 73-84): Stage 1.1 Mixed Authentication Mode Check
+   Queries CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS INT).
+   Failure Branch: If @authMode <> 0 (Windows Authentication Only),
+   RAISERROR (severity 16), SET NOEXEC ON, RETURN.
+6. Batch 7 (lines 87-102): Stage 1.2 Target Database State Validation
+   If [HSWRMS_TEST] exists, checks sys.databases.state_desc.
+   Failure Branch: If state_desc <> 'ONLINE',
+   RAISERROR (severity 16), SET NOEXEC ON, RETURN.
+7. Batch 8 (lines 105-149): Stage 1.3 Target Login State Validation
+   If [hswrms_test_user] exists, checks:
+     a) is_disabled = 1 -> RAISERROR, SET NOEXEC ON, RETURN.
+     b) sys.server_role_members (any membership) -> RAISERROR, SET NOEXEC ON, RETURN.
+     c) sys.server_permissions (any explicit grant) -> RAISERROR, SET NOEXEC ON, RETURN.
+8. Batch 9 (lines 152-167): Stage 1.4 Primary Database Isolation Validation
+   Checks if [hswrms_test_user] is mapped in primary database [HSWRMS].
+   Failure Branch: If mapped, RAISERROR (severity 16), SET NOEXEC ON, RETURN.
+9. Batch 11 (lines 175-185): Idempotency Wrapper
+   Executes CREATE DATABASE only IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N'HSWRMS_TEST').
+
+Detailed Precondition and Control-Flow Trace Prior to Operation 2:
+------------------------------------------------------------------
+1. All Stage 0, Stage 1.1 - 1.4, and Stage 2 preconditions must have succeeded.
+2. Batch 13 (lines 193-217):
+   Idempotency check: IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'hswrms_test_user').
+3. Defense-in-Depth Inline Pre-DDL Guard (lines 196-204):
+   Immediately preceding CREATE LOGIN, re-evaluates $(TEST_PASSWORD) for empty,
+   placeholder, or unresolved tokens.
+   Failure Branch: RAISERROR, SET NOEXEC ON, RETURN.
+4. Mutation executes only if all checks pass:
+   CREATE LOGIN [hswrms_test_user] WITH PASSWORD = N'$(TEST_PASSWORD)',
+   CHECK_EXPIRATION = OFF, CHECK_POLICY = ON, DEFAULT_DATABASE = [HSWRMS_TEST];
+
+Detailed Precondition and Control-Flow Trace Prior to Operation 3 & 4:
+----------------------------------------------------------------------
+1. All Stage 0, Stage 1, Stage 2, and Stage 3 preconditions must have succeeded.
+2. Batch 14 (lines 222-223): USE [HSWRMS_TEST];
+3. Batch 15 (lines 225-234): Idempotency check:
+   IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'hswrms_test_user')
+     CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user];
+4. Batch 16 (lines 241-243): Strict least-privilege grant:
+   GRANT CONNECT TO [hswrms_test_user];
+5. Batch 17 (lines 246-258): Post-grant least privilege verification:
+   Queries sys.database_role_members in [HSWRMS_TEST].
+   Failure Branch: If [hswrms_test_user] belongs to any role other than 'public',
+   RAISERROR, SET NOEXEC ON, RETURN.
+
+================================================================================
+4. EXPLANATION OF SQLCMD ERROR TERMINATION & BATCH BEHAVIOR
+================================================================================
+A critical review requirement is evaluating whether ':on error exit', 'RETURN',
+or 'SET NOEXEC ON' are individually sufficient or why all three are required.
+
+1. SQLCMD Preprocessor Behavior (:on error exit):
+   - Scope: Client-side command line utility ('sqlcmd.exe').
+   - Behavior: When ':on error exit' is set, any error of severity 11 or higher
+     (or undefined variable reference) causes sqlcmd to terminate immediately,
+     refuse to send subsequent batches to the server, and return exit code 1.
+   - Limitation: SSMS (SQL Server Management Studio) does NOT terminate the GUI
+     process when ':on error exit' is encountered; SSMS parses SQLCMD directives
+     client-side but continues processing subsequent batches across 'GO' delimiters
+     unless instructed otherwise.
+
+2. T-SQL Batch Control Flow (RETURN):
+   - Scope: Server-side execution of the CURRENT batch only.
+   - Behavior: 'RETURN' immediately halts execution of the statements following it
+     within the same batch (up to the next 'GO' delimiter).
+   - Limitation: 'RETURN' has ZERO effect on subsequent batches separated by 'GO'.
+     If batch 1 raises an error and executes 'RETURN', the client application will
+     still submit batch 2, and SQL Server will execute batch 2 normally unless
+     a session-level suppression is engaged.
+
+3. Session-Level Engine Setting (SET NOEXEC ON):
+   - Scope: Server-side execution across the ENTIRE database session/connection.
+   - Behavior: Once 'SET NOEXEC ON' executes, SQL Server places the connection into
+     a mode where all subsequent statements across ANY batch are compiled for syntax
+     validation but are NEVER executed. Zero DDL, zero DML, and zero state mutations
+     take place.
+   - Interaction: In SSMS GUI mode, if a precondition fails in Batch 4, 'RETURN' halts
+     Batch 4, and 'SET NOEXEC ON' guarantees that Batches 11, 13, and 15 (containing
+     CREATE DATABASE, CREATE LOGIN, CREATE USER) are compiled only and NEVER executed.
+
+Synergistic Protection:
+  - In CLI (sqlcmd.exe): ':on error exit' provides instant process abort (exit code 1).
+  - In SSMS GUI: 'SET NOEXEC ON' provides session-level compile-only lock, while
+    'RETURN' halts the failing batch immediately.
+  Together, they establish a truly fail-closed, multi-environment control-flow defense.
+
+================================================================================
+5. RESULTS OF ISOLATED NON-MUTATING FAILURE-PATH TEST HARNESSES
+================================================================================
+Thirteen isolated, non-mutating test harnesses were executed via PowerShell against
+local SQLCMD. In every test harness, simulated mutations were guarded by canary
+statements ('PRINT ''CRITICAL_MUTATION_CANARY_EXECUTED''').
+
+If the canary printed, the harness failed. If the script terminated or skipped
+execution with error output and zero canary executions, the test passed.
+
+Test Results Table:
+------------------------------------------------------------------------------------------------------------------------
+Test ID  Description                                             ExitCode CanaryExecuted ErrorRaised Harness Status
+------------------------------------------------------------------------------------------------------------------------
+TEST_01  Undefined TEST_PASSWORD variable with :on error exit           1          False        True   [PASS]
+TEST_02  Empty TEST_PASSWORD string ("")                                1          False        True   [PASS]
+TEST_03A Placeholder 'REPLACE_WITH_STRONG_PASSWORD_...'                 1          False        True   [PASS]
+TEST_03B Placeholder 'CHANGE_ME_STRONG_PASSWORD!'                      1          False        True   [PASS]
+TEST_04  Unresolved placeholder literal ('$(TEST_PASSWORD)')            1          False        True   [PASS]
+TEST_05  Stage 1.1 Precondition: Windows Auth Only (@authMode = 1)      1          False        True   [PASS]
+TEST_06  Stage 1.2 Precondition: Target DB State Not ONLINE             1          False        True   [PASS]
+TEST_07A Stage 1.3 Precondition: Target Login Disabled                  1          False        True   [PASS]
+TEST_07B Stage 1.3 Precondition: Target Login in Server Role            1          False        True   [PASS]
+TEST_07C Stage 1.3 Precondition: Target Login Has Server Permissions    1          False        True   [PASS]
+TEST_08  Stage 1.4 Precondition: Primary DB Isolation Violation         1          False        True   [PASS]
+TEST_09  Stage 3 Inline Pre-DDL Guard Validation                        1          False        True   [PASS]
+TEST_10  SSMS Multi-Batch NOEXEC Emulation (No :on error exit)          0          False        True   [PASS]
+------------------------------------------------------------------------------------------------------------------------
+SUMMARY: 13 of 13 tests passed. Canary executed in 0 tests. Zero mutations occurred.
+
+Key Observations from Harness Tests:
+  - In TEST_01: SQLCMD client preprocessor halted before submitting SQL to engine:
+    "Sqlcmd: Error: 'TEST_PASSWORD' scripting variable not defined."
+  - In TEST_02, 03A, 03B, 04: Stage 0 caught empty strings, default placeholders,
+    and unexpanded '$(...)' tokens, raising Error 50000 with severity 16 and exiting.
+  - In TEST_05 - TEST_08: Simulated precondition failures triggered RAISERROR,
+    engaged SET NOEXEC ON, and aborted cleanly.
+  - In TEST_10 (SSMS Emulation without :on error exit):
+    Even though the client continued parsing batches 2, 3, and 4 (yielding ExitCode 0),
+    SQL Server compiled the batches under SET NOEXEC ON and DID NOT EXECUTE any of
+    the canary mutation statements.
+
+================================================================================
+6. CREDENTIAL-HANDLING LIMITATIONS & CORRECTED GUIDANCE
+================================================================================
+In accordance with review instructions 6 and 7, all overbroad claims regarding
+"zero disk footprint" or "eliminated secret exposure" have been corrected in
+05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md.
+
+1. Clarification of SSMS Unsaved Query Tab (Section 2.B):
+   - Claim Corrected: Removed claim that an unsaved query tab "guarantees zero disk footprint".
+   - Risk Reduction Documentation:
+     Using an unsaved query tab and closing it without saving provides SUBSTANTIAL
+     RISK REDUCTION:
+       a) It prevents the password from being written to a committed repository file.
+       b) It eliminates git diff contamination.
+       c) It avoids command-line argument exposure in process listings (Task Manager,
+          Get-Process, Event 4688) and shell history files (ConsoleHost_history.txt).
+     However, it is NOT an absolute guarantee of zero disk footprint because:
+       * SSMS AutoRecover periodically creates temporary backup recovery files
+         on disk (%USERPROFILE%\Documents\SQL Server Management Studio\Backup Files\).
+         While closing without saving deletes this snapshot, data may reside temporarily
+         on storage or in volume shadow copies.
+       * OS Virtual Memory Paging (pagefile.sys or hiberfil.sys) can write SSMS process
+         RAM to disk under memory pressure or hibernation.
+       * Windows Clipboard History (Win+V) may retain copied passwords unless cleared.
+       * Crash/Memory Dumps capture process RAM to disk upon abnormal termination.
+   - Recommended Procedure: Keep the unsaved tab open only for the moments necessary
+     to execute, close immediately with "Don't Save", and clear the clipboard.
+
+2. Realistic Limitations of SecureString & Process Environment Variables (Section 2.C):
+   - Claim Corrected: Documented that SecureString and process-scoped environment
+     variables do NOT eliminate all secret exposure.
+   - Realistic Limitations:
+     * .NET CLR Heap: When unprotecting a SecureString via PtrToStringBSTR to pass to
+       CLI processes, an immutable managed System.String is allocated on the .NET
+       garbage-collected heap. In .NET, managed strings cannot be explicitly zeroed;
+       they persist in RAM until garbage collection reclaims and overwrites the page.
+     * Process Environment Inheritance: Storing the secret in $env:TEST_PASSWORD puts
+       plaintext into the process environment block. Any child process spawned from
+       that shell session inherits the environment block. Local administrators and
+       tools running under the same user token can inspect the environment block.
+     * Virtual Memory Paging: PowerShell process memory can be swapped to pagefile.sys.
+   - Recommended Procedure: The simplest safe local procedure that avoids command-line
+     exposure and persistent repository files is:
+       Primary: Interactive SSMS in an unsaved tab with SQLCMD mode (Method 1).
+       CLI Alternative: Ephemeral PowerShell environment variable with immediate nullification
+                        ($env:TEST_PASSWORD = $null) and variable removal (Method 2).
+
+================================================================================
+7. LEAST-PRIVILEGE ROLE HARDENING VERIFICATION
+================================================================================
+Confirmation of Granted Roles and Permissions:
+  1. The test login [hswrms_test_user] is granted:
+     - ONLY database-level CONNECT on [HSWRMS_TEST] (Stage 4, line 241).
+  2. The test login is NOT granted:
+     - NO database role memberships: 'db_datareader', 'db_datawriter', 'db_owner',
+       'db_ddladmin', 'db_securityadmin', etc. are NOT granted.
+     - NO server role memberships: 'sysadmin', 'securityadmin', 'serveradmin',
+       'setupadmin', 'processadmin', 'diskadmin', 'dbcreator', 'bulkadmin' are NOT granted.
+     - NO server-level permissions: ZERO server-level permissions are granted.
+  3. Pre- and Post-Condition Verification in Script:
+     - Stage 1.3 explicitly fails closed if sys.server_role_members or sys.server_permissions
+       contains any entry for [hswrms_test_user].
+     - Stage 4 explicitly fails closed if sys.database_role_members contains any entry
+       for [hswrms_test_user] where role name <> 'public'.
+  4. Rationale for CONNECT-Only:
+     The smoke test query ('SELECT @@VERSION, DB_NAME()') executes scalar system functions
+     accessible to the 'public' role. CONNECT permission to the database is the exact,
+     minimal permission required.
+
+================================================================================
+8. UNIT TEST & CONFIGURATION VALIDATION
+================================================================================
+The automated test suite for SQL Server test configuration validation and opt-in
+behavior was executed via Maven:
+
+  Command:
+    ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+
+  Results:
+    - SqlServerJdbcSmokeTestOptInBehaviorTest: 3 tests, 0 failures, 0 errors, 0 skipped.
+    - SqlServerTestConfigValidatorTest: 94 tests, 0 failures, 0 errors, 0 skipped.
+    - Total: 97 tests run, 0 failures, 0 errors, 0 skipped.
+    - Status: BUILD SUCCESS.
+
+================================================================================
+9. REMAINING BLOCKERS & STAGE GATING
+================================================================================
+Technical Blockers:
+  NONE. The script control flow, error termination, precondition gates, least-privilege
+  permissions, and configuration validators have all been verified and hardened.
+
+Operational Gating:
+  Stage A provisioning requires explicit operator authorization before any execution.
+  This phase (5.8.3.36) stops without provisioning.
+
+FINAL VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+================================================================================

@@ -1,0 +1,323 @@
+================================================================================
+HSWRMS Phase 5.8.3.40 — Safe Provisioning Execution Path Implementation & Audit
+================================================================================
+Generated: 2026-10-27T16:18:00+07:00
+Scope: Root-Cause Investigation of Harness Stall, Parameterized ADO.NET Script
+       Implementation (provision_hswrms_test.ps1), Full AST Parser Verification,
+       DryRun & WhatIf ($PSCmdlet.ShouldProcess) Audit, 28-Case Isolated Test
+       Execution, Guide Harmonization, and Stage A Readiness Audit.
+
+================================================================================
+1. EXECUTIVE SUMMARY & AUDIT VERDICT
+================================================================================
+Phase 5.8.3.40 resolved the remaining operational gap between the SQLCMD-based
+provisioning script and the safer parameterized ADO.NET architecture documented
+in Phase 5.8.3.39. It implemented the official PowerShell ADO.NET provisioning
+script (05_Development/database/scripts/provision_hswrms_test.ps1), diagnosed and
+eliminated a background process stall caused by interactive prompting on empty
+inputs, validated all syntax via full AST parsing, confirmed zero-mutation
+guarantees under -WhatIf and -DryRun, and executed a 28-case synthetic audit
+harness with zero failures.
+
+All mandatory restrictions were strictly enforced throughout this phase:
+  - ZERO state mutations were executed against the live SQL Server instance.
+  - NO database, login, user, role, permission, or server setting was created or altered.
+  - The live JDBC smoke test was NOT executed.
+  - NO real password was requested, generated, displayed, or logged.
+  - Antigravity language server PID 12140 was strictly preserved and never touched.
+  - All 33 staged M2 files and four protected SQL file hashes remain byte-identical.
+  - All testing utilized synthetic, non-secret test values in isolated test harnesses.
+
+FINAL AUDIT VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+
+Supporting Findings:
+  1. Stall Diagnosis & Resolution: Investigated PowerShell PIDs 5840 and 4696 that
+     stalled in an earlier test run. Determined that test case VAL_01_EMPTY passed an
+     empty string ("") to -PlaintextPasswordForTesting. In provision_hswrms_test.ps1,
+     checking 'if (-not [string]::IsNullOrEmpty($PlaintextPasswordForTesting))'
+     evaluated to $false for empty strings, causing execution to fall into the 'else'
+     branch and call Read-Host -AsSecureString. In a background process with redirected
+     stdin, Read-Host blocked indefinitely waiting for input. The stalled task was
+     safely terminated via the IDE task cancellation mechanism without affecting the
+     Antigravity language server (PID 12140). The parameter logic was fixed to use
+     $PSBoundParameters.ContainsKey('PlaintextPasswordForTesting'), immediately
+     throwing a validation error on empty strings and eliminating all blocking.
+  2. Full AST Parser Validation: Parsing provision_hswrms_test.ps1 via
+     [System.Management.Automation.Language.Parser]::ParseFile confirmed zero syntax
+     errors, zero parser warnings, and clean AST construction.
+  3. Strict -WhatIf and -DryRun Guarding: Verified that provision_hswrms_test.ps1 does
+     not rely merely on [CmdletBinding(SupportsShouldProcess = $true)]. It evaluates
+     $PSCmdlet.ShouldProcess() before opening any network connection (halting execution
+     prior to creating any SqlConnection object), and explicitly wraps every DDL
+     execution (Stage 2 CREATE DATABASE, Stage 3 CREATE LOGIN, Stage 4 CREATE USER
+     and GRANT CONNECT) in dedicated $PSCmdlet.ShouldProcess() conditional blocks.
+  4. 28-Test Harness Execution (Exit Code 0): Re-ran the isolated audit harness
+     (scratch/test_safer_provisioning_harness.ps1). All 28 tests completed in 3 seconds
+     with exit code 0: 14 client validation tests PASSED, 13 parameterized RPC quoting
+     tests PASSED, and 1 zero-mutation invariant check PASSED.
+  5. Primary & Fallback Documentation: Updated HSWRMS_TEST_PROVISIONING_GUIDE.md to
+     establish provision_hswrms_test.ps1 as the primary Stage A execution method,
+     while retaining the SSMS unsaved query window as an audited fallback.
+  6. Regression Safety: 97 automated unit tests passed with BUILD SUCCESS. SQL Server
+     inspection confirmed 0 test databases and 0 test logins exist.
+
+STOPPING NOTICE:
+  This audit does NOT execute Stage A or Stage B. Provisioning remains completely
+  blocked until explicit, separate human operator authorization is provided.
+
+================================================================================
+2. ROOT-CAUSE DIAGNOSIS & REMEDIATION OF HARNESS STALL
+================================================================================
+Background:
+  During the initial execution of scratch/test_safer_provisioning_harness.ps1,
+  PowerShell child processes (PIDs 5840 and 4696) appeared stalled for nearly 20
+  minutes with 0% CPU consumption over a 60-second measurement window.
+
+Process & Task Inspection:
+  - Task state in IDE: Background task task-7686 was holding the child process.
+  - Process tree: powershell.exe (PID 5840) spawned by the tool runner, hosting
+    the test harness script, which in turn spawned child powershell.exe (PID 4696).
+  - CPU usage: 0.00% CPU activity across 60 seconds.
+  - State: Blocked waiting on synchronous console stdin read.
+  - Protected process check: Language server PID 12140 was inspected and verified
+    completely unrelated; PID 12140 was NOT touched or signaled.
+
+Root Cause Analysis:
+  In the initial implementation of provision_hswrms_test.ps1, credential handling
+  was structured as:
+    if (-not [string]::IsNullOrEmpty($PlaintextPasswordForTesting)) {
+        $plainPass = $PlaintextPasswordForTesting
+    }
+    elseif ($TestPassword -ne $null) {
+        ...
+    }
+    else {
+        $sec = Read-Host -Prompt "Enter HSWRMS test password (min 12 chars)" -AsSecureString
+        ...
+    }
+
+  When test case VAL_01_EMPTY executed:
+    & $scriptPath -DryRun -PlaintextPasswordForTesting ""
+  The parameter $PlaintextPasswordForTesting was explicitly passed, but its value
+  was [string]::Empty ("").
+  Consequently, [string]::IsNullOrEmpty("") evaluated to $true.
+  Therefore, '-not [string]::IsNullOrEmpty("")' evaluated to $false!
+  The script failed the first 'if', skipped the 'elseif', and entered the 'else'
+  block, invoking:
+    Read-Host -Prompt "Enter HSWRMS test password (min 12 chars)" -AsSecureString
+
+  Because the script was executing inside an automated background PowerShell process
+  with standard input redirected and no interactive operator attached, Read-Host
+  blocked indefinitely awaiting console keystrokes, completely halting the pipeline.
+
+Cancellation & Remediation:
+  1. Safe Task Termination: The stalled task task-7686 was cancelled via the IDE's
+     manage_task 'kill' action. Child PIDs 5840 and 4696 were terminated cleanly.
+     Antigravity language server PID 12140 remained running and undisturbed.
+  2. Bound Parameter Detection Fix: Replaced IsNullOrEmpty checks with PowerShell's
+     built-in $PSBoundParameters dictionary:
+       if ($PSBoundParameters.ContainsKey('PlaintextPasswordForTesting')) {
+           $plainPass = $PlaintextPasswordForTesting
+       }
+       elseif ($PSBoundParameters.ContainsKey('TestPassword')) {
+           if ($TestPassword -ne $null) {
+               $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($TestPassword)
+               $plainPass = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+           } else {
+               $plainPass = $null
+           }
+       }
+       else {
+           $sec = Read-Host -Prompt "Enter HSWRMS test password (min 12 chars)" -AsSecureString
+           ...
+       }
+  3. Result: When -PlaintextPasswordForTesting "" is passed, $PSBoundParameters.ContainsKey
+     evaluates to $true, assigning "" directly to $plainPass. Execution proceeds
+     immediately to Test-HswrmsProvisioningInput, which evaluates:
+       if ([string]::IsNullOrEmpty($Password)) {
+           throw "VALIDATION ERROR: Password is required and cannot be null or empty."
+       }
+     This throws an immediate terminating exception without prompting Read-Host,
+     allowing the test harness to catch the error, mark VAL_01_EMPTY as REJECTED
+     [PASS], and complete instantaneously.
+
+================================================================================
+3. COMPLETE TEST HARNESS EXECUTION RESULTS (ALL 28 TESTS PASSED)
+================================================================================
+Command Executed:
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File scratch/test_safer_provisioning_harness.ps1
+Exit Code: 0
+Execution Time: 3.2 seconds
+Result: ALL 28 TESTS PASSED [PASS] (0 Failures, 0 Blocked)
+
+Detailed Results Table:
+
+PART 1: CLIENT-SIDE INPUT VALIDATION & FAIL-CLOSED GUARDS
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Test ID                           Description                                         Expected Outcome         Actual Outcome        Verdict
+-------------------------------------------------------------------------------------------------------------------------------------------------
+VAL_01_EMPTY                      Empty password ("")                                 REJECT                   REJECTED              PASS
+VAL_02_WHITESPACE                 Whitespace-only password ("            ")           REJECT                   REJECTED              PASS
+VAL_03_TOO_SHORT                  Below 12 characters ("Short1!")                     REJECT                   REJECTED              PASS
+VAL_04_PLACEHOLDER_1              Prohibited placeholder (REPLACE_WITH_STRONG_...)    REJECT                   REJECTED              PASS
+VAL_05_PLACEHOLDER_2              Prohibited placeholder (CHANGE_ME_STRONG_...)       REJECT                   REJECTED              PASS
+VAL_06_MACRO_PREFIX               Unresolved SQLCMD macro syntax ($(TEST_PASSWORD))   REJECT                   REJECTED              PASS
+VAL_07_TOO_LONG                   Exceeds 128 characters (131 chars)                  REJECT                   REJECTED              PASS
+VAL_08_VALID_MIN12                Valid 12-char boundary password (Abcdef12345!)      ACCEPT                   ACCEPTED              PASS
+VAL_09_VALID_MAX128               Valid 128-char boundary password (128 chars)        ACCEPT                   ACCEPTED              PASS
+VAL_10_VALID_SPECIALS             Valid password with rich symbols (!#@%^&*())        ACCEPT                   ACCEPTED              PASS
+VAL_11_DB_IDENTIFIER_WHITELIST    Arbitrary DatabaseName injection attempt            REJECT                   REJECTED              PASS
+VAL_12_LOGIN_IDENTIFIER_WHITELIST Arbitrary LoginName injection attempt               REJECT                   REJECTED              PASS
+VAL_13_SERVER_IDENTIFIER_REGEX    Injection characters in ServerInstance parameter    REJECT                   REJECTED              PASS
+VAL_14_WHATIF_SAFE_EXECUTION      Verify -WhatIf halts prior to opening DB connection ACCEPT & ZERO MUTATION   SAFE WHAT-IF RETURN   PASS
+
+PART 2: PARAMETERIZED RPC QUOTING & SQL INJECTION RESISTANCE (READ-ONLY ADO.NET)
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Test ID                           Payload / Threat Vector                             Expected Outcome         Actual Outcome        Verdict
+-------------------------------------------------------------------------------------------------------------------------------------------------
+RPC_01_STANDARD                   SyntheticPass123!#                                  Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_02_SINGLE_QUOTE               Synthetic'Pass123!                                  Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_03_SQL_INJECTION              Synthetic'; SELECT @@VERSION; --                    Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_04_SEMICOLON                  Synthetic;Pass123!                                  Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_05_COMMENT_DASH               Synthetic--Pass123!                                 Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_06_BLOCK_COMMENT              Synthetic/*Pass*/123!                               Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_07_DOUBLE_QUOTE               Synthetic"Pass"123!                                 Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_08_PAREN_BRACKET              Synthetic)[]{}Pass123!                              Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_09_SPECIAL_SYMBOLS            Synthetic<>&|~@^Pass123!                            Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_10_MACRO_SEQUENCE             Synthetic$(UNKNOWN_MACRO)123!                       Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_11_UNICODE_CHARS              SyntheticPass123!_Ñ_€                               Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_12_BOUNDARY_12                Abcdef12345! (Exact 12-char minimum)                Strictly Quoted Literal  Enclosed & Escaped    PASS
+RPC_13_BOUNDARY_128               128-char maximum boundary password                  Strictly Quoted Literal  Enclosed & Escaped    PASS
+
+PART 3: INVARIANT VERIFICATION (ZERO STATE MUTATIONS ON REAL SQL SERVER)
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Test ID                           Verification Check                                  Expected Outcome         Actual Outcome        Verdict
+-------------------------------------------------------------------------------------------------------------------------------------------------
+MUT_01_ZERO_STATE_CHANGE          Confirm HSWRMS_TEST & hswrms_test_user are absent   Zero Objects Created     DB: 0, Login: 0       PASS
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+Summary: 28 Total Tests | 28 PASSED | 0 FAILED | 0 BLOCKED | Exit Code: 0
+
+================================================================================
+4. POWERSHELL PARSING & DRYRUN / WHATIF BEHAVIOR AUDIT
+================================================================================
+A. AST Syntax Parser Verification:
+   The script provision_hswrms_test.ps1 was inspected using PowerShell's Abstract
+   Syntax Tree (AST) parser:
+     [System.Management.Automation.Language.Parser]::ParseFile(...)
+   Results:
+     - Parser Errors: 0
+     - Parser Warnings: 0
+     - AST Status: Valid, fully parsable PowerShell 5.1/7+ scriptblock.
+
+B. -WhatIf and -DryRun Guarding Analysis:
+   In PowerShell, declaring '[CmdletBinding(SupportsShouldProcess = $true)]' registers
+   the -WhatIf and -Confirm parameters on the cmdlet or script. However, native .NET
+   API calls (such as $conn.Open() or $cmd.ExecuteNonQuery()) are NOT automatically
+   intercepted by PowerShell engine hooks. Relying on SupportsShouldProcess alone
+   without checking $PSCmdlet.ShouldProcess() would allow .NET DDL commands to execute
+   even when -WhatIf is specified.
+
+   Audit of provision_hswrms_test.ps1 confirms robust, multi-layer guarding:
+   1. Pre-Connection Guard (Line 180):
+      $isWhatIf = ($DryRun -or (-not $PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "Execute Stage A Provisioning (Database [$DatabaseName], Login [$LoginName])")))
+      if ($isWhatIf) {
+          Write-Host "[DRY RUN PASS] All client-side validations passed successfully."
+          ...
+          return
+      }
+      Behavior: When -WhatIf is passed, $PSCmdlet.ShouldProcess emits the standard
+      PowerShell What-If notification:
+        "What if: Performing the operation "Execute Stage A Provisioning..." on target "SQL Server instance 'localhost'"."
+      It returns $false, causing $isWhatIf to evaluate to $true, and the script
+      exits at Line 195. ZERO database connections are opened, zero TCP sockets are
+      connected, and zero SQL queries are sent.
+   2. Defense-in-Depth DDL Operation Guards:
+      Even if the pre-connection guard were removed, each individual DDL mutation is
+      explicitly guarded by its own $PSCmdlet.ShouldProcess() invocation:
+        - Stage 2 (Line 314):
+          if ($PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "CREATE DATABASE [$DatabaseName]")) {
+              $null = $cmd.ExecuteNonQuery()
+          }
+        - Stage 3 (Line 336):
+          if ($PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "CREATE LOGIN [$LoginName]")) {
+              $null = $cmd.ExecuteNonQuery()
+          }
+        - Stage 4 (Line 359):
+          if ($PSCmdlet.ShouldProcess("Database [$DatabaseName]", "CREATE USER [$LoginName] and GRANT CONNECT")) {
+              $null = $cmd.ExecuteNonQuery()
+          }
+   3. Empirical Verification:
+      Running '.\provision_hswrms_test.ps1 -WhatIf -PlaintextPasswordForTesting "ValidPass123!"'
+      emitted the What-If notification, printed the safe dry-run summary, exited with
+      code 0, and executed ZERO server queries or mutations.
+
+================================================================================
+5. REPOSITORY SAFETY CHECKS & INTEGRITY VERIFICATION
+================================================================================
+Repository Location: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Active Branch:       audit-all-modules
+Current HEAD:        55f80aef5f1139a45efbc94984823ed2a56923ac
+
+A. Staged M2 Domain Files Integrity:
+   - Staged Files: Exactly 33 files
+   - Command: git diff --cached ea253dc6d039aa723414e3cd4f1926aa1500f60a -- (git diff --name-only --cached)
+   - Diff vs Reference Commit: 0 bytes / 0 lines [BYTE-IDENTICAL MATCH]
+
+B. Protected SQL Files SHA-256 Hashes:
+   1. V003__m2_retreat_booking_schema_reconciliation.sql
+      SHA-256: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+   2. V004__m5_customer_review_category_ratings.sql
+      SHA-256: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+   3. V005__m6_audit_log.sql
+      SHA-256: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+   4. draft_m6_governance_and_delegation.sql
+      SHA-256: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+
+C. Real SQL Server State Invariants:
+   - Connection: localhost:1433 (master)
+   - Database [HSWRMS_TEST] Existence: 0 (Absent) [PASS]
+   - Login [hswrms_test_user] Existence: 0 (Absent) [PASS]
+   - Primary Database [HSWRMS] State: ONLINE, 0 test user mappings [PASS]
+
+D. Automated Unit Regression Suite:
+   - Command: ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+   - Results: Tests run: 97, Failures: 0, Errors: 0, Skipped: 0 [BUILD SUCCESS]
+
+================================================================================
+6. FILES CHANGED IN PHASE 5.8.3.40
+================================================================================
+1. 05_Development/database/scripts/provision_hswrms_test.ps1 (NEW)
+   - Production-grade PowerShell ADO.NET script implementing typed RPC TDS parameter
+     binding, server-side QUOTENAME(@password, '''') quoting, client-side input
+     whitelisting, $PSCmdlet.ShouldProcess -WhatIf/-DryRun guarding, and deterministic
+     memory scrubbing.
+2. 05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md (MODIFIED)
+   - Updated Section 2.B to establish provision_hswrms_test.ps1 as the primary Stage A
+     execution path.
+   - Updated Section 2.E with a detailed comparative character and security matrix
+     between Parameterized ADO.NET and SQLCMD.
+   - Updated Section 5 to document the primary PowerShell execution commands and the
+     audited SSMS fallback path.
+3. scratch/test_safer_provisioning_harness.ps1 (ARTIFACT UPDATED)
+   - Fixed parameter pass-through for empty/null strings; updated test result formatting
+     for full, untruncated table output.
+4. 06_Reports/PHASE_5.8.3.40_SAFE_PROVISIONING_EXECUTION_REVIEW.txt (NEW)
+   - This deliverable report.
+
+================================================================================
+7. REMAINING BLOCKERS & AUTHORIZATION GATE
+================================================================================
+Current Blocker:
+  STAGE A PROVISIONING REQUIRES EXPLICIT, SEPARATE HUMAN OPERATOR AUTHORIZATION.
+
+Action Items Upon Authorization:
+  1. Operator executes Stage A via:
+     .\05_Development\database\scripts\provision_hswrms_test.ps1 -ServerInstance "localhost"
+  2. Operator enters a strong password (minimum 12 characters, meeting Windows policy)
+     at the secure prompt.
+  3. Script will provision database [HSWRMS_TEST], login [hswrms_test_user], map the
+     user, grant database CONNECT, and verify configuration invariants.
+  4. Submit Stage A report for review before proceeding to Stage B (Live JDBC smoke test).
+================================================================================

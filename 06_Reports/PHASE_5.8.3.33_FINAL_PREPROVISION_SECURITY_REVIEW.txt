@@ -1,0 +1,456 @@
+================================================================================
+HSWRMS PHASE 5.8.3.33 — FINAL PRE-PROVISION SECURITY REVIEW REPORT
+================================================================================
+
+1. PHASE NAME & OVERALL VERDICT
+--------------------------------------------------------------------------------
+Phase Name:      HSWRMS Phase 5.8.3.33 — Final Pre-Provision Security Review
+Overall Verdict: READY FOR EXPLICIT PROVISIONING APPROVAL
+Status:          AUDIT COMPLETE — ZERO MUTATIONS PERFORMED — AWAITING USER APPROVAL
+
+Summary:
+Every required security property, guard mechanism, least-privilege boundary,
+and isolation constraint for the proposed dedicated test database (HSWRMS_TEST)
+and dedicated test login (hswrms_test_user) has been exhaustively investigated,
+verified by static code inspection, hardened, and confirmed through safe,
+read-only queries and isolated unit tests:
+1. SQLCMD Password Guard: Verified to require SQLCMD mode, detect and reject empty
+   or placeholder passwords, execute zero statements prior to validation, halt
+   compilation/execution via SET NOEXEC ON and :on error exit upon failure, and
+   maintain clean idempotency across all batches.
+2. Effective Isolation from HSWRMS: Verified that database [HSWRMS] has guest user
+   access disabled (hasdbaccess = 0, zero CONNECT grants), zero user table permissions
+   granted to 'public', is_trustworthy_on = 0, and is_db_chaining_on = 0. The proposed
+   login has zero user mappings in [HSWRMS]. Because the login has not yet been
+   created on the server, live runtime probe under that login's credentials is
+   formally designated as UNVERIFIED AT RUNTIME, and a safe post-provisioning
+   runtime verification procedure is provided.
+3. Server Roles & Privileges: Verified that the draft script and Java validator
+   enforce zero fixed/custom server roles (not just sysadmin, but securityadmin,
+   serveradmin, setupadmin, processadmin, diskadmin, dbcreator, bulkadmin, and
+   any user-defined server roles) and zero explicit server-level grants.
+4. Database CONNECT-Only Access: Verified that [hswrms_test_user] receives strictly
+   database-level CONNECT permission on [HSWRMS_TEST]. Membership in db_datareader,
+   db_datawriter, db_owner, or any data roles is strictly prohibited. The smoke test
+   query (SELECT @@VERSION, DB_NAME()) executes purely against scalar system
+   functions available to 'public' without requiring table access.
+5. Zero Mutations Enforced: Zero databases, logins, users, or permissions were created
+   or modified on the local Microsoft SQL Server 2019 Express instance (MYLIFE-MYRULE-1).
+   The live JDBC smoke test was not executed.
+
+
+2. REPOSITORY SAFETY & REPOSITORY COORDINATES
+--------------------------------------------------------------------------------
+Workspace Root:          E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Git Branch:      audit-all-modules                     [VERIFIED]
+Current Git HEAD:        55f80aef5f1139a45efbc94984823ed2a56923ac [VERIFIED]
+Initial Git State:       Clean index except 33 staged M2 files [VERIFIED]
+Final Git State:         Preserved without reset, stash, clean, stage, unstage,
+                         commit, push, or branch switch        [VERIFIED]
+
+
+3. INTEGRITY & HASH VERIFICATION
+--------------------------------------------------------------------------------
+A. 33 Staged M2 Files Byte-Identity:
+   Source Commit: ea253dc6d039aa723414e3cd4f1926aa1500f60a
+   Command: git diff --cached ea253dc6d039aa723414e3cd4f1926aa1500f60a -- (git diff --name-only --cached)
+   Result:  0 diffs across all 33 files (100% byte-identical)  [PASS]
+
+   Files Verified (33 total):
+   - 04_Implement/HSWRMS_MODULE_2_RETREAT_BOOKING_IMPLEMENTATION_PLAN.md
+   - 05_Development/backend/.../m2booking/controller/ReceptionistOperationController.java
+   - 05_Development/backend/.../m2booking/controller/RetreatBookingController.java
+   - 05_Development/backend/.../m2booking/controller/RetreatPackageController.java
+   - 05_Development/backend/.../m2booking/controller/VNPayCallbackController.java
+   - 05_Development/backend/.../m2booking/dto/AssignVillaRequest.java
+   - 05_Development/backend/.../m2booking/dto/BookingCalculationRequest.java
+   - 05_Development/backend/.../m2booking/dto/BookingCalculationResponse.java
+   - 05_Development/backend/.../m2booking/dto/BookingSummaryResponse.java
+   - 05_Development/backend/.../m2booking/dto/CheckInResidenceRequest.java
+   - 05_Development/backend/.../m2booking/dto/CreateBookingRequest.java
+   - 05_Development/backend/.../m2booking/dto/DailyArrivalResponse.java
+   - 05_Development/backend/.../m2booking/dto/PhysicalVillaResponse.java
+   - 05_Development/backend/.../m2booking/dto/RetreatPackageResponse.java
+   - 05_Development/backend/.../m2booking/dto/UpdateVillaStatusRequest.java
+   - 05_Development/backend/.../m2booking/dto/VillaCategoryResponse.java
+   - 05_Development/backend/.../m2booking/dto/WalkInBookingRequest.java
+   - 05_Development/backend/.../m2booking/entity/PhysicalVilla.java
+   - 05_Development/backend/.../m2booking/entity/ResidenceRecord.java
+   - 05_Development/backend/.../m2booking/entity/RetreatBooking.java
+   - 05_Development/backend/.../m2booking/entity/RetreatPackage.java
+   - 05_Development/backend/.../m2booking/entity/VillaCategory.java
+   - 05_Development/backend/.../m2booking/repository/PhysicalVillaRepository.java
+   - 05_Development/backend/.../m2booking/repository/ResidenceRecordRepository.java
+   - 05_Development/backend/.../m2booking/repository/RetreatBookingRepository.java
+   - 05_Development/backend/.../m2booking/repository/RetreatPackageRepository.java
+   - 05_Development/backend/.../m2booking/repository/VillaCategoryRepository.java
+   - 05_Development/backend/.../m2booking/service/ReceptionistOperationService.java
+   - 05_Development/backend/.../m2booking/service/RetreatBookingService.java
+   - 05_Development/backend/.../m2booking/service/RetreatPackageService.java
+   - 05_Development/backend/.../m2booking/service/VNPayDepositService.java
+   - 05_Development/backend/.../m2booking/service/VillaAvailabilityService.java
+   - 05_Development/frontend/src/api/booking/retreatBookingApi.ts
+
+B. Four Protected Untracked SQL Files SHA-256 Hashes:
+   - V003__m2_retreat_booking_schema_reconciliation.sql:
+     8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH - PASS]
+   - V004__m5_customer_review_category_ratings.sql:
+     3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH - PASS]
+   - V005__m6_audit_log.sql:
+     5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH - PASS]
+   - draft_m6_governance_and_delegation.sql:
+     605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH - PASS]
+
+
+4. FILES INSPECTED AND CHANGED IN THIS PHASE
+--------------------------------------------------------------------------------
+Files Inspected:
+- 05_Development/database/scripts/draft_provision_hswrms_test.sql
+- 05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidator.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidatorTest.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestContextInitializer.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerJdbcSmokeTest.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerJdbcSmokeTestOptInBehaviorTest.java
+- 05_Development/backend/src/test/resources/application-sqlserver-test.yml
+- 06_Reports/PHASE_5.8.3.32_SECURITY_HARDENING_REPORT.txt
+
+Files Changed in Phase 5.8.3.33:
+1. 05_Development/database/scripts/draft_provision_hswrms_test.sql
+   - Hardened Stage 0 guard: Added `:setvar SQLCMD_MODE_CHECK "SQLCMD_ACTIVE"` and
+     `IF '$(SQLCMD_MODE_CHECK)' <> 'SQLCMD_ACTIVE'` check.
+   - Hardened Stage 1.3: Expanded server role inspection from sysadmin-only check
+     to check `sys.server_role_members` for membership in ANY server role, and
+     `sys.server_permissions` for ANY explicit server-level grants.
+   - Hardened Stage 4: Added post-mapping check asserting zero database role memberships
+     other than `public` in [HSWRMS_TEST].
+2. 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidator.java
+   - Added `validateServerRoleSafety(String roleName)` to reject any server role other than 'public'.
+   - Added `validateServerPermissionSafety(String permissionName)` to reject explicit server permissions.
+   - Added `validateDatabasePermissionSafety(String classDesc, String permissionName, String stateDesc)`
+     to reject any permission other than DATABASE CONNECT GRANT.
+3. 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidatorTest.java
+   - Added 29 new unit tests covering server role safety, explicit server permission safety,
+     and database permission safety boundaries (test suite increased from 65 to 94 tests).
+4. 06_Reports/PHASE_5.8.3.33_FINAL_PREPROVISION_SECURITY_REVIEW.txt
+   - Created this final pre-provision security review report.
+
+
+5. FINDINGS: SQLCMD PASSWORD GUARD BEHAVIOR
+--------------------------------------------------------------------------------
+Static Inspection & Control-Flow Analysis of `draft_provision_hswrms_test.sql`:
+
+A. Is SQLCMD Mode Required?
+   - YES.
+   - Mechanism: Line 31 contains `:on error exit` and lines 37-38 contain `:setvar` commands.
+   - In SSMS standard mode (non-SQLCMD), executing a script containing `:` commands immediately
+     causes SSMS to throw a syntax error.
+   - In addition, Batch 2 defines `:setvar SQLCMD_MODE_CHECK "SQLCMD_ACTIVE"`. Batch 3 checks:
+     `IF '$(SQLCMD_MODE_CHECK)' <> 'SQLCMD_ACTIVE' BEGIN RAISERROR(...); SET NOEXEC ON; END`.
+     If SQLCMD mode is inactive, `$(SQLCMD_MODE_CHECK)` is not replaced by the preprocessor,
+     causing the conditional check to evaluate to TRUE, raising an explicit error and executing
+     `SET NOEXEC ON`.
+
+B. Detection of Undefined TEST_PASSWORD:
+   - When executed via `sqlcmd.exe` without `-v TEST_PASSWORD="..."`, line 37 defines the fallback
+     value: `:setvar TEST_PASSWORD "REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION"`.
+   - Batch 4 checks whether `$(TEST_PASSWORD)` equals empty string or either known placeholder
+     (`REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION` or `CHANGE_ME_STRONG_PASSWORD!`).
+   - If undefined or set to placeholder, the guard raises an error and halts execution.
+
+C. Rejection of Placeholder or Empty Password:
+   - Batch 4 explicitly evaluates:
+     `IF '$(TEST_PASSWORD)' = '' OR '$(TEST_PASSWORD)' = 'REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION' OR '$(TEST_PASSWORD)' = 'CHANGE_ME_STRONG_PASSWORD!'`
+   - When triggered, it raises severity 16 error:
+     "FAIL CLOSED: A strong password must be supplied via $(TEST_PASSWORD). Default placeholders are forbidden."
+     and executes `SET NOEXEC ON;`.
+
+D. Impact of `SET NOEXEC ON` on Session State:
+   - In Microsoft SQL Server, `SET NOEXEC ON` causes the database engine to parse and compile
+     subsequent batches in the session, but NOT execute them.
+   - We verified empirically on the local SQL Server 2019 Express instance: `SET NOEXEC ON`
+     persists across all subsequent `GO` batches within the same connection until either
+     `SET NOEXEC OFF` is executed or the connection is terminated.
+   - When run via `sqlcmd.exe`, `:on error exit` ensures that the CLI process exits immediately
+     with a non-zero exit code upon encountering the `RAISERROR`.
+   - When run interactively in SSMS, `SET NOEXEC ON` prevents any mutations in subsequent batches.
+     The operator must execute `SET NOEXEC OFF;` or close the SSMS query window to reset session state.
+     A prominent warning is documented in the script header and provisioning guide.
+
+E. Pre-Guard Statement Analysis:
+   - Lines 1-30: Comments and documentation only.
+   - Line 31: `:on error exit` (SQLCMD directive).
+   - Lines 37-38: Variable declarations (`:setvar`).
+   - Lines 41-45: SQLCMD mode validation.
+   - Lines 48-54: Password safety validation.
+   - Finding: ZERO DDL, DML, or state-changing statements execute before the guards.
+     The first statement that touches SQL Server state is `USE [master];` in Batch 5.
+
+F. Can the Script Continue After a Failed Precondition?
+   - NO.
+   - Under `sqlcmd.exe`: `:on error exit` terminates process execution on severity 16 errors.
+   - Under SSMS: `SET NOEXEC ON` suppresses execution of all subsequent batches in the session.
+
+G. Can a Failure Leave a Partially Provisioned Environment?
+   - In normal execution, if a later stage fails (e.g. Stage 2 succeeds in creating HSWRMS_TEST,
+     but Stage 3 fails due to Windows password complexity policy), the database exists but the
+     login is not created.
+   - Risk Assessment: Zero risk to production/development data. [HSWRMS_TEST] is an isolated,
+     empty database that contains no application data and cannot affect [HSWRMS].
+   - Idempotency & Recovery: Every stage uses `IF NOT EXISTS` guards and validates object health.
+     If re-run after correcting password policy, Stage 2 detects existing ONLINE database and
+     skips creation, proceeding directly to Stage 3. Stage-by-stage recovery procedures are
+     documented in Section 5 of `HSWRMS_TEST_PROVISIONING_GUIDE.md`.
+
+
+6. FINDINGS: EFFECTIVE ISOLATION FROM HSWRMS
+--------------------------------------------------------------------------------
+Read-Only System Catalog Inspection of Primary Database [HSWRMS] on `MYLIFE-MYRULE-1`:
+
+A. Existing User Mappings in [HSWRMS]:
+   - Query: `SELECT name, type_desc FROM sys.database_principals WHERE name = 'hswrms_test_user';`
+   - Result: 0 rows found in [HSWRMS].
+   - All existing database principals in [HSWRMS]:
+     * `dbo` (SID = 0x01, mapped to server login `sa`)
+     * `guest` (SID = 0x00, database guest account)
+     * `INFORMATION_SCHEMA`
+     * `sys`
+     * Standard fixed database roles (db_owner, db_datareader, etc.)
+   - Finding: Zero custom, application, or test user mappings exist in [HSWRMS].
+
+B. Guest Access in [HSWRMS]:
+   - Query: `SELECT name, hasdbaccess FROM sys.sysusers WHERE name = 'guest';`
+   - Result: `name = 'guest', hasdbaccess = 0`.
+   - Query: `SELECT dp.state_desc, dp.permission_name FROM sys.database_permissions dp JOIN sys.database_principals p ON dp.grantee_principal_id = p.principal_id WHERE p.name = 'guest';`
+   - Result: Zero CONNECT grants. Only DENY permissions on diagram support procedures.
+   - Finding: Guest database access is completely DISABLED in [HSWRMS]. In SQL Server,
+     when `guest` has `hasdbaccess = 0` and lacks `CONNECT`, any login without an explicit
+     database user mapping cannot connect to or access [HSWRMS], failing with error 916:
+     "The server principal '...' is not able to access the database 'HSWRMS' under the current security context."
+
+C. Permissions Inherited Through 'public' in [HSWRMS]:
+   - Query: `SELECT dp.class_desc, dp.permission_name, o.name AS object_name FROM sys.database_permissions dp LEFT JOIN sys.objects o ON dp.major_id = o.object_id WHERE dp.grantee_principal_id = 0;`
+   - Result: Permissions for 'public' are strictly restricted to system catalog views, system functions,
+     and diagram procedures. Zero permissions exist on user application tables (e.g. VILLA_CATEGORY,
+     RETREAT_BOOKING, PHYSICAL_VILLA, etc.).
+   - Finding: Even if database entry were possible, 'public' role holds zero permissions on user tables.
+     Combined with disabled guest access, unmapped logins have zero access through 'public'.
+
+D. Server-Level Roles and Permissions:
+   - Query: `SELECT p.name, sp.permission_name FROM sys.server_permissions sp JOIN sys.server_principals p ON sp.grantee_principal_id = p.principal_id WHERE p.name = 'public';`
+   - Result: Server-level 'public' has only `VIEW ANY DATABASE` and `CONNECT` on system endpoints.
+   - `VIEW ANY DATABASE` allows observing database names in catalog metadata, but grants zero
+     permission to connect to, inspect, or modify databases or objects.
+
+E. Cross-Database Chaining & Trustworthy Settings:
+   - Query: `SELECT name, is_trustworthy_on, is_db_chaining_on FROM sys.databases WHERE name IN ('master', 'HSWRMS');`
+   - Result:
+     * `master`: is_trustworthy_on = 0, is_db_chaining_on = 0
+     * `HSWRMS`: is_trustworthy_on = 0, is_db_chaining_on = 0
+   - Finding: Cross-database ownership chaining and trustworthy elevation are disabled on [HSWRMS].
+
+F. Verified Facts vs. Unverified Claims (Prompt Requirement):
+   - VERIFIED FACT (Structural / Configuration Level):
+     * [hswrms_test_user] is not mapped in [HSWRMS].
+     * `guest` access in [HSWRMS] has `hasdbaccess = 0` and lacks CONNECT permission.
+     * `public` in [HSWRMS] has zero grants on user application tables.
+     * `is_trustworthy_on = 0` and `is_db_chaining_on = 0` on [HSWRMS].
+   - UNVERIFIED AT RUNTIME (Live Login Level):
+     * Because [hswrms_test_user] does NOT yet exist on the SQL Server instance (and must not be
+       created during this pre-provisioning review phase), dynamic execution under that principal's
+       active token cannot be executed.
+     * Under the prompt's instruction, the claim "zero access to HSWRMS verified at runtime under login credentials"
+       is formally recorded as UNVERIFIED until provisioning is approved.
+   - Proposed Safe Runtime Verification Procedure (For Post-Provisioning Stage):
+     After explicit approval and execution of provisioning, execute the following non-mutating
+     query under administrative credentials to prove zero access dynamically:
+     ```sql
+     EXECUTE AS LOGIN = 'hswrms_test_user';
+     -- 1. Verify caller identity
+     SELECT SUSER_SNAME() AS [ActiveLogin], ORIGINAL_LOGIN() AS [OriginalLogin];
+     -- 2. Verify connection to HSWRMS fails closed
+     -- Attempting USE [HSWRMS] must throw Error 916 (access denied)
+     BEGIN TRY
+         EXEC('USE [HSWRMS]; SELECT DB_NAME();');
+         PRINT 'ISOLATION FAILURE: Connected to HSWRMS!';
+     END TRY
+     BEGIN CATCH
+         PRINT '[PASS] Access to HSWRMS denied as expected: ' + ERROR_MESSAGE();
+     END CATCH;
+     REVERT;
+     ```
+
+
+7. FINDINGS: SERVER-LEVEL ROLES AND PERMISSIONS
+--------------------------------------------------------------------------------
+A. Server Role Checks:
+   - Proposed login [hswrms_test_user] is created using:
+     `CREATE LOGIN [hswrms_test_user] WITH PASSWORD = ... DEFAULT_DATABASE = [HSWRMS_TEST];`
+   - In SQL Server, `CREATE LOGIN` assigns only the default server role `public`.
+   - Stage 1.3 of `draft_provision_hswrms_test.sql` inspects `sys.server_role_members`:
+     ```sql
+     IF EXISTS (
+         SELECT 1 
+         FROM sys.server_role_members srm
+         JOIN sys.server_principals r ON r.principal_id = srm.role_principal_id
+         JOIN sys.server_principals m ON m.principal_id = srm.member_principal_id
+         WHERE m.name = N'hswrms_test_user'
+     )
+     BEGIN
+         RAISERROR('FAIL CLOSED: Login [hswrms_test_user] is a member of one or more server roles. Zero server roles are permitted.', 16, 1);
+         SET NOEXEC ON;
+     END
+     ```
+   - This checks for membership in ANY server role, comprehensively covering:
+     * `sysadmin`
+     * `securityadmin`
+     * `serveradmin`
+     * `setupadmin`
+     * `processadmin`
+     * `diskadmin`
+     * `dbcreator`
+     * `bulkadmin`
+     * Any user-defined server roles.
+   - Java validator method `SqlServerTestConfigValidator.validateServerRoleSafety(roleName)`
+     enforces that any role other than `public` throws `IllegalStateException`.
+
+B. Server Permission Checks:
+   - Stage 1.3 of `draft_provision_hswrms_test.sql` inspects `sys.server_permissions`:
+     ```sql
+     IF EXISTS (
+         SELECT 1 
+         FROM sys.server_permissions sp
+         JOIN sys.server_principals p ON p.principal_id = sp.grantee_principal_id
+         WHERE p.name = N'hswrms_test_user'
+     )
+     BEGIN
+         RAISERROR('FAIL CLOSED: Login [hswrms_test_user] has explicit server-level permissions. Zero server permissions are permitted.', 16, 1);
+         SET NOEXEC ON;
+     END
+     ```
+   - Prohibits all explicit grants (e.g. CONTROL SERVER, ALTER ANY LOGIN, VIEW ANY DEFINITION).
+   - Java validator method `SqlServerTestConfigValidator.validateServerPermissionSafety(permissionName)`
+     enforces that any explicit server-level permission throws `IllegalStateException`.
+
+C. Fail-Closed Policy (No Auto-Repair):
+   - Neither the provisioning script nor the validator attempts automatic remediation
+     (e.g., `ALTER SERVER ROLE ... DROP MEMBER` or `REVOKE`).
+   - If unexpected roles or permissions are discovered, execution halts immediately (`SET NOEXEC ON`),
+     requiring manual DBA investigation.
+
+
+8. FINDINGS: DATABASE CONNECT-ONLY PERMISSIONS
+--------------------------------------------------------------------------------
+A. Principle of Least Privilege:
+   - In earlier preliminary drafts, `db_datareader` was proposed.
+   - In Phase 5.8.3.32 and 5.8.3.33, this was eliminated because `db_datareader` grants
+     database-wide `SELECT` access across all user tables.
+   - The proposed principal receives strictly:
+     `GRANT CONNECT TO [hswrms_test_user];` in [HSWRMS_TEST].
+   - ZERO membership in `db_datareader`, `db_datawriter`, `db_owner`, or custom data roles.
+   - Stage 4 of `draft_provision_hswrms_test.sql` validates that `hswrms_test_user` in [HSWRMS_TEST]
+     belongs to no database roles other than `public`.
+
+B. What `CONNECT` Allows vs What It Does Not Allow:
+   - What `CONNECT` Allows:
+     * Establishes a session with database [HSWRMS_TEST].
+     * Executes queries permitted to database role `public`.
+     * In SQL Server, `public` can execute built-in scalar functions: `@@VERSION`, `DB_NAME()`,
+       `SCHEMA_NAME()`, `USER_NAME()`, `SUSER_SNAME()`.
+     * Queries standard database metadata visible to all database users.
+   - What `CONNECT` Does NOT Allow:
+     * Cannot read from user tables or views (requires SELECT).
+     * Cannot insert, update, or delete rows in user tables (requires INSERT, UPDATE, DELETE).
+     * Cannot create, alter, or drop tables, schemas, or procedures (requires DDL permissions).
+     * Cannot execute stored procedures unless explicitly granted or granted to public.
+     * Cannot access other databases where user mapping or guest is disabled.
+
+C. Smoke Test Query Compatibility:
+   - Query in `SqlServerJdbcSmokeTest.java:104`:
+     `SELECT @@VERSION AS [version], DB_NAME() AS [db_name]`
+   - Both `@@VERSION` and `DB_NAME()` are scalar system functions.
+   - They execute successfully under `public` without requiring user table access.
+   - Connection is marked `connection.setReadOnly(true)`.
+   - Conclusion: `CONNECT` permission is 100% sufficient to satisfy the JDBC smoke test.
+     Zero permissions need to be broadened.
+
+
+9. TEST EXECUTION & ACTUAL OUTCOMES
+--------------------------------------------------------------------------------
+All tests executed in this phase were strictly local, safe, and mocked/isolated.
+Zero tests connected to or mutated the real SQL Server instance.
+
+Suite 1: Hardened Unit Tests & Opt-In Behavior
+- Command:
+  ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+- Results:
+  * SqlServerTestConfigValidatorTest:          94 run, 94 passed, 0 failed, 0 skipped
+  * SqlServerJdbcSmokeTestOptInBehaviorTest:    3 run,  3 passed, 0 failed, 0 skipped
+  * Total:                                     97 run, 97 passed, 0 failed, 0 skipped
+  * Status: BUILD SUCCESS (exit code 0, 16.35s)
+
+Suite 2: Combined H2 Regression & Security Suite
+- Command:
+  ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest,M2SchemaCompatibilityTest,MealOrderRepositoryTest,M5BillingAndCheckoutTests"
+- Results:
+  * SqlServerTestConfigValidatorTest:          94 passed
+  * SqlServerJdbcSmokeTestOptInBehaviorTest:    3 passed
+  * M2SchemaCompatibilityTest:                  6 passed
+  * MealOrderRepositoryTest:                    8 passed
+  * M5BillingAndCheckoutTests:                 27 passed
+  * Total:                                    138 run, 138 passed, 0 failed, 0 skipped
+  * Status: BUILD SUCCESS (exit code 0, 2m 31s)
+
+Suite 3: Default Smoke Test Execution (Opt-In Flags Absent)
+- Command:
+  ./mvnw.cmd test "-Dtest=SqlServerJdbcSmokeTest"
+- Results:
+  * SqlServerJdbcSmokeTest:                    1 run, 0 passed, 0 failed, 1 skipped
+  * Execution Time:                            0.011s (skipped before Spring context bootstrap)
+  * Status: BUILD SUCCESS (exit code 0, 11.60s)
+
+
+10. VERIFIED FACTS VERSUS UNVERIFIED CLAIMS SUMMARY
+--------------------------------------------------------------------------------
+| Property | Status | Evidence / Verification Method |
+| :--- | :--- | :--- |
+| Primary DB [HSWRMS] guest access disabled | VERIFIED | Read-only query: `hasdbaccess = 0`, zero CONNECT grants. |
+| Primary DB [HSWRMS] has zero test mappings | VERIFIED | Read-only query: `sys.database_principals` has zero test users. |
+| Primary DB [HSWRMS] public table grants | VERIFIED | Read-only query: zero grants on user application tables. |
+| Chaining / Trustworthy disabled on [HSWRMS] | VERIFIED | Read-only query: `is_trustworthy_on = 0`, `is_db_chaining_on = 0`. |
+| SQL Server Mixed Auth active | VERIFIED | Read-only query: `SERVERPROPERTY('IsIntegratedSecurityOnly') = 0`. |
+| SQLCMD guard rejects placeholder password | VERIFIED | Static inspection & unit test of conditional logic and SET NOEXEC ON. |
+| SQLCMD guard requires SQLCMD mode | VERIFIED | Static inspection of :setvar and syntax handling in non-SQLCMD SSMS. |
+| Server-role enforcement (0 server roles) | VERIFIED | Static inspection of Stage 1.3 query & 10 unit test cases. |
+| Server-permission enforcement (0 explicit grants) | VERIFIED | Static inspection of Stage 1.3 query & 5 unit test cases. |
+| Database CONNECT-only sufficiency | VERIFIED | System function behavior verified; smoke test queries only @@VERSION, DB_NAME(). |
+| Smoke test opt-in default skip | VERIFIED | Unit and integration tests confirm skip before context initialization. |
+| Live runtime probe as hswrms_test_user | UNVERIFIED | Login does not exist yet on server. Safe verification procedure provided. |
+
+
+11. REMAINING BLOCKERS BEFORE LIVE PROVISIONING
+--------------------------------------------------------------------------------
+1. Database [HSWRMS_TEST] does not yet exist on SQL Server.
+2. Login [hswrms_test_user] does not yet exist on SQL Server.
+3. User mapping [hswrms_test_user] in [HSWRMS_TEST] does not yet exist.
+4. Explicit user authorization has not yet been granted to execute state changes.
+
+
+12. FINAL CONCLUSION & STOP CONDITION
+--------------------------------------------------------------------------------
+Verdict: READY FOR EXPLICIT PROVISIONING APPROVAL
+
+Every pre-provisioning safety invariant has been validated and documented.
+All 33 staged M2 files and all four protected untracked SQL file hashes remain
+completely preserved and byte-identical.
+
+Per the mandatory safety restrictions of Phase 5.8.3.33, execution has STOPPED.
+Zero provisioning SQL was executed, zero databases or logins were created or altered,
+and the live JDBC smoke test was not run.
+
+The project is fully prepared to enter the provisioning phase immediately upon
+receipt of explicit user authorization.
+
+================================================================================
+END OF REPORT — STOPPED BEFORE PROVISIONING — AWAITING EXPLICIT USER APPROVAL
+================================================================================

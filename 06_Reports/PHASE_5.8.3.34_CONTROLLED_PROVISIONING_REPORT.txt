@@ -1,0 +1,186 @@
+================================================================================
+HSWRMS PHASE 5.8.3.34 — CONTROLLED SQL SERVER TEST PROVISIONING &
+LIVE JDBC VERIFICATION REPORT (PHASE 0: READ-ONLY PRE-FLIGHT)
+================================================================================
+
+1. PHASE NAME & OVERALL STATUS
+--------------------------------------------------------------------------------
+Phase Name:      HSWRMS Phase 5.8.3.34 — Controlled SQL Server Test Provisioning
+                 & Live JDBC Verification
+Current Stage:   PHASE 0: READ-ONLY PRE-FLIGHT
+Overall Status:  PRE-FLIGHT COMPLETED — ZERO MUTATIONS PERFORMED — STOPPED
+                 STAGE A: PENDING EXPLICIT USER APPROVAL
+                 STAGE B: PENDING STAGE A COMPLETION & SEPARATE USER APPROVAL
+
+Summary:
+Phase 0 read-only pre-flight has rechecked and confirmed the exact SQL Server
+instance state, repository integrity, and baseline assumptions:
+1. Repository & Baseline Integrity: Actual branch is 'audit-all-modules', HEAD is
+   55f80aef5f1139a45efbc94984823ed2a56923ac, all 33 staged M2 files remain 100%
+   byte-identical to ea253dc6d039aa723414e3cd4f1926aa1500f60a, and all four
+   protected untracked SQL files match their reference SHA-256 hashes.
+2. SQL Server Target State: Connected via Windows Authentication (-E) to local
+   SQL Server 2019 Express (MYLIFE-MYRULE-1, version 15.0.2130.3). Confirmed:
+   - Database [HSWRMS_TEST] is ABSENT from sys.databases.
+   - Login [hswrms_test_user] is ABSENT from sys.server_principals.
+   - Database user [hswrms_test_user] is ABSENT from all databases.
+   - Primary database [HSWRMS] is ONLINE, with guest access disabled (hasdbaccess = 0,
+     zero CONNECT grants), public holding zero user-table permissions, and both
+     is_trustworthy_on = 0 and is_db_chaining_on = 0.
+   - Server default collation is confirmed as SQL_Latin1_General_CP1_CI_AS, matching
+     the draft provisioning specification.
+   - Server Mixed Authentication mode is confirmed active (IsIntegratedSecurityOnly = 0).
+3. Readiness: The environment is clean, consistent with Phase 5.8.3.33, and safe
+   to propose for Stage A provisioning.
+4. Stop Condition: In strict accordance with the mandatory authorization protocol,
+   execution has STOPPED at Phase 0. No provisioning SQL was executed, no logins
+   or databases were created, and the live JDBC smoke test was not run.
+
+
+2. REPOSITORY COORDINATES & INTEGRITY VERIFICATION
+--------------------------------------------------------------------------------
+Workspace Root:       E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Git Branch:   audit-all-modules                     [VERIFIED]
+Current Git HEAD:     55f80aef5f1139a45efbc94984823ed2a56923ac [VERIFIED]
+
+A. 33 Staged M2 Files Byte-Identity:
+   Source Commit:     ea253dc6d039aa723414e3cd4f1926aa1500f60a
+   Command:           git diff --cached ea253dc6d039aa723414e3cd4f1926aa1500f60a -- (git diff --name-only --cached)
+   Result:            0 diffs across all 33 files (100% byte-identical) [PASS]
+
+B. Four Protected Untracked SQL Files SHA-256 Hashes:
+   - V003__m2_retreat_booking_schema_reconciliation.sql:
+     8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH - PASS]
+   - V004__m5_customer_review_category_ratings.sql:
+     3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH - PASS]
+   - V005__m6_audit_log.sql:
+     5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH - PASS]
+   - draft_m6_governance_and_delegation.sql:
+     605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH - PASS]
+
+
+3. PHASE 0 READ-ONLY PRE-FLIGHT EVIDENCE
+--------------------------------------------------------------------------------
+Read-only queries executed via sqlcmd -S localhost -E produced the following evidence:
+
+A. Server Instance & Authentication:
+   - Server Name:             MYLIFE-MYRULE-1
+   - Product Edition:         Express Edition (64-bit)
+   - Product Version:         15.0.2130.3 (SQL Server 2019 RTM-CU18)
+   - IsIntegratedSecurityOnly: 0 (Mixed Authentication Mode active)
+   - Server Collation:        SQL_Latin1_General_CP1_CI_AS
+   - Master DB Collation:     SQL_Latin1_General_CP1_CI_AS
+   - Caller Identity:         MYLIFE-MYRULE-1\ADMIN (sysadmin = 1, securityadmin = 1, dbcreator = 1)
+     Note: Caller has the administrative authority required to execute Stage A if approved.
+
+B. Database Existence & State:
+   - [master]:                ONLINE, Collation: SQL_Latin1_General_CP1_CI_AS, Trustworthy: 0, DbChaining: 1
+   - [HSWRMS]:                ONLINE, Collation: SQL_Latin1_General_CP1_CI_AS, Trustworthy: 0, DbChaining: 0
+   - [HSWRMS_TEST]:           ABSENT (0 rows in sys.databases)
+
+C. Login & Principal Existence:
+   - Login [hswrms_test_user] in sys.server_principals: ABSENT (0 rows)
+   - User [hswrms_test_user] across all databases:       ABSENT (0 rows across all database catalogs)
+
+D. Primary Database [HSWRMS] Isolation:
+   - Guest user in [HSWRMS]:   hasdbaccess = 0 (disabled), zero CONNECT grants, DENY on diagrams.
+   - User mappings in [HSWRMS]: Zero test user mappings. Only dbo (sa), guest, sys, INFORMATION_SCHEMA.
+   - Public role in [HSWRMS]:  Zero permissions on user application tables or views.
+   - Chaining & Trustworthy:   is_trustworthy_on = 0, is_db_chaining_on = 0.
+
+
+4. DIFFERENCES FROM PHASE 5.8.3.33
+--------------------------------------------------------------------------------
+Comparison against PHASE_5.8.3.33_FINAL_PREPROVISION_SECURITY_REVIEW.txt:
+- Branch & Commit:           No difference (audit-all-modules @ 55f80aef5f1139a45efbc94984823ed2a56923ac).
+- Staged M2 Files:           No difference (33 files, 0 diffs vs ea253dc6d039aa723414e3cd4f1926aa1500f60a).
+- Protected File Hashes:     No difference (exact SHA-256 match on all 4 files).
+- SQL Server State:          No difference. Target database and login remain clean and absent.
+- Isolation Invariants:      No difference. Guest access disabled, zero user table grants on public.
+- Conclusion:                Zero drift or environmental divergence. All baseline invariants are intact.
+
+
+5. PROPOSED STAGE A: EXACT PLANNED MUTATIONS & SCOPE
+--------------------------------------------------------------------------------
+Stage A will be executed ONLY after explicit operator approval.
+
+Operation 1: Create Dedicated Isolated Test Database
+- SQL Statement:
+  CREATE DATABASE [HSWRMS_TEST] COLLATE SQL_Latin1_General_CP1_CI_AS;
+- Scope: Local SQL Server 2019 Express instance (MYLIFE-MYRULE-1).
+- Collation: SQL_Latin1_General_CP1_CI_AS (strictly matches server default, master, and HSWRMS tables).
+- Pre-condition Guard:
+  IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N'HSWRMS_TEST')
+  If database exists unexpectedly in non-ONLINE state, script halts with RAISERROR and SET NOEXEC ON.
+- Impact: Creates an empty, isolated database. Zero impact on primary database [HSWRMS].
+
+Operation 2: Create Dedicated Least-Privileged SQL Login
+- SQL Statement:
+  CREATE LOGIN [hswrms_test_user]
+  WITH PASSWORD = N'$(TEST_PASSWORD)',
+       CHECK_EXPIRATION = OFF,
+       CHECK_POLICY = ON,
+       DEFAULT_DATABASE = [HSWRMS_TEST];
+- Scope: Server-level principal on MYLIFE-MYRULE-1.
+- Pre-condition Guard:
+  IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'hswrms_test_user')
+  If login exists unexpectedly, script validates: is_disabled = 0, zero server role memberships,
+  zero explicit server permissions, and default database is HSWRMS_TEST. If tainted, halts immediately.
+- Impact: Creates login with ZERO server roles (only default 'public') and zero server permissions.
+
+Operation 3: Map Database User in [HSWRMS_TEST] & Grant Strict CONNECT Only
+- SQL Statements:
+  USE [HSWRMS_TEST];
+  CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user];
+  GRANT CONNECT TO [hswrms_test_user];
+- Scope: Database-level principal inside [HSWRMS_TEST] only.
+- Pre-condition Guard:
+  IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'hswrms_test_user')
+  Validates that user has zero database role memberships other than 'public'.
+- Impact: Grants strictly CONNECT on [HSWRMS_TEST].
+  NO db_datareader, NO db_datawriter, NO db_owner, NO table/DDL permissions.
+
+
+6. CREDENTIAL HANDLING & SECRETS SAFETY PROTOCOL
+--------------------------------------------------------------------------------
+1. No Real Passwords in Chat: The operator will NEVER be asked to paste a plain password into the chat.
+2. No Real Passwords in Files: No real password will be hardcoded in SQL files, Java files, YAML configs,
+   reports, or repository commits.
+3. Execution Options for Stage A:
+   - Method 1 (Interactive SSMS via SQLCMD Mode - Recommended):
+     Operator opens 05_Development/database/scripts/draft_provision_hswrms_test.sql in SSMS,
+     enables Query -> SQLCMD Mode, changes :setvar TEST_PASSWORD "..." to a locally chosen
+     strong password, and executes.
+   - Method 2 (CLI sqlcmd via Process-Scoped Variable):
+     Operator executes sqlcmd.exe in a local PowerShell session passing -v TEST_PASSWORD="$env:TEMP_PASS"
+     where $env:TEMP_PASS is populated via Read-Host -AsSecureString or process-local memory,
+     and immediately cleared afterward ($env:TEMP_PASS = $null).
+
+
+7. UNRESOLVED RISKS & MITIGATION
+--------------------------------------------------------------------------------
+- Risk 1: Accidental exposure of secrets in chat or repository.
+  Mitigation: Strict protocol forbidding password transmission in prompt or source files.
+- Risk 2: Accidental execution targeting primary database [HSWRMS].
+  Mitigation: Script Stage 1.4 fails closed if hswrms_test_user is mapped in [HSWRMS].
+  Java validator SqlServerTestConfigValidator throws SAFETY VIOLATION if HSWRMS is targeted.
+- Risk 3: Partial provisioning (e.g. database created, login fails due to password complexity).
+  Mitigation: Idempotency guards allow re-running Stage 3 independently. Step-by-step recovery
+  procedure documented in Section 5 of HSWRMS_TEST_PROVISIONING_GUIDE.md.
+- Risk 4: Premature execution of Stage B before Stage A permissions are audited.
+  Mitigation: Stage B requires a second, separate explicit approval after Stage A completion report.
+
+
+8. PHASE 0 STOP CONDITION & RECOMMENDATION
+--------------------------------------------------------------------------------
+Verdict: PHASE 0 PRE-FLIGHT COMPLETE — READY TO PROPOSE STAGE A
+
+All pre-flight checks have passed. Zero mutations were performed.
+Per Section 4 and Section 8 of the execution prompt:
+EXECUTION HAS STOPPED.
+
+Awaiting explicit operator authorization before initiating Stage A.
+
+================================================================================
+END OF REPORT — PHASE 0 COMPLETE — AWAITING EXPLICIT STAGE A APPROVAL
+================================================================================

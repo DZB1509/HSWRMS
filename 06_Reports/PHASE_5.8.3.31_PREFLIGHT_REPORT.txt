@@ -1,0 +1,136 @@
+================================================================================
+PHASE 5.8.3.31 — SQL SERVER TEST ENVIRONMENT PREFLIGHT & PROVISIONING REPORT
+================================================================================
+
+1. PHASE NAME & OVERALL VERDICT
+--------------------------------------------------------------------------------
+Phase Name:      PHASE 5.8.3.31 — SQL Server Test Environment Preflight & Provisioning
+Overall Verdict: PREFLIGHT COMPLETE — PROVISIONING BLOCKED PENDING USER AUTHORIZATION
+
+Summary:
+Read-only preflight inspection of the local SQL Server 2019 Express instance
+(`MYLIFE-MYRULE-1`) completed successfully via Windows Authentication.
+The endpoint `localhost:1433` is active, and Mixed Authentication Mode is confirmed
+enabled (`IsIntegratedSecurityOnly = 0`). The dedicated test database (`HSWRMS_TEST`)
+and dedicated test login (`hswrms_test_user`) do not yet exist. Local configuration
+and opt-in behavior tests pass 100%. No server or database state was mutated.
+Privileged provisioning operations are prepared and await explicit user approval.
+
+
+2. REPOSITORY SAFETY & COORDINATES
+--------------------------------------------------------------------------------
+Actual Branch:           audit-all-modules                     [PASS]
+Actual HEAD:             55f80aef5f1139a45efbc94984823ed2a56923ac [PASS]
+Repository Dirty State:  Preserved exactly as received         [PASS]
+Unrelated Changes:       Zero resets, stashes, cleans, or commits [PASS]
+
+
+3. INTEGRITY & HASH VERIFICATION
+--------------------------------------------------------------------------------
+33 Staged M2 Files Byte-Identity vs ea253dc6d039aa723414e3cd4f1926aa1500f60a:
+- Result: 0 diffs (100% byte-identical)                        [PASS]
+
+Protected Untracked SQL Files SHA-256 Hashes:
+- V003__m2_retreat_booking_schema_reconciliation.sql:
+  8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0   [PASS]
+- V004__m5_customer_review_category_ratings.sql:
+  3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F   [PASS]
+- V005__m6_audit_log.sql:
+  5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E   [PASS]
+- draft_m6_governance_and_delegation.sql:
+  605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B   [PASS]
+
+
+4. SQL SERVER ENVIRONMENT INSPECTION FINDINGS
+--------------------------------------------------------------------------------
+Check                                        Status    Details
+--------------------------------------------------------------------------------
+TCP Endpoint Reachability (localhost:1433)   PASS      TcpTestSucceeded = True (active listener)
+SQL Server Product & Version                 PASS      Microsoft SQL Server 2019 Express 15.0.2130.3
+Server Instance Name                         PASS      MYLIFE-MYRULE-1
+Inspection Connection Method                 PASS      Windows Authentication (MYLIFE-MYRULE-1\ADMIN)
+Instance Authentication Mode                 PASS      Mixed Mode ENABLED (IsIntegratedSecurityOnly = 0)
+Primary Database (HSWRMS) Existence          PASS      Present (database_id 44, ONLINE)
+Dedicated Test Database (HSWRMS_TEST)        BLOCKED   Not found in sys.databases (needs provisioning)
+Dedicated Test Login (hswrms_test_user)      BLOCKED   Not found in sys.server_principals (needs provisioning)
+Database User Mapping & Permissions          BLOCKED   Not present (depends on database and login)
+
+
+5. TEST EXECUTION & REGRESSION RESULTS
+--------------------------------------------------------------------------------
+Command:
+./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+- SqlServerTestConfigValidatorTest:          43 run, 43 passed, 0 failed, 0 skipped
+- SqlServerJdbcSmokeTestOptInBehaviorTest:    3 run,  3 passed, 0 failed, 0 skipped
+- Total:                                     46 run, 46 passed, 0 failed, 0 skipped (BUILD SUCCESS)
+
+Command:
+./mvnw.cmd test "-Dtest=SqlServerJdbcSmokeTest"
+- SqlServerJdbcSmokeTest (Default run):       1 run,  0 passed, 0 failed, 1 skipped (BUILD SUCCESS)
+  (Opt-in guard @EnabledIf correctly skips smoke test when flags are absent)
+
+
+6. FILES CHANGED
+--------------------------------------------------------------------------------
+- 06_Reports/PHASE_5.8.3.31_PREFLIGHT_REPORT.txt: Created this preflight report.
+Zero production or test source files were modified in this phase.
+
+
+7. LIVE JDBC CONNECTION STATUS
+--------------------------------------------------------------------------------
+Was any live JDBC smoke test connection established?
+- Answer: NO.
+- Explanation: The smoke test is strictly opt-in and is blocked by preflight guards
+  until HSWRMS_TEST and hswrms_test_user exist and credentials are supplied.
+
+
+8. SERVER & DATABASE MUTATION STATUS
+--------------------------------------------------------------------------------
+Was any database, login, permission, or server state changed?
+- Answer: NO.
+- Explanation: Only strictly read-only diagnostic queries were executed against
+  sys.databases, sys.server_principals, SERVERPROPERTY, and @@VERSION.
+
+
+9. REMAINING BLOCKERS
+--------------------------------------------------------------------------------
+1. Database HSWRMS_TEST does not exist.
+2. Login hswrms_test_user does not exist.
+3. User mapping with role db_datareader does not exist in HSWRMS_TEST.
+4. Test credentials have not been configured in the local test shell environment.
+
+
+10. PROPOSED PRIVILEGED ACTIONS REQUIRING USER APPROVAL
+--------------------------------------------------------------------------------
+To proceed with provisioning the dedicated test environment, the following
+four bounded operations are proposed:
+
+Operation 1: Create Dedicated Test Database
+- SQL: CREATE DATABASE [HSWRMS_TEST] COLLATE SQL_Latin1_General_CP1_CI_AS;
+- Scope: New isolated test database only.
+- Impact: Zero impact on existing HSWRMS database or application data.
+
+Operation 2: Create Dedicated SQL Server Login
+- SQL: CREATE LOGIN [hswrms_test_user] WITH PASSWORD = N'<USER_SUPPLIED_PASSWORD>',
+       CHECK_EXPIRATION = OFF, CHECK_POLICY = ON, DEFAULT_DATABASE = [HSWRMS_TEST];
+- Scope: Local SQL login only.
+- Impact: Zero server-level roles (no sysadmin, no securityadmin).
+
+Operation 3: Map Login to HSWRMS_TEST with Least Privilege
+- SQL: USE [HSWRMS_TEST]; CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user];
+       ALTER ROLE [db_datareader] ADD MEMBER [hswrms_test_user];
+- Scope: Database user inside HSWRMS_TEST only.
+- Impact: Strictly read-only access in HSWRMS_TEST. NO permissions on HSWRMS.
+
+Operation 4: Execute Opt-In Smoke Test
+- Command:
+  $env:SQLSERVER_TEST_USERNAME = "hswrms_test_user"
+  $env:SQLSERVER_TEST_PASSWORD = "<USER_SUPPLIED_PASSWORD>"
+  $env:SQLSERVER_TEST_DB = "HSWRMS_TEST"
+  ./mvnw.cmd test "-Dtest=SqlServerJdbcSmokeTest" "-Dspring.profiles.active=sqlserver-test" "-Dhswrms.sqlserver.test.enabled=true"
+- Scope: Spring Boot backend smoke test.
+- Impact: Executes read-only query SELECT @@VERSION, DB_NAME() to verify connectivity.
+
+================================================================================
+END OF REPORT — AWAITING EXPLICIT USER APPROVAL BEFORE PROVISIONING
+================================================================================

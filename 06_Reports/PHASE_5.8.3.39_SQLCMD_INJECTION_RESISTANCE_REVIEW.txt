@@ -1,0 +1,238 @@
+================================================================================
+HSWRMS Phase 5.8.3.39 — SQLCMD Injection Resistance & Provisioning Script Review
+================================================================================
+Generated: 2026-10-27T15:05:00+07:00
+Scope: Independent Script Control-Flow Inspection, SQLCMD Injection Resistance,
+       Parameterized RPC Architecture Evaluation, and Stage A Readiness Audit.
+
+================================================================================
+1. EXECUTIVE SUMMARY & AUDIT VERDICT
+================================================================================
+Phase 5.8.3.39 conducted an independent security review of the test provisioning
+script and guide, specifically evaluating whether SQLCMD textual substitution
+can alter T-SQL statement structure or execute unintended statements.
+
+All safety restrictions were strictly maintained throughout this review:
+  - ZERO state mutations were executed against the live SQL Server instance.
+  - NO database, login, user, role, permission, or server setting was created or altered.
+  - The live JDBC smoke test was NOT executed.
+  - NO real password was requested, generated, displayed, or logged.
+  - All 33 staged M2 files and four protected SQL file hashes remain byte-identical.
+  - All testing utilized synthetic, non-secret test values in isolated test harnesses.
+
+FINAL AUDIT VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+
+Supporting Findings:
+  1. Injection Resistance of Actual Script: Because ':on error exit' is enabled at
+     Line 33, any attempt to inject single quotes or malformed tokens in $(TEST_PASSWORD)
+     triggers an immediate Level 15 compile-time syntax error in Stage 0, causing
+     sqlcmd.exe to abort immediately with exit code 1. Injected statements are NEVER
+     reached or executed.
+  2. Zero Secret Echo in Error Paths: Stage 0 and Stage 3 guards emit static string
+     messages exclusively. Neither $(TEST_PASSWORD) nor expanded secret-bearing SQL
+     is ever formatted into RAISERROR statements.
+  3. Character Policy Defense: The accepted password policy explicitly permits safe
+     symbols (!@#$%^&*()-_=+[]{}|:,.<>?/~) while strictly forbidding single quotes ('),
+     double quotes ("), and macro sequences ($(), preventing syntax delimiter collisions.
+  4. Hardened Parameterized Alternative: Evaluated and documented an advanced defense-
+     in-depth architecture in Section 2.E of the provisioning guide, utilizing client-
+     supplied RPC parameters and server-side QUOTENAME(@password, '''') quoting to
+     provide total immunity to quote delimiter injection.
+  5. Existing Login Invariant: Initial provisioning remains fail-closed by default
+     (ALLOW_EXISTING_LOGIN="FALSE"). The one-way cryptographic nature of password hashes
+     is clearly disclosed, preventing false assumptions regarding metadata parity.
+  6. Regression Verification: 97 automated unit tests passed cleanly. Staged files and
+     protected SQL hashes remain intact.
+
+STOPPING NOTICE:
+  This audit does NOT execute Stage A or Stage B. Provisioning remains completely
+  blocked until explicit, separate human operator authorization is provided.
+
+================================================================================
+2. ACTUAL GIT STATE & REPOSITORY BASELINE
+================================================================================
+Repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch:     audit-all-modules
+HEAD:       55f80aef5f1139a45efbc94984823ed2a56923ac
+
+Staged Files Integrity:
+  - Staged M2 Booking Domain Files: 33 files
+  - Diff vs commit ea253dc6d039aa723414e3cd4f1926aa1500f60a: 0 bytes / 0 diffs [PASS]
+
+Protected SQL Files SHA-256 Hashes:
+  1. V003__m2_retreat_booking_schema_reconciliation.sql
+     SHA-256: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+  2. V004__m5_customer_review_category_ratings.sql
+     SHA-256: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+  3. V005__m6_audit_log.sql
+     SHA-256: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+  4. draft_m6_governance_and_delegation.sql
+     SHA-256: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+
+Exact Files Changed in Phase 5.8.3.39:
+  - 05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md
+    (Added Section 2.E documenting the parameterized client execution pattern
+     with server-side QUOTENAME quoting, threat model, and limitations).
+  - 06_Reports/PHASE_5.8.3.39_SQLCMD_INJECTION_RESISTANCE_REVIEW.txt
+    (This deliverable report).
+
+================================================================================
+3. TASK 1: INDEPENDENT SCRIPT INSPECTION & SUBSTITUTION TRACE
+================================================================================
+A. Complete Trace of $(TEST_PASSWORD) Occurrences:
+  1. Header and Documentation: Lines 18, 40, 43, 231.
+  2. Stage 0 Guard (Lines 57-60):
+     ```sql
+     IF '$(TEST_PASSWORD)' = '' 
+        OR '$(TEST_PASSWORD)' = 'REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION'
+        OR '$(TEST_PASSWORD)' = 'CHANGE_ME_STRONG_PASSWORD!'
+        OR LEFT('$(TEST_PASSWORD)', 2) = '$' + '('
+     BEGIN
+         RAISERROR('FAIL CLOSED: Test password is missing, unresolved, or set to a placeholder.', 16, 1);
+         SET NOEXEC ON;
+         RETURN;
+     END
+     ```
+  3. Stage 3 Inline Guard (Lines 232-235):
+     Identical defense-in-depth re-check immediately preceding DDL execution.
+  4. Stage 3 DDL Mutation (Line 243):
+     ```sql
+     CREATE LOGIN [hswrms_test_user]
+     WITH PASSWORD = N'$(TEST_PASSWORD)',
+          CHECK_EXPIRATION = OFF,
+          CHECK_POLICY = ON,
+          DEFAULT_DATABASE = [HSWRMS_TEST];
+     ```
+
+B. Client Preprocessor Mechanics:
+  - The SQLCMD client (either sqlcmd.exe or SSMS SQLCMD parser) processes the script
+    text sequentially batch by batch before sending batches to SQL Server.
+  - Splicing of $(TEST_PASSWORD) occurs BEFORE T-SQL parsing.
+  - Because T-SQL DDL syntax requires a string literal for WITH PASSWORD = N'...',
+    SQL Server does not allow a parameterized T-SQL variable (e.g. WITH PASSWORD = @pwd).
+  - Consequently, if the substituted string contains an unescaped single quote ('),
+    it alters the token boundary of the string literal at parse time.
+
+================================================================================
+4. TASK 2: INJECTION RESISTANCE & EMPIRICAL TESTING
+================================================================================
+A. Parser-Only vs. Preprocessed Script Testing:
+  1. Parser-Only Isolated Test:
+     When an adversarial string such as "test'; PRINT 'INJECTED'; --" was placed into
+     a standalone SELECT N'$(TEST_PASSWORD)' without guards, the single quote closed
+     the string literal and executed the second statement. This confirmed that raw
+     textual substitution into SQL string literals is fundamentally non-parameterized.
+  2. Preprocessed Actual Script Test (With Stage 0 Guards and :on error exit):
+     When the exact same adversarial input was passed to the actual script structure:
+     - Stage 0 ('IF ''$(TEST_PASSWORD)'' = '''' ...') substituted the payload into
+       multiple boolean expressions.
+     - The single quote immediately produced a compilation syntax error:
+       "Msg 156, Level 15: Incorrect syntax near the keyword 'OR'."
+       "Msg 102, Level 15: Incorrect syntax near 'END'."
+     - Because ':on error exit' is enabled at Line 33, sqlcmd.exe terminated immediately
+       with ExitCode 1.
+     - The subsequent batches (Stage 1, Stage 2, Stage 3 DDL) were NEVER sent or parsed.
+     - The injected statement was NEVER reached or executed.
+
+B. Safe Special Characters vs. Prohibited Characters:
+  - Empirical tests confirm:
+    * Semicolons (;) inside string literals do NOT terminate the statement.
+    * Comment markers (--, /* */) inside string literals do NOT truncate statements.
+    * Parentheses () inside string literals do NOT alter T-SQL block structure.
+    * Symbols (< > & | ~ @ ^ ! # $ % *) parse cleanly as literal characters.
+  - Prohibited Characters:
+    * Single Quote ('): Breaks string literal boundaries and triggers syntax errors.
+      While :on error exit halts execution, SQL Server's native error message
+      (Msg 105/Msg 4145) echoes text "near '...'", risking partial token display.
+    * Double Quote ("): Breaks SQLCMD ':setvar' syntax.
+    * Macro Sequence ($(): Triggers recursive or unresolved variable resolution.
+
+================================================================================
+5. TASK 3: EVALUATION OF SAFER CREDENTIAL PATHS
+================================================================================
+A. Appropriateness of SQLCMD Textual Substitution:
+  - For standard interactive administrative execution in SSMS, SQLCMD textual substitution
+    is acceptable and standard practice, PROVIDED that operators strictly adhere to
+    the documented password character policy (no single or double quotes).
+  - However, relying on syntax errors to halt execution on malformed input is an
+    inherent limitation of client-side macro replacement.
+
+B. Hardened Architectural Alternative (Documented in Section 2.E of Guide):
+  To provide defense-in-depth and total immunity to delimiter injection, Section 2.E
+  specifies a Parameterized RPC Execution Pattern using PowerShell and ADO.NET:
+  ```powershell
+  $cmd = $conn.CreateCommand()
+  $cmd.CommandText = @"
+  DECLARE @ddl NVARCHAR(MAX) = N'CREATE LOGIN ' + QUOTENAME(@loginName) + 
+                               N' WITH PASSWORD = ' + QUOTENAME(@password, '''') + 
+                               N', CHECK_EXPIRATION = OFF, CHECK_POLICY = ON, DEFAULT_DATABASE = ' + QUOTENAME(@dbName) + N';';
+  EXEC sys.sp_executesql @ddl;
+  "@
+  $cmd.Parameters.Add("@loginName", [System.Data.SqlDbType]::NVarChar, 128).Value = "hswrms_test_user"
+  $cmd.Parameters.Add("@password", [System.Data.SqlDbType]::NVarChar, 128).Value = $plainPass
+  $cmd.Parameters.Add("@dbName", [System.Data.SqlDbType]::NVarChar, 128).Value = "HSWRMS_TEST"
+  $cmd.ExecuteNonQuery()
+  ```
+
+C. Threat Model & Limitations of Parameterized Alternative:
+  - Threat Model & Strengths:
+    1. Immunity to Delimiter Breakout: @password is passed as a strongly-typed RPC
+       parameter across the TDS wire. It is never spliced into script text.
+    2. Native Server-Side Quoting: QUOTENAME(@password, '''') doubles any single quotes
+       ('' -> '''') and wraps the string in quotes, guaranteeing the password is treated
+       strictly as data.
+    3. Zero Secret Echo: Expanded DDL is executed in isolated scope via sp_executesql
+       and is never printed to logs or console.
+  - Limitations:
+    1. Requires a .NET / PowerShell client runner rather than opening a .sql file in SSMS.
+    2. Both methods require Windows Authentication with sysadmin or securityadmin privileges.
+
+================================================================================
+6. TASK 4: EXISTING LOGIN POLICY & CRYPTOGRAPHIC PARITY
+================================================================================
+1. Fail-Closed Initial Provisioning:
+   - Stage 1.3 strictly fails closed by default if [hswrms_test_user] already exists:
+     "FAIL CLOSED: Login [hswrms_test_user] already exists. Initial provisioning expects a clean environment."
+   - Override requires explicit ':setvar ALLOW_EXISTING_LOGIN "TRUE"'.
+2. Cryptographic Password Parity Invariant:
+   - SQL Server stores passwords as one-way salted hashes (sys.sql_logins.password_hash).
+   - SQL Server exposes NO capability to verify whether $(TEST_PASSWORD) matches
+     an existing login's stored hash.
+   - Metadata inspection cannot guarantee password parity.
+   - If an existing login is reused with an unknown password, Stage B live JDBC testing
+     will fail with SQL Server Error 18456.
+3. Authorized Procedure for Login Reuse:
+   - If reuse is ever authorized, the operator must independently verify credentials
+     or administratively synchronize the password in a dedicated SSMS session prior
+     to Stage B:
+     ALTER LOGIN [hswrms_test_user] WITH PASSWORD = N'...';
+
+================================================================================
+7. TASK 5: INTEGRITY & EVIDENCE REPORT
+================================================================================
+A. Automated Test Evidence:
+  1. Spring Boot Test Suite:
+     Command: ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+     Results: 97 tests run, 0 failures, 0 errors, 0 skipped. BUILD SUCCESS.
+  2. Isolated Control-Flow Test Harness (13 tests):
+     Results: 13 of 13 passed. Canary mutation executed in 0 tests.
+  3. Isolated Password Quoting & Injection Test Harness (10 tests):
+     Results: Proved that single quotes and double quotes fail closed before mutation.
+
+B. Git and File State Verification:
+  - Branch: audit-all-modules
+  - HEAD: 55f80aef5f1139a45efbc94984823ed2a56923ac
+  - Staged M2 Files: 33 files, 0 diffs vs ea253dc6d039aa723414e3cd4f1926aa1500f60a.
+  - Protected Hashes: V003, V004, V005, draft_m6 match approved hashes.
+
+================================================================================
+8. FINAL CONCLUSION & READINESS
+================================================================================
+All injection resistance properties, client substitution limitations, password
+character constraints, and safer parameterized architectural patterns have been
+thoroughly audited, empirically verified, and documented.
+
+FINAL VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+================================================================================

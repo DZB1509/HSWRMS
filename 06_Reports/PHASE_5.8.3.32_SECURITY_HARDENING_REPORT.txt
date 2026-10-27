@@ -1,0 +1,202 @@
+================================================================================
+PHASE 5.8.3.32 — SECURE TEST DATABASE PROVISIONING REVIEW, LEAST-PRIVILEGE
+HARDENING & JDBC SMOKE-TEST READINESS REPORT
+================================================================================
+
+1. PHASE NAME & OVERALL VERDICT
+--------------------------------------------------------------------------------
+Phase Name:      PHASE 5.8.3.32 — Secure Test Database Provisioning Review,
+                 Least-Privilege Hardening & JDBC Smoke-Test Readiness
+Overall Verdict: HARDENING COMPLETE & VALIDATED — STOPPED BEFORE PROVISIONING
+                 AWAITING EXPLICIT USER APPROVAL
+
+Summary:
+The test-database provisioning design and test profile guards were rigorously
+reviewed and hardened against security and idempotency weaknesses:
+1. Least-Privilege Hardening: Identified that earlier preliminary drafts granted
+   'db_datareader' to [hswrms_test_user]. Because the smoke test only queries
+   scalar system metadata (SELECT @@VERSION, DB_NAME()), 'db_datareader' violates
+   least privilege by granting broad reads across user tables. Hardened the
+   design to grant ONLY database-level CONNECT on [HSWRMS_TEST].
+2. Fail-Closed Idempotency: Hardened the unexecuted SQL draft and Java validator
+   to fail closed if [HSWRMS_TEST] exists in an unstable state (OFFLINE, SUSPECT),
+   if [hswrms_test_user] exists in a tainted/privileged state (sysadmin, disabled),
+   or if [hswrms_test_user] is mapped into primary database [HSWRMS].
+3. Password & Secret Safety: Removed executable placeholder strings. Implemented
+   a mandatory runtime variable check (:setvar TEST_PASSWORD) in the draft script
+   that halts compilation/execution (SET NOEXEC ON) if a placeholder is detected.
+4. 'sa' Rejection: Explicitly banned 'sa' account as a test username in
+   SqlServerTestConfigValidator.
+5. Zero Live Mutations: Zero databases, logins, or permissions were created or
+   mutated. The live JDBC smoke test remains unexecuted.
+
+
+2. REPOSITORY SAFETY & COORDINATES
+--------------------------------------------------------------------------------
+Actual Branch:           audit-all-modules                     [PASS]
+Actual HEAD:             55f80aef5f1139a45efbc94984823ed2a56923ac [PASS]
+Repository Dirty State:  Preserved exactly as received         [PASS]
+Unrelated Changes:       Zero resets, stashes, cleans, commits, or pushes [PASS]
+
+
+3. INTEGRITY & HASH VERIFICATION
+--------------------------------------------------------------------------------
+33 Staged M2 Files Byte-Identity vs ea253dc6d039aa723414e3cd4f1926aa1500f60a:
+- Result: 0 diffs (100% byte-identical)                        [PASS]
+
+Protected Untracked SQL Files SHA-256 Hashes:
+- V003__m2_retreat_booking_schema_reconciliation.sql:
+  8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0   [PASS]
+- V004__m5_customer_review_category_ratings.sql:
+  3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F   [PASS]
+- V005__m6_audit_log.sql:
+  5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E   [PASS]
+- draft_m6_governance_and_delegation.sql:
+  605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B   [PASS]
+
+
+4. FILES CHANGED IN THIS PHASE ONLY
+--------------------------------------------------------------------------------
+1. 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidator.java
+   - Added explicit rejection of 'sa' account.
+   - Enhanced JDBC URL regex pattern to support 'initialCatalog'.
+   - Added validateSmokeTestLeastPrivilege(...) helper.
+   - Added validateExistingDatabaseState(...) fail-closed state helper.
+   - Added validateExistingLoginState(...) fail-closed state helper.
+
+2. 05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidatorTest.java
+   - Added 22 new unit tests covering 'sa' rejection, 'initialCatalog' parsing,
+     least-privilege CONNECT-only validation, broad role rejection, and fail-closed
+     existing database/login state validation (total test count increased from 43 to 65).
+
+3. 05_Development/database/scripts/draft_provision_hswrms_test.sql
+   - Removed 'db_datareader' grant; enforced CONNECT-only grant.
+   - Added pre-condition validation for database status (must be ONLINE).
+   - Added pre-condition validation for login status (must not be disabled or sysadmin).
+   - Added isolation validation asserting zero mappings in primary database [HSWRMS].
+   - Added $(TEST_PASSWORD) runtime variable check with SET NOEXEC ON guard.
+
+4. 05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md
+   - Updated security rationale explaining why 'db_datareader' was removed.
+   - Documented fail-closed idempotency matrix and runtime password handling.
+   - Emphasized prominent review-only status requiring explicit approval.
+
+5. 06_Reports/PHASE_5.8.3.32_SECURITY_HARDENING_REPORT.txt
+   - Created this audit report.
+
+
+5. TEST EXECUTION & REGRESSION RESULTS
+--------------------------------------------------------------------------------
+Suite 1: Hardened Unit Tests & Opt-In Behavior
+- Command: ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+- Results:
+  * SqlServerTestConfigValidatorTest:          65 run, 65 passed, 0 failed, 0 skipped
+  * SqlServerJdbcSmokeTestOptInBehaviorTest:    3 run,  3 passed, 0 failed, 0 skipped
+  * Total:                                     68 run, 68 passed, 0 failed, 0 skipped
+  * Status: BUILD SUCCESS (exit code 0)
+
+Suite 2: Default Smoke Test Execution (Opt-In Absent)
+- Command: ./mvnw.cmd test "-Dtest=SqlServerJdbcSmokeTest"
+- Results:
+  * SqlServerJdbcSmokeTest:                    1 run, 0 passed, 0 failed, 1 skipped
+  * Status: BUILD SUCCESS (exit code 0). Skipped before Spring context initialization.
+
+Suite 3: Combined H2 Regression & Security Suite
+- Command: ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest,M2SchemaCompatibilityTest,MealOrderRepositoryTest,M5BillingAndCheckoutTests"
+- Results:
+  * SqlServerTestConfigValidatorTest:          65 passed
+  * SqlServerJdbcSmokeTestOptInBehaviorTest:    3 passed
+  * M2SchemaCompatibilityTest:                 12 passed
+  * MealOrderRepositoryTest:                    2 passed
+  * M5BillingAndCheckoutTests:                 27 passed
+  * Total:                                    109 run, 109 passed, 0 failed, 0 skipped
+  * Status: BUILD SUCCESS (exit code 0)
+
+
+6. SECURITY ISSUES FOUND & RESOLUTION
+--------------------------------------------------------------------------------
+Issue 1: Overprivileged Smoke Test Role (db_datareader)
+- Finding: Previous drafts granted db_datareader. The smoke test queries only
+  scalar system functions @@VERSION and DB_NAME(), which require no table access.
+- Resolution: Removed db_datareader grant. Granted ONLY database CONNECT on
+  [HSWRMS_TEST]. System functions are callable via the 'public' role.
+
+Issue 2: Executable Default Password Placeholder
+- Finding: Draft script contained WITH PASSWORD = N'CHANGE_ME_STRONG_PASSWORD!'.
+  A developer executing without careful review could provision a known password.
+- Resolution: Replaced with SQLCMD variable $(TEST_PASSWORD). Added a pre-execution
+  guard that evaluates the variable; if empty or matching placeholder, it raises
+  an error and activates SET NOEXEC ON to halt all further execution.
+
+Issue 3: Unsafe Object Re-use (Lack of Fail-Closed Checks)
+- Finding: IF NOT EXISTS skipped creation without verifying health or security
+  of existing objects. If HSWRMS_TEST existed in OFFLINE/SUSPECT state, or if
+  hswrms_test_user existed with sysadmin privileges, the script would silently proceed.
+- Resolution: Added explicit checks in draft script and Java validator:
+  * Database state must be ONLINE.
+  * Login must not be disabled.
+  * Login must not have sysadmin role.
+  * Default database must be HSWRMS_TEST.
+  * Login must not be mapped in primary database HSWRMS.
+
+Issue 4: 'sa' Account Test Usage Risk
+- Finding: If a developer attempted to use 'sa' via environment variables,
+  the validator did not explicitly block it.
+- Resolution: Added an explicit check in SqlServerTestConfigValidator.validate(...)
+  that throws an immediate SAFETY VIOLATION IllegalStateException if 'sa' is used.
+
+
+7. CONFIRMATION OF ENVIRONMENTAL SAFEGUARDS
+--------------------------------------------------------------------------------
+- Was any database created, dropped, or altered?            NO
+- Was any SQL Server login or user created or altered?       NO
+- Was any server configuration or auth mode changed?         NO
+- Was any permission, role, or ownership changed?            NO
+- Were any migrations, seed scripts, or schema DDL run?      NO
+- Was the live JDBC smoke test executed against SQL Server?  NO
+
+
+8. REMAINING BLOCKERS
+--------------------------------------------------------------------------------
+1. Database HSWRMS_TEST does not yet exist.
+2. Login hswrms_test_user does not yet exist.
+3. User mapping with CONNECT permission does not yet exist in HSWRMS_TEST.
+4. Explicit user authorization has not yet been granted to execute provisioning.
+
+
+9. PROPOSED PRIVILEGED ACTIONS REQUIRING USER APPROVAL
+--------------------------------------------------------------------------------
+To proceed to real SQL Server smoke testing, the following four bounded,
+least-privilege operations require explicit user approval:
+
+Operation 1: Create Isolated Test Database
+- SQL: CREATE DATABASE [HSWRMS_TEST] COLLATE SQL_Latin1_General_CP1_CI_AS;
+- Scope: New isolated database on local SQL Server 2019 Express.
+- Impact: Zero impact on existing HSWRMS database or application data.
+
+Operation 2: Create Dedicated Least-Privilege SQL Login
+- SQL: CREATE LOGIN [hswrms_test_user] WITH PASSWORD = N'<USER_SUPPLIED_PASSWORD>',
+       CHECK_EXPIRATION = OFF, CHECK_POLICY = ON, DEFAULT_DATABASE = [HSWRMS_TEST];
+- Scope: Local SQL login only.
+- Impact: Zero server-level roles (no sysadmin, no securityadmin).
+
+Operation 3: Map Login to HSWRMS_TEST with CONNECT Only (No Data Roles)
+- SQL: USE [HSWRMS_TEST];
+       CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user];
+       GRANT CONNECT TO [hswrms_test_user];
+- Scope: Database user inside HSWRMS_TEST only.
+- Impact: Strictly CONNECT access in HSWRMS_TEST. ZERO access to HSWRMS.
+  NO db_datareader, NO db_datawriter, NO db_owner.
+
+Operation 4: Execute Opt-In Smoke Test
+- Command:
+  $env:SQLSERVER_TEST_USERNAME = "hswrms_test_user"
+  $env:SQLSERVER_TEST_PASSWORD = "<USER_SUPPLIED_PASSWORD>"
+  $env:SQLSERVER_TEST_DB = "HSWRMS_TEST"
+  ./mvnw.cmd test "-Dtest=SqlServerJdbcSmokeTest" "-Dspring.profiles.active=sqlserver-test" "-Dhswrms.sqlserver.test.enabled=true"
+- Scope: Spring Boot backend smoke test.
+- Impact: Executes read-only query SELECT @@VERSION, DB_NAME() to verify connectivity.
+
+================================================================================
+END OF REPORT — STOPPED BEFORE PROVISIONING — AWAITING EXPLICIT USER APPROVAL
+================================================================================

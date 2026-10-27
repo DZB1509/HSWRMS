@@ -1,0 +1,310 @@
+================================================================================
+HSWRMS TECHNICAL ACCEPTANCE & TEST EVIDENCE RECONCILIATION REPORT (M1–M6)
+================================================================================
+Project: HeavenStay Wellness Resort Management System (HSWRMS)
+Phase: 5.8.3.46 - M1–M6 Evidence Reconciliation, Audit Hardening & Bridge Safety
+Date: 27/10/2026
+Branch: audit-all-modules (Commit: 55f80aef5f1139a45efbc94984823ed2a56923ac)
+Environment: Java 17 LTS, Spring Boot 3.3.4, H2 In-Memory DB, React 19 / Vite 8
+================================================================================
+
+MỤC TIÊU CỐT LÕI:
+1. Đối soát số liệu kiểm thử thực tế từ Maven Surefire XMLs, giải trình triệt để
+   nguyên nhân sai lệch số liệu 190 vs 155 trong báo cáo Phase 5.8.3.45.
+2. Xác minh cầu nối M3 Spa -> M5 Billing: bảo đảm tính bất biến, chống ghi trùng
+   (idempotency), xử lý lỗi session/booking không hợp lệ, session bị hủy.
+3. Rà soát an toàn thay đổi M6: sửa lỗi fail-closed trong BusinessParameterService
+   khi PermissionService null và bổ sung test bằng chứng thực tế.
+4. Bảo toàn môi trường: giữ nguyên 33 file staged M2, 4 migration hash bảo vệ,
+   không can thiệp DDL/migration hay dữ liệu trên SQL Server HSWRMS/HSWRMS_TEST.
+
+
+================================================================================
+1. ĐỐI SOÁT SỐ LIỆU KIỂM THỬ THỰC TẾ (SUREFIRE XML RECONCILIATION)
+================================================================================
+
+1.1 NGUYÊN NHÂN SAI LỆCH SỐ LIỆU (190 VS 155 TRONG BÁO CÁO 45):
+- Trong Báo cáo Phase 5.8.3.45:
+  * Tổng số test ghi ở phần SUMMARY là 190 (được trích từ console output của Maven Surefire).
+  * Tuy nhiên, các dòng chi tiết theo từng suite ở Mục 1 và Mục 4 chỉ cộng lại thành 155.
+- Kết quả đối soát trực tiếp từ các file XML thực tế trong target/surefire-reports:
+  * File XML tại thời điểm chạy Phase 45 (23:04:54 - 23:07:41) xác nhận:
+    + M1: AuthLoginEndpointTests (4) + AuthServiceTest (17) + AccountLockoutIntegrationTest (8) = 29 tests.
+      (Báo cáo cũ ghi sai: AuthServiceTest = 5 thay vì 17 -> thiếu 12 tests).
+    + M2: M2SchemaCompatibilityTest (6) + RetreatBookingSecurityTest (14) + RetreatBookingServiceAuthorizationTest (9) = 29 tests.
+      (Báo cáo cũ ghi sai: M2SchemaCompatibilityTest = 4, RetreatBookingSecurityTest = 6, RetreatBookingServiceAuthorizationTest = 4 -> thiếu 15 tests).
+    + M3: SpaServiceTests (29) + SpaSecurityTests (5) + SpaConcurrencyTest (1) = 35 tests.
+      (Báo cáo cũ ghi sai: SpaServiceTests = 21, SpaSecurityTests = 9, SpaConcurrencyTest = 3 -> lệch 2 tests).
+    + M4: MealOrderRepositoryTest (8) = 8 tests.
+      (Báo cáo cũ ghi sai: 1 test -> thiếu 7 tests).
+    + M5: M5BillingAndCheckoutTests (44) = 44 tests.
+    + M6: AdminControllersSecurityTest (12) + DelegationServiceTest (9) + BusinessParameterServiceTest (5) +
+          StaffAccountServiceTest (6) + AuditLogServiceTest (6) + PermissionMatrixServiceTest (6) +
+          AccountUnlockJobTest (1) = 45 tests.
+      (Báo cáo cũ ghi sai: AdminControllersSecurityTest = 14, AuditLogServiceTest = 3, AccountUnlockJobTest = 3 -> lệch 1 test).
+  * Tổng số test thực tế trong file XML của 18 suite tại lần chạy Phase 45:
+    29 (M1) + 29 (M2) + 35 (M3) + 8 (M4) + 44 (M5) + 45 (M6) = 190 tests (100% PASS, 0 Failures, 0 Errors, 0 Skipped).
+  * KẾT LUẬN: Số liệu 190 của Maven là CHÍNH XÁC. Số 155 là do tác giả báo cáo 45 sao chép thủ công các con số ước lượng cũ của từng lớp mà không đọc file XML báo cáo thực tế.
+
+1.2 PHÂN BIỆT RÕ CÁC KHÁI NIỆM TEST:
+- Test Class / Test Suite: 18 lớp kiểm thử được cấu hình chạy trong bộ regression.
+- Test Method / Test Case: Mỗi phương thức kiểm thử độc lập được chú thích @Test.
+- Test Execution: Số lần thực thi phương thức test (195 lượt chạy thành công trong lần chạy hiện tại).
+- Test Skipped: 0 test bị bỏ qua trong bộ regression suite (Lưu ý: SqlServerJdbcSmokeTest là test opt-in riêng cho SQL Server khi có biến môi trường HSWRMS_TEST_SQLSERVER_ENABLED=true, không nằm trong danh sách -Dtest regression).
+
+1.3 BẢNG ĐỐI SOÁT CHI TIẾT TỪ TỪNG FILE XML THỰC TẾ (LẦN CHẠY HIỆN TẠI):
+Lệnh chạy: .\mvnw.cmd test "-Dtest=AuthLoginEndpointTests,AuthServiceTest,AccountLockoutIntegrationTest,M2SchemaCompatibilityTest,RetreatBookingSecurityTest,RetreatBookingServiceAuthorizationTest,SpaServiceTests,SpaSecurityTests,SpaConcurrencyTest,MealOrderRepositoryTest,M5BillingAndCheckoutTests,AdminControllersSecurityTest,DelegationServiceTest,BusinessParameterServiceTest,StaffAccountServiceTest,AuditLogServiceTest,PermissionMatrixServiceTest,AccountUnlockJobTest"
+
+| STT | Module | Test Suite (Class) | Tests XML Cũ (45) | Tests XML Mới (46) | Failures | Errors | Skipped | Thời gian (s) | File XML Timestamp |
+|:---:|:---:|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| 1 | M1 | AuthLoginEndpointTests | 4 | 4 | 0 | 0 | 0 | 24.72 | 2026-10-27 23:28:34 |
+| 2 | M1 | AuthServiceTest | 17 | 17 | 0 | 0 | 0 | 2.38 | 2026-10-27 23:28:47 |
+| 3 | M1 | AccountLockoutIntegrationTest | 8 | 8 | 0 | 0 | 0 | 10.35 | 2026-10-27 23:28:44 |
+| 4 | M2 | M2SchemaCompatibilityTest | 6 | 6 | 0 | 0 | 0 | 6.33 | 2026-10-27 23:28:53 |
+| 5 | M2 | RetreatBookingSecurityTest | 14 | 14 | 0 | 0 | 0 | 5.12 | 2026-10-27 23:28:58 |
+| 6 | M2 | RetreatBookingServiceAuthorizationTest | 9 | 9 | 0 | 0 | 0 | 0.67 | 2026-10-27 23:28:59 |
+| 7 | M3 | SpaServiceTests | 29 | 29 | 0 | 0 | 0 | 2.65 | 2026-10-27 23:29:09 |
+| 8 | M3 | SpaSecurityTests | 5 | 5 | 0 | 0 | 0 | 4.01 | 2026-10-27 23:29:07 |
+| 9 | M3 | SpaConcurrencyTest | 1 | 1 | 0 | 0 | 0 | 3.84 | 2026-10-27 23:29:03 |
+| 10 | M4 | MealOrderRepositoryTest | 8 | 8 | 0 | 0 | 0 | 0.20 | 2026-10-27 23:29:09 |
+| 11 | M5 | M5BillingAndCheckoutTests | 44 | 48 (+4) | 0 | 0 | 0 | 133.11 | 2026-10-27 23:31:23 |
+| 12 | M6 | AdminControllersSecurityTest | 12 | 12 | 0 | 0 | 0 | 3.52 | 2026-10-27 23:31:26 |
+| 13 | M6 | DelegationServiceTest | 9 | 9 | 0 | 0 | 0 | 0.41 | 2026-10-27 23:31:27 |
+| 14 | M6 | BusinessParameterServiceTest | 5 | 6 (+1) | 0 | 0 | 0 | 0.15 | 2026-10-27 23:31:26 |
+| 15 | M6 | StaffAccountServiceTest | 6 | 6 | 0 | 0 | 0 | 0.31 | 2026-10-27 23:31:27 |
+| 16 | M6 | AuditLogServiceTest | 6 | 6 | 0 | 0 | 0 | 0.11 | 2026-10-27 23:31:26 |
+| 17 | M6 | PermissionMatrixServiceTest | 6 | 6 | 0 | 0 | 0 | 0.18 | 2026-10-27 23:31:27 |
+| 18 | M6 | AccountUnlockJobTest | 1 | 1 | 0 | 0 | 0 | 0.06 | 2026-10-27 23:31:23 |
+| **TỔNG** | | **18 Test Suites** | **190** | **195** | **0** | **0** | **0** | **218.11 s** | **BUILD SUCCESS** |
+
+TỔNG HỢP THEO MODULE:
+- M1 Identity & Access: 29 tests
+- M2 Booking & Residence: 29 tests
+- M3 Spa Treatment: 35 tests
+- M4 Food & Beverage: 8 tests
+- M5 Billing & Checkout: 48 tests
+- M6 Governance & Admin: 46 tests
+-> TỔNG CỘNG: 195 tests (100% Pass, 0 Failures, 0 Errors, 0 Skipped).
+
+
+================================================================================
+2. XÁC MINH CẦU NỐI M3 SPA → M5 BILLING (CONTRACT & SAFETY VERIFICATION)
+================================================================================
+
+2.1 KIỂM TOÁN MÃ NGUỒN VÀ HÀNH VI:
+- DefaultBillingAdapter:
+  * Triển khai interface BillingPort từ M3.
+  * Chỉ thực hiện postFolioCharge khi:
+    (1) FolioBillingService có sẵn trong ApplicationContext (getIfAvailable() != null).
+    (2) retreatBookingId != null.
+    (3) bookingRepository.existsById(retreatBookingId) == true.
+  * Nếu không thỏa mãn (ví dụ trong mock test M3 độc lập hoặc booking giả định), adapter ghi log
+    "[OI-01 Preserved Boundary] Extra spa session #... marked billable..." và bỏ qua an toàn mà không làm sập tiến trình.
+  * Bọc lời gọi postFolioCharge trong khối try/catch: nếu phát sinh BusinessRuleException (ví dụ DUPLICATE_CHARGE,
+    BOOKING_MISMATCH, INVALID_SERVICE_STATE, INVOICE_ALREADY_ISSUED), adapter ghi log lỗi chi tiết mà không làm rollback
+    giao dịch M3 ngoài ý muốn nếu đã hoàn thành phiên điều trị.
+
+- FolioBillingService.postFolioCharge:
+  * Khóa bi quan (pessimistic write lock) trên hàng FolioEntity (findByIdForUpdate) và hàng SpaSession (findByIdWithLock).
+  * Chống ghi trùng (Idempotency):
+    `if (folioItemRepository.existsBySourceSpaSessionId(request.getSourceSpaSessionId())) { throw new BusinessRuleException("DUPLICATE_CHARGE", ...); }`
+  * Khớp mã đặt phòng (Booking Mismatch):
+    `if (!booking.getRetreatBookingId().equals(spaSession.getRetreatBookingId())) { throw new BusinessRuleException("BOOKING_MISMATCH", ...); }`
+  * Kiểm tra trạng thái phiên (Session State):
+    `if (spaSession.getSessionStatus() == SpaSessionStatus.CANCELLED) { throw new BusinessRuleException("INVALID_SERVICE_STATE", ...); }`
+  * Bảo vệ hóa đơn đã phát hành/đã thanh toán:
+    `if (existingInvoice != null && ("ISSUED".equalsIgnoreCase(...) || "PAID".equalsIgnoreCase(...))) { throw new BusinessRuleException("INVOICE_ALREADY_ISSUED", ...); }`
+
+2.2 CÁC TEST ĐÃ BỔ SUNG ĐỂ CHỨNG MINH AN TOÀN:
+1. M5BillingAndCheckoutTests.m3BillingAdapterDuplicateChargeIgnoredIdempotently:
+   - Gọi billingPort.recordExtraSpaCharge lần 1 -> Tạo 1 FolioItem loại SPA với số tiền 750.000 VND.
+   - Gọi billingPort.recordExtraSpaCharge lần 2 cho cùng sessionId (mô phỏng retry hoặc lặp lời gọi) ->
+     Hệ thống bắt DUPLICATE_CHARGE, ghi log cảnh báo; số lượng FolioItem gắn với sessionId vẫn duy nhất là 1;
+     số dư Folio và hóa đơn không bị đội gấp đôi.
+2. M5BillingAndCheckoutTests.postFolioChargeDirectlyBlocksDuplicateSpaSessionCharge:
+   - Trực tiếp gọi folioBillingService.postFolioCharge lần 2 cho cùng spaSessionId ->
+     Xác nhận ném BusinessRuleException với mã "DUPLICATE_CHARGE".
+3. M5BillingAndCheckoutTests.postFolioChargeRejectsBookingMismatchAndCancelledSpaSession:
+   - Gửi yêu cầu tính phí spaSession của Booking 1 vào Booking 2 -> Ném BusinessRuleException("BOOKING_MISMATCH").
+   - Gửi yêu cầu tính phí cho phiên Spa đã bị CANCELLED -> Ném BusinessRuleException("INVALID_SERVICE_STATE").
+4. M5BillingAndCheckoutTests.m3BillingAdapterInvalidBookingAndSessionGracefullyHandled:
+   - Gọi với bookingId không tồn tại (999999) -> Xử lý an toàn, không ném exception, không tạo FolioItem rác.
+   - Gọi với spaSessionId không tồn tại (99999999L) -> Bắt lỗi không tìm thấy, không tạo FolioItem rác.
+
+
+================================================================================
+3. RÀ SOÁT AN TOÀN VÀ NGUYÊN TẮC FAIL-CLOSED TRONG M6
+================================================================================
+
+3.1 PHÁT HIỆN LỖ HỔNG VÀ SỬA ĐỔI:
+- Lỗ hổng trong BusinessParameterService.java:
+  * Đoạn mã cũ:
+    ```java
+    if (!actor.admin()) {
+        if (permissionService != null && !permissionService.userHas(actor.userId(), "S50", "U")) {
+            audit.record(actor, "Update Business Parameter", "SystemConfiguration", key, AuditLogService.DENIED);
+            throw new AccessDeniedException("Updating business parameters requires delegated S50:U permission.");
+        }
+        if (!config.isManagerEditable()) {
+            audit.record(actor, "Update Business Parameter", "SystemConfiguration", key, AuditLogService.DENIED);
+            throw new AccessDeniedException("This parameter is not covered by the delegated rights.");
+        }
+    }
+    ```
+  * Rủi ro bảo mật: Nếu BusinessParameterService được khởi tạo trong môi trường mà permissionService == null,
+    biểu thức `permissionService != null && ...` trả về false. Khi đó, nếu tham số có `config.isManagerEditable() == true`,
+    người dùng không phải admin (Manager) có thể cập nhật tham số cấu hình mà KHÔNG bị kiểm tra quyền S50:U!
+    Đây là hành vi fail-open vi phạm nghiêm trọng nguyên tắc an toàn.
+  * Sửa lỗi theo nguyên tắc Fail-Closed:
+    ```java
+    if (!actor.admin()) {
+        if (permissionService == null || !permissionService.userHas(actor.userId(), "S50", "U")) {
+            audit.record(actor, "Update Business Parameter", "SystemConfiguration", key, AuditLogService.DENIED);
+            throw new AccessDeniedException("Updating business parameters requires delegated S50:U permission.");
+        }
+        if (!config.isManagerEditable()) {
+            audit.record(actor, "Update Business Parameter", "SystemConfiguration", key, AuditLogService.DENIED);
+            throw new AccessDeniedException("This parameter is not covered by the delegated rights.");
+        }
+    }
+    ```
+  * Kết quả: Nếu permissionService == null, mọi yêu cầu từ non-admin đều bị từ chối tuyệt đối (403 AccessDeniedException)
+    và ghi vết kiểm toán trạng thái DENIED.
+
+3.2 TEST BẰNG CHỨNG BỔ SUNG:
+- BusinessParameterServiceTest.managerDeniedWhenPermissionServiceIsNullFailClosed:
+  * Khởi tạo BusinessParameterService với `permissionService = null`.
+  * Yêu cầu cập nhật từ ManagerActor -> Bị từ chối với AccessDeniedException.
+  * Kiểm tra AuditLogRepository -> Xác nhận tồn tại bản ghi Action="Update Business Parameter",
+    TargetDataType="SystemConfiguration", AccessStatus="DENIED", TargetRefId="refund_percentage".
+  * Yêu cầu cập nhật từ AdminActor -> Cho phép thành công vì Admin không phụ thuộc quyền ủy quyền.
+
+3.3 KIỂM TRA TÍNH XÁC THỰC CỦA CÁC TEST KHÁC TRONG M6:
+- Các test trong AdminControllersSecurityTest, DelegationServiceTest, StaffAccountServiceTest,
+  BusinessParameterServiceTest đều kiểm tra side effects thực tế trong cơ sở dữ liệu:
+  * Kiểm tra bản ghi AuditLog được lưu trữ với đúng Action, TargetRefId, AccessStatus (SUCCESS, DENIED, FAILED).
+  * Kiểm tra thay đổi giá trị trong SystemConfiguration hoặc tài khoản User.
+  * Không phụ thuộc vào mock nông hoặc chỉ kiểm tra HTTP status code.
+
+
+================================================================================
+4. CÁC LỆNH ĐÃ CHẠY VÀ KẾT QUẢ THỰC TẾ
+================================================================================
+
+1. Kiểm tra Surefire XML ban đầu:
+   Get-ChildItem -Path "05_Development\backend\target\surefire-reports\TEST-*.xml"
+   -> Kết quả: Toàn bộ 18 test XML khớp với thời điểm chạy Phase 45, tổng số test là 190.
+
+2. Chạy kiểm thử lớp BusinessParameterServiceTest sau khi sửa fail-closed:
+   .\mvnw.cmd test "-Dtest=BusinessParameterServiceTest"
+   -> Kết quả: Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS (Time: 41.73s).
+
+3. Chạy kiểm thử có mục tiêu 4 test mới trong M5BillingAndCheckoutTests:
+   .\mvnw.cmd test "-Dtest=M5BillingAndCheckoutTests#m3BillingAdapterDuplicateChargeIgnoredIdempotently+postFolioChargeDirectlyBlocksDuplicateSpaSessionCharge+postFolioChargeRejectsBookingMismatchAndCancelledSpaSession+m3BillingAdapterInvalidBookingAndSessionGracefullyHandled"
+   -> Kết quả: Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS (Time: 01:20 min).
+
+4. Chạy toàn bộ Regression Test Suite (18 classes):
+   .\mvnw.cmd test "-Dtest=AuthLoginEndpointTests,AuthServiceTest,AccountLockoutIntegrationTest,M2SchemaCompatibilityTest,RetreatBookingSecurityTest,RetreatBookingServiceAuthorizationTest,SpaServiceTests,SpaSecurityTests,SpaConcurrencyTest,MealOrderRepositoryTest,M5BillingAndCheckoutTests,AdminControllersSecurityTest,DelegationServiceTest,BusinessParameterServiceTest,StaffAccountServiceTest,AuditLogServiceTest,PermissionMatrixServiceTest,AccountUnlockJobTest"
+   -> Kết quả: Tests run: 195, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS (Time: 03:25 min).
+
+5. Kiểm tra biên dịch Frontend và Production Build:
+   npm run build (tsc -b && vite build)
+   -> Kết quả: 2,701 modules transformed in 2.01s, dist/ tạo thành công, 0 lỗi TypeScript.
+
+6. Kiểm tra mã nguồn Frontend:
+   npx oxlint
+   -> Kết quả: 0 lỗi, 8 cảnh báo bắt lỗi tham số catch trên 180 file.
+
+7. Đối soát toàn vẹn Git và Migration Checksums:
+   PowerShell verification script
+   -> Kết quả: 33 file staged M2 nguyên vẹn; 4 file migration hash khớp 100%.
+
+
+================================================================================
+5. MA TRẬN PHÂN LOẠI CÁC LUỒNG HỆ THỐNG
+================================================================================
+
+5.1 CÁC LUỒNG ĐÃ ĐƯỢC XÁC MINH CÓ BẰNG CHỨNG (VERIFIED WITH TEST EVIDENCE):
+- Flow 1 (M1-M2-M5): Check-in bắt buộc cư trú -> Gán Villa -> Khởi tạo Folio mặc định.
+- Flow 2 (M3-M5): Phiên Spa ngoài gói tự động đẩy phí vào Folio qua DefaultBillingAdapter ->
+  Khóa bi quan chống ghi đè -> Chống ghi trùng (idempotency) khi retry/lặp ->
+  Cập nhật số dư và phản ánh vào hóa đơn tổng hợp (Consolidated Invoice).
+- Flow 3 (M4-M5): Đơn ăn gọi món (A_LA_CARTE) tính phí vào Folio; đơn ăn trong gói (DAILY_MEAL) bị chặn tính phí;
+  chặn ghi trùng đơn ăn.
+- Flow 4 (M3/M4-M5): Billing Guard chặn xuất hóa đơn và thanh toán trả phòng nếu có phiên Spa hoặc đơn F&B chưa hoàn tất.
+- Flow 5 (M5): Thanh toán số dư -> Trả phòng (checkout) nguyên tử -> Đóng Folio, hoàn thành Booking, chuyển Villa sang NEEDS_CLEANING.
+  Hỗ trợ đầy đủ trường hợp số dư 0 VND.
+- Flow 6 (M6): Khóa truy cập admin đối với dữ liệu nhạy cảm của khách hàng (Luật Cư trú & Sức khỏe).
+- Flow 7 (M6): Ủy quyền quản trị (Delegation) có thời hạn, cấm tự ủy quyền (CANNOT_DELEGATE_TO_SELF),
+  và ghi vết kiểm toán trạng thái DENIED/FAILED/SUCCESS đầy đủ.
+- Flow 8 (M6): Cập nhật tham số nghiệp vụ tuân thủ nguyên tắc Fail-Closed khi thiếu PermissionService.
+
+5.2 CÁC LUỒNG MỚI CHỈ ĐƯỢC SUY LUẬN / CHƯA CÓ TEST BACKEND (INFERRED ONLY):
+- Tích hợp cổng thanh toán trực tuyến thực tế (Live VNPay IPN webhook):
+  Hiện mới kiểm thử logic tính toán chữ ký số, HMAC SHA512 và callback mock; chưa có kiểm thử mạng với cổng thanh toán thật.
+- Vòng đời xử lý hoàn tiền (Refund Service):
+  Tham số refund_percentage đã có trong M6 và kiểm tra khoảng giá trị, nhưng logic tính toán hoàn tiền và gọi cổng thanh toán
+  khi hủy đặt phòng chưa được cài đặt trong service M2/M5.
+- Màn hình quản lý bếp M4 tương tác trực tiếp (Interactive Kitchen Display Station):
+  M4 hiện mới có tầng JPA Entity và Repository phục vụ tích hợp thanh toán M5; các API nghiệp vụ gọi món theo thời gian thực
+  chưa được triển khai.
+
+5.3 ĐIỂM CHƯA CÓ BẰNG CHỨNG (UNPROVEN BOUNDARY):
+- Môi trường cơ sở dữ liệu Microsoft SQL Server E2E.
+
+
+================================================================================
+6. TRẠNG THÁI SQL SERVER E2E
+================================================================================
+- Trạng thái: CHƯA THỰC HIỆN (NOT EXECUTED).
+- Nguyên nhân & Rào cản:
+  * Toàn bộ 195 test tự động nêu trên chạy trong môi trường cơ sở dữ liệu in-memory H2.
+  * Tuân thủ triệt để chỉ thị an toàn: Không chạy DDL/migration, không ghi dữ liệu hoặc sửa đổi quyền trên
+    cơ sở dữ liệu HSWRMS hoặc HSWRMS_TEST.
+  * Không sử dụng tài khoản `sa`.
+  * Kiểm thử E2E trên SQL Server chỉ được thực hiện khi có môi trường riêng biệt và thông tin đăng nhập
+    không phải `sa` được cấp quyền chính thức.
+
+
+================================================================================
+7. TÌNH TRẠNG GIT VÀ BẢO TOÀN MÔI TRƯỜNG
+================================================================================
+
+7.1 BẢO TOÀN 33 FILE STAGED M2:
+Số lượng file staged trong Git index: 33 files.
+Không thực hiện bất kỳ lệnh git commit, push, reset, clean, stash, checkout, switch hay stage/unstage nào.
+
+7.2 BẢO TOÀN 4 MIGRATION HASH ĐƯỢC BẢO VỆ:
+- V003__m2_retreat_booking_schema_reconciliation.sql:
+  SHA-256: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 (MATCH)
+- V004__m5_customer_review_category_ratings.sql:
+  SHA-256: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F (MATCH)
+- V005__m6_audit_log.sql:
+  SHA-256: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E (MATCH)
+- draft_m6_governance_and_delegation.sql:
+  SHA-256: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B (MATCH)
+
+
+================================================================================
+8. DANH SÁCH BLOCKER CÒN LẠI (XẾP THEO MỨC ĐỘ RỦI RO)
+================================================================================
+
+1. [HIGH RISK] Nghiệm thu môi trường SQL Server thực tế:
+   * Mô tả: Chưa kiểm thử tương thích phương ngữ SQL Server (T-SQL, collation, kiểu datetime2/offset, deadlock retry)
+     trên cơ sở dữ liệu thật vì đang tuân thủ rào chắn an toàn chưa có tài khoản non-sa phù hợp.
+   * Hành động cần thiết: Chuẩn bị tài khoản và phân quyền an toàn theo hướng dẫn provisioning để chạy E2E suite.
+
+2. [MEDIUM-HIGH RISK] Triển khai dịch vụ hoàn tiền (Refund Financial Flow):
+   * Mô tả: M6 đã quản lý cấu hình refund_percentage và cancellation_window_hours, nhưng chưa có dịch vụ thực hiện
+     giao dịch hoàn tiền khi hủy đặt phòng.
+   * Hành động cần thiết: Xây dựng quy trình xử lý hoàn tiền và tích hợp với cổng thanh toán sau khi hoàn tất nghiệm thu cốt lõi.
+
+3. [MEDIUM RISK] Hoàn thiện nghiệp vụ mở rộng Module 4 (F&B Real-time Order Engine):
+   * Mô tả: Tích hợp F&B hiện tại đáp ứng đầy đủ yêu cầu tính phí Folio và Billing Guard của M5; tuy nhiên
+     giao diện đặt món thời gian thực của khách và màn hình bếp chuyên sâu chưa được triển khai hoàn chỉnh.
+
+4. [LOW RISK] Cảnh báo linter Frontend:
+   * Mô tả: 8 cảnh báo tham số biến catch không dùng trong các hàm bọc an toàn frontend. Không ảnh hưởng đến bản build hay nghiệp vụ.
+================================================================================
+BÁO CÁO KẾT THÚC - TRẠNG THÁI NGHIỆM THU: VERIFIED WITH EVIDENCE (195/195 PASS)
+================================================================================

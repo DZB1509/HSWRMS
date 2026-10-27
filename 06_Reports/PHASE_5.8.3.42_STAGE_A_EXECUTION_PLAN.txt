@@ -1,0 +1,256 @@
+================================================================================
+HSWRMS Phase 5.8.3.42 — Stage A Execution Plan & Final Safety Gate
+================================================================================
+Generated: 2026-10-27T16:38:00+07:00
+Scope: Stage A Execution Planning, Mutation Inventory, Least-Privilege Audit,
+       Midway Failure & Partial-State Recovery Procedures, Operator Credential
+       Capture Workflow, Repository Invariant Checks, and Safety Gate Review.
+
+================================================================================
+1. EXECUTIVE SUMMARY & VERDICT
+================================================================================
+Phase 5.8.3.42 establishes the formal, reviewable Stage A execution plan for
+provisioning the dedicated test database (HSWRMS_TEST) and SQL login (hswrms_test_user)
+on SQL Server instance 'localhost'.
+
+This phase is strictly planning and verification. NO state changes were made:
+  - ZERO database connections were opened for provisioning.
+  - ZERO databases, logins, users, roles, or permissions were created or altered.
+  - The live JDBC smoke test was NOT executed.
+  - NO real password was requested, generated, displayed, or logged.
+  - Staged M2 files and protected SQL hashes remain 100% byte-identical.
+
+FINAL AUDIT VERDICT:
+  READY FOR OPERATOR REVIEW
+
+Supporting Findings:
+  1. Exact State Change Inventory: Fully inventoried every intended DDL operation
+     across Stages 2, 3, and 4. All three operations are individually guarded by
+     $PSCmdlet.ShouldProcess().
+  2. Least-Privilege Rigor: Confirmed hswrms_test_user receives exclusively
+     database CONNECT permission in HSWRMS_TEST. Zero membership in db_datareader,
+     db_datawriter, db_owner, or any administrative server roles.
+  3. Primary Database Isolation: Confirmed zero mappings in primary database HSWRMS.
+     Guest access remains disabled and any cross-database connection fails closed.
+  4. Midway Failure & Safe Recovery: Established idempotent recovery procedures
+     without automated drops or rollbacks, preserving operator control.
+  5. Operator Password Security: Formulated the exact execution command using
+     interactive masked input (Read-Host -AsSecureString), eliminating CLI argument
+     exposure, process table leakage, and history file logging.
+  6. Repository Invariants Verified: Staged M2 files (33 files), protected SQL
+     hashes (4 files), and live SQL Server state (0 test objects) confirmed intact.
+
+STOPPING NOTICE:
+  This phase does NOT execute Stage A. Provisioning remains completely blocked
+  pending explicit operator authorization.
+
+================================================================================
+2. INTENDED SQL SERVER STATE CHANGES (MUTATION INVENTORY)
+================================================================================
+Target Instance: localhost:1433
+Target Database: HSWRMS_TEST
+Target Login:    hswrms_test_user
+Script:          05_Development/database/scripts/provision_hswrms_test.ps1
+
+The script will execute exactly four discrete state changes across three stages:
+
+1. Stage 2 — Database Creation:
+   - Target Context: SQL Server instance level / master
+   - DDL Statement:
+       CREATE DATABASE [HSWRMS_TEST] COLLATE SQL_Latin1_General_CP1_CI_AS;
+   - Execution Guard:
+       Line 314: if ($PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "CREATE DATABASE [$DatabaseName]"))
+   - Pre-condition: sys.databases must confirm HSWRMS_TEST is absent (or ONLINE if -AllowExistingDb is authorized).
+   - Physical Effect: Allocates database files (MDF/LDF) and system catalogs.
+
+2. Stage 3 — Login Creation:
+   - Target Context: SQL Server instance level (sys.server_principals)
+   - DDL Statement (executed via parameterized RPC sys.sp_executesql):
+       CREATE LOGIN [hswrms_test_user]
+         WITH PASSWORD = <server_quoted_password>,
+              CHECK_EXPIRATION = OFF,
+              CHECK_POLICY = ON,
+              DEFAULT_DATABASE = [HSWRMS_TEST];
+   - Parameter Mechanism: Transmitted as typed RPC parameter @password (NVarChar(128))
+     over TDS protocol; enclosed via server-side QUOTENAME(@password, '''').
+   - Execution Guard:
+       Line 336: if ($PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "CREATE LOGIN [$LoginName]"))
+   - Security Policies: CHECK_POLICY = ON enforces Windows password complexity;
+     DEFAULT_DATABASE = [HSWRMS_TEST] routes connection context away from master.
+   - Server Role Memberships: Exactly 0.
+   - Server Permissions: Exactly 0 (beyond default public CONNECT SQL).
+
+3. Stage 4 — Database User Mapping:
+   - Target Context: Database level in HSWRMS_TEST (sys.database_principals)
+   - DDL Statement:
+       USE [HSWRMS_TEST];
+       IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'hswrms_test_user')
+       BEGIN
+           CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user];
+       END;
+   - Execution Guard:
+       Line 359: if ($PSCmdlet.ShouldProcess("Database [$DatabaseName]", "CREATE USER [$LoginName] and GRANT CONNECT"))
+   - Physical Effect: Creates database principal hswrms_test_user mapped to server login.
+
+4. Stage 4 — Least-Privilege Permission Grant:
+   - Target Context: Database level in HSWRMS_TEST (sys.database_permissions)
+   - DDL Statement:
+       USE [HSWRMS_TEST];
+       GRANT CONNECT TO [hswrms_test_user];
+   - Execution Guard:
+       Line 359 (Combined in Stage 4 execution block)
+   - Physical Effect: Allows login to establish a database session in HSWRMS_TEST.
+
+================================================================================
+3. LEAST-PRIVILEGE INVARIANTS & PRIMARY DATABASE ISOLATION
+================================================================================
+A. Least-Privilege Verification:
+   - Scope of Testing: The live JDBC smoke test (SqlServerJdbcSmokeTest) executes:
+       SELECT @@VERSION AS [version], DB_NAME() AS [db_name];
+   - Access Required: Built-in scalar functions @@VERSION and DB_NAME() are
+     accessible to the public database role.
+   - Permissions Granted: Exclusively database-level CONNECT.
+   - Permissions Denied / Omitted:
+     * db_datareader:   NOT granted (no table read access)
+     * db_datawriter:   NOT granted (no table write access)
+     * db_owner:        NOT granted (no administrative control)
+     * db_ddladmin:     NOT granted (no schema modification access)
+     * Server Roles:    sysadmin=0, securityadmin=0, serveradmin=0, etc.
+
+B. Primary Database (HSWRMS) Isolation Verification:
+   - The script performs ZERO DDL operations targeting HSWRMS.
+   - Stage 1.4 explicitly validates:
+       USE [HSWRMS]; SELECT COUNT(*) FROM sys.database_principals WHERE name = @loginName;
+     If mappedCount > 0, the script aborts immediately (FAIL CLOSED).
+   - In HSWRMS, guest user access is verified disabled (hasdbaccess = 0).
+   - In HSWRMS, cross-database chaining and trustworthy settings are disabled (0).
+   - Any attempt by hswrms_test_user to access HSWRMS fails closed with SQL Server Error 916.
+
+================================================================================
+4. MIDWAY FAILURE BEHAVIOR & SAFE RECOVERY PROCEDURES
+================================================================================
+General Architectural Principle:
+  Automatic rollback (such as issuing DROP DATABASE or DROP LOGIN on error) is
+  STRONGLY PROHIBITED. Automatic drop logic introduces severe risk of accidental
+  data loss if run against unintended targets or misconfigured connections.
+  Instead, the script fails closed immediately on error, logs the sanitized fault,
+  and allows the operator to execute a safe, idempotent forward-recovery procedure.
+
+Failure Scenarios & Recovery Procedures:
+
+Scenario 1: Pre-Condition Check Fails in Stage 1
+  - Example: SQL Server is in Windows-Only mode, or target objects exist without override.
+  - Script Action: Aborts immediately with descriptive error before Stage 2.
+  - Partial State: ZERO objects created or altered.
+  - Recovery: Resolve pre-condition (e.g. enable Mixed Mode) and re-run.
+
+Scenario 2: Database Creation Fails in Stage 2
+  - Example: Disk full, insufficient OS file permissions.
+  - Script Action: Throws exception, scrubs unmanaged memory, halts.
+  - Partial State: Database creation failed; Login and User were NOT created.
+  - Recovery: Resolve disk/permission issue and re-run script.
+
+Scenario 3: Login Creation Fails in Stage 3
+  - Example: Password does not meet Windows Server password complexity policy.
+  - Script Action: Throws exception, scrubs unmanaged memory, halts.
+  - Partial State: Database [HSWRMS_TEST] was created; Login and User were NOT created.
+  - Recovery Procedure:
+    1. Do NOT drop [HSWRMS_TEST].
+    2. Operator selects a password meeting complexity policy (upper, lower, digits, symbols).
+    3. Operator re-runs script with the authorized database reuse switch:
+       .\provision_hswrms_test.ps1 -ServerInstance "localhost" -AllowExistingDb
+    4. Stage 1 confirms [HSWRMS_TEST] is ONLINE.
+    5. Stage 2 detects database exists and skips creation.
+    6. Stage 3 creates the login successfully.
+    7. Stage 4 completes user mapping and CONNECT grant.
+
+Scenario 4: User Mapping or Permission Grant Fails in Stage 4
+  - Example: Interrupted network connection during database context switch.
+  - Script Action: Throws exception, scrubs unmanaged memory, halts.
+  - Partial State: Database [HSWRMS_TEST] and Login [hswrms_test_user] exist; User mapping missing.
+  - Recovery Procedure:
+    1. Do NOT drop database or login.
+    2. Operator re-runs script with both reuse switches authorized:
+       .\provision_hswrms_test.ps1 -ServerInstance "localhost" -AllowExistingDb -AllowExistingLogin
+    3. Stages 2 and 3 skip creation.
+    4. Stage 4 maps the user and executes GRANT CONNECT.
+    5. Stage 5 verifies effective configuration.
+
+================================================================================
+5. OPERATOR CREDENTIAL SUPPLY & SECURITY PROTOCOL
+================================================================================
+To protect test credentials from accidental exposure or persistence:
+
+1. Console Masking:
+   - When executed without password parameters, the script invokes:
+       $sec = Read-Host -Prompt "Enter HSWRMS test password (min 12 chars)" -AsSecureString
+   - Keystrokes are masked (* or blank) in the terminal.
+2. Shell History Elimination:
+   - Input entered via Read-Host is handled as unmanaged input and is NOT recorded
+     in PowerShell's persistent history file (ConsoleHost_history.txt).
+3. Process Listing Protection:
+   - Because no password arguments are passed on the command line, process inspection
+     tools (Get-Process, Task Manager, wmic process, Process Explorer) and Windows
+     Security Audit Event 4688 display ONLY the script invocation:
+       powershell.exe -File provision_hswrms_test.ps1 -ServerInstance localhost
+4. Memory Scrubbing:
+   - The unmanaged BSTR buffer is zeroed and freed immediately via ZeroFreeBSTR in a
+     guaranteed finally block.
+   - The managed variable reference is cleared ($plainPass = $null) and GC collection is requested.
+5. Strict Secrecy Invariants:
+   - The real password is NEVER requested, generated, printed, or saved by the agent.
+   - The operator supplies the credential directly and interactively into the console prompt.
+
+================================================================================
+6. REPOSITORY SAFETY & INVARIANT AUDIT
+================================================================================
+A. Staged M2 Domain Files Integrity:
+   - Staged Files: Exactly 33 files
+   - Reference Commit: ea253dc6d039aa723414e3cd4f1926aa1500f60a
+   - Diff vs Reference: 0 bytes / 0 lines [BYTE-IDENTICAL MATCH]
+
+B. Protected SQL Files SHA-256 Hashes:
+   1. V003__m2_retreat_booking_schema_reconciliation.sql
+      Hash: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+   2. V004__m5_customer_review_category_ratings.sql
+      Hash: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+   3. V005__m6_audit_log.sql
+      Hash: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+   4. draft_m6_governance_and_delegation.sql
+      Hash: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+
+C. Real SQL Server State Invariants:
+   - Database [HSWRMS_TEST] Count:       0 (Absent) [PASS]
+   - Login [hswrms_test_user] Count:      0 (Absent) [PASS]
+   - Primary Database [HSWRMS] State:    ONLINE, 0 test user mappings [PASS]
+
+D. Automated Unit Regression Suite:
+   - 97 tests run, 0 failures, 0 errors, 0 skipped [BUILD SUCCESS]
+
+================================================================================
+7. PROPOSED EXECUTION COMMANDS (FOR OPERATOR REVIEW ONLY — DO NOT EXECUTE)
+================================================================================
+The operator can review the plan and, when ready to proceed, execute:
+
+Step 1: Optional Pre-Execution Dry Run (Non-mutating verification):
+```powershell
+.\05_Development\database\scripts\provision_hswrms_test.ps1 -ServerInstance "localhost" -DryRun
+```
+
+Step 2: Authorized Stage A Provisioning Execution:
+```powershell
+.\05_Development\database\scripts\provision_hswrms_test.ps1 -ServerInstance "localhost"
+```
+* Note: Step 2 will prompt securely for the password via Read-Host -AsSecureString.
+  The operator enters the chosen password directly.
+
+DO NOT EXECUTE THESE COMMANDS DURING THIS PHASE.
+
+================================================================================
+8. FINAL VERDICT
+================================================================================
+All technical, security, and repository checks have been verified.
+The Stage A execution plan is complete, reviewable, and ready for operator decision.
+
+FINAL STATUS: READY FOR OPERATOR REVIEW
+================================================================================
