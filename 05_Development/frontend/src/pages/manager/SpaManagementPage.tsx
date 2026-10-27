@@ -19,7 +19,10 @@ import {
   Utensils,
   Grid,
   List as ListIcon,
-  PowerOff
+  PowerOff,
+  ShieldAlert,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 import {
   SPA_TREATMENTS_INVENTORY,
@@ -50,8 +53,12 @@ type ActiveTab = 'treatments' | 'packages' | 'rooms' | 'rules';
 
 export const SpaManagementPage: React.FC = () => {
   const { role } = useAuth();
-  const { logAuditEvent } = useGovernance();
+  const { hasCapability, managerDelegatedCapabilities, logAuditEvent } = useGovernance();
   const { showToast } = useToast();
+
+  const isAdmin = role === 'admin';
+  const canManageSpa = isAdmin || hasCapability('manager', 'manage_spa_packages') || managerDelegatedCapabilities.includes('manage_spa_packages');
+  const canManagePricing = isAdmin || hasCapability('manager', 'manage_pricing') || managerDelegatedCapabilities.includes('manage_pricing');
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('treatments');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -212,6 +219,11 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Save Treatment
   const handleSaveTreatment = async (updated: SpaTreatmentItem) => {
+    if (!canManageSpa) {
+      showToast('Thao tác bị từ chối: Quản lý chưa được Quản Trị Viên ủy quyền để chỉnh sửa liệu trình Spa.', 'error');
+      return;
+    }
+
     setTreatments((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setEditingTreatment(null);
 
@@ -250,9 +262,9 @@ export const SpaManagementPage: React.FC = () => {
     }
 
     logAuditEvent({
-      actorId: 'usr-admin',
-      actorName: 'Quản trị viên',
-      actorRole: role || 'admin',
+      actorId: role === 'admin' ? 'usr-admin' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Quản trị viên' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
       action: 'UPDATE',
       dataCategory: 'SECURITY_GOVERNANCE',
       targetRef: updated.treatmentCode,
@@ -264,6 +276,11 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Add Treatment
   const handleAddTreatment = async (newTreatment: SpaTreatmentItem) => {
+    if (!canManageSpa) {
+      showToast('Thao tác bị từ chối: Quản lý chưa được Quản Trị Viên ủy quyền để thêm liệu trình Spa mới.', 'error');
+      return;
+    }
+
     setTreatments((prev) => [newTreatment, ...prev]);
     setIsAddTreatmentOpen(false);
 
@@ -305,6 +322,11 @@ export const SpaManagementPage: React.FC = () => {
 
   // Toggle Treatment Status (Ngừng gói / Kích hoạt lại) - Quy định: Không cho phép xóa, chỉ ngừng gói
   const handleToggleTreatmentStatus = async (item: SpaTreatmentItem) => {
+    if (!canManageSpa) {
+      showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để thay đổi trạng thái liệu trình Spa.', 'error');
+      return;
+    }
+
     const isStopping = item.status === 'ACTIVE';
     if (isStopping) {
       const confirmed = window.confirm(
@@ -336,9 +358,9 @@ export const SpaManagementPage: React.FC = () => {
     );
 
     logAuditEvent({
-      actorId: 'usr-admin',
-      actorName: 'Quản trị viên',
-      actorRole: role || 'admin',
+      actorId: role === 'admin' ? 'usr-admin' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Quản trị viên' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
       action: 'TOGGLE',
       dataCategory: 'SECURITY_GOVERNANCE',
       targetRef: item.treatmentCode,
@@ -352,6 +374,11 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Save Package
   const handleSavePackage = async (updated: RetreatPackageItem) => {
+    if (!canManageSpa) {
+      showToast('Thao tác bị từ chối: Quản lý chưa được Quản Trị Viên ủy quyền để chỉnh sửa gói nghỉ dưỡng.', 'error');
+      return;
+    }
+
     setPackages((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
     setEditingPackage(null);
 
@@ -388,9 +415,9 @@ export const SpaManagementPage: React.FC = () => {
     }
 
     logAuditEvent({
-      actorId: 'usr-admin',
-      actorName: 'Quản trị viên',
-      actorRole: role || 'admin',
+      actorId: role === 'admin' ? 'usr-admin' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Quản trị viên' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
       action: 'UPDATE',
       dataCategory: 'SECURITY_GOVERNANCE',
       targetRef: updated.packageCode,
@@ -402,6 +429,11 @@ export const SpaManagementPage: React.FC = () => {
 
   // Handle Add Package
   const handleAddPackage = async (newPkg: RetreatPackageItem) => {
+    if (!canManageSpa) {
+      showToast('Thao tác bị từ chối: Quản lý chưa được Quản Trị Viên ủy quyền để thêm gói nghỉ dưỡng mới.', 'error');
+      return;
+    }
+
     setPackages((prev) => [newPkg, ...prev]);
     setIsAddPackageOpen(false);
 
@@ -441,6 +473,11 @@ export const SpaManagementPage: React.FC = () => {
 
   // Toggle Package Status (Ngừng gói / Kích hoạt lại) - Quy định: Không cho phép xóa, chỉ ngừng gói
   const handleTogglePackageStatus = async (item: RetreatPackageItem) => {
+    if (!canManageSpa) {
+      showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để thay đổi trạng thái gói nghỉ dưỡng.', 'error');
+      return;
+    }
+
     const isStopping = item.status === 'ACTIVE';
     if (isStopping) {
       const confirmed = window.confirm(
@@ -472,9 +509,9 @@ export const SpaManagementPage: React.FC = () => {
     );
 
     logAuditEvent({
-      actorId: 'usr-admin',
-      actorName: 'Quản trị viên',
-      actorRole: role || 'admin',
+      actorId: role === 'admin' ? 'usr-admin' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Quản trị viên' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
       action: 'TOGGLE',
       dataCategory: 'SECURITY_GOVERNANCE',
       targetRef: item.packageCode,
@@ -539,6 +576,41 @@ export const SpaManagementPage: React.FC = () => {
                 Đã Đồng Bộ CSDL SQL Server (Live)
               </span>
             )}
+
+            {/* Spa Authority Clearance Pill */}
+            {canManageSpa ? (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                backgroundColor: '#e6f7ef',
+                color: '#087443',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                border: '1px solid #b6ebd0'
+              }}>
+                <ShieldCheck size={12} />
+                {isAdmin ? 'Thẩm Quyền Admin Toàn Phần' : 'Được Admin Cấp Quyền Quản Trị Spa'}
+              </span>
+            ) : (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                backgroundColor: '#f3f4f6',
+                color: '#4b5563',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                border: '1px solid #e5e7eb'
+              }}>
+                <ShieldAlert size={12} />
+                Giám Sát Spa Chỉ Đọc (Cần Admin Ủy Quyền)
+              </span>
+            )}
           </div>
 
           <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -561,7 +633,7 @@ export const SpaManagementPage: React.FC = () => {
             {isLoadingDb ? 'Đang Tải DB...' : 'Đồng Bộ Database'}
           </Button>
 
-          {activeTab === 'treatments' ? (
+          {canManageSpa && (activeTab === 'treatments' ? (
             <Button
               variant="primary"
               size="sm"
@@ -579,7 +651,7 @@ export const SpaManagementPage: React.FC = () => {
             >
               Tạo Gói Retreat Mới
             </Button>
-          ) : null}
+          ) : null)}
         </div>
       </div>
 
@@ -960,33 +1032,58 @@ export const SpaManagementPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTreatmentStatus(t)}
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '12px',
-                        padding: '3px 10px',
-                        background: t.status === 'ACTIVE'
-                          ? 'rgba(46, 125, 90, 0.95)'
-                          : 'rgba(113, 128, 150, 0.95)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                      }}
-                      title="Nhấn để ngừng gói hoặc kích hoạt lại"
-                    >
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
-                      {t.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
-                    </button>
+                    {canManageSpa ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTreatmentStatus(t)}
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          padding: '3px 10px',
+                          background: t.status === 'ACTIVE'
+                            ? 'rgba(46, 125, 90, 0.95)'
+                            : 'rgba(113, 128, 150, 0.95)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}
+                        title="Nhấn để ngừng gói hoặc kích hoạt lại"
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
+                        {t.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
+                      </button>
+                    ) : (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          padding: '3px 10px',
+                          background: t.status === 'ACTIVE'
+                            ? 'rgba(46, 125, 90, 0.95)'
+                            : 'rgba(113, 128, 150, 0.95)',
+                          color: '#fff',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'default'
+                        }}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
+                        {t.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
+                      </span>
+                    )}
                   </div>
 
                   {/* Card Content */}
@@ -1067,62 +1164,66 @@ export const SpaManagementPage: React.FC = () => {
                       >
                         Chi Tiết
                       </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        style={{ flex: 1 }}
-                        icon={<Edit2 size={14} />}
-                        onClick={() => {
-                          setEditingTreatment(t);
-                        }}
-                        title="Chỉnh sửa liệu trình & đơn giá"
-                      >
-                        Chỉnh Sửa
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleTreatmentStatus(t)}
-                        title={
-                          t.status === 'ACTIVE'
-                            ? 'Ngừng áp dụng gói này (Chuyển sang Inactive, không xóa)'
-                            : 'Kích hoạt lại gói này'
-                        }
-                        style={{
-                          flex: 1,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '5px',
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: t.status === 'ACTIVE'
-                            ? '1px solid rgba(221, 107, 32, 0.35)'
-                            : '1px solid rgba(46, 125, 90, 0.35)',
-                          background: t.status === 'ACTIVE'
-                            ? 'rgba(221, 107, 32, 0.08)'
-                            : 'rgba(46, 125, 90, 0.08)',
-                          color: t.status === 'ACTIVE'
-                            ? '#DD6B20'
-                            : '#2E7D5A',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                          transition: 'all 0.2s ease',
-                          opacity: 1
-                        }}
-                      >
-                        {t.status === 'ACTIVE' ? (
-                          <>
-                            <PowerOff size={13} />
-                            <span>Ngừng gói</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 size={13} />
-                            <span>Kích hoạt</span>
-                          </>
-                        )}
-                      </button>
+                      {canManageSpa && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          style={{ flex: 1 }}
+                          icon={<Edit2 size={14} />}
+                          onClick={() => {
+                            setEditingTreatment(t);
+                          }}
+                          title="Chỉnh sửa liệu trình & đơn giá"
+                        >
+                          Chỉnh Sửa
+                        </Button>
+                      )}
+                      {canManageSpa && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTreatmentStatus(t)}
+                          title={
+                            t.status === 'ACTIVE'
+                              ? 'Ngừng áp dụng gói này (Chuyển sang Inactive, không xóa)'
+                              : 'Kích hoạt lại gói này'
+                          }
+                          style={{
+                            flex: 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '5px',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: t.status === 'ACTIVE'
+                              ? '1px solid rgba(221, 107, 32, 0.35)'
+                              : '1px solid rgba(46, 125, 90, 0.35)',
+                            background: t.status === 'ACTIVE'
+                              ? 'rgba(221, 107, 32, 0.08)'
+                              : 'rgba(46, 125, 90, 0.08)',
+                            color: t.status === 'ACTIVE'
+                              ? '#DD6B20'
+                              : '#2E7D5A',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            transition: 'all 0.2s ease',
+                            opacity: 1
+                          }}
+                        >
+                          {t.status === 'ACTIVE' ? (
+                            <>
+                              <PowerOff size={13} />
+                              <span>Ngừng gói</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={13} />
+                              <span>Kích hoạt</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1173,22 +1274,38 @@ export const SpaManagementPage: React.FC = () => {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleTreatmentStatus(t)}
-                          style={{
-                            padding: '3px 8px',
-                            background: t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.15)' : 'rgba(113, 128, 150, 0.15)',
-                            color: t.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
-                            border: 'none',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {t.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                        </button>
+                        {canManageSpa ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTreatmentStatus(t)}
+                            style={{
+                              padding: '3px 8px',
+                              background: t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.15)' : 'rgba(113, 128, 150, 0.15)',
+                              color: t.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
+                              border: 'none',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {t.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                          </button>
+                        ) : (
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              background: t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.15)' : 'rgba(113, 128, 150, 0.15)',
+                              color: t.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'default'
+                            }}
+                          >
+                            {t.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
@@ -1200,36 +1317,40 @@ export const SpaManagementPage: React.FC = () => {
                           >
                             <Eye size={15} />
                           </button>
-                          <button
-                            type="button"
-                            className="hsw-action-btn"
-                            onClick={() => {
-                              setEditingTreatment(t);
-                            }}
-                            title="Chỉnh sửa liệu trình & đơn giá"
-                          >
-                            <Edit2 size={15} />
-                          </button>
-                          <button
-                            type="button"
-                            className="hsw-action-btn"
-                            onClick={() => handleToggleTreatmentStatus(t)}
-                            title={
-                              t.status === 'ACTIVE'
-                                ? 'Ngừng áp dụng gói'
-                                : 'Kích hoạt lại gói'
-                            }
-                            style={{
-                              color: t.status === 'ACTIVE' ? '#DD6B20' : '#2E7D5A',
-                              opacity: 1
-                            }}
-                          >
-                            {t.status === 'ACTIVE' ? (
-                              <PowerOff size={15} />
-                            ) : (
-                              <CheckCircle2 size={15} />
-                            )}
-                          </button>
+                          {canManageSpa && (
+                            <button
+                              type="button"
+                              className="hsw-action-btn"
+                              onClick={() => {
+                                setEditingTreatment(t);
+                              }}
+                              title="Chỉnh sửa liệu trình & đơn giá"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                          )}
+                          {canManageSpa && (
+                            <button
+                              type="button"
+                              className="hsw-action-btn"
+                              onClick={() => handleToggleTreatmentStatus(t)}
+                              title={
+                                t.status === 'ACTIVE'
+                                  ? 'Ngừng áp dụng gói'
+                                  : 'Kích hoạt lại gói'
+                              }
+                              style={{
+                                color: t.status === 'ACTIVE' ? '#DD6B20' : '#2E7D5A',
+                                opacity: 1
+                              }}
+                            >
+                              {t.status === 'ACTIVE' ? (
+                                <PowerOff size={15} />
+                              ) : (
+                                <CheckCircle2 size={15} />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1281,31 +1402,54 @@ export const SpaManagementPage: React.FC = () => {
                     {p.durationNights} Đêm
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleTogglePackageStatus(p)}
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    padding: '3px 10px',
-                    background: p.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }}
-                  title="Nhấn để ngừng gói hoặc kích hoạt lại"
-                >
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: p.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
-                  {p.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
-                </button>
+                {canManageSpa ? (
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePackageStatus(p)}
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      padding: '3px 10px',
+                      background: p.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                    title="Nhấn để ngừng gói hoặc kích hoạt lại"
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: p.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
+                    {p.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
+                  </button>
+                ) : (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      padding: '3px 10px',
+                      background: p.status === 'ACTIVE' ? '#2E7D5A' : '#718096',
+                      color: '#fff',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'default'
+                    }}
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: p.status === 'ACTIVE' ? '#48BB78' : '#E2E8F0' }}></span>
+                    {p.status === 'ACTIVE' ? 'Active' : 'Ngừng gói'}
+                  </span>
+                )}
               </div>
 
               {/* Package Details */}
@@ -1350,62 +1494,66 @@ export const SpaManagementPage: React.FC = () => {
                   >
                     Xem Chi Tiết
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    style={{ flex: 1 }}
-                    icon={<Edit2 size={14} />}
-                    onClick={() => {
-                      setEditingPackage(p);
-                    }}
-                    title="Chỉnh sửa gói retreat & biểu giá"
-                  >
-                    Chỉnh Sửa
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => handleTogglePackageStatus(p)}
-                    title={
-                      p.status === 'ACTIVE'
-                        ? 'Ngừng gói retreat này (Chuyển sang Inactive, không xóa)'
-                        : 'Kích hoạt lại gói này'
-                    }
-                    style={{
-                      flex: 1,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '5px',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: p.status === 'ACTIVE'
-                        ? '1px solid rgba(221, 107, 32, 0.35)'
-                        : '1px solid rgba(46, 125, 90, 0.35)',
-                      background: p.status === 'ACTIVE'
-                        ? 'rgba(221, 107, 32, 0.08)'
-                        : 'rgba(46, 125, 90, 0.08)',
-                      color: p.status === 'ACTIVE'
-                        ? '#DD6B20'
-                        : '#2E7D5A',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      transition: 'all 0.2s ease',
-                      opacity: 1
-                    }}
-                  >
-                    {p.status === 'ACTIVE' ? (
-                      <>
-                        <PowerOff size={13} />
-                        <span>Ngừng gói</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 size={13} />
-                        <span>Kích hoạt</span>
-                      </>
-                    )}
-                  </button>
+                  {canManageSpa && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      style={{ flex: 1 }}
+                      icon={<Edit2 size={14} />}
+                      onClick={() => {
+                        setEditingPackage(p);
+                      }}
+                      title="Chỉnh sửa gói retreat & biểu giá"
+                    >
+                      Chỉnh Sửa
+                    </Button>
+                  )}
+                  {canManageSpa && (
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePackageStatus(p)}
+                      title={
+                        p.status === 'ACTIVE'
+                          ? 'Ngừng gói retreat này (Chuyển sang Inactive, không xóa)'
+                          : 'Kích hoạt lại gói này'
+                      }
+                      style={{
+                        flex: 1,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: p.status === 'ACTIVE'
+                          ? '1px solid rgba(221, 107, 32, 0.35)'
+                          : '1px solid rgba(46, 125, 90, 0.35)',
+                        background: p.status === 'ACTIVE'
+                          ? 'rgba(221, 107, 32, 0.08)'
+                          : 'rgba(46, 125, 90, 0.08)',
+                        color: p.status === 'ACTIVE'
+                          ? '#DD6B20'
+                          : '#2E7D5A',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        transition: 'all 0.2s ease',
+                        opacity: 1
+                      }}
+                    >
+                      {p.status === 'ACTIVE' ? (
+                        <>
+                          <PowerOff size={13} />
+                          <span>Ngừng gói</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={13} />
+                          <span>Kích hoạt</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1661,6 +1809,7 @@ export const SpaManagementPage: React.FC = () => {
           setViewingTreatment(null);
           setEditingTreatment(t);
         }}
+        canEdit={canManageSpa}
       />
 
       {/* 4. Edit Retreat Package Modal */}
@@ -1687,6 +1836,7 @@ export const SpaManagementPage: React.FC = () => {
           setViewingPackage(null);
           setEditingPackage(p);
         }}
+        canEdit={canManageSpa}
       />
     </div>
   );

@@ -9,6 +9,7 @@ interface RetreatPackageDetailModalProps {
   pkg: RetreatPackageItem | null;
   onClose: () => void;
   onEdit: (pkg: RetreatPackageItem) => void;
+  canEdit?: boolean;
 }
 
 export const RetreatPackageDetailModal: React.FC<RetreatPackageDetailModalProps> = ({
@@ -16,6 +17,7 @@ export const RetreatPackageDetailModal: React.FC<RetreatPackageDetailModalProps>
   pkg,
   onClose,
   onEdit,
+  canEdit = true,
 }) => {
   const [liveTreatments, setLiveTreatments] = useState<PackageTreatmentMappingItem[]>([]);
   const [liveFnb, setLiveFnb] = useState<PackageFnBEntitlementItem | null>(null);
@@ -291,16 +293,18 @@ export const RetreatPackageDetailModal: React.FC<RetreatPackageDetailModalProps>
             <Button variant="secondary" onClick={onClose}>
               Đóng
             </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                onClose();
-                onEdit(pkg);
-              }}
-            >
-              <Edit2 size={15} style={{ marginRight: '6px' }} />
-              Chỉnh Sửa Gói
-            </Button>
+            {canEdit && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  onClose();
+                  onEdit(pkg);
+                }}
+              >
+                <Edit2 size={15} style={{ marginRight: '6px' }} />
+                Chỉnh Sửa Gói
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -439,6 +439,11 @@ export const VillaManagementPage: React.FC = () => {
   };
 
   const handleSaveVillaPrice = async (villaId: string, newRate: number, reason: string) => {
+    if (!canManagePricing) {
+      showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để sửa giá biệt thự.', 'error');
+      return;
+    }
+
     setVillas((prev) =>
       prev.map((v) => (v.id === villaId ? { ...v, nightlyRate: newRate } : v))
     );
@@ -477,6 +482,11 @@ export const VillaManagementPage: React.FC = () => {
   };
 
   const handleSavePackagePrice = async (pkgId: string, newBasePrice: number, reason: string) => {
+    if (!canManagePricing) {
+      showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để sửa giá gói nghỉ dưỡng.', 'error');
+      return;
+    }
+
     setPackages((prev) =>
       prev.map((p) => (p.id === pkgId ? { ...p, basePrice: newBasePrice } : p))
     );
@@ -518,6 +528,11 @@ export const VillaManagementPage: React.FC = () => {
     newModifier: number,
     reason: string
   ) => {
+    if (!canManagePricing) {
+      showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để sửa biểu giá hạng phòng.', 'error');
+      return;
+    }
+
     setCategories((prev) =>
       prev.map((c) =>
         c.id === categoryId
@@ -557,6 +572,11 @@ export const VillaManagementPage: React.FC = () => {
   };
 
   const handleAddPackage = (newPkg: RetreatPackageMaster) => {
+    if (!canManageInventory && !canManageCategories) {
+      showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để tạo gói nghỉ dưỡng.', 'error');
+      return;
+    }
+
     setPackages((prev) => [newPkg, ...prev]);
 
     fetch('http://localhost:8080/api/v1/retreat-packages', {
@@ -1420,7 +1440,7 @@ export const VillaManagementPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <button
+                        {canManagePricing && (<button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1443,7 +1463,7 @@ export const VillaManagementPage: React.FC = () => {
                         >
                           <DollarSign size={12} />
                           Sửa Giá
-                        </button>
+                        </button>)}
                       </div>
 
                       {/* Amenities Pills */}
@@ -1521,7 +1541,7 @@ export const VillaManagementPage: React.FC = () => {
                             <span style={{ fontWeight: 700, color: 'var(--accent-forest, #2d4a3e)', fontSize: '13px' }}>
                               {formatVND(villa.nightlyRate || 4500000)}
                             </span>
-                            <button
+                            {canManagePricing && (<button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1540,7 +1560,7 @@ export const VillaManagementPage: React.FC = () => {
                               title="Chỉnh sửa giá thuê đêm"
                             >
                               Sửa
-                            </button>
+                            </button>)}
                           </div>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
@@ -1763,14 +1783,14 @@ export const VillaManagementPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <Button
+                    {canManagePricing && (<Button
                       size="sm"
                       variant="secondary"
                       icon={<DollarSign size={13} />}
                       onClick={() => setEditingPriceCategory(cat)}
                     >
                       Sửa Giá & Phụ Thu
-                    </Button>
+                    </Button>)}
                   </div>
 
                   {/* Amenities text */}
@@ -1941,14 +1961,14 @@ export const VillaManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button
+                  {canManagePricing && (<Button
                     size="sm"
                     variant="primary"
                     icon={<DollarSign size={13} />}
                     onClick={() => setEditingPricePackage(pkg)}
                   >
                     Sửa Giá Gói
-                  </Button>
+                  </Button>)}
                 </div>
               </div>
             ))}
@@ -2320,7 +2340,7 @@ export const VillaManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button
+                  {canManagePricing && (<Button
                     type="button"
                     size="sm"
                     variant="primary"
@@ -2330,7 +2350,7 @@ export const VillaManagementPage: React.FC = () => {
                     }}
                   >
                     Chỉnh Sửa Giá Biệt Thự
-                  </Button>
+                  </Button>)}
                 </div>
               </div>
 

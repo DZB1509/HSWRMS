@@ -105,26 +105,32 @@ export interface MatrixDiffResponse {
   valid: boolean;
 }
 
+export interface DelegablePermissionDto {
+  permissionId: number;
+  module: string;
+  action: string;
+}
+
 export interface DelegationDto {
   delegationId: number;
   managerUserId: number;
   managerName?: string;
-  delegateeUserId: number;
-  delegateeName?: string;
+  grantedByAdminUserId?: number;
+  validFrom: string;
+  validUntil: string;
   status: 'PENDING' | 'ACTIVE' | 'REVOKED' | 'EXPIRED';
-  startsAt: string;
-  expiresAt: string;
-  revokedAt?: string;
-  revokeReason?: string;
-  createdAt: string;
   permissions: string[];
+  revokedAt?: string;
+  startsAt?: string;
+  expiresAt?: string;
+  createdAt?: string;
 }
 
 export interface DelegationCreateRequest {
-  delegateeUserId: number;
-  startsAt: string;
-  expiresAt: string;
+  managerUserId: number;
   permissionIds: number[];
+  validFrom: string;
+  validUntil: string;
 }
 
 export interface AuditLogEntryDto {

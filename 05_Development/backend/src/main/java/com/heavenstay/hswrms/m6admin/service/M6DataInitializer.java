@@ -93,27 +93,16 @@ public class M6DataInitializer implements ApplicationRunner {
         }
 
         try {
-            // Ensure S12 (Master Data Management) is not admin-only and MANAGER role has S12 permissions
+            // S12 (Master Data Management) is not admin-only so it can be delegated to the Manager.
+            // NOTE: MANAGER is no longer auto-granted S12 here; write rights come only via delegation.
             jdbc.execute("""
                 IF OBJECT_ID(N'dbo.Permission', N'U') IS NOT NULL
-                BEGIN
                     UPDATE dbo.Permission SET is_admin_only = 0 WHERE module_or_screen = 'S12';
-
-                    IF EXISTS (SELECT 1 FROM dbo.[Role] WHERE role_name = 'MANAGER')
-                    BEGIN
-                        INSERT INTO dbo.RolePermission (role_id, permission_id)
-                        SELECT r.role_id, p.permission_id
-                        FROM dbo.[Role] r, dbo.Permission p
-                        WHERE r.role_name = 'MANAGER' AND p.module_or_screen = 'S12'
-                          AND NOT EXISTS (
-                              SELECT 1 FROM dbo.RolePermission rp
-                              WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id
-                          );
-                    END
-                END
+                IF OBJECT_ID(N'dbo.Role', N'U') IS NOT NULL
+                    UPDATE dbo.[Role] SET role_name = UPPER(role_name) WHERE role_name IN ('Manager', 'Admin', 'Receptionist', 'Therapist');
             """);
         } catch (Exception ex) {
-            log.debug("Grant of S12 to MANAGER skipped: {}", ex.getMessage());
+            log.debug("S12 admin-only flag normalisation skipped: {}", ex.getMessage());
         }
 
         // 1. Roles
@@ -138,6 +127,27 @@ public class M6DataInitializer implements ApplicationRunner {
                         rolePermissionRepo.save(new RolePermission(id.getRoleId(), id.getPermissionId()));
                     }
                 }
+            }
+        }
+
+        // 2b. One-time migration: earlier builds granted S12 Create/Update/Deactivate to the MANAGER role,
+        // so revoked delegations had no effect. Strip those legacy grants (Manager keeps S12:V only) and
+        // make the write permissions delegable. A marker prevents overriding later Admin matrix edits.
+        final String s12Marker = "MIGRATION_S12_MANAGER_WRITE_REVOKED";
+        if (configRepo.findByConfigurationKey(s12Marker).isEmpty()) {
+            try {
+                jdbc.update("UPDATE dbo.Permission SET is_delegable = 1 "
+                        + "WHERE module_or_screen = 'S12' AND action_type IN ('C','U','D')");
+                jdbc.update("DELETE FROM dbo.RolePermission WHERE role_id IN "
+                        + "(SELECT role_id FROM dbo.[Role] WHERE role_name = 'MANAGER') "
+                        + "AND permission_id IN (SELECT permission_id FROM dbo.Permission "
+                        + "WHERE module_or_screen = 'S12' AND action_type IN ('C','U','D'))");
+                configRepo.save(new SystemConfiguration(s12Marker, "1", "INT",
+                        BigDecimal.ZERO, BigDecimal.ONE, "Flag",
+                        "Migration marker: legacy MANAGER S12 write grants revoked", false));
+                log.info("Revoked legacy S12 write permissions from MANAGER role.");
+            } catch (Exception ex) {
+                log.warn("S12 manager write revocation migration failed: {}", ex.getMessage());
             }
         }
 

@@ -12,6 +12,7 @@ import type {
   MatrixDiffResponse,
   DelegationDto,
   DelegationCreateRequest,
+  DelegablePermissionDto,
   AuditLogPageResponse,
   VillaCategoryDto,
   SpaTreatmentDto,
@@ -117,15 +118,18 @@ export const adminApi = {
     return unwrap(res);
   },
 
+  getDelegablePermissions: async (): Promise<DelegablePermissionDto[]> => {
+    const res = await apiClient.get<ApiResponse<DelegablePermissionDto[]>>('/admin/delegations/delegable-permissions');
+    return unwrap(res);
+  },
+
   createDelegation: async (body: DelegationCreateRequest): Promise<DelegationDto> => {
     const res = await apiClient.post<ApiResponse<DelegationDto>>('/admin/delegations', body);
     return unwrap(res);
   },
 
-  revokeDelegation: async (id: number, reason: string): Promise<DelegationDto> => {
-    const res = await apiClient.delete<ApiResponse<DelegationDto>>(`/admin/delegations/${id}`, {
-      params: { reason },
-    });
+  revokeDelegation: async (id: number): Promise<DelegationDto> => {
+    const res = await apiClient.post<ApiResponse<DelegationDto>>(`/admin/delegations/${id}/revoke`);
     return unwrap(res);
   },
 

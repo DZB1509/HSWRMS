@@ -87,7 +87,8 @@ public class UserAccount {
     }
 
     public boolean hasRole(String roleName) {
-        return roles.stream().anyMatch(r -> r.getRoleName().equals(roleName));
+        String canonical = Role.canonical(roleName);
+        return roles.stream().anyMatch(r -> java.util.Objects.equals(r.canonicalName(), canonical));
     }
 
     public boolean isActive() {

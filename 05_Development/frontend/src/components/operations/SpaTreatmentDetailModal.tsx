@@ -9,6 +9,7 @@ interface SpaTreatmentDetailModalProps {
   treatment: SpaTreatmentItem | null;
   onClose: () => void;
   onEdit: (treatment: SpaTreatmentItem) => void;
+  canEdit?: boolean;
 }
 
 export const SpaTreatmentDetailModal: React.FC<SpaTreatmentDetailModalProps> = ({
@@ -16,6 +17,7 @@ export const SpaTreatmentDetailModal: React.FC<SpaTreatmentDetailModalProps> = (
   treatment,
   onClose,
   onEdit,
+  canEdit = true,
 }) => {
   if (!isOpen || !treatment) return null;
 
@@ -214,16 +216,18 @@ export const SpaTreatmentDetailModal: React.FC<SpaTreatmentDetailModalProps> = (
             <Button variant="secondary" onClick={onClose}>
               Đóng
             </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                onClose();
-                onEdit(treatment);
-              }}
-            >
-              <Edit2 size={15} style={{ marginRight: '6px' }} />
-              Chỉnh Sửa Liệu Trình
-            </Button>
+            {canEdit && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  onClose();
+                  onEdit(treatment);
+                }}
+              >
+                <Edit2 size={15} style={{ marginRight: '6px' }} />
+                Chỉnh Sửa Liệu Trình
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -827,7 +827,8 @@ export const INITIAL_DELEGATIONS: AdminDelegation[] = [
     ],
     startsAt: '2026-09-27 08:00',
     expiresAt: '2026-11-30 23:59',
-    status: 'active',
+    status: 'revoked',
+    revokedAt: '2026-10-21 16:30',
     grantedBy: 'Alexander Wright (Quản trị viên)',
     reason: 'Ủy quyền tác nghiệp quản lý danh mục 27 biệt thự, chuyển trạng thái dọn dẹp/bảo trì và cấu hình tham số thời vụ.',
     createdAt: '2026-09-27 07:45'
