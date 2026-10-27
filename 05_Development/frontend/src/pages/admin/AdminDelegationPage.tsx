@@ -1,92 +1,141 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users2,
   Plus,
   ShieldAlert,
-  AlertTriangle,
   CheckCircle2,
   Ban,
-  X,
-  Sparkles
+  Clock,
+  RefreshCw,
+  AlertCircle,
+  Eye,
+  Lock,
+  Sparkles,
 } from 'lucide-react';
-import { useGovernance } from '../../hooks/useGovernance';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/common/Toast';
 import { Button } from '../../components/common/Button';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
-import type { CapabilityKey } from '../../types/governance';
+import {
+  delegationApi,
+  formatDelegationTime,
+  normalizeDelegationStatus,
+  validateDelegationAuthorization,
+  type DelegationViewDto,
+  type DelegablePermissionViewDto,
+} from '../../features/m6-admin/api/delegationApi';
+import {
+  MODULE_DESCRIPTIONS,
+  ACTION_NAMES,
+} from '../../features/m6-admin/api/permissionMatrixApi';
 
 export const AdminDelegationPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'common']);
-  const { delegations, createDelegation, revokeDelegation, permissionRules } = useGovernance();
+  const { currentUser } = useAuth();
   const { showToast } = useToast();
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
+  const { canView } = useMemo(
+    () => validateDelegationAuthorization(currentUser),
+    [currentUser]
+  );
 
-  // Form states for new delegation
-  const delegableRules = permissionRules.filter((r) => r.isDelegableToManager);
-  const [selectedCaps, setSelectedCaps] = useState<CapabilityKey[]>(['configure_business_parameters']);
-  const [durationHours, setDurationHours] = useState<number>(24);
-  const [reason, setReason] = useState<string>('');
-  const [formError, setFormError] = useState<string | null>(null);
+  const [delegations, setDelegations] = useState<DelegationViewDto[]>([]);
+  const [delegablePermissions, setDelegablePermissions] = useState<DelegablePermissionViewDto[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // Filter state
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const totalItems = delegations.length;
-  const paginatedDelegations = delegations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
-  const handleToggleCapability = (cap: CapabilityKey) => {
-    setSelectedCaps((prev) =>
-      prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
-    );
-  };
+  // Inspector state
+  const [selectedDelegation, setSelectedDelegation] = useState<DelegationViewDto | null>(null);
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedCaps.length === 0) {
-      setFormError(t('operations.delegation.errorNoCaps', 'Select at least one delegable capability.'));
-      return;
-    }
-    if (!reason.trim()) {
-      setFormError(t('operations.delegation.errorNoReason', 'Operational justification reason is mandatory for audit logging.'));
+  const loadData = useCallback(async () => {
+    if (!canView) {
+      setLoading(false);
+      setError('Bạn không có quyền truy cập Ủy Quyền Quản Lý (Yêu cầu quyền S52:V).');
       return;
     }
 
-    const now = new Date();
-    const startsAt = now.toISOString().replace('T', ' ').substring(0, 16);
-    const end = new Date(now.getTime() + durationHours * 3600 * 1000);
-    const expiresAt = end.toISOString().replace('T', ' ').substring(0, 16);
+    try {
+      setLoading(true);
+      setError(null);
 
-    const res = createDelegation({
-      delegateUserId: 'usr-mgr-01',
-      delegateName: 'Sarah Jenkins',
-      delegateRole: 'manager',
-      capabilities: selectedCaps,
-      startsAt,
-      expiresAt,
-      reason: reason.trim()
+      const [delegationList, delegables] = await Promise.all([
+        delegationApi.list(),
+        delegationApi.listDelegablePermissions(),
+      ]);
+
+      setDelegations(delegationList);
+      setDelegablePermissions(delegables);
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể tải danh sách ủy quyền từ máy chủ';
+      setError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [canView, showToast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Filtered delegations
+  const filteredDelegations = useMemo(() => {
+    return delegations.filter((del) => {
+      const status = normalizeDelegationStatus(del.status);
+      const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+
+      const q = searchQuery.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        del.managerName.toLowerCase().includes(q) ||
+        String(del.delegationId).includes(q) ||
+        del.permissions.some((p) => p.toLowerCase().includes(q));
+
+      return matchesStatus && matchesQuery;
     });
+  }, [delegations, statusFilter, searchQuery]);
 
-    if (!res.success) {
-      setFormError(res.error || 'Delegation creation failed');
-      showToast(res.error || 'Failed to grant delegation', 'error');
-    } else {
-      showToast(t('operations.delegation.createdSuccess', 'Limited delegation successfully granted to Sarah Jenkins (Manager)'), 'success');
-      setModalOpen(false);
-      setSelectedCaps(['configure_business_parameters']);
-      setReason('');
-      setFormError(null);
-    }
-  };
+  const totalItems = filteredDelegations.length;
+  const paginatedDelegations = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredDelegations.slice(start, start + pageSize);
+  }, [filteredDelegations, currentPage, pageSize]);
 
-  const handleRevokeConfirm = () => {
-    if (!revokeConfirmId) return;
-    revokeDelegation(revokeConfirmId, 'Immediate administrator manual revocation');
-    showToast(t('operations.delegation.revokedSuccess', 'Delegation revoked immediately. Audit event recorded.'), 'warning');
-    setRevokeConfirmId(null);
+  // Permission label helper
+  const renderPermissionBadge = (permCode: string) => {
+    const parts = permCode.split(':');
+    const mod = parts[0] || permCode;
+    const act = parts[1] || '';
+    const modName = MODULE_DESCRIPTIONS[mod]?.name || mod;
+    const actName = ACTION_NAMES[act]?.label || act;
+
+    return (
+      <span
+        key={permCode}
+        className="hsw-perm-badge delegable"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontSize: '11px',
+          padding: '2px 8px',
+          borderRadius: 'var(--radius-pill)',
+        }}
+        title={`${modName} (${actName})`}
+      >
+        <Sparkles size={10} />
+        <code>{permCode}</code> {modName}
+      </span>
+    );
   };
 
   return (
@@ -97,7 +146,7 @@ export const AdminDelegationPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
               <h1 className="hsw-gov-title">
-                {t('operations.delegation.pageTitle', 'Limited Admin Rights Delegation to Manager')}
+                {t('operations.delegation.pageTitle', 'Ủy Quyền Quản Lý (Admin Rights Delegation)')}
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -106,38 +155,113 @@ export const AdminDelegationPage: React.FC = () => {
                 letterSpacing: '0.06em',
                 padding: '3px 8px',
                 borderRadius: 'var(--radius-pill)',
-                backgroundColor: 'var(--actor-admin)',
-                color: 'var(--actor-admin-text)'
+                backgroundColor: 'var(--accent-sand)',
+                color: 'var(--text-primary)',
               }}>
-                {t('topbar.adminClearance', 'Administrator Clearance')}
+                Phân Hệ S52 (Chỉ Đọc & Tra Cứu)
               </span>
             </div>
             <p className="hsw-gov-subtitle">
-              {t('operations.delegation.pageSubtitle', 'Grant temporary, tightly scoped operational capabilities to Resort Operations Manager (Sarah Jenkins) without conferring unrestricted Admin authority.')}
+              {t('operations.delegation.pageSubtitle', 'Cấp quyền ủy quyền có thời hạn cho Quản lý vận hành (Manager) trong phạm vi cho phép, không chuyển giao toàn bộ quyền Quản trị.')}
             </p>
           </div>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setModalOpen(true)}
-            icon={<Plus size={15} />}
-          >
-            {t('operations.delegation.btnGrant', 'Grant Scoped Delegation')}
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={loadData}
+              disabled={loading}
+              icon={<RefreshCw size={14} className={loading ? 'hsw-spin' : ''} />}
+            >
+              {t('common.actions.refresh', 'Làm Mới')}
+            </Button>
+
+            {/* Mutation button disabled in Phase 5.4 */}
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={true}
+              icon={<Plus size={15} />}
+              title="Tính năng Cấp quyền ủy quyền mới (POST) tạm thời bị khóa trong Phase 5.4 (Read-Only Audit)"
+            >
+              Cấp Ủy Quyền (Đang Khóa)
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Privilege Escalation Safeguard Banner */}
-      <div className="hsw-gov-banner privacy">
+      <div className="hsw-gov-banner privacy" style={{ marginBottom: 'var(--space-4)' }}>
         <ShieldAlert size={18} style={{ color: 'var(--accent-terracotta)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.delegation.safeguardTitle', 'Privilege Escalation Protection (BR-06 Compliance)')}
+            {t('operations.delegation.safeguardTitle', 'Ranh Giới Kiểm Soát Leo Thang Đặc Quyền (Tuân Thủ Quy Tắc BR-06)')}
           </strong>
-          <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.delegation.safeguardDesc', 'Delegation is strictly restricted to approved operational functions. Administrative credential management, RBAC matrix reconfiguration, security audit review, and sub-delegation powers CANNOT be delegated to Manager.')}
+          <span style={{ display: 'block', marginTop: '2px', fontSize: 'var(--text-xs)' }}>
+            Ủy quyền chỉ áp dụng đối với các quyền nghiệp vụ có cờ <code>is_delegable = true</code> ({delegablePermissions.length} quyền cho phép: S50 Tham số kinh doanh, S53 Xem nhật ký kiểm toán, v.v.). Quyền quản lý tài khoản nhân viên (S10–S11), cấu hình ma trận phân quyền (S51), và bản thân chức năng ủy quyền (S52) là <strong>bất biến và KHÔNG THỂ ủy quyền cho Quản lý</strong>.
           </span>
+        </div>
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="hsw-gov-banner" style={{ backgroundColor: '#fbeeed', borderColor: 'var(--danger)', marginBottom: 'var(--space-4)' }}>
+          <AlertCircle size={18} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ flex: 1 }}>
+            <strong style={{ color: 'var(--danger)' }}>Không thể tải dữ liệu ủy quyền</strong>
+            <div style={{ fontSize: 'var(--text-xs)', marginTop: '2px', color: 'var(--text-secondary)' }}>{error}</div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={loadData}>Thử lại</Button>
+        </div>
+      )}
+
+      {/* Filter and Search Bar */}
+      <div className="hsw-gov-card" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Trạng thái:
+              </span>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="hsw-filter-select"
+                style={{ padding: '4px 8px', fontSize: 'var(--text-xs)', borderRadius: 'var(--radius-sm)' }}
+              >
+                <option value="ALL">Tất cả trạng thái ({delegations.length})</option>
+                <option value="ACTIVE">ACTIVE (Đang hiệu lực)</option>
+                <option value="PENDING">PENDING (Chờ kích hoạt)</option>
+                <option value="EXPIRED">EXPIRED (Hết hạn)</option>
+                <option value="REVOKED">REVOKED (Đã thu hồi)</option>
+              </select>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Tìm theo tên Quản lý, ID, mã quyền..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '4px 8px',
+                fontSize: 'var(--text-xs)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-medium)',
+                width: '240px',
+              }}
+            />
+          </div>
+
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Đang hiển thị <strong>{filteredDelegations.length}</strong> / {delegations.length} bản ghi ủy quyền
+          </div>
         </div>
       </div>
 
@@ -146,116 +270,150 @@ export const AdminDelegationPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <Users2 size={18} style={{ color: 'var(--accent-forest)' }} />
-            {t('operations.delegation.historyTitle', 'Delegation Records & Operational History')}
+            {t('operations.delegation.historyTitle', 'Lịch Sử Ủy Quyền Quản Trị Hệ Thống')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {delegations.filter((d) => d.status === 'active').length} {t('operations.delegation.activeCount', 'Active')} · {totalItems} Total
+            {delegations.filter((d) => normalizeDelegationStatus(d.status) === 'ACTIVE').length} Đang hiệu lực · {delegations.length} Tổng số
           </span>
         </div>
 
-        <div className="hsw-matrix-table-wrap">
-          <table className="hsw-matrix-table">
-            <thead>
-              <tr>
-                <th>{t('operations.delegation.colId', 'Delegation ID')}</th>
-                <th>{t('operations.delegation.colRecipient', 'Delegatee')}</th>
-                <th>{t('operations.delegation.colCapabilities', 'Granted Capabilities')}</th>
-                <th>{t('operations.delegation.colWindow', 'Active Window')}</th>
-                <th>{t('operations.delegation.colStatus', 'Status')}</th>
-                <th>{t('operations.delegation.colGrantor', 'Grantor & Reason')}</th>
-                <th style={{ textAlign: 'right' }}>{t('common.actions.title', 'Action')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedDelegations.map((del) => {
-                const isActive = del.status === 'active';
-                const isRevoked = del.status === 'revoked';
-                const isExpired = del.status === 'expired';
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--text-muted)' }}>
+            <RefreshCw size={24} className="hsw-spin" style={{ margin: '0 auto var(--space-3) auto', display: 'block' }} />
+            <span>Đang tải danh sách ủy quyền từ máy chủ...</span>
+          </div>
+        ) : paginatedDelegations.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--text-muted)' }}>
+            Không tìm thấy bản ghi ủy quyền nào phù hợp.
+          </div>
+        ) : (
+          <div className="hsw-matrix-table-wrap">
+            <table className="hsw-matrix-table">
+              <thead>
+                <tr>
+                  <th>Mã Ủy Quyền</th>
+                  <th>Quản Lý Nhận Quyền</th>
+                  <th>Danh Mục Quyền Được Ủy Quyền</th>
+                  <th>Thời Gian Hiệu Lực</th>
+                  <th>Trạng Thái</th>
+                  <th>Người Cấp</th>
+                  <th style={{ textAlign: 'right' }}>Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedDelegations.map((del) => {
+                  const status = normalizeDelegationStatus(del.status);
+                  const isActive = status === 'ACTIVE';
+                  const isPending = status === 'PENDING';
+                  const isExpired = status === 'EXPIRED';
+                  const isRevoked = status === 'REVOKED';
 
-                return (
-                  <tr key={del.id}>
-                    <td>
-                      <code style={{ fontWeight: 600, fontSize: '11px' }}>{del.id}</code>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Created {del.createdAt}</div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{del.delegateName}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
-                        {del.delegateRole} · {del.delegateUserId}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        {del.capabilities.map((c) => {
-                          const rule = permissionRules.find((r) => r.capability === c);
-                          return (
-                            <span key={c} className="hsw-perm-badge delegable" style={{ alignSelf: 'flex-start' }}>
-                              <Sparkles size={10} />
-                              {rule ? t(rule.nameKey, rule.defaultName) : c}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '11px', color: 'var(--text-primary)' }}>
-                        <strong>{t('operations.delegation.from', 'From')}:</strong> {del.startsAt}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        <strong>{t('operations.delegation.until', 'Until')}:</strong> {del.expiresAt}
-                      </div>
-                    </td>
-                    <td>
-                      {isActive && (
-                        <span className="hsw-audit-pill success" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          <CheckCircle2 size={11} />
-                          {t('common.status.active', 'ACTIVE')}
-                        </span>
-                      )}
-                      {isExpired && (
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                          {t('common.status.expired', 'EXPIRED')}
-                        </span>
-                      )}
-                      {isRevoked && (
-                        <span className="hsw-audit-pill denied" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          <Ban size={11} />
-                          {t('common.status.revoked', 'REVOKED')}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ maxWidth: '280px' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-primary)' }}>{del.grantedBy}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '2px' }}>
-                        "{del.reason}"
-                      </div>
-                      {del.revokedAt && (
-                        <div style={{ fontSize: '10px', color: 'var(--danger)', marginTop: '2px' }}>
-                          Revoked at {del.revokedAt}
+                  return (
+                    <tr
+                      key={del.delegationId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedDelegation(del)}
+                    >
+                      <td>
+                        <code style={{ fontWeight: 700, fontSize: '11px', backgroundColor: '#f2f0ea', padding: '2px 6px', borderRadius: '3px' }}>
+                          DEL-{del.delegationId}
+                        </code>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{del.managerName}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          Manager · ID: {del.managerUserId}
                         </div>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {isActive ? (
-                        <Button
-                          variant="tertiary"
-                          size="sm"
-                          onClick={() => setRevokeConfirmId(del.id)}
-                          style={{ color: 'var(--danger)' }}
-                          icon={<Ban size={13} />}
-                        >
-                          {t('operations.delegation.revoke', 'Revoke')}
-                        </Button>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {del.permissions && del.permissions.length > 0 ? (
+                            del.permissions.map((p) => renderPermissionBadge(p))
+                          ) : (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Không có quyền nào</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '11px', color: 'var(--text-primary)' }}>
+                          <strong>Từ:</strong> {formatDelegationTime(del.validFrom)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          <strong>Đến:</strong> {formatDelegationTime(del.validUntil)}
+                        </div>
+                      </td>
+                      <td>
+                        {isActive && (
+                          <span className="hsw-audit-pill success" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <CheckCircle2 size={11} />
+                            ACTIVE
+                          </span>
+                        )}
+                        {isPending && (
+                          <span className="hsw-audit-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: '#fef3c7', color: '#b45309' }}>
+                            <Clock size={11} />
+                            PENDING
+                          </span>
+                        )}
+                        {isExpired && (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            EXPIRED
+                          </span>
+                        )}
+                        {isRevoked && (
+                          <div>
+                            <span className="hsw-audit-pill denied" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Ban size={11} />
+                              REVOKED
+                            </span>
+                            {del.revokedAt && (
+                              <div style={{ fontSize: '10px', color: 'var(--danger)', marginTop: '2px' }}>
+                                Thu hồi lúc: {formatDelegationTime(del.revokedAt)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '11px', color: 'var(--text-primary)' }}>
+                          Admin ID: {del.grantedByAdminUserId}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <Button
+                            variant="tertiary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDelegation(del);
+                            }}
+                            icon={<Eye size={13} />}
+                            title="Xem chi tiết ủy quyền"
+                          >
+                            Chi Tiết
+                          </Button>
+
+                          {/* Revoke button disabled in Phase 5.4 */}
+                          <Button
+                            variant="tertiary"
+                            size="sm"
+                            disabled={true}
+                            style={{ color: 'var(--danger)' }}
+                            icon={<Lock size={12} />}
+                            title="Tính năng Thu hồi ủy quyền (POST /revoke) tạm thời bị khóa trong Phase 5.4 (Read-Only Audit)"
+                          >
+                            Thu Hồi (Khóa)
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {totalItems > pageSize && (
           <div style={{ marginTop: 'var(--space-4)' }}>
@@ -271,178 +429,47 @@ export const AdminDelegationPage: React.FC = () => {
         )}
       </div>
 
-      {/* Grant Delegation Modal */}
-      {modalOpen && (
-        <div className="hsw-modal-overlay">
-          <div className="hsw-modal-box">
-            <div className="hsw-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <Users2 size={20} style={{ color: 'var(--accent-forest)' }} />
-                <h3 className="hsw-modal-title">
-                  {t('operations.delegation.modalTitle', 'Grant Limited Operational Delegation')}
-                </h3>
+      {/* Selected Delegation Inspector Drawer / Card */}
+      {selectedDelegation && (
+        <div className="hsw-gov-card" style={{ marginTop: 'var(--space-4)', backgroundColor: '#faf9f6' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                <Users2 size={16} style={{ color: 'var(--accent-forest)' }} />
+                <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+                  Chi Tiết Bản Ghi Ủy Quyền DEL-{selectedDelegation.delegationId} ↔ {selectedDelegation.managerName}
+                </h4>
+                <span className={`hsw-audit-pill ${normalizeDelegationStatus(selectedDelegation.status) === 'ACTIVE' ? 'success' : 'denied'}`}>
+                  {selectedDelegation.status}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            <form onSubmit={handleCreateSubmit}>
-              {/* Recipient fixed to Sarah Jenkins (Manager) */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.delegateeLabel', 'Designated Delegatee')}
-                </label>
-                <div style={{ padding: 'var(--space-2) var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}>
-                  <strong>Sarah Jenkins</strong> — Resort Operations Manager (<code>usr-mgr-01</code>)
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 'var(--space-2)' }}>
+                <div><strong>Quản lý nhận quyền:</strong> {selectedDelegation.managerName} (User ID: {selectedDelegation.managerUserId})</div>
+                <div><strong>Quản trị viên cấp quyền:</strong> Admin ID {selectedDelegation.grantedByAdminUserId}</div>
+                <div><strong>Khoảng thời gian hiệu lực:</strong> {formatDelegationTime(selectedDelegation.validFrom)} đến {formatDelegationTime(selectedDelegation.validUntil)}</div>
+                {selectedDelegation.revokedAt && (
+                  <div style={{ color: 'var(--danger)' }}><strong>Thời điểm thu hồi:</strong> {formatDelegationTime(selectedDelegation.revokedAt)}</div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <strong style={{ fontSize: 'var(--text-xs)', display: 'block', marginBottom: '4px' }}>
+                  Danh sách quyền được ủy quyền ({selectedDelegation.permissions.length}):
+                </strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {selectedDelegation.permissions.map((p) => renderPermissionBadge(p))}
                 </div>
               </div>
-
-              {/* Scoped Capabilities Checkboxes */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.selectCapsLabel', 'Select Delegable Capabilities (Whitelisted Scope Only)')}
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  {delegableRules.map((r) => {
-                    const checked = selectedCaps.includes(r.capability);
-                    return (
-                      <label
-                        key={r.capability}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: 'var(--space-2)',
-                          padding: 'var(--space-2)',
-                          backgroundColor: checked ? '#f4faf6' : '#faf9f6',
-                          border: checked ? '1px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => handleToggleCapability(r.capability)}
-                          style={{ marginTop: '2px' }}
-                        />
-                        <div>
-                          <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', display: 'block' }}>
-                            {t(r.nameKey, r.defaultName)}
-                          </strong>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                            {t(r.descriptionKey, r.defaultDescription)}
-                          </span>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Duration Select */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.durationLabel', 'Delegation Active Window Duration')}
-                </label>
-                <select
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(Number(e.target.value))}
-                  style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
-                >
-                  <option value={8}>8 Hours (Single Shift Coverage)</option>
-                  <option value={24}>24 Hours (Next Day Operations)</option>
-                  <option value={48}>48 Hours (Weekend Coverage)</option>
-                  <option value={168}>7 Days (Weekly Management Duty)</option>
-                </select>
-              </div>
-
-              {/* Justification Reason */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  {t('operations.delegation.reasonLabel', 'Operational Justification (Mandatory for Audit Trail)')}
-                </label>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g., Weather advisory requires manager authority to adjust cancellation window during weekend shift."
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-2)',
-                    fontSize: 'var(--text-xs)',
-                    border: '1px solid var(--border-medium)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontFamily: 'inherit',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              {formError && (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', marginBottom: 'var(--space-3)' }}>
-                  {formError}
-                </div>
-              )}
-
-              <div className="hsw-modal-actions">
-                <Button variant="secondary" size="sm" type="button" onClick={() => setModalOpen(false)}>
-                  {t('common.actions.cancel', 'Cancel')}
-                </Button>
-                <Button variant="primary" size="sm" type="submit">
-                  {t('operations.delegation.btnSubmitGrant', 'Authorize Delegation')}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Revoke Confirmation Modal */}
-      {revokeConfirmId && (
-        <div className="hsw-modal-overlay">
-          <div className="hsw-modal-box">
-            <div className="hsw-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <AlertTriangle size={20} style={{ color: 'var(--danger)' }} />
-                <h3 className="hsw-modal-title">
-                  {t('operations.delegation.revokeModalTitle', 'Confirm Immediate Delegation Revocation')}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRevokeConfirmId(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                <X size={18} />
-              </button>
             </div>
 
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {t('operations.delegation.revokePrompt', 'Are you sure you want to revoke delegation record')} <strong>{revokeConfirmId}</strong>?
-            </p>
-
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              {t('operations.delegation.revokeNotice', 'The delegated capability will immediately cease to be available to Sarah Jenkins. The record will remain archived in the delegation history and a revocation event will be committed to the Sensitive Governance Audit Log.')}
-            </p>
-
-            <div className="hsw-modal-actions">
-              <Button variant="secondary" size="sm" onClick={() => setRevokeConfirmId(null)}>
-                {t('common.actions.cancel', 'Cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleRevokeConfirm}
-                style={{ backgroundColor: 'var(--danger)' }}
-              >
-                {t('operations.delegation.confirmRevoke', 'Revoke Authority Immediately')}
-              </Button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedDelegation(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}
+            >
+              Đóng
+            </button>
           </div>
         </div>
       )}
