@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
-import { useCustomer } from '../../context/CustomerContext';
-import { isItemDietaryCompatible } from '../../utils/dietaryFilter';
 import type { DietaryMenuItem, MealPeriod, LocalizedString } from '../../types/dining';
-import { Search, Info, AlertCircle, CalendarCheck, Coffee, ShieldCheck } from 'lucide-react';
+import { Search, Info, AlertCircle, CalendarCheck, Coffee } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
@@ -12,7 +10,6 @@ import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 export const DietaryMenuPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const { menuItems, getDietaryProjection } = useDining();
-  const { wellnessProfile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -25,18 +22,9 @@ export const DietaryMenuPage: React.FC = () => {
   const customerId = 'usr-cust-01';
   const dietaryInfo = getDietaryProjection(customerId);
 
-  // Active dietary restrictions & allergies from wellness profile
-  const dietaryRestrictions = wellnessProfile?.dietaryProfile?.dietaryRestrictions?.length
-    ? wellnessProfile.dietaryProfile.dietaryRestrictions
-    : dietaryInfo.dietaryRestrictions;
-  const allergies = wellnessProfile?.dietaryProfile?.allergies?.length
-    ? wellnessProfile.dietaryProfile.allergies
-    : dietaryInfo.allergies;
-
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [activePeriod, setActivePeriod] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterSafeOnly, setFilterSafeOnly] = useState<boolean>(true);
 
   const categories = [
     { key: 'all', labelKey: 'dining.categories.all', defaultLabel: 'All Offerings' },
@@ -56,11 +44,6 @@ export const DietaryMenuPage: React.FC = () => {
       item.mealPeriods.includes(activePeriod as MealPeriod) ||
       item.mealPeriods.includes('all_day');
 
-    // Dietary & allergy strict filter
-    const matchesDietary =
-      !filterSafeOnly || isItemDietaryCompatible(item, dietaryRestrictions, allergies);
-    if (!matchesDietary) return false;
-
     if (!searchQuery.trim()) {
       return matchesCategory && matchesPeriod;
     }
@@ -74,7 +57,7 @@ export const DietaryMenuPage: React.FC = () => {
   });
 
   const hasAllergyWarning = (item: DietaryMenuItem) => {
-    return item.allergenTags.some((tag) => allergies.includes(tag.toLowerCase()));
+    return item.allergenTags.some((tag) => dietaryInfo.allergies.includes(tag.toLowerCase()));
   };
 
   return (
@@ -170,79 +153,6 @@ export const DietaryMenuPage: React.FC = () => {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Personalized Dietary Safeguard Indicator */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          backgroundColor: filterSafeOnly ? 'rgba(46, 125, 50, 0.08)' : 'var(--surface-muted, #f8f9fa)',
-          border: `1px solid ${filterSafeOnly ? 'rgba(46, 125, 50, 0.28)' : 'var(--border-subtle, #e0e0e0)'}`,
-          borderRadius: 'var(--radius-md, 12px)',
-          padding: '14px 20px',
-          marginBottom: 'var(--space-6, 24px)',
-          boxShadow: filterSafeOnly ? '0 2px 8px rgba(46, 125, 50, 0.08)' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <ShieldCheck size={24} style={{ color: filterSafeOnly ? '#2e7d32' : 'var(--text-secondary)' }} />
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {filterSafeOnly ? (
-                <>
-                  {t('dining.menu.filteredTitle', 'Đang tự động lọc theo Hồ sơ sức khỏe của bạn')}:{' '}
-                  <span style={{ color: 'var(--accent-forest, #2e7d32)' }}>
-                    {dietaryRestrictions.join(', ') || 'Ăn chay'}
-                  </span>
-                  {allergies.length > 0 && (
-                    <span style={{ color: 'var(--text-danger, #d32f2f)', marginLeft: '8px', fontSize: '12px' }}>
-                      (Tránh dị ứng: {allergies.join(', ')})
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>{t('dining.menu.allTitle', 'Đang hiển thị toàn bộ thực đơn khu nghỉ dưỡng (Bao gồm thịt, cá, hải sản)')}</>
-              )}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              {filterSafeOnly
-                ? t(
-                    'dining.menu.filteredDesc',
-                    'Các món chứa thịt động vật, cá và chất gây dị ứng đã được tự động ẩn để đảm bảo nguyên tắc dưỡng sinh an toàn tuyệt đối.'
-                  )
-                : t(
-                    'dining.menu.allDesc',
-                    'Cảnh báo: Một số món chứa thịt đỏ, cá/hải sản hoặc chất gây dị ứng có thể không phù hợp với thể trạng của bạn.'
-                  )}
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="hsw-btn"
-          style={{
-            padding: '7px 16px',
-            fontSize: '12px',
-            fontWeight: 600,
-            borderRadius: 'var(--radius-pill, 20px)',
-            cursor: 'pointer',
-            border: filterSafeOnly ? '1px solid var(--border-subtle, #ccc)' : 'none',
-            backgroundColor: filterSafeOnly ? 'var(--surface, #fff)' : 'var(--accent-forest, #2e7d32)',
-            color: filterSafeOnly ? 'var(--text-primary)' : '#fff',
-            transition: 'all 0.2s ease',
-          }}
-          onClick={() => setFilterSafeOnly(!filterSafeOnly)}
-          id="toggle-dietary-filter"
-        >
-          {filterSafeOnly
-            ? t('dining.menu.viewAll', 'Xem tất cả món (Tắt lọc)')
-            : t('dining.menu.viewSafeOnly', '🌿 Bật lọc an toàn (Chỉ món phù hợp)')}
-        </button>
       </div>
 
       {/* Culinary Cards Grid (3 cols desktop, 2 tablet, 1 mobile) */}

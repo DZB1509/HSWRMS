@@ -8,8 +8,8 @@ import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import type { LocalizedString, MealPrepEntry, FnbFulfillmentStatus, MealPeriod } from '../../types/dining';
 import { fnbApi } from '../../features/m4-fnb/api/fnbApi';
-import { AmanoiServiceLocationBadge } from '../../components/dining/AmanoiServiceLocationBadge';
-import { parseDiningNotes } from '../../utils/diningServiceHelper';
+import { AmanoiServiceLocationBadge } from '../../components/dining/ServiceLocationBadge';
+import { parseDiningNotes, getLocalDateString } from '../../utils/diningServiceHelper';
 import { cleanMojibake } from '../../utils/textEncodingHelper';
 
 
@@ -40,10 +40,10 @@ export const MealOrderDetailPage: React.FC = () => {
   // 1. Resolve from DiningContext getOrderById (searches all local, customer-created, and mock orders)
   let item: MealPrepEntry | undefined = getOrderById && id ? getOrderById(id) : undefined;
 
-  // 2. Fallback search across canonical dates and current dates
+  // 2. Fallback search across current date and historical canonical dates
   if (!item && id) {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const datesToSearch = ['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2024-12-05', todayStr];
+    const todayStr = getLocalDateString();
+    const datesToSearch = [todayStr, '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2024-12-05'];
     for (const d of datesToSearch) {
       const list = getDailyPrepList(d);
       const found = list.find((i) => i.id === id || i.id.replace(/\D/g, '') === id.replace(/\D/g, ''));
@@ -74,9 +74,9 @@ export const MealOrderDetailPage: React.FC = () => {
                 date: ko.orderDate || new Date().toISOString().split('T')[0],
                 mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
                 targetTime: ko.mealType ? ko.mealType.toLowerCase() : 'breakfast',
-                customerName: ko.customerFirstName ? `${ko.customerFirstName}` : 'Eleanor Vance',
+                customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName}` : 'Eleanor Vance',
                 villaNumber: ko.villaNumber || 'Villa #102 (Tranquil Garden)',
-                items: (ko.lines || []).map((line) => ({
+                items: ((ko.items || ko.lines || []) as any[]).map((line) => ({
                   menuItemId: String(line.menuItemId),
                   quantity: line.quantity,
                   notes: ko.specialNotes || undefined,
@@ -84,7 +84,7 @@ export const MealOrderDetailPage: React.FC = () => {
                   inventoryMessage: line.inventoryMessage,
                 })),
                 customerNotes: ko.specialNotes || undefined,
-                dietaryNotes: [...(ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
+                dietaryNotes: [...(ko.allergies || ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
                 dietaryVerificationStatus: (ko.dietaryVerificationStatus as any) || 'UNVERIFIED',
                 locationVerificationStatus: (ko.locationVerificationStatus as any) || 'VERIFIED_VILLA',
                 folioPostingStatus: (ko.folioPostingStatus as any) || (ko.orderType === 'A_LA_CARTE' ? 'PENDING_RECONCILIATION' : 'NOT_APPLICABLE'),
@@ -104,6 +104,14 @@ export const MealOrderDetailPage: React.FC = () => {
       }
     }
   }, [id, item, isLoadingRemote]);
+
+  if (isLoadingRemote) {
+    return (
+      <div className="hsw-page-container" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p style={{ color: 'var(--text-secondary)' }}>Đang tải chi tiết đơn hàng...</p>
+      </div>
+    );
+  }
 
   if (!item) {
     return (
@@ -181,7 +189,7 @@ export const MealOrderDetailPage: React.FC = () => {
     );
   };
 
-  const handleStatusChange = (newStatus: 'pending' | 'preparing' | 'ready' | 'delivered') => {
+  const handleStatusChange = (newStatus: FnbFulfillmentStatus) => {
     updateFulfillmentStatus(item!.id, item!.type, newStatus);
     const numId = parseInt(item!.id.replace(/\D/g, ''), 10);
     if (!isNaN(numId) && numId > 0) {
@@ -194,9 +202,9 @@ export const MealOrderDetailPage: React.FC = () => {
               date: ko.orderDate || new Date().toISOString().split('T')[0],
               mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
               targetTime: ko.mealType ? ko.mealType.toLowerCase() : 'breakfast',
-              customerName: ko.customerFirstName ? `${ko.customerFirstName}` : 'Eleanor Vance',
+              customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName}` : 'Eleanor Vance',
               villaNumber: ko.villaNumber || 'Villa #102 (Tranquil Garden)',
-              items: (ko.lines || []).map((line) => ({
+              items: ((ko.items || ko.lines || []) as any[]).map((line) => ({
                 menuItemId: String(line.menuItemId),
                 quantity: line.quantity,
                 notes: ko.specialNotes || undefined,
@@ -204,7 +212,7 @@ export const MealOrderDetailPage: React.FC = () => {
                 inventoryMessage: line.inventoryMessage,
               })),
               customerNotes: ko.specialNotes || undefined,
-              dietaryNotes: [...(ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
+              dietaryNotes: [...(ko.allergies || ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
               dietaryVerificationStatus: (ko.dietaryVerificationStatus as any) || 'UNVERIFIED',
               locationVerificationStatus: (ko.locationVerificationStatus as any) || 'VERIFIED_VILLA',
               folioPostingStatus: (ko.folioPostingStatus as any) || (ko.orderType === 'A_LA_CARTE' ? 'PENDING_RECONCILIATION' : 'NOT_APPLICABLE'),
@@ -276,10 +284,11 @@ export const MealOrderDetailPage: React.FC = () => {
                 value={item.status}
                 onChange={(e) => handleStatusChange(e.target.value as any)}
               >
-                <option value="pending">{t('fnb.prepList.statusPending', 'PENDING')}</option>
-                <option value="preparing">{t('fnb.prepList.statusPreparing', 'PREPARING')}</option>
-                <option value="ready">{t('fnb.prepList.statusReady', 'READY')}</option>
-                <option value="delivered">{t('fnb.prepList.statusDelivered', 'DELIVERED')}</option>
+                <option value="pending" disabled={item.status !== 'pending'}>{t('fnb.prepList.statusPending', 'PENDING')}</option>
+                <option value="preparing" disabled={item.status !== 'pending' && item.status !== 'preparing'}>{t('fnb.prepList.statusPreparing', 'PREPARING')}</option>
+                <option value="ready" disabled={item.status !== 'preparing' && item.status !== 'ready'}>{t('fnb.prepList.statusReady', 'READY')}</option>
+                <option value="delivered" disabled={item.status !== 'ready' && item.status !== 'delivered'}>{t('fnb.prepList.statusDelivered', 'DELIVERED')}</option>
+                <option value="cancelled" disabled={item.status === 'delivered' || item.status === 'cancelled'}>{t('fnb.prepList.statusCancelled', 'CANCELLED')}</option>
               </select>
             </div>
             {item.inventoryStatus && (

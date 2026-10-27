@@ -19,13 +19,11 @@ import { useNavigate } from 'react-router-dom';
 import { fnbApi } from '../../features/m4-fnb/api/fnbApi';
 import type {
   IngredientDemandResponse,
-  MenuAvailabilityResponse,
   FnbDashboardResponse,
 } from '../../features/m4-fnb/types/fnbDto';
 
 import { cleanMojibake } from '../../utils/textEncodingHelper';
-
-const CANONICAL_RESORT_DATE = '2026-09-24';
+import { getLocalDateString } from '../../utils/diningServiceHelper';
 
 export const FnbDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
@@ -34,10 +32,9 @@ export const FnbDashboardPage: React.FC = () => {
 
   const currentLang = (i18n.language?.startsWith('vi') ? 'vi' : 'en') as 'vi' | 'en';
 
-  const [resortDate, setResortDate] = useState(CANONICAL_RESORT_DATE);
+  const [resortDate, setResortDate] = useState(() => getLocalDateString());
   const [demandFilter, setDemandFilter] = useState<'all' | 'shortage' | 'covered'>('all');
   const [ingredientDemand, setIngredientDemand] = useState<IngredientDemandResponse[]>([]);
-  const [menuAvailability, setMenuAvailability] = useState<MenuAvailabilityResponse[]>([]);
   const [dashboardMetrics, setDashboardMetrics] = useState<FnbDashboardResponse | null>(null);
   const [apiOnline, setApiOnline] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -51,7 +48,6 @@ export const FnbDashboardPage: React.FC = () => {
         setDashboardMetrics(response);
         setApiOnline(true);
         setIngredientDemand(response.ingredientDemand || []);
-        setMenuAvailability(response.menuAvailability || []);
       }
       if (fetchKitchenOrders) {
         await fetchKitchenOrders(date);
@@ -532,81 +528,7 @@ export const FnbDashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* 4. MENU ITEM AVAILABILITY & SERVING CAPACITY */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-md)',
-          padding: 'var(--space-4)',
-          marginBottom: 'var(--space-6)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-          <div>
-            <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, margin: 0 }}>
-              {t('fnb.dashboard.menuCapacityTitle', 'Menu Capacity & Serving Availability')}
-            </h3>
-            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-              Servings calculable from current usable stock before ingredient exhaustion
-            </div>
-          </div>
-          <button
-            type="button"
-            className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
-            onClick={() => navigate('/customer/dining/menu')}
-          >
-            <span>View Catalog</span>
-            <ChevronRight size={14} />
-          </button>
-        </div>
-
-        {menuAvailability.length === 0 ? (
-          <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-soft)', borderRadius: 'var(--radius-sm)' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              {apiOnline
-                ? 'Chưa có thực đơn nào được cấu hình công thức nguyên liệu trong hệ thống'
-                : 'Chưa có dữ liệu công thức món ăn'}
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 'var(--space-3)' }}>
-            {menuAvailability.map((menu) => (
-              <div
-                key={menu.menuItemId}
-                style={{
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: 'var(--space-3)',
-                  background: menu.available ? 'var(--bg-soft)' : '#fff8f7',
-                  borderLeft: menu.available ? '3px solid var(--accent-forest)' : '3px solid #ef4444',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(menu.itemName)}</span>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: 'var(--radius-xs)',
-                      backgroundColor: menu.available ? '#edf3ee' : '#fee2e2',
-                      color: menu.available ? 'var(--accent-forest)' : '#b91c1c',
-                    }}
-                  >
-                    {menu.available ? `${menu.servingsAvailable} Servings` : 'UNAVAILABLE'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                  {menu.reason}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 5. Urgent Prep Queue Preview Section */}
+      {/* 4. Urgent Prep Queue Preview Section */}
       <div
         style={{
           background: 'var(--surface)',

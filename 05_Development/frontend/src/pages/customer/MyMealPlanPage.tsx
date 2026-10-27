@@ -9,7 +9,7 @@ import { Calendar, Coffee, Info, Receipt, ListOrdered } from 'lucide-react';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
-import { AmanoiServiceLocationBadge } from '../../components/dining/AmanoiServiceLocationBadge';
+import { AmanoiServiceLocationBadge } from '../../components/dining/ServiceLocationBadge';
 import { parseDiningNotes } from '../../utils/diningServiceHelper';
 
 

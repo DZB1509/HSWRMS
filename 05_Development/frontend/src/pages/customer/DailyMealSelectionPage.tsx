@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee, Sh
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
-import { AmanoiDiningLocationPicker } from '../../components/dining/AmanoiDiningLocationPicker';
+import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
 import {
   parseDiningNotes,
   buildAmanoiDiningNotes,
@@ -40,8 +40,7 @@ export const DailyMealSelectionPage: React.FC = () => {
 
   const [activeDate, setActiveDate] = useState<string>('');
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [portionCount, setPortionCount] = useState<number>(1);
+  const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
   const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('DINING_PAVILION');
   const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState('');
@@ -92,15 +91,23 @@ export const DailyMealSelectionPage: React.FC = () => {
     if (activeDate && activeBooking) {
       const existing = getMealSelection(activeBooking.id, activeDate, activePeriod);
       if (existing) {
-        setSelectedItemId(existing.menuItemIds[0] || null);
-        setPortionCount(existing.quantity || (existing.items && existing.items[0]?.quantity) || 1);
+        const itemMap: Record<string, number> = {};
+        if (existing.items && existing.items.length > 0) {
+          existing.items.forEach(it => {
+            if (it.menuItemId) itemMap[it.menuItemId] = it.quantity || 1;
+          });
+        } else if (existing.menuItemIds && existing.menuItemIds.length > 0) {
+          existing.menuItemIds.forEach(id => {
+            itemMap[id] = existing.quantity || 1;
+          });
+        }
+        setSelectedItems(itemMap);
         const parsed = parseDiningNotes(existing.notes);
         setDiningLocation(parsed.location);
         setSelectedWellnessTags(parsed.wellnessTags);
         setCustomNotes(parsed.cleanNotes);
       } else {
-        setSelectedItemId(null);
-        setPortionCount(1);
+        setSelectedItems({});
         setDiningLocation('DINING_PAVILION');
         setSelectedWellnessTags([]);
         setCustomNotes('');
@@ -126,8 +133,10 @@ export const DailyMealSelectionPage: React.FC = () => {
     );
   };
 
+  const selectedEntries = Object.entries(selectedItems).filter(([_, qty]) => qty > 0);
+
   const handleSave = () => {
-    if (!activeBooking || !selectedItemId) return;
+    if (!activeBooking || selectedEntries.length === 0) return;
     const finalNotes = buildAmanoiDiningNotes(
       diningLocation,
       selectedWellnessTags,
@@ -135,21 +144,27 @@ export const DailyMealSelectionPage: React.FC = () => {
       activeBooking.villaNumber
     );
 
+    const items = selectedEntries.map(([mId, qty]) => ({
+      menuItemId: mId,
+      quantity: qty,
+      notes: finalNotes,
+    }));
+    const menuItemIds = selectedEntries.map(([mId]) => mId);
+    const totalPortions = selectedEntries.reduce((sum, [_, qty]) => sum + qty, 0);
+
     saveMealSelection({
       bookingId: activeBooking.id,
       customerId,
       date: activeDate,
       mealPeriod: activePeriod,
-      menuItemIds: [selectedItemId],
-      quantity: portionCount,
-      items: [{ menuItemId: selectedItemId, quantity: portionCount, notes: finalNotes }],
+      menuItemIds,
+      quantity: totalPortions,
+      items,
       notes: finalNotes,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3500);
   };
-
-  const selectedItem = menuItems.find((m) => m.id === selectedItemId);
 
 
   if (!activeBooking) {
@@ -429,11 +444,25 @@ export const DailyMealSelectionPage: React.FC = () => {
                 }}
               >
                 {availableItems.map((item) => {
-                  const isSelected = selectedItemId === item.id;
+                  const isSelected = Boolean(selectedItems[item.id]);
+                  const itemPortion = selectedItems[item.id] || 1;
                   const warning = hasAllergyWarning(item);
                   const localizedName = localize(item.name);
                   const localizedDesc = localize(item.description);
                   const isAvailable = item.available !== false && (item.availableServings === undefined || item.availableServings > 0);
+
+                  const toggleSelection = () => {
+                    if (!isAvailable) return;
+                    setSelectedItems((prev) => {
+                      const next = { ...prev };
+                      if (next[item.id]) {
+                        delete next[item.id];
+                      } else {
+                        next[item.id] = 1;
+                      }
+                      return next;
+                    });
+                  };
 
                   return (
                     <div
@@ -444,25 +473,15 @@ export const DailyMealSelectionPage: React.FC = () => {
                         cursor: isAvailable ? 'pointer' : 'not-allowed',
                         position: 'relative',
                       }}
-                      onClick={() => {
-                        if (!isAvailable) return;
-                        if (selectedItemId !== item.id) {
-                          setSelectedItemId(item.id);
-                          setPortionCount(1);
-                        }
-                      }}
+                      onClick={toggleSelection}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          if (!isAvailable) return;
-                          if (selectedItemId !== item.id) {
-                            setSelectedItemId(item.id);
-                            setPortionCount(1);
-                          }
+                          toggleSelection();
                         }
                       }}
                       tabIndex={isAvailable ? 0 : -1}
-                      role="radio"
+                      role="checkbox"
                       aria-checked={isSelected}
                       aria-disabled={!isAvailable}
                       id={`select-card-${item.id}`}
@@ -570,20 +589,37 @@ export const DailyMealSelectionPage: React.FC = () => {
                                 type="button"
                                 className="hsw-btn hsw-btn-secondary hsw-btn-sm"
                                 style={{ padding: '0 8px', height: '26px', minWidth: '26px', fontWeight: 700 }}
-                                onClick={() => setPortionCount((prev) => Math.max(1, prev - 1))}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItems((prev) => {
+                                    const current = prev[item.id] || 1;
+                                    if (current <= 1) {
+                                      const next = { ...prev };
+                                      delete next[item.id];
+                                      return next;
+                                    }
+                                    return { ...prev, [item.id]: current - 1 };
+                                  });
+                                }}
                                 id={`btn-portion-dec-${item.id}`}
-                                title="Giảm số lượng"
+                                title="Giảm số lượng (hoặc bỏ chọn nếu về 0)"
                               >
                                 -
                               </button>
                               <span style={{ fontWeight: 700, fontSize: '13px', minWidth: '60px', textAlign: 'center', color: 'var(--text-primary)' }}>
-                                {portionCount} {t('dining.select.portion', 'suất')}
+                                {itemPortion} {t('dining.select.portion', 'suất')}
                               </span>
                               <button
                                 type="button"
                                 className="hsw-btn hsw-btn-secondary hsw-btn-sm"
                                 style={{ padding: '0 8px', height: '26px', minWidth: '26px', fontWeight: 700 }}
-                                onClick={() => setPortionCount((prev) => Math.min(10, prev + 1))}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItems((prev) => ({
+                                    ...prev,
+                                    [item.id]: Math.min(10, (prev[item.id] || 1) + 1),
+                                  }));
+                                }}
                                 id={`btn-portion-inc-${item.id}`}
                                 title="Tăng số lượng"
                               >
@@ -611,10 +647,14 @@ export const DailyMealSelectionPage: React.FC = () => {
               />
 
               <div className="hsw-meal-save-card">
-                {selectedItem && (
+                {selectedEntries.length > 0 && (
                   <div style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                     <span style={{ fontSize: 'var(--text-sm)', color: 'var(--accent-forest)', fontWeight: 700 }}>
-                      {t('dining.select.selectedBadge', 'Selected')}: {portionCount}x {localize(selectedItem.name)}
+                      {t('dining.select.selectedBadge', 'Selected')} ({selectedEntries.length} món):{' '}
+                      {selectedEntries.map(([mId, qty]) => {
+                        const m = menuItems.find((it) => it.id === mId);
+                        return `${qty}x ${m ? localize(m.name) : mId}`;
+                      }).join(', ')}
                     </span>
                     <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>
                       {diningLocation === 'IN_VILLA'
@@ -629,12 +669,15 @@ export const DailyMealSelectionPage: React.FC = () => {
                   <button
                     type="button"
                     className="hsw-btn hsw-btn-primary"
-                    disabled={!selectedItemId || activeDate < todayStr}
+                    disabled={selectedEntries.length === 0 || activeDate < todayStr}
                     onClick={handleSave}
                     id="btn-save-meal-selection"
                   >
                     <CheckCircle2 size={16} />
-                    <span>{t('dining.select.saveSelection', 'Save Meal Selection')}</span>
+                    <span>
+                      {t('dining.select.saveSelection', 'Save Meal Selection')}
+                      {selectedEntries.length > 0 ? ` (${selectedEntries.length} món)` : ''}
+                    </span>
                   </button>
 
                   {activeDate < todayStr && (

@@ -7,7 +7,7 @@ import { AlertCircle, Minus, Plus, ShoppingBag, Info, CheckCircle2 } from 'lucid
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
-import { AmanoiDiningLocationPicker } from '../../components/dining/AmanoiDiningLocationPicker';
+import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
 import { buildAmanoiDiningNotes, type DiningServiceLocation } from '../../utils/diningServiceHelper';
 
 interface CartItem {

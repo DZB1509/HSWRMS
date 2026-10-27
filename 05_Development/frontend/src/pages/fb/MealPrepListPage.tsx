@@ -4,19 +4,30 @@ import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 import { useNavigate } from 'react-router-dom';
-import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, Scale, ChevronDown, ChevronUp, UtensilsCrossed, CheckCircle } from 'lucide-react';
+import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, ChevronDown, ChevronUp, UtensilsCrossed, CheckCircle, Boxes } from 'lucide-react';
 import { MENU_ITEM_RECIPES } from '../../data/mockDining';
-import { AmanoiServiceLocationBadge } from '../../components/dining/AmanoiServiceLocationBadge';
-import { parseDiningNotes } from '../../utils/diningServiceHelper';
+import { AmanoiServiceLocationBadge } from '../../components/dining/ServiceLocationBadge';
+import { parseDiningNotes, getLocalDateString } from '../../utils/diningServiceHelper';
 
 import { cleanMojibake } from '../../utils/textEncodingHelper';
 
-const CANONICAL_RESORT_DATE = '2026-09-24';
 
 
 export const MealPrepListPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'customer']);
-  const { getDailyPrepList, updateFulfillmentStatus, menuItems, fetchKitchenOrders, syncStatus } = useDining();
+  const {
+    getDailyPrepList,
+    updateFulfillmentStatus,
+    menuItems,
+    fetchKitchenOrders,
+    syncStatus,
+    ingredientInventory,
+    refreshInventory,
+    isInventoryStale,
+    lastInventorySyncTime,
+    inventorySyncStatus,
+    refreshMenu,
+  } = useDining();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'vi') as 'vi' | 'en';
@@ -29,11 +40,10 @@ export const MealPrepListPage: React.FC = () => {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Batch Scaling state (for 95-100 servings)
-  const [showBatchScaling, setShowBatchScaling] = useState(true);
-  const [batchTargetServings, setBatchTargetServings] = useState<number>(100);
-  const [recipeSearch, setRecipeSearch] = useState<string>('');
-  const [expandedDishId, setExpandedDishId] = useState<string | null>(null);
+  // Physical inventory section state
+  const [showPhysicalInventory, setShowPhysicalInventory] = useState(true);
+  const [ingredientSearch, setIngredientSearch] = useState('');
+
   const [expandedRowRecipeId, setExpandedRowRecipeId] = useState<string | null>(null);
 
   const formatDietaryNote = (note: string) => {
@@ -46,8 +56,8 @@ export const MealPrepListPage: React.FC = () => {
     return t(`customer:dining.allergies.${normalized}`, note);
   };
 
-  // Canonical operational resort date default (Requirement 28)
-  const [date, setDate] = useState(CANONICAL_RESORT_DATE);
+  // Always default to current operational resort date (local today)
+  const [date, setDate] = useState(() => getLocalDateString());
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterLocation, setFilterLocation] = useState('all');
@@ -62,12 +72,23 @@ export const MealPrepListPage: React.FC = () => {
     if (fetchKitchenOrders) {
       fetchKitchenOrders(date);
     }
-  }, [date, fetchKitchenOrders]);
+    if (refreshInventory) {
+      refreshInventory(date);
+    }
+    if (refreshMenu) {
+      refreshMenu(date);
+    }
+  }, [date, fetchKitchenOrders, refreshInventory, refreshMenu]);
 
   const handleManualRefresh = async () => {
-    if (fetchKitchenOrders) {
-      setIsRefreshing(true);
-      await fetchKitchenOrders(date);
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchKitchenOrders ? fetchKitchenOrders(date) : Promise.resolve([]),
+        refreshMenu ? refreshMenu(date) : Promise.resolve(),
+        refreshInventory ? refreshInventory(date) : Promise.resolve(),
+      ]);
+    } finally {
       setIsRefreshing(false);
     }
   };
@@ -90,7 +111,7 @@ export const MealPrepListPage: React.FC = () => {
       (item.villaNumber && item.villaNumber.toLowerCase().includes(q)) ||
       (item.customerNotes && item.customerNotes.toLowerCase().includes(q)) ||
       item.items.some((line) => {
-        const dish = menuItems.find((m) => m.id === line.menuItemId);
+        const dish = menuItems.find((m) => m.id === line.menuItemId || String(m.backendId) === String(line.menuItemId) || (m.backendId && String(m.backendId) === line.menuItemId.replace(/\D/g, '')));
         if (!dish) return false;
         const matchesDishName =
           (dish.name.vi && dish.name.vi.toLowerCase().includes(q)) ||
@@ -123,7 +144,7 @@ export const MealPrepListPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
-    setDate(CANONICAL_RESORT_DATE);
+    setDate(getLocalDateString());
     setFilterType('all');
     setFilterStatus('all');
     setFilterLocation('all');
@@ -391,6 +412,7 @@ export const MealPrepListPage: React.FC = () => {
               <option value="preparing">{t('fnb.status.preparing', 'Preparing')}</option>
               <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
               <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
+              <option value="cancelled">{t('fnb.status.cancelled', 'Cancelled')}</option>
             </select>
           </div>
 
@@ -439,9 +461,9 @@ export const MealPrepListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Batch Ingredient Demand & Volume Scaling Component (95-100 Servings) */}
+      {/* Physical Usable Ingredient Stock Monitoring Section */}
       <div
-        className="hsw-batch-scaling-card"
+        className="hsw-physical-inventory-card"
         style={{
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
@@ -450,7 +472,7 @@ export const MealPrepListPage: React.FC = () => {
           marginBottom: '20px',
           boxShadow: 'var(--shadow-sm)',
         }}
-        id="fnb-batch-ingredient-scaling"
+        id="fnb-physical-inventory-section"
       >
         {/* Header & Toggle */}
         <div
@@ -461,7 +483,7 @@ export const MealPrepListPage: React.FC = () => {
             cursor: 'pointer',
             userSelect: 'none',
           }}
-          onClick={() => setShowBatchScaling((prev) => !prev)}
+          onClick={() => setShowPhysicalInventory((prev) => !prev)}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
@@ -469,105 +491,94 @@ export const MealPrepListPage: React.FC = () => {
                 width: '32px',
                 height: '32px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(46, 125, 50, 0.12)',
-                color: 'var(--accent-forest)',
+                backgroundColor: 'rgba(26, 104, 158, 0.12)',
+                color: '#1a689e',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Scale size={18} />
+              <Boxes size={18} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {t('fnb.prepList.batchScalingTitle', 'Bảng Tổng Hợp & Quy Đổi Nguyên Liệu Theo Mẻ (Batch Scaling)')}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {t('fnb.prepList.physicalStockTitle', 'Tồn Kho Nguyên Liệu Khả Dụng Thực Tế (Usable Stock)')}
+                </h3>
+                {inventorySyncStatus === 'syncing' ? (
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                    ⏳ Đang đồng bộ kho...
+                  </span>
+                ) : isInventoryStale ? (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      backgroundColor: '#fff1f0',
+                      color: '#cf1322',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 600,
+                      border: '1px solid #ffa39e',
+                    }}
+                  >
+                    ⚠️ Tồn kho có thể chưa mới nhất
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      color: 'var(--accent-forest)',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✓ Tự động cập nhật sau mỗi lần trừ kho
+                  </span>
+                )}
+              </div>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                 {t(
-                  'fnb.prepList.batchScalingSubtitle',
-                  'Định lượng nguyên liệu chính xác (g, ml, quả, lát) phục vụ quy mô khoảng 95 - 100 suất ăn.'
+                  'fnb.prepList.physicalStockSubtitle',
+                  'Số lượng nguyên liệu vật lý thực tế từ các lô kho hợp lệ (FEFO: FRESH, GOOD, NEAR_EXPIRY).'
                 )}
+                {lastInventorySyncTime && ` · Đồng bộ lúc: ${lastInventorySyncTime}`}
               </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: 'var(--accent-forest)',
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-pill)',
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+              style={{ padding: '4px 10px', fontSize: '12px', gap: '4px' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (refreshInventory) refreshInventory(date);
+                if (refreshMenu) refreshMenu(date);
               }}
+              title="Làm mới tồn kho ngay lập tức"
             >
-              {batchTargetServings} {t('fnb.prepList.servingsCount', 'suất')}
-            </span>
+              <RotateCcw size={13} />
+              <span>{t('common.refresh', 'Làm mới')}</span>
+            </button>
             <button
               type="button"
               className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
               style={{ padding: '4px 8px' }}
-              aria-label="Toggle batch scaling panel"
+              aria-label="Toggle physical inventory panel"
             >
-              {showBatchScaling ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {showPhysicalInventory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           </div>
         </div>
 
-        {/* Expandable Scaling Workspace */}
-        {showBatchScaling && (
+        {/* Expandable Inventory Table */}
+        {showPhysicalInventory && (
           <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-            {/* Controls Row: Target Volume Preset Buttons & Recipe Search */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '12px',
-                marginBottom: '14px',
-              }}
-            >
-              {/* Volume Steppers / Presets */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  {t('fnb.prepList.servingsVolume', 'Quy Mô Mẻ Nấu')}:
-                </span>
-                <button
-                  type="button"
-                  className={`hsw-btn hsw-btn-sm ${batchTargetServings === 95 ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
-                  style={{ height: '30px', padding: '0 12px', fontSize: '12px', fontWeight: 600 }}
-                  onClick={() => setBatchTargetServings(95)}
-                  id="btn-scale-95"
-                >
-                  95 {t('fnb.prepList.servingsCount', 'suất')}
-                </button>
-                <button
-                  type="button"
-                  className={`hsw-btn hsw-btn-sm ${batchTargetServings === 100 ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
-                  style={{ height: '30px', padding: '0 12px', fontSize: '12px', fontWeight: 600 }}
-                  onClick={() => setBatchTargetServings(100)}
-                  id="btn-scale-100"
-                >
-                  100 {t('fnb.prepList.servingsCount', 'suất')}
-                </button>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
-                  <input
-                    type="number"
-                    min="1"
-                    max="500"
-                    value={batchTargetServings}
-                    onChange={(e) => setBatchTargetServings(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="hsw-input"
-                    style={{ width: '65px', height: '30px', fontSize: '12px', textAlign: 'center', padding: '2px 4px' }}
-                    id="input-custom-batch-servings"
-                  />
-                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{t('fnb.prepList.servingsCount', 'suất')}</span>
-                </div>
-              </div>
-
-              {/* Recipe Search Input */}
-              <div style={{ position: 'relative', minWidth: '240px', flex: '1 1 240px', maxWidth: '380px' }}>
+            {/* Search filter row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
                 <Search
                   size={13}
                   style={{
@@ -580,195 +591,103 @@ export const MealPrepListPage: React.FC = () => {
                 />
                 <input
                   type="text"
+                  placeholder={t('fnb.prepList.searchIngredientPlaceholder', 'Tìm tên nguyên liệu...')}
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
                   className="hsw-input"
-                  style={{ width: '100%', height: '32px', fontSize: '12px', paddingLeft: '30px' }}
-                  placeholder={t('fnb.prepList.searchRecipePlaceholder', 'Tìm nhanh theo tên món hoặc nguyên liệu...')}
-                  value={recipeSearch}
-                  onChange={(e) => setRecipeSearch(e.target.value)}
-                  id="input-recipe-ingredient-search"
+                  style={{ width: '100%', paddingLeft: '30px', height: '32px', fontSize: '12px' }}
                 />
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Tổng cộng: <strong>{ingredientInventory?.length || 0}</strong> nguyên liệu trong hệ thống
               </div>
             </div>
 
-            {/* List of Dishes and Scaled Ingredients */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {menuItems
-                .filter((item) => {
-                  const q = recipeSearch.toLowerCase().trim();
-                  if (!q) return true;
-                  const matchesDish =
-                    (item.name.vi && item.name.vi.toLowerCase().includes(q)) ||
-                    (item.name.en && item.name.en.toLowerCase().includes(q));
-                  const recipes = MENU_ITEM_RECIPES[item.id] || [];
-                  const matchesIng = recipes.some(
-                    (r) =>
-                      (r.name.vi && r.name.vi.toLowerCase().includes(q)) ||
-                      (r.name.en && r.name.en.toLowerCase().includes(q))
-                  );
-                  return matchesDish || matchesIng;
-                })
-                .map((dish) => {
-                  const recipes = MENU_ITEM_RECIPES[dish.id] || [];
-                  const isExpanded = expandedDishId === dish.id || recipeSearch.trim().length > 0;
-                  const isAvailable = dish.available !== false;
+            {/* Inventory table */}
+            <div style={{ overflowX: 'auto', maxHeight: '320px', overflowY: 'auto' }}>
+              <table
+                style={{
+                  width: '100%',
+                  fontSize: '12px',
+                  borderCollapse: 'collapse',
+                  backgroundColor: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-xs)',
+                }}
+              >
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--bg-soft)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', position: 'sticky', top: 0, zIndex: 1 }}>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      Tên Nguyên Liệu
+                    </th>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)', width: '120px' }}>
+                      Đơn Vị Đo
+                    </th>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent-forest)', textAlign: 'right', width: '180px' }}>
+                      Tồn Kho Khả Dụng (Usable)
+                    </th>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', width: '140px' }}>
+                      Tình Trạng
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(ingredientInventory || [])
+                    .filter((item) => {
+                      if (!ingredientSearch.trim()) return true;
+                      const q = ingredientSearch.toLowerCase().trim();
+                      return item.ingredientName.toLowerCase().includes(q) || String(item.ingredientId).includes(q);
+                    })
+                    .map((item) => {
+                      const isShortage = item.status === 'SHORTAGE' || item.shortfall > 0;
+                      const isZero = Number(item.usableQuantity) <= 0;
 
-                  return (
-                    <div
-                      key={dish.id}
-                      style={{
-                        backgroundColor: 'var(--bg-soft)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '10px 14px',
-                      }}
-                      id={`recipe-card-${dish.id}`}
-                    >
-                      {/* Dish Summary Bar */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => setExpandedDishId(expandedDishId === dish.id ? null : dish.id)}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
-                            }}
-                          />
-                          <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
-                            {localize(dish.name)}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              color: 'var(--text-tertiary)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            · {dish.category} · {dish.mealPeriods.join(', ')}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                            {recipes.length} {t('fnb.prepList.totalIngredientsNeeded', 'nguyên liệu')}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              padding: '2px 7px',
-                              borderRadius: 'var(--radius-pill)',
-                              backgroundColor: isAvailable ? 'rgba(46, 125, 50, 0.1)' : 'rgba(211, 47, 47, 0.1)',
-                              color: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
-                            }}
-                          >
-                            {isAvailable ? t('fnb.prepList.inStock', 'Đủ nguyên liệu') : t('fnb.prepList.outOfStock', 'Hết hàng')}
-                          </span>
-                          <button
-                            type="button"
-                            className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
-                            style={{ padding: '2px 6px', height: '24px' }}
-                          >
-                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Scaled Ingredients Table */}
-                      {isExpanded && (
-                        <div style={{ marginTop: '10px', overflowX: 'auto' }}>
-                          <table
-                            style={{
-                              width: '100%',
-                              fontSize: '12px',
-                              borderCollapse: 'collapse',
-                              backgroundColor: 'var(--bg-surface)',
-                              borderRadius: 'var(--radius-xs)',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <thead>
-                              <tr style={{ backgroundColor: 'var(--bg-soft)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left' }}>
-                                <th style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                  {t('fnb.prepList.ingredientName', 'Tên Nguyên Liệu')}
-                                </th>
-                                <th style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--text-secondary)', width: '90px' }}>
-                                  {t('fnb.prepList.unit', 'Đơn vị')}
-                                </th>
-                                <th style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--text-secondary)', width: '130px' }}>
-                                  {t('fnb.prepList.perServing', 'Định lượng / 1 Suất')}
-                                </th>
-                                <th style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--accent-forest)', width: '160px' }}>
-                                  {t('fnb.prepList.scaledTotal', `Tổng Cho ${batchTargetServings} Suất`, { count: batchTargetServings })}
-                                </th>
-                                <th style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--text-secondary)', width: '140px' }}>
-                                  {t('fnb.prepList.stockStatus', 'Tình Trạng Kho')}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {recipes.map((ing) => {
-                                const scaledQty = ing.quantityPerServing * batchTargetServings;
-                                const isUnitMetric = ing.unit === 'g' || ing.unit === 'ml';
-                                const formattedScaled = isUnitMetric && scaledQty >= 1000
-                                  ? `${(scaledQty / 1000).toFixed(2)} ${ing.unit === 'g' ? 'kg' : 'L'} (${scaledQty.toLocaleString()} ${ing.unit})`
-                                  : `${scaledQty.toLocaleString()} ${ing.unit}`;
-                                const isShortage = ing.stockAvailable < scaledQty;
-
-                                return (
-                                  <tr
-                                    key={ing.ingredientId}
-                                    style={{
-                                      borderBottom: '1px solid var(--border-subtle)',
-                                      backgroundColor: ing.stockAvailable === 0 ? 'rgba(211, 47, 47, 0.04)' : undefined,
-                                    }}
-                                  >
-                                    <td style={{ padding: '6px 10px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                                      {localize(ing.name)}
-                                    </td>
-                                    <td style={{ padding: '6px 10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                                      {ing.unit}
-                                    </td>
-                                    <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>
-                                      {ing.quantityPerServing} {ing.unit}
-                                    </td>
-                                    <td style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--accent-forest)' }}>
-                                      {formattedScaled}
-                                    </td>
-                                    <td style={{ padding: '6px 10px' }}>
-                                      {ing.stockAvailable === 0 ? (
-                                        <span style={{ color: '#d32f2f', fontWeight: 600, fontSize: '11px' }}>
-                                          ● {t('fnb.prepList.outOfStock', 'Hết hàng (0)')}
-                                        </span>
-                                      ) : isShortage ? (
-                                        <span style={{ color: '#ed6c02', fontWeight: 600, fontSize: '11px' }}>
-                                          ▲ {t('fnb.prepList.lowStock', 'Thiếu hụt')} ({ing.stockAvailable.toLocaleString()} {ing.unit})
-                                        </span>
-                                      ) : (
-                                        <span style={{ color: 'var(--accent-forest)', fontWeight: 600, fontSize: '11px' }}>
-                                          ✓ {t('fnb.prepList.inStock', 'Đủ kho')} ({ing.stockAvailable.toLocaleString()} {ing.unit})
-                                        </span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      return (
+                        <tr
+                          key={item.ingredientId}
+                          style={{
+                            borderBottom: '1px solid var(--border-subtle)',
+                            backgroundColor: isZero ? 'rgba(211, 47, 47, 0.03)' : undefined,
+                          }}
+                        >
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {cleanMojibake(item.ingredientName)}
+                            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '6px', fontWeight: 400 }}>
+                              #{item.ingredientId}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            {item.unitOfMeasure}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: isZero ? '#d32f2f' : 'var(--text-primary)', fontSize: '13px' }}>
+                            {Number(item.usableQuantity).toLocaleString()} {item.unitOfMeasure}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            {isZero ? (
+                              <span style={{ color: '#d32f2f', fontWeight: 600, fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'rgba(211, 47, 47, 0.08)' }}>
+                                ● Hết hàng
+                              </span>
+                            ) : isShortage ? (
+                              <span style={{ color: '#ed6c02', fontWeight: 600, fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'rgba(237, 108, 2, 0.08)' }}>
+                                ▲ Thiếu hụt
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--accent-forest)', fontWeight: 600, fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'rgba(46, 125, 50, 0.08)' }}>
+                                ✓ Khả dụng
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {(!ingredientInventory || ingredientInventory.length === 0) && (
+                    <tr>
+                      <td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                        Chưa có dữ liệu tồn kho nguyên liệu từ máy chủ.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -865,8 +784,8 @@ export const MealPrepListPage: React.FC = () => {
                   <td onClick={() => navigate(`/fb/orders/${item.id}`)} style={{ cursor: 'pointer' }}>
                     <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '13px' }}>
                       {item.items.map((lineItem, idx) => {
-                        const menuItem = menuItems.find((m) => m.id === lineItem.menuItemId);
-                        const recipes = MENU_ITEM_RECIPES[lineItem.menuItemId] || [];
+                        const menuItem = menuItems.find((m) => m.id === lineItem.menuItemId || String(m.backendId) === String(lineItem.menuItemId) || (m.backendId && String(m.backendId) === lineItem.menuItemId.replace(/\D/g, '')));
+                        const recipes = MENU_ITEM_RECIPES[lineItem.menuItemId] || (menuItem ? MENU_ITEM_RECIPES[menuItem.id] : []) || [];
                         const isExpanded = expandedRowRecipeId === `${item.id}-${lineItem.menuItemId}`;
 
                         return (
@@ -1012,6 +931,8 @@ export const MealPrepListPage: React.FC = () => {
                             ? '#fef3e2'
                             : item.status === 'ready'
                             ? '#eef6fc'
+                            : item.status === 'cancelled'
+                            ? '#fff1f0'
                             : 'var(--success-bg)',
                         color:
                           item.status === 'pending'
@@ -1020,14 +941,17 @@ export const MealPrepListPage: React.FC = () => {
                             ? '#9a6114'
                             : item.status === 'ready'
                             ? '#1a689e'
+                            : item.status === 'cancelled'
+                            ? '#cf1322'
                             : 'var(--success)',
                       }}
                       id={`status-select-${item.id}`}
                     >
-                      <option value="pending">{t('fnb.status.pending', 'Pending')}</option>
-                      <option value="preparing">{t('fnb.status.preparing', 'Preparing')}</option>
-                      <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
-                      <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
+                      <option value="pending" disabled={item.status !== 'pending'}>{t('fnb.status.pending', 'Pending')}</option>
+                      <option value="preparing" disabled={item.status !== 'pending' && item.status !== 'preparing'}>{t('fnb.status.preparing', 'Preparing')}</option>
+                      <option value="ready" disabled={item.status !== 'preparing' && item.status !== 'ready'}>{t('fnb.status.ready', 'Ready')}</option>
+                      <option value="delivered" disabled={item.status !== 'ready' && item.status !== 'delivered'}>{t('fnb.status.delivered', 'Delivered')}</option>
+                      <option value="cancelled" disabled={item.status === 'delivered' || item.status === 'cancelled'}>{t('fnb.status.cancelled', 'Cancelled')}</option>
                     </select>
                     <div style={{ marginTop: '5px' }}>
                       {renderInventoryBadge(item.inventoryStatus, item.inventoryMessage)}
