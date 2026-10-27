@@ -213,7 +213,14 @@ export const fnbApi = {
     const res = await apiClient.get<ApiResponse<FnbDashboardResponse>>('/fnb/dashboard', {
       params: date ? { date } : undefined,
     });
-    return unwrapResponse(res);
+    const unwrapped = unwrapResponse(res);
+    if (unwrapped && unwrapped.ingredientDemand) {
+      unwrapped.ingredientDemand = unwrapped.ingredientDemand.map((d: any) => ({
+        ...d,
+        status: d.status || d.alert || (d.shortfall > 0 ? 'SHORTAGE' : 'COVERED'),
+      }));
+    }
+    return unwrapped;
   },
 
   // ==========================================================================

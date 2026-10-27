@@ -98,7 +98,10 @@ export interface MealOrderResponse {
   specialNotes: string | null;
   createdAt: string;
   subtotal: number;
-  lines: MealOrderLineResponse[];
+  lines?: MealOrderLineResponse[];
+  items?: MealOrderLineResponse[];
+  inventoryStatus?: string;
+  inventoryMessage?: string | null;
 }
 
 // --- Kitchen Display System (KDS) ---
@@ -115,23 +118,27 @@ export interface KitchenOrderLineResponse {
 
 export interface KitchenOrderResponse {
   id: number;
-  retreatBookingId: number;
-  customerFirstName: string;
+  bookingId?: number;
+  retreatBookingId?: number;
+  guestFirstName?: string;
+  customerFirstName?: string;
   villaNumber: string;
   orderDate: string;
   mealType: string | null;
   orderType: string;
   status: string;
   specialNotes: string | null;
-  delivered: boolean;
-  allergyTags: string[];
+  delivered?: boolean;
+  allergies?: string[];
+  allergyTags?: string[];
   dietaryPreferences: string[];
   dietaryVerificationStatus?: 'VERIFIED' | 'UNVERIFIED' | 'NO_PROFILE_ATTACHED' | string;
   locationVerificationStatus?: 'VERIFIED_VILLA' | 'UNVERIFIED_LOCATION' | string;
   folioPostingStatus?: 'NOT_APPLICABLE' | 'PENDING_RECONCILIATION' | 'POSTED_TO_FOLIO' | string;
   inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
   inventoryMessage?: string | null;
-  lines: KitchenOrderLineResponse[];
+  items?: KitchenOrderLineResponse[];
+  lines?: KitchenOrderLineResponse[];
 }
 
 export interface UpdateOrderStatusRequest {
@@ -181,7 +188,8 @@ export interface IngredientDemandResponse {
   requiredQuantity: number;
   usableQuantity: number;
   shortfall: number;
-  status: 'SHORTAGE' | 'COVERED';
+  status: 'SHORTAGE' | 'COVERED' | string;
+  alert?: 'SHORTAGE' | 'COVERED' | string;
 }
 
 export interface FnbDashboardResponse {

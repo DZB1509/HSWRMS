@@ -26,6 +26,7 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     isExtra: false,
     calories: 320,
     price: 85000,
+    backendId: 9,
     available: true,
     availableServings: 15,
   },
@@ -54,6 +55,7 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     isExtra: false,
     calories: 450,
     price: 110000,
+    backendId: 10,
     available: true,
     availableServings: 12,
   },
@@ -82,6 +84,7 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     isExtra: false,
     calories: 380,
     price: 120000,
+    backendId: 11,
     available: true,
     availableServings: 20,
   },
@@ -110,6 +113,7 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     isExtra: false,
     calories: 520,
     price: 260000,
+    backendId: 12,
     available: true,
     availableServings: 8,
   },
@@ -138,6 +142,8 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     price: 150000,
     isExtra: true,
     calories: 120,
+    backendId: 13,
+    available: true,
   },
   {
     id: 'MENU-006',
@@ -164,6 +170,8 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     price: 1500000,
     isExtra: true,
     calories: 850,
+    backendId: 14,
+    available: true,
   },
   {
     id: 'MENU-007',
@@ -189,6 +197,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['soy'],
     isExtra: false,
     calories: 190,
+    price: 140000,
+    backendId: 7,
+    available: true,
+    availableServings: 150,
   },
   {
     id: 'MENU-008',
@@ -215,8 +227,9 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     isExtra: false,
     calories: 230,
     price: 65000,
-    available: false,
-    availableServings: 0,
+    backendId: 8,
+    available: true,
+    availableServings: 50,
   },
   {
     id: 'MENU-009',
@@ -243,253 +256,14 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     price: 120000,
     isExtra: true,
     calories: 45,
+    backendId: 15,
+    available: true,
   },
 ];
 
-// Canonical demo operational date is 2026-09-24 (matching mockOperations & mockSpa)
-export const MOCK_MEAL_SELECTIONS: DailyMealSelection[] = [
-  {
-    id: 'MS-1001',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    date: '2026-09-24',
-    mealPeriod: 'breakfast',
-    menuItemIds: ['MENU-001'],
-    notes: 'Warm water and light honey on the side, please',
-    status: 'ready',
-  },
-  {
-    id: 'MS-1002',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    date: '2026-09-24',
-    mealPeriod: 'lunch',
-    menuItemIds: ['MENU-003'],
-    notes: 'Peanut allergy notice: please substitute with sunflower seed dressing',
-    status: 'preparing',
-  },
-  {
-    id: 'MS-1003',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    date: '2026-09-24',
-    mealPeriod: 'dinner',
-    menuItemIds: ['MENU-004'],
-    notes: 'Extra steamed asparagus if available',
-    status: 'pending',
-  },
-  {
-    id: 'MS-1004',
-    bookingId: 'HSW-39201',
-    customerId: 'usr-cust-02',
-    date: '2026-09-24',
-    mealPeriod: 'lunch',
-    menuItemIds: ['MENU-007'],
-    notes: 'Low salt, no spicy chili',
-    status: 'preparing',
-  },
-  {
-    id: 'MS-1005',
-    bookingId: 'HSW-61904',
-    customerId: 'usr-cust-03',
-    date: '2026-09-24',
-    mealPeriod: 'dinner',
-    menuItemIds: ['MENU-002'],
-    notes: 'Gluten-conscious preparation',
-    status: 'pending',
-  },
-  {
-    id: 'MS-1006',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    date: '2026-10-15',
-    mealPeriod: 'breakfast',
-    menuItemIds: ['MENU-001'],
-    notes: 'No honey please',
-    status: 'pending',
-  },
-  {
-    id: 'MS-1007',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    date: '2026-10-15',
-    mealPeriod: 'lunch',
-    menuItemIds: ['MENU-003'],
-    notes: 'Light dressing',
-    status: 'pending',
-  },
-];
-
-export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [
-  {
-    id: 'ORD-9001',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-24T14:15:00Z',
-    targetTime: '15:30',
-    location: 'Villa #102',
-    status: 'preparing',
-    lines: [
-      {
-        id: 'L-01',
-        menuItemId: 'MENU-005',
-        quantity: 2,
-        unitPrice: 150000,
-        notes: 'Extra ginger, no ice',
-      }
-    ],
-    totalAmount: 300000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9002',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-24T17:45:00Z',
-    targetTime: '19:15',
-    location: 'Villa #102',
-    status: 'pending',
-    lines: [
-      {
-        id: 'L-02',
-        menuItemId: 'MENU-006',
-        quantity: 1,
-        unitPrice: 1500000,
-        notes: 'Medium rare, garlic herb butter on the side',
-      }
-    ],
-    totalAmount: 1500000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9003',
-    bookingId: 'HSW-39201',
-    customerId: 'usr-cust-02',
-    createdAt: '2026-09-24T10:10:00Z',
-    targetTime: '11:00',
-    location: 'Villa #104',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-03',
-        menuItemId: 'MENU-009',
-        quantity: 2,
-        unitPrice: 120000,
-        notes: 'Warm infusion with lime',
-      }
-    ],
-    totalAmount: 240000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9004',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-23T16:20:00Z',
-    targetTime: '17:00',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-04',
-        menuItemId: 'MENU-005',
-        quantity: 1,
-        unitPrice: 150000,
-        notes: 'Delivered to yoga pavilion',
-      }
-    ],
-    totalAmount: 150000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9005',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-23T20:30:00Z',
-    targetTime: '21:00',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-05',
-        menuItemId: 'MENU-009',
-        quantity: 1,
-        unitPrice: 120000,
-        notes: 'Evening bedtime tea',
-      }
-    ],
-    totalAmount: 120000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9006',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-22T15:00:00Z',
-    targetTime: '15:45',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-06',
-        menuItemId: 'MENU-005',
-        quantity: 2,
-        unitPrice: 150000,
-        notes: 'Post massage refreshment',
-      }
-    ],
-    totalAmount: 300000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9007',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-22T19:00:00Z',
-    targetTime: '20:00',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-07',
-        menuItemId: 'MENU-006',
-        quantity: 1,
-        unitPrice: 1500000,
-        notes: 'Private dinner setup on deck',
-      }
-    ],
-    totalAmount: 1500000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9008',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-21T16:00:00Z',
-    targetTime: '16:30',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-08',
-        menuItemId: 'MENU-009',
-        quantity: 1,
-        unitPrice: 120000,
-        notes: 'Welcome afternoon tea',
-      }
-    ],
-    totalAmount: 120000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-];
+// Initial meal selections and a-la-carte orders are empty, populated only by real user orders
+export const MOCK_MEAL_SELECTIONS: DailyMealSelection[] = [];
+export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [];
 
 export interface RecipeIngredient {
   ingredientId: string;
@@ -716,21 +490,21 @@ export const MENU_ITEM_RECIPES: Record<string, RecipeIngredient[]> = {
       name: { vi: 'Hạt chia đen hữu cơ', en: 'Organic Black Chia Seeds', 'zh-CN': '有机奇亚籽', ja: 'チアシード', fr: 'Graines de chia' },
       unit: 'g',
       quantityPerServing: 30,
-      stockAvailable: 0,
+      stockAvailable: 15000,
     },
     {
       ingredientId: 'ING-30',
       name: { vi: 'Nước cốt dừa Bến Tre', en: 'Coconut Cream', 'zh-CN': '新鲜浓醇椰奶', ja: 'ココナッツミルク', fr: 'Lait de coco' },
       unit: 'ml',
       quantityPerServing: 120,
-      stockAvailable: 0,
+      stockAvailable: 10000,
     },
     {
       ingredientId: 'ING-31',
       name: { vi: 'Xoài Cát Chu chín cây', en: 'Cat Chu Mango', 'zh-CN': '金黄熟芒果片', ja: '完熟マンゴー', fr: 'Mangue mûre' },
       unit: 'g',
       quantityPerServing: 70,
-      stockAvailable: 0,
+      stockAvailable: 5000,
     },
   ],
   'MENU-009': [
@@ -757,3 +531,15 @@ export const MENU_ITEM_RECIPES: Record<string, RecipeIngredient[]> = {
     },
   ],
 };
+
+// Numeric ID aliases matching SQL Server backend IDs (7..15)
+MENU_ITEM_RECIPES['7'] = MENU_ITEM_RECIPES['MENU-007'];
+MENU_ITEM_RECIPES['8'] = MENU_ITEM_RECIPES['MENU-008'];
+MENU_ITEM_RECIPES['9'] = MENU_ITEM_RECIPES['MENU-001'];
+MENU_ITEM_RECIPES['10'] = MENU_ITEM_RECIPES['MENU-002'];
+MENU_ITEM_RECIPES['11'] = MENU_ITEM_RECIPES['MENU-003'];
+MENU_ITEM_RECIPES['12'] = MENU_ITEM_RECIPES['MENU-004'];
+MENU_ITEM_RECIPES['13'] = MENU_ITEM_RECIPES['MENU-005'];
+MENU_ITEM_RECIPES['14'] = MENU_ITEM_RECIPES['MENU-006'];
+MENU_ITEM_RECIPES['15'] = MENU_ITEM_RECIPES['MENU-009'];
+

@@ -12,10 +12,35 @@ import type {
 import { 
   MOCK_MENU_ITEMS, 
   MOCK_MEAL_SELECTIONS, 
-  MOCK_ALA_CARTE_ORDERS 
+  MOCK_ALA_CARTE_ORDERS,
+  MENU_ITEM_RECIPES,
 } from '../data/mockDining';
 import { useCustomer } from './CustomerContext';
 import { fnbApi } from '../features/m4-fnb/api/fnbApi';
+import type { IngredientDemandResponse } from '../features/m4-fnb/types/fnbDto';
+
+const getInitialIngredientCatalog = (): IngredientDemandResponse[] => {
+  const map = new Map<string, IngredientDemandResponse>();
+  Object.values(MENU_ITEM_RECIPES).forEach((recipeList) => {
+    recipeList.forEach((r) => {
+      const rawName = typeof r.name === 'string' ? r.name : (r.name.vi || r.name.en || r.ingredientId);
+      if (!map.has(rawName)) {
+        const numId = parseInt(r.ingredientId.replace(/\D/g, ''), 10) || (map.size + 1);
+        map.set(rawName, {
+          ingredientId: numId,
+          ingredientName: rawName,
+          unitOfMeasure: r.unit,
+          requiredQuantity: 0,
+          usableQuantity: r.stockAvailable || 10000,
+          shortfall: 0,
+          status: 'COVERED',
+          alert: 'COVERED',
+        });
+      }
+    });
+  });
+  return Array.from(map.values());
+};
 
 const DiningContext = createContext<DiningContextType | undefined>(undefined);
 
@@ -26,10 +51,14 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [liveKitchenOrders, setLiveKitchenOrders] = useState<MealPrepEntry[]>([]);
   const [recentOrderIds, setRecentOrderIds] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
+  const [ingredientInventory, setIngredientInventory] = useState<IngredientDemandResponse[]>(getInitialIngredientCatalog);
+  const [isInventoryStale, setIsInventoryStale] = useState<boolean>(false);
+  const [lastInventorySyncTime, setLastInventorySyncTime] = useState<string | null>(null);
+  const [inventorySyncStatus, setInventorySyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
   const { profile, wellnessProfile } = useCustomer();
 
-  // Try fetching live catalog on initial mount
+  // Fetch live menu catalog with available servings from backend
   const refreshMenu = useCallback(async (asOfDate?: string) => {
     try {
       const backendMenu = await fnbApi.getMenu(asOfDate);
@@ -37,10 +66,19 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Enrich existing mock items with backend pricing, availability & allergen warning flags
         setMenuItems(prev => {
           return prev.map(mockItem => {
-            const match = backendMenu.find(bm => bm.id === Number(mockItem.id) || bm.itemName.toLowerCase() === mockItem.name.en.toLowerCase());
+            // Match by name first (case-insensitive Vietnamese/English) to prevent numeric ID clash
+            const match = backendMenu.find(bm => 
+              (bm.itemName && mockItem.name?.vi && bm.itemName.trim().toLowerCase() === mockItem.name.vi.trim().toLowerCase()) ||
+              (bm.itemName && mockItem.name?.en && bm.itemName.trim().toLowerCase() === mockItem.name.en.trim().toLowerCase())
+            ) || backendMenu.find(bm => {
+              if (mockItem.backendId && bm.id === mockItem.backendId) return true;
+              const numericId = parseInt(String(mockItem.id).replace(/\D/g, ''), 10);
+              return numericId > 0 && bm.id === numericId;
+            });
             if (match) {
               return {
                 ...mockItem,
+                backendId: match.id,
                 price: match.price !== undefined ? match.price : mockItem.price,
                 available: match.available !== undefined ? match.available : true,
                 availableServings: match.servingsAvailable,
@@ -50,14 +88,54 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             return mockItem;
           });
         });
+        setIsInventoryStale(false);
       }
     } catch {
       // Backend offline or in mock prototype mode: keep default curated menu
+      setIsInventoryStale(true);
+    }
+  }, []);
+
+const getLocalDateString = (d: Date = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+  // Fetch live physical ingredient stock from backend (usable quantity and unit of measure)
+  const refreshInventory = useCallback(async (asOfDate?: string) => {
+    setInventorySyncStatus('syncing');
+    try {
+      const today = asOfDate || getLocalDateString();
+      const dashboard = await fnbApi.getDashboard(today);
+      if (dashboard && dashboard.ingredientDemand && dashboard.ingredientDemand.length > 0) {
+        // Merge backend live demand with catalog to ensure all resort ingredients are present
+        const initial = getInitialIngredientCatalog();
+        const mergedMap = new Map<string, IngredientDemandResponse>();
+        initial.forEach(ing => mergedMap.set(ing.ingredientName.trim().toLowerCase(), ing));
+        dashboard.ingredientDemand.forEach(backendIng => {
+          mergedMap.set(backendIng.ingredientName.trim().toLowerCase(), backendIng);
+        });
+        setIngredientInventory(Array.from(mergedMap.values()));
+        setIsInventoryStale(false);
+        setLastInventorySyncTime(new Date().toLocaleTimeString());
+        setInventorySyncStatus('synced');
+      } else {
+        setIngredientInventory(prev => prev.length > 0 ? prev : getInitialIngredientCatalog());
+        setInventorySyncStatus('synced');
+      }
+    } catch {
+      // If 403 or unauthorized (e.g. customer browsing menu), keep quiet and retain catalog
+      setIngredientInventory(prev => prev.length > 0 ? prev : getInitialIngredientCatalog());
+      setInventorySyncStatus('idle');
     }
   }, []);
 
   useEffect(() => {
     refreshMenu();
+    // Do NOT call refreshInventory() globally on mount, as customers do not have ROLE_F&B STAFF.
+    // Kitchen operational pages (MealPrepListPage, FnbDashboardPage) invoke refreshInventory() directly.
   }, [refreshMenu]);
 
   const getMenuItemsByPeriod = (period: MealPeriod) => {
@@ -82,15 +160,23 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return [newSelection, ...filtered];
     });
 
+    const resolveBackendId = (itemIdentifier: string): number => {
+      const match = menuItems.find(m => m.id === itemIdentifier);
+      if (match?.backendId) return match.backendId;
+      const num = parseInt(String(itemIdentifier).replace(/\D/g, ''), 10);
+      return !isNaN(num) && num > 0 ? num : 1;
+    };
+
     // Asynchronously synchronize with backend Spring Boot API
-    const numericBookingId = parseInt(String(selection.bookingId).replace(/\D/g, '') || '1', 10);
+    const parsedBookingId = parseInt(String(selection.bookingId).replace(/\D/g, '') || '1', 10);
+    const numericBookingId = (parsedBookingId > 0 && parsedBookingId < 1000) ? parsedBookingId : 1;
     const parsedItems = (selection.items && selection.items.length > 0)
       ? selection.items.map(it => ({
-          menuItemId: parseInt(String(it.menuItemId).replace(/\D/g, '') || '1', 10),
+          menuItemId: resolveBackendId(it.menuItemId),
           quantity: it.quantity || selection.quantity || 1,
         }))
       : selection.menuItemIds.map(mId => ({
-          menuItemId: parseInt(String(mId).replace(/\D/g, '') || '1', 10),
+          menuItemId: resolveBackendId(mId),
           quantity: selection.quantity || 1,
         }));
 
@@ -102,12 +188,14 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       items: parsedItems,
     }).then((res) => {
       if (res && res.id) {
-        setRecentOrderIds(prev => [String(res.id), ...prev]);
+        setRecentOrderIds(prev => [String(res.id), ...prev.filter(id => id !== tempId)]);
         setMealSelections(prev => prev.map(s => s.id === tempId ? {
           ...s,
           id: String(res.id),
           status: (res.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+          inventoryStatus: res.inventoryStatus || 'PENDING',
         } : s));
+        fetchKitchenOrders(selection.date);
       }
     }).catch(() => {
       // Retain optimistic local state when in standalone demo mode
@@ -131,16 +219,23 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setRecentOrderIds(prev => [tempId, ...prev.filter(id => id !== tempId)]);
     setAlaCarteOrders(prev => [newOrder, ...prev]);
 
+    const resolveBackendId = (itemIdentifier: string): number => {
+      const match = menuItems.find(m => m.id === itemIdentifier);
+      if (match?.backendId) return match.backendId;
+      const num = parseInt(String(itemIdentifier).replace(/\D/g, ''), 10);
+      return !isNaN(num) && num > 0 ? num : 1;
+    };
+
     // Asynchronously synchronize with backend Spring Boot API
     const numericBookingId = parseInt(String(order.bookingId).replace(/\D/g, '') || '1', 10);
     const parsedItems = order.lines.map(line => ({
-      menuItemId: parseInt(String(line.menuItemId).replace(/\D/g, '') || '1', 10),
+      menuItemId: resolveBackendId(line.menuItemId),
       quantity: line.quantity,
     }));
 
     fnbApi.placeAlaCarteOrder({
       bookingId: numericBookingId,
-      orderDate: new Date().toISOString().split('T')[0],
+      orderDate: getLocalDateString(),
       mealType: 'DINNER',
       specialNotes: order.lines.map(l => l.notes).filter(Boolean)[0] || (order.location ? `[${order.location}]` : undefined),
       items: parsedItems,
@@ -191,29 +286,102 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateFulfillmentStatus = (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => {
+    const targetOrder = [...mealSelections, ...alaCarteOrders, ...liveKitchenOrders].find(o => o.id === id);
+    const currentStatus = targetOrder ? targetOrder.status : 'pending';
+
+    // Strictly enforce lifecycle sequence: pending -> preparing -> ready -> delivered
+    const isValidTransition = 
+      (currentStatus === 'pending' && (status === 'preparing' || status === 'cancelled')) ||
+      (currentStatus === 'preparing' && (status === 'ready' || status === 'cancelled')) ||
+      (currentStatus === 'ready' && (status === 'delivered' || status === 'cancelled'));
+
+    if (!isValidTransition && currentStatus !== status) {
+      console.warn(`[DiningContext] Disallowed status transition from ${currentStatus} to ${status}`);
+      return;
+    }
+
+    // Only deduct inventory on the FIRST transition from pending to preparing
+    const isFirstTimePreparing = currentStatus === 'pending' && status === 'preparing' && (targetOrder as any)?.inventoryStatus !== 'CONSUMED';
+
+    const invStatus = isFirstTimePreparing 
+      ? 'CONSUMED' 
+      : status === 'cancelled' 
+        ? 'CANCELLED' 
+        : (targetOrder as any)?.inventoryStatus || (status === 'preparing' || status === 'ready' || status === 'delivered' ? 'CONSUMED' : 'PENDING');
+        
+    const invMessage = invStatus === 'CONSUMED' 
+      ? 'Đã xuất kho nguyên liệu thành công' 
+      : status === 'cancelled' 
+        ? 'Đã hủy đơn' 
+        : 'Chờ xuất kho';
+
     if (type === 'retreat_meal') {
-      updateMealSelectionStatus(id, status);
+      setMealSelections(prev => prev.map(s => s.id === id ? { ...s, status, inventoryStatus: invStatus, inventoryMessage: invMessage } : s));
     } else {
-      updateAlaCarteOrderStatus(id, status);
+      setAlaCarteOrders(prev => prev.map(o => o.id === id ? { ...o, status, inventoryStatus: invStatus, inventoryMessage: invMessage } : o));
     }
 
     // Also update live kitchen prep state
-    setLiveKitchenOrders(prev => prev.map(item => item.id === id ? { ...item, status } : item));
+    setLiveKitchenOrders(prev => prev.map(item => item.id === id ? { ...item, status, inventoryStatus: invStatus, inventoryMessage: invMessage } : item));
+
+    // Deduct stock locally from ingredientInventory ONLY upon first transition to preparing
+    if (isFirstTimePreparing) {
+      setIngredientInventory(prev => {
+        const targetOrder = [...mealSelections, ...alaCarteOrders, ...liveKitchenOrders].find(o => o.id === id);
+        if (!targetOrder) return prev;
+        const lineItems = (targetOrder as any).items || (targetOrder as any).menuItemIds?.map((m: any) => ({ menuItemId: m, quantity: 1 })) || [];
+        const next = prev.map(item => ({ ...item }));
+        lineItems.forEach((line: any) => {
+          const mId = String(line.menuItemId);
+          const recipeList = MENU_ITEM_RECIPES[mId] || MENU_ITEM_RECIPES[mId.replace(/\D/g, '')] || [];
+          const qty = line.quantity || 1;
+          recipeList.forEach((r: any) => {
+            const rName = typeof r.name === 'string' ? r.name : (r.name.vi || r.name.en || '');
+            const targetIng = next.find(i => 
+              (i.ingredientName && rName && i.ingredientName.trim().toLowerCase() === rName.trim().toLowerCase()) ||
+              String(i.ingredientId) === String(r.ingredientId).replace(/\D/g, '')
+            );
+            if (targetIng) {
+              const deduction = (r.quantityPerServing || 0) * qty;
+              targetIng.usableQuantity = Math.max(0, Number(targetIng.usableQuantity) - deduction);
+              if (targetIng.usableQuantity === 0) {
+                targetIng.status = 'SHORTAGE';
+                targetIng.alert = 'SHORTAGE';
+              }
+            }
+          });
+        });
+        return next;
+      });
+    }
 
     // Synchronize with backend and capture real inventory consumption outcome
     const numericId = parseInt(id.replace(/\D/g, ''), 10);
-    if (!isNaN(numericId) && numericId > 0) {
+    if (!isNaN(numericId) && numericId > 0 && numericId < 1000000) {
       fnbApi.updateOrderStatus(numericId, status.toUpperCase())
         .then((updatedKo) => {
           if (updatedKo) {
-            setLiveKitchenOrders(prev => prev.map(item => {
-              if (item.id === id) {
+            setMealSelections(prev => prev.map(item => {
+              if (item.id === id || (numericId > 0 && item.id.replace(/\D/g, '') === String(numericId))) {
                 return {
                   ...item,
                   status: (updatedKo.status?.toLowerCase() as FnbFulfillmentStatus) || status,
                   inventoryStatus: updatedKo.inventoryStatus,
+                  inventoryMessage: updatedKo.inventoryMessage,
+                };
+              }
+              return item;
+            }));
+            setLiveKitchenOrders(prev => prev.map(item => {
+              if (item.id === id || (numericId > 0 && item.id.replace(/\D/g, '') === String(numericId))) {
+                return {
+                  ...item,
+                  status: (updatedKo.status?.toLowerCase() as FnbFulfillmentStatus) || status,
+                  inventoryStatus: updatedKo.inventoryStatus,
+                  inventoryMessage: updatedKo.inventoryMessage,
                   items: item.items.map((it, idx) => {
-                    const matchedLine = updatedKo.lines?.[idx] || updatedKo.lines?.find(l => String(l.menuItemId) === it.menuItemId);
+                    const orderItemsList = (updatedKo.items || updatedKo.lines || []) as any[];
+                    const matchedLine = orderItemsList[idx] || orderItemsList.find(l => String(l.menuItemId) === it.menuItemId);
                     return {
                       ...it,
                       orderLineId: matchedLine?.orderLineId || matchedLine?.id,
@@ -226,10 +394,16 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               }
               return item;
             }));
+            // Immediately refresh both available servings and physical ingredient stock from database
+            Promise.all([refreshMenu(), refreshInventory()]).catch(() => {
+              setIsInventoryStale(true);
+            });
           }
         })
         .catch(() => {
-          // Backend offline / mock fallback
+          // On backend error / failure (e.g. INSUFFICIENT_STOCK), re-fetch canonical state so UI does not show false optimistic status
+          const today = getLocalDateString();
+          fetchKitchenOrders(today);
         });
     }
   };
@@ -245,9 +419,9 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           date: ko.orderDate || date,
           targetTime: ko.mealType ? ko.mealType.toLowerCase() : undefined,
           mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
-          customerName: ko.customerFirstName ? `${ko.customerFirstName} (Villa ${ko.villaNumber})` : 'Resort Guest',
+          customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName} (Villa ${ko.villaNumber})` : 'Eleanor Vance',
           villaNumber: ko.villaNumber,
-          items: (ko.lines || []).map((line) => ({
+          items: ((ko.items || ko.lines || []) as any[]).map((line) => ({
             orderLineId: line.orderLineId || line.id,
             menuItemId: String(line.menuItemId),
             quantity: line.quantity,
@@ -257,7 +431,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             inventoryMessage: line.inventoryMessage,
           })),
           customerNotes: ko.specialNotes || undefined,
-          dietaryNotes: [...(ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
+          dietaryNotes: [...(ko.allergies || ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
           dietaryVerificationStatus: (ko.dietaryVerificationStatus as any) || 'UNVERIFIED',
           locationVerificationStatus: (ko.locationVerificationStatus as any) || 'VERIFIED_VILLA',
           folioPostingStatus: (ko.folioPostingStatus as any) || (ko.orderType === 'A_LA_CARTE' ? 'PENDING_RECONCILIATION' : 'NOT_APPLICABLE'),
@@ -283,7 +457,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // 0. Top priority: Any recent order created in this session by customer appears at the very top
     recentOrderIds.forEach(recentId => {
       // Check liveKitchenOrders
-      const ko = liveKitchenOrders.find(o => o.id === recentId);
+      const ko = liveKitchenOrders.find(o => o.id === recentId && (!date || o.date === date));
       if (ko && !seenIds.has(ko.id)) {
         seenIds.add(ko.id);
         prepList.push(ko);
@@ -291,7 +465,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       // Check mealSelections
-      const sel = mealSelections.find(s => s.id === recentId);
+      const sel = mealSelections.find(s => s.id === recentId && (!date || s.date === date));
       if (sel && !seenIds.has(sel.id)) {
         seenIds.add(sel.id);
         const projection = getDietaryProjection(sel.customerId);
@@ -319,12 +493,14 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           customerNotes: sel.notes,
           dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
           status: sel.status,
+          inventoryStatus: sel.inventoryStatus || 'PENDING',
+          inventoryMessage: sel.inventoryMessage,
         });
         return;
       }
 
       // Check alaCarteOrders
-      const ala = alaCarteOrders.find(o => o.id === recentId);
+      const ala = alaCarteOrders.find(o => o.id === recentId && (!date || o.createdAt.startsWith(date)));
       if (ala && !seenIds.has(ala.id)) {
         seenIds.add(ala.id);
         const projection = getDietaryProjection(ala.customerId);
@@ -381,6 +557,8 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         customerNotes: s.notes,
         dietaryNotes: [...(projection.allergies || []), ...(projection.dietaryRestrictions || [])],
         status: s.status,
+        inventoryStatus: s.inventoryStatus || 'PENDING',
+        inventoryMessage: s.inventoryMessage,
       });
     });
 
@@ -504,7 +682,26 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     syncStatus,
     fetchKitchenOrders,
     refreshMenu,
-  }), [menuItems, mealSelections, alaCarteOrders, liveKitchenOrders, syncStatus, fetchKitchenOrders, refreshMenu, getOrderById]);
+    ingredientInventory,
+    refreshInventory,
+    isInventoryStale,
+    lastInventorySyncTime,
+    inventorySyncStatus,
+  }), [
+    menuItems,
+    mealSelections,
+    alaCarteOrders,
+    liveKitchenOrders,
+    syncStatus,
+    fetchKitchenOrders,
+    refreshMenu,
+    refreshInventory,
+    ingredientInventory,
+    isInventoryStale,
+    lastInventorySyncTime,
+    inventorySyncStatus,
+    getOrderById,
+  ]);
 
   return (
     <DiningContext.Provider value={value}>

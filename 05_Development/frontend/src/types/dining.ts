@@ -23,6 +23,7 @@ export interface DietaryMenuItem {
   dietaryTags: ('vegetarian' | 'lacto_ovo_vegetarian' | 'vegan' | 'gluten_free' | 'gluten_conscious' | 'dairy_free' | 'keto' | 'pescatarian' | 'flexitarian')[];
   allergenTags: ('nuts' | 'shellfish' | 'soy' | 'eggs' | 'fish' | 'dairy')[];
   price?: number;
+  backendId?: number;
   isExtra: boolean;
   calories?: number;
   available?: boolean;
@@ -37,9 +38,17 @@ export interface DailyMealSelection {
   mealPeriod: MealPeriod;
   menuItemIds: string[]; // Support multiple choices per meal period if allowed
   quantity?: number; // Portions selected (e.g. 1 portion, 2 portions)
-  items?: { menuItemId: string; quantity: number; notes?: string }[];
+  items?: {
+    menuItemId: string;
+    quantity: number;
+    notes?: string;
+    inventoryStatus?: string;
+    inventoryMessage?: string | null;
+  }[];
   notes: string;
   status: FnbFulfillmentStatus; // Fulfillment status of the included retreat meal
+  inventoryStatus?: string;
+  inventoryMessage?: string | null;
 }
 
 export interface AlaCarteOrderLine {
@@ -127,5 +136,10 @@ export interface DiningContextType {
   syncStatus?: 'idle' | 'syncing' | 'synced' | 'offline';
   fetchKitchenOrders?: (date: string) => Promise<MealPrepEntry[]>;
   refreshMenu?: (asOfDate?: string) => Promise<void>;
+  ingredientInventory?: import('../features/m4-fnb/types/fnbDto').IngredientDemandResponse[];
+  refreshInventory?: (asOfDate?: string) => Promise<void>;
+  isInventoryStale?: boolean;
+  lastInventorySyncTime?: string | null;
+  inventorySyncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
 }
 
