@@ -10,6 +10,8 @@ public class ResidenceRecordResponse {
     private String identificationType;
     private String nationality;
     private String permanentAddress;
+    private String fullName;
+    private java.time.LocalDate dateOfBirth;
     private LocalDateTime collectedAt;
 
     public ResidenceRecordResponse() {
@@ -61,6 +63,22 @@ public class ResidenceRecordResponse {
 
     public void setPermanentAddress(String permanentAddress) {
         this.permanentAddress = permanentAddress;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public java.time.LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(java.time.LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public LocalDateTime getCollectedAt() {

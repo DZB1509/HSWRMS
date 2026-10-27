@@ -159,6 +159,8 @@ export interface ResidenceRecordDto {
   identificationType: string;
   nationality: string;
   permanentAddress?: string;
+  fullName?: string;
+  dateOfBirth?: string;
   collectedAt?: string;
 }
 
@@ -263,6 +265,8 @@ export interface ResidenceRecordResponse {
   identificationType: string;
   nationality: string;
   permanentAddress: string;
+  fullName?: string;
+  dateOfBirth?: string;
   collectedAt: string;
 }
 
@@ -512,17 +516,46 @@ export async function recordResidenceDeclaration(
 }
 
 /**
- * Receptionist: Assign physical villa to complete check-in
+ * Receptionist: Assign physical villa to booking
  */
 export async function assignPhysicalVilla(
   bookingId: number,
-  physicalVillaId: number,
+  physicalVillaId?: number,
+  villaNumber?: string,
   healthProfileConfirmed?: boolean
 ): Promise<BookingSummaryResponse> {
   const res = await apiClient.post<ApiResponse<BookingSummaryResponse>>(
     `/receptionist/check-in/${bookingId}/assign-villa`,
-    { physicalVillaId, healthProfileConfirmed }
+    { physicalVillaId, villaNumber, healthProfileConfirmed }
   );
+  return res.data;
+}
+
+/**
+ * Receptionist: Complete and finalize check-in
+ */
+export async function completeCheckInApi(
+  bookingId: number
+): Promise<BookingSummaryResponse> {
+  const res = await apiClient.post<ApiResponse<BookingSummaryResponse>>(
+    `/receptionist/check-in/${bookingId}/complete-check-in`
+  );
+  return res.data;
+}
+
+/**
+ * Customer Profile: Read customer profile from SQL Server
+ */
+export async function getCustomerProfileApi(): Promise<any> {
+  const res = await apiClient.get<ApiResponse<any>>('/customer/profile');
+  return res.data;
+}
+
+/**
+ * Customer Profile: Save customer profile directly to SQL Server
+ */
+export async function updateCustomerProfileApi(data: any): Promise<any> {
+  const res = await apiClient.put<ApiResponse<any>>('/customer/profile', data);
   return res.data;
 }
 

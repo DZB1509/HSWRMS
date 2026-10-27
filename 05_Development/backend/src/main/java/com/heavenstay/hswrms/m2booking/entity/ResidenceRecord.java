@@ -28,6 +28,12 @@ public class ResidenceRecord {
     @Column(name = "permanent_address", length = 500)
     private String permanentAddress;
 
+    @Column(name = "full_name", length = 200)
+    private String fullName;
+
+    @Column(name = "date_of_birth")
+    private java.time.LocalDate dateOfBirth;
+
     @Column(name = "collected_at", nullable = false)
     private LocalDateTime collectedAt = LocalDateTime.now();
 
@@ -80,6 +86,22 @@ public class ResidenceRecord {
 
     public void setPermanentAddress(String permanentAddress) {
         this.permanentAddress = permanentAddress;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public java.time.LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(java.time.LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public LocalDateTime getCollectedAt() {

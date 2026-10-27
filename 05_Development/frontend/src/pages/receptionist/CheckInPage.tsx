@@ -15,10 +15,13 @@ import {
   Key,
 } from 'lucide-react';
 import { useOperations } from '../../context/OperationsContext';
-import { recordResidenceDeclaration } from '../../api/booking/retreatBookingApi';
+import {
+  recordResidenceDeclaration,
+  getReceptionistBookingDetail,
+  type ReceptionistBookingDetailResponseDto,
+} from '../../api/booking/retreatBookingApi';
 import { useToast } from '../../components/common/Toast';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
-import { OperationalStatusChip } from '../../components/operations/OperationalStatusChip';
 import { VillaStatusChip } from '../../components/operations/VillaStatusChip';
 import type { CustomerIdentityVerification } from '../../types/operations';
 import { formatVND } from '../../i18n';
@@ -39,7 +42,7 @@ export const CheckInPage: React.FC = () => {
   } = useOperations();
 
   const arrival = getArrivalByBookingRef(bookingId || '');
-  const assignedVilla = arrival?.assignedVillaId ? getVillaById(arrival.assignedVillaId) : undefined;
+  const [backendDetail, setBackendDetail] = useState<ReceptionistBookingDetailResponseDto | null>(null);
 
   const currentLang = (i18n.language || 'en') as 'en' | 'vi' | 'zh-CN' | 'ja' | 'fr';
 
@@ -53,37 +56,104 @@ export const CheckInPage: React.FC = () => {
   // Form State for Identity & Residence (kept transient in-memory / session)
   const [formData, setFormData] = useState<CustomerIdentityVerification>({
     fullLegalName: arrival?.identityVerification?.fullLegalName || arrival?.customerName || '',
-    nationality: arrival?.identityVerification?.nationality || 'Vietnam',
+    nationality: arrival?.identityVerification?.nationality || 'Việt Nam',
     dateOfBirth: arrival?.identityVerification?.dateOfBirth || '',
-    idType: arrival?.identityVerification?.idType || 'passport',
+    idType: arrival?.identityVerification?.idType || 'national_id',
     idNumber: arrival?.identityVerification?.idNumber || '',
     issueDate: arrival?.identityVerification?.issueDate || '',
     expiryDate: arrival?.identityVerification?.expiryDate || '',
     permanentAddress: arrival?.identityVerification?.permanentAddress || '',
-    residenceCountry: arrival?.identityVerification?.residenceCountry || 'Vietnam',
-    arrivalTransport: arrival?.identityVerification?.arrivalTransport || 'Resort Airport Shuttle',
+    residenceCountry: arrival?.identityVerification?.residenceCountry || 'Việt Nam',
+    arrivalTransport: arrival?.identityVerification?.arrivalTransport || 'Xe đưa đón của Resort',
     receptionistNotes: arrival?.identityVerification?.receptionistNotes || '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // One-way pre-fill: Load customer profile / residence record from SQL Server backend
+  useEffect(() => {
+    const numBookingId = parseInt((bookingId || '').replace(/\D/g, ''), 10);
+    if (!isNaN(numBookingId) && numBookingId > 0) {
+      getReceptionistBookingDetail(numBookingId)
+        .then((detail) => {
+          if (!detail) return;
+          setBackendDetail(detail);
+
+          setFormData((prev) => {
+            const rec = detail.residenceRecord;
+            const cust = detail.customerProfile;
+
+            const fullLegalName =
+              rec?.fullName ||
+              prev.fullLegalName ||
+              cust?.fullName ||
+              detail.customerFullName ||
+              arrival?.customerName ||
+              '';
+            const nationality =
+              rec?.nationality ||
+              (prev.nationality && prev.nationality !== 'Vietnam' ? prev.nationality : 'Việt Nam');
+            const dateOfBirth =
+              rec?.dateOfBirth ||
+              prev.dateOfBirth ||
+              (cust?.dateOfBirth ? String(cust.dateOfBirth) : '');
+            const permanentAddress =
+              rec?.permanentAddress ||
+              prev.permanentAddress ||
+              cust?.residentialAddress ||
+              '';
+            const idType = rec?.identificationType
+              ? (rec.identificationType.toLowerCase() === 'cccd' || rec.identificationType.toLowerCase() === 'national_id'
+                  ? 'national_id'
+                  : (rec.identificationType.toLowerCase() as any))
+              : prev.idType;
+            const idNumber = rec?.identificationNumber || prev.idNumber || '';
+
+            return {
+              ...prev,
+              fullLegalName,
+              nationality,
+              dateOfBirth,
+              permanentAddress,
+              idType,
+              idNumber,
+            };
+          });
+        })
+        .catch((err) => {
+          console.warn('Could not fetch receptionist booking detail:', err);
+        });
+    }
+  }, [bookingId]);
 
   if (!arrival) {
     return (
       <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
         <AlertCircle size={40} style={{ color: '#C62828', margin: '0 auto 12px' }} />
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {t('operations.checkIn.arrivalNotFound', 'Arrival Record Not Found')}
+          {t('operations.checkIn.arrivalNotFound', 'Không tìm thấy hồ sơ đến')}
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-          {t('operations.checkIn.noArrivalMatchingRef', { bookingId, defaultValue: `No arrival matching booking reference "${bookingId}" was found in the daily queue.` })}
+          {t('operations.checkIn.noArrivalMatchingRef', { bookingId, defaultValue: `Không tìm thấy lượt đến nào khớp với mã đặt chỗ "${bookingId}".` })}
         </p>
         <Link to="/receptionist/arrivals" className="hsw-btn hsw-btn-secondary">
           <ArrowLeft size={14} />
-          <span>{t('operations.checkIn.returnToArrivals', 'Return to Daily Arrivals')}</span>
+          <span>{t('operations.checkIn.returnToArrivals', 'Quay lại Danh Sách Đến')}</span>
         </Link>
       </div>
     );
   }
+
+  const assignedVillaId =
+    arrival?.assignedVillaId ||
+    (backendDetail?.assignedVillaId ? String(backendDetail.assignedVillaId) : undefined);
+  const assignedVillaNumber =
+    arrival?.assignedVillaNumber ||
+    (backendDetail?.assignedVillaNumber ? `Villa #${backendDetail.assignedVillaNumber}` : undefined);
+
+  const assignedVilla =
+    (assignedVillaId ? getVillaById(assignedVillaId) : undefined) ||
+    (assignedVillaNumber ? getVillaById(assignedVillaNumber) : undefined);
 
   const retreatTitle =
     typeof arrival.retreatName === 'object'
@@ -97,7 +167,7 @@ export const CheckInPage: React.FC = () => {
     formData.idNumber.trim() &&
     formData.permanentAddress.trim()
   );
-  const isVillaAssigned = Boolean(arrival.assignedVillaId && assignedVilla);
+  const isVillaAssigned = Boolean((assignedVillaId || assignedVillaNumber) && assignedVilla);
   const isVillaReady = assignedVilla?.status === 'ready' || assignedVilla?.status === 'reserved';
   const isVillaBlocked = assignedVilla?.status === 'maintenance' || assignedVilla?.status === 'cleaning';
 
@@ -110,12 +180,16 @@ export const CheckInPage: React.FC = () => {
   const handleSaveDraft = async () => {
     saveCheckInDraft(arrival.bookingReference, formData);
     const numBookingId = parseInt(arrival.bookingReference.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
-    if (!isNaN(numBookingId) && formData.idNumber) {
+    if (!isNaN(numBookingId)) {
+      if (!formData.idNumber.trim()) {
+        showToast('Vui lòng nhập Số Giấy Tờ Tùy Thân để lưu thông tin cư trú vào SQL Server.', 'warning');
+        return;
+      }
       try {
         await recordResidenceDeclaration(numBookingId, {
           fullName: formData.fullLegalName || arrival.customerName,
           nationality: formData.nationality,
-          identificationNumber: formData.idNumber,
+          identificationNumber: formData.idNumber.trim(),
           identificationType: (formData.idType === 'national_id' ? 'CCCD' : formData.idType.toUpperCase()) || 'CCCD',
           dateOfBirth: formData.dateOfBirth,
           permanentAddress: formData.permanentAddress,
@@ -124,7 +198,7 @@ export const CheckInPage: React.FC = () => {
         showToast('Đã lưu thông tin khai báo cư trú thành công vào hệ thống SQL Server.', 'success');
         return;
       } catch (err: any) {
-        showToast(err?.response?.data?.message || 'Lỗi khi lưu thông tin cư trú xuống SQL Server.', 'error');
+        showToast(err?.response?.data?.message || err?.message || 'Lỗi khi lưu thông tin cư trú xuống SQL Server.', 'error');
         return;
       }
     }
@@ -132,18 +206,23 @@ export const CheckInPage: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    if (!canCompleteCheckIn || !arrival.assignedVillaId) {
+    if (!canCompleteCheckIn) {
       showToast('Vui lòng hoàn tất toàn bộ điều kiện (tiền cọc, cư trú, biệt thự sẵn sàng) trước khi hoàn tất nhận phòng.', 'warning');
       return;
     }
 
+    const targetVillaId = assignedVillaId || (assignedVilla ? assignedVilla.id : '');
+    if (!targetVillaId) {
+      showToast('Chưa xác định được biệt thự được phân bổ.', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
-    const result = completeCheckIn(arrival.bookingReference, formData, arrival.assignedVillaId);
+    const result = await completeCheckIn(arrival.bookingReference, formData, targetVillaId);
 
     if (result.success) {
       showToast(result.message, 'success');
       await refreshOperationsData();
-      // Navigate to arrivals or refresh view
       setTimeout(() => {
         setIsSubmitting(false);
         navigate('/receptionist/arrivals');
@@ -158,8 +237,8 @@ export const CheckInPage: React.FC = () => {
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
       <OperationalPageHeader
-        title={t('operations.checkIn.title', 'Check-In & Residence Information')}
-        subtitle={t('operations.checkIn.subtitle', 'Verify retreat reservation, complete mandatory residence reporting details, and finalize villa check-in.')}
+        title={t('operations.checkIn.title', 'Thủ Tục Nhận Phòng & Khai Báo Cư Trú')}
+        subtitle={t('operations.checkIn.subtitle', 'Xác minh đặt chỗ, hoàn tất thông tin khai báo cư trú bắt buộc và tiến hành hoàn tất nhận phòng.')}
         badge="Screen #22"
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -169,7 +248,7 @@ export const CheckInPage: React.FC = () => {
               style={{ fontSize: 'var(--text-xs)', minHeight: '36px' }}
             >
               <ArrowLeft size={14} />
-              <span>{t('operations.common.back', 'Back to Arrivals')}</span>
+              <span>{t('operations.common.back', 'Quay Lại Danh Sách Đến')}</span>
             </Link>
             <button
               type="button"
@@ -178,7 +257,7 @@ export const CheckInPage: React.FC = () => {
               style={{ fontSize: 'var(--text-xs)', minHeight: '36px' }}
             >
               <Save size={14} />
-              <span>{t('operations.common.saveDraft', 'Save Draft')}</span>
+              <span>{t('operations.common.saveDraft', 'Lưu Thông Tin Cư Trú')}</span>
             </button>
             <button
               type="button"
@@ -190,8 +269,8 @@ export const CheckInPage: React.FC = () => {
               <Check size={14} />
               <span>
                 {arrival.arrivalStatus === 'checked_in'
-                  ? t('operations.arrivals.checkedInBadge', 'Already Checked In')
-                  : t('operations.common.complete', 'Complete Check-In')}
+                  ? 'Đã Nhận Phòng'
+                  : '✓ Hoàn Tất Nhận Phòng'}
               </span>
             </button>
           </div>
@@ -210,7 +289,7 @@ export const CheckInPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileText size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  {t('operations.checkIn.bookingVerification', 'Booking Verification')}
+                  {t('operations.checkIn.bookingVerification', 'Xác Minh Đặt Chỗ')}
                 </h2>
               </div>
               <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', backgroundColor: 'var(--bg-soft)', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
@@ -221,7 +300,7 @@ export const CheckInPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
               <div>
                 <span style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>
-                  {t('operations.common.customer', 'Customer')}:
+                  {t('operations.common.customer', 'Khách hàng')}:
                 </span>
                 <strong style={{ color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
                   {arrival.customerName}
@@ -233,34 +312,49 @@ export const CheckInPage: React.FC = () => {
 
               <div>
                 <span style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>
-                  {t('operations.common.retreat', 'Retreat Package')}:
+                  {t('operations.common.retreat', 'Gói Nghỉ Dưỡng')}:
                 </span>
                 <strong style={{ color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
                   {retreatTitle}
                 </strong>
                 <div style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {arrival.nights} {t('operations.common.nights', 'Nights')} ({arrival.startDate} → {arrival.endDate})
+                  {arrival.nights} {t('operations.common.nights', 'Đêm')} ({arrival.startDate} → {arrival.endDate})
                 </div>
               </div>
 
               <div>
                 <span style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>
-                  {t('operations.common.partySize', 'Party Size')}:
+                  {t('operations.common.partySize', 'Số Lượng Khách')}:
                 </span>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                   {arrival.partySize === 1
-                    ? t('operations.common.customerSolo', '1 Customer (Solo)')
-                    : t('operations.common.customerCount', { count: arrival.partySize, defaultValue: `${arrival.partySize} Customers` })}
+                    ? '1 Khách (Đi một mình)'
+                    : `${arrival.partySize} Khách`}
                 </span>
               </div>
 
               <div>
                 <span style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>
-                  {t('operations.payment.requiredDeposit', 'Required Deposit')}:
+                  {t('operations.payment.requiredDeposit', 'Tiền Đặt Cọc Bắt Buộc')}:
                 </span>
-                <OperationalStatusChip type="deposit" status={arrival.depositStatus} size="sm" />
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    backgroundColor: isDepositPaid ? '#E8F5E9' : '#FFF8E1',
+                    color: isDepositPaid ? '#1B5E20' : '#8C5400',
+                    border: `1px solid ${isDepositPaid ? '#C8E6C9' : '#FFE082'}`,
+                  }}
+                >
+                  {isDepositPaid ? 'Đã Thanh Toán' : 'Chờ Thanh Toán'}
+                </span>
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {formatVND(arrival.depositAmount)} ({t('operations.payment.percentOfTotal', { percent: Math.round((arrival.depositAmount / (arrival.totalPrice || 1)) * 100), defaultValue: `${Math.round((arrival.depositAmount / (arrival.totalPrice || 1)) * 100)}% of total` })})
+                  {formatVND(arrival.depositAmount)} ({arrival.totalPrice ? Math.round((arrival.depositAmount / arrival.totalPrice) * 100) : 30}% tổng tiền)
                 </div>
               </div>
             </div>
@@ -281,13 +375,13 @@ export const CheckInPage: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
                 <CheckCircle2 size={14} style={{ color: '#1B5E20' }} />
-                <span>{t('operations.checkIn.wellnessIntakeStatus', 'Wellness Intake Status:')}</span>
+                <span>Trạng thái hồ sơ sức khỏe:</span>
                 <strong style={{ color: 'var(--accent-forest)' }}>
-                  {t('operations.common.wellnessProfileCompleted', 'Wellness Profile Completed')}
+                  Đã Hoàn Thành Hồ Sơ Sức Khỏe
                 </strong>
               </div>
               <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                ({t('operations.checkIn.healthDetailsRestricted', 'Health details restricted to Therapist')})
+                (Chi tiết bệnh lý được bảo mật, chỉ Chuyên viên trị liệu được xem)
               </span>
             </div>
           </div>
@@ -298,10 +392,25 @@ export const CheckInPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <User size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  {t('operations.checkIn.identityVerification', 'Identity & Residence Verification')}
+                  Xác Minh Định Danh & Cư Trú
                 </h2>
               </div>
-              <OperationalStatusChip type="residence" status={arrival.residenceDeclarationStatus} size="sm" />
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  backgroundColor: isIdentityComplete ? '#E8F5E9' : '#FFF8E1',
+                  color: isIdentityComplete ? '#1B5E20' : '#8C5400',
+                  border: `1px solid ${isIdentityComplete ? '#C8E6C9' : '#FFE082'}`,
+                }}
+              >
+                {isIdentityComplete ? 'Đã Hoàn Thiện' : 'Chưa Đủ Thông Tin'}
+              </span>
             </div>
 
             {/* Privacy Notice Banner (Section 8) */}
@@ -320,7 +429,7 @@ export const CheckInPage: React.FC = () => {
               }}
             >
               <ShieldCheck size={16} style={{ color: 'var(--accent-forest)', flexShrink: 0 }} />
-              <span>{t('operations.common.protectedSensitiveData', 'Protected sensitive information — processed strictly under residency compliance standards.')}</span>
+              <span>Thông tin định danh được bảo mật nghiêm ngặt — chỉ thu thập để phục vụ khai báo cư trú theo Luật Cư trú 2020.</span>
             </div>
 
             {/* Form Fields */}
@@ -329,12 +438,13 @@ export const CheckInPage: React.FC = () => {
               {/* Legal Name */}
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.fullLegalName', 'Full Legal Name (as in Passport/ID)')} *
+                  Họ và Tên Đầy Đủ (Theo Hộ Chiếu/CCCD) *
                 </label>
                 <input
                   type="text"
                   value={formData.fullLegalName}
                   onChange={(e) => handleInputChange('fullLegalName', e.target.value)}
+                  placeholder="VD: Nguyễn Văn An"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -351,12 +461,13 @@ export const CheckInPage: React.FC = () => {
               {/* Nationality */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.nationality', 'Nationality')} *
+                  Quốc Tịch *
                 </label>
                 <input
                   type="text"
                   value={formData.nationality}
                   onChange={(e) => handleInputChange('nationality', e.target.value)}
+                  placeholder="Việt Nam"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -373,7 +484,7 @@ export const CheckInPage: React.FC = () => {
               {/* Date of Birth */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.dob', 'Date of Birth')} *
+                  Ngày Sinh *
                 </label>
                 <input
                   type="date"
@@ -395,7 +506,7 @@ export const CheckInPage: React.FC = () => {
               {/* ID Type */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.idType', 'Identity Document Type')} *
+                  Loại Giấy Tờ Tùy Thân *
                 </label>
                 <select
                   value={formData.idType}
@@ -411,21 +522,22 @@ export const CheckInPage: React.FC = () => {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <option value="passport">{t('operations.checkIn.passport', 'Passport')}</option>
-                  <option value="national_id">{t('operations.checkIn.nationalId', 'National Citizen ID')}</option>
-                  <option value="driver_license">{t('operations.checkIn.driverLicense', "Driver's License")}</option>
+                  <option value="national_id">Căn Cước Công Dân (CCCD)</option>
+                  <option value="passport">Hộ Chiếu (Passport)</option>
+                  <option value="driver_license">Giấy Phép Lái Xe</option>
                 </select>
               </div>
 
               {/* ID Number */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.idNumber', 'Document Number')} *
+                  Số Giấy Tờ *
                 </label>
                 <input
                   type="text"
                   value={formData.idNumber}
                   onChange={(e) => handleInputChange('idNumber', e.target.value)}
+                  placeholder="VD: 001088012345"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -442,12 +554,13 @@ export const CheckInPage: React.FC = () => {
               {/* Permanent Address */}
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.permanentAddress', 'Permanent Address / Residential City')} *
+                  Địa Chỉ Thường Trú / Tỉnh Thành *
                 </label>
                 <input
                   type="text"
                   value={formData.permanentAddress}
                   onChange={(e) => handleInputChange('permanentAddress', e.target.value)}
+                  placeholder="VD: Số 28 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -464,12 +577,13 @@ export const CheckInPage: React.FC = () => {
               {/* Arrival Transportation */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.arrivalTransport', 'Arrival Transportation')}
+                  Phương Tiện Di Chuyển Đến
                 </label>
                 <input
                   type="text"
                   value={formData.arrivalTransport}
                   onChange={(e) => handleInputChange('arrivalTransport', e.target.value)}
+                  placeholder="VD: Xe riêng / Xe đưa đón resort"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -486,13 +600,13 @@ export const CheckInPage: React.FC = () => {
               {/* Receptionist Notes */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {t('operations.checkIn.receptionistNotes', 'Front Desk / Arrival Notes')}
+                  Ghi Chú Tiếp Đón / Lễ Tân
                 </label>
                 <input
                   type="text"
                   value={formData.receptionistNotes}
                   onChange={(e) => handleInputChange('receptionistNotes', e.target.value)}
-                  placeholder={t('operations.checkIn.remarksPlaceholder', 'Optional operational remarks...')}
+                  placeholder="Ghi chú nghiệp vụ lễ tân (tùy chọn)..."
                   style={{
                     width: '100%',
                     height: '36px',
@@ -518,7 +632,7 @@ export const CheckInPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Home size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  {t('operations.checkIn.villaAssignmentStatus', 'Assigned Villa Status')}
+                  Trạng Thái Villa Phân Bổ
                 </h2>
               </div>
               <Link
@@ -526,9 +640,9 @@ export const CheckInPage: React.FC = () => {
                 className="hsw-btn hsw-btn-secondary"
                 style={{ minHeight: '30px', padding: '0 10px', fontSize: '11px' }}
               >
-                {arrival.assignedVillaId
-                  ? t('operations.checkIn.changeVilla', 'Change Villa')
-                  : t('operations.checkIn.assignVillaNow', 'Assign Villa')}
+                {assignedVilla
+                  ? 'Đổi Biệt Thự'
+                  : 'Phân Bổ Biệt Thự'}
               </Link>
             </div>
 
@@ -537,10 +651,10 @@ export const CheckInPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Villa #{assignedVilla.code} — {assignedVilla.name[currentLang] || assignedVilla.name.en}
+                      Biệt thự #{assignedVilla.code.replace(/^Villa\s*#?/i, '')} ({assignedVilla.category})
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {assignedVilla.category} • {t('operations.checkIn.capacityLabel', { capacity: assignedVilla.capacity, defaultValue: `Capacity: ${assignedVilla.capacity} Persons` })} • {assignedVilla.bedType}
+                      {assignedVilla.category} • Sức chứa: {assignedVilla.capacity} người • {assignedVilla.bedType}
                     </div>
                   </div>
                   <VillaStatusChip status={assignedVilla.status} housekeeping={assignedVilla.housekeeping} />
@@ -557,7 +671,7 @@ export const CheckInPage: React.FC = () => {
                       color: '#8C5400',
                     }}
                   >
-                    ⚠️ {t('operations.checkIn.cleaningNoticeWarning', 'Housekeeping is currently cleaning this villa. Check-in cannot be finalized until room is marked Ready.')}
+                    ⚠️ Buồng phòng đang dọn dẹp biệt thự này. Chỉ có thể hoàn tất nhận phòng khi buồng phòng chuyển trạng thái Sẵn Sàng.
                   </div>
                 )}
 
@@ -572,14 +686,14 @@ export const CheckInPage: React.FC = () => {
                       color: '#C62828',
                     }}
                   >
-                    ❌ {t('operations.checkIn.maintenanceAlertWarning', 'Villa is undergoing maintenance. Please reassign to an available ready villa.')}
+                    ❌ Biệt thự đang bảo trì. Vui lòng đổi sang một căn biệt thự khác đang sẵn sàng.
                   </div>
                 )}
               </div>
             ) : (
               <div style={{ padding: 'var(--space-4)', textAlign: 'center', backgroundColor: 'var(--bg-canvas)', borderRadius: 'var(--radius-xs)' }}>
                 <div style={{ color: '#C62828', fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: '8px' }}>
-                  {t('operations.checkIn.notAssigned', 'No villa assigned yet')}
+                  Chưa phân bổ villa
                 </div>
                 <Link
                   to={`/receptionist/check-in/${arrival.bookingReference}/villa`}
@@ -587,7 +701,7 @@ export const CheckInPage: React.FC = () => {
                   style={{ minHeight: '34px', fontSize: '11px' }}
                 >
                   <Home size={14} />
-                  <span>{t('operations.checkIn.assignVillaNow', 'Assign Villa Now')}</span>
+                  <span>Phân Bổ Villa Ngay</span>
                 </Link>
               </div>
             )}
@@ -598,7 +712,7 @@ export const CheckInPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
               <CheckCircle2 size={18} style={{ color: 'var(--accent-forest)' }} />
               <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                {t('operations.checkIn.readinessChecklist', 'Check-In Readiness Verification')}
+                Kiểm Tra Điều Kiện Nhận Phòng
               </h2>
             </div>
 
@@ -608,16 +722,11 @@ export const CheckInPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
                   {isDepositPaid ? <CheckCircle2 size={16} color="#1B5E20" /> : <Clock size={16} color="#8C5400" />}
                   <span style={{ fontWeight: 600, color: isDepositPaid ? '#1B5E20' : '#8C5400' }}>
-                    {t('operations.checkIn.depositSatisfiedChecklist', {
-                      status: arrival.depositStatus === 'paid'
-                        ? t('operations.checkIn.confirmed', 'Confirmed')
-                        : t('operations.checkIn.pending', 'Pending'),
-                      defaultValue: `1. Required Deposit Satisfied (${arrival.depositStatus === 'paid' ? 'Confirmed' : 'Pending'})`
-                    })}
+                    1. Tiền Cọc Đã Xác Nhận (Đã Thanh Toán)
                   </span>
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', color: isDepositPaid ? '#1B5E20' : '#8C5400' }}>
-                  {isDepositPaid ? t('operations.checkIn.verified', 'Verified') : t('operations.checkIn.pending', 'Pending')}
+                  {isDepositPaid ? 'ĐÃ XÁC NHẬN' : 'CHỜ THANH TOÁN'}
                 </span>
               </div>
 
@@ -626,11 +735,11 @@ export const CheckInPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
                   {isIdentityComplete ? <CheckCircle2 size={16} color="#1B5E20" /> : <Clock size={16} color="#8C5400" />}
                   <span style={{ fontWeight: 600, color: isIdentityComplete ? '#1B5E20' : '#8C5400' }}>
-                    {t('operations.checkIn.residenceInfoChecklist', '2. Residence Information & ID Complete')}
+                    2. Thông Tin Cư Trú & Định Danh Đầy Đủ
                   </span>
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', color: isIdentityComplete ? '#1B5E20' : '#8C5400' }}>
-                  {isIdentityComplete ? t('operations.checkIn.ready', 'Ready') : t('operations.checkIn.incomplete', 'Incomplete')}
+                  {isIdentityComplete ? 'ĐÃ HOÀN THIỆN' : 'CHƯA ĐỦ THÔNG TIN'}
                 </span>
               </div>
 
@@ -643,11 +752,11 @@ export const CheckInPage: React.FC = () => {
                     <AlertCircle size={16} color="#C62828" />
                   )}
                   <span style={{ fontWeight: 600, color: isVillaAssigned && isVillaReady && !isVillaBlocked ? '#1B5E20' : '#C62828' }}>
-                    {t('operations.checkIn.villaAssignedChecklist', '3. Villa Assigned & Clean / Ready')}
+                    3. Đã Phân Bổ Villa & Sạch Sẽ / Sẵn Sàng
                   </span>
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', color: isVillaAssigned && isVillaReady && !isVillaBlocked ? '#1B5E20' : '#C62828' }}>
-                  {isVillaAssigned && isVillaReady && !isVillaBlocked ? t('operations.checkIn.ready', 'Ready') : t('operations.checkIn.notReady', 'Not Ready')}
+                  {isVillaAssigned && isVillaReady && !isVillaBlocked ? 'SẴN SÀNG' : 'CHƯA SẴN SÀNG'}
                 </span>
               </div>
             </div>
@@ -665,13 +774,13 @@ export const CheckInPage: React.FC = () => {
                   <Key size={16} />
                   <span>
                     {arrival.arrivalStatus === 'checked_in'
-                      ? t('operations.checkIn.stayAlreadyCheckedIn', 'Stay Already Checked In')
-                      : t('operations.checkIn.completeCheckInAndKey', 'Complete Check-In & Issue Key')}
+                      ? 'Kỳ Nghỉ Đã Hoàn Tất Nhận Phòng'
+                      : '✓ Hoàn Tất Nhận Phòng & Bàn Giao Khóa'}
                   </span>
                 </button>
               ) : (
                 <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-secondary)', padding: 'var(--space-2)' }}>
-                  {t('operations.checkIn.cannotCheckInNotice', 'All 3 readiness requirements must be fulfilled before completing check-in.')}
+                  Cần thỏa mãn đầy đủ cả 3 điều kiện sẵn sàng trước khi hoàn tất nhận phòng.
                 </div>
               )}
             </div>
@@ -681,3 +790,4 @@ export const CheckInPage: React.FC = () => {
     </div>
   );
 };
+

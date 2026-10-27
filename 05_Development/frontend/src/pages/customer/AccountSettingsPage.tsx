@@ -27,6 +27,21 @@ export const AccountSettingsPage: React.FC = () => {
     notifyWellness: profile.notificationPreferences.wellnessReminders,
   });
 
+  React.useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      fullName: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      dateOfBirth: profile.dateOfBirth,
+      address: profile.address,
+      preferredLanguage: profile.preferredLanguage,
+      emergencyName: profile.emergencyContact?.name || '',
+      emergencyPhone: profile.emergencyContact?.phone || '',
+      emergencyRelationship: profile.emergencyContact?.relationship || '',
+    }));
+  }, [profile]);
+
   const [passwordState, setPasswordState] = useState({
     currentPassword: '',
     newPassword: '',

@@ -14,6 +14,10 @@ public class CheckInResidenceRequest {
 
     private String permanentAddress;
 
+    private String fullName;
+
+    private java.time.LocalDate dateOfBirth;
+
     public CheckInResidenceRequest() {
     }
 
@@ -47,5 +51,21 @@ public class CheckInResidenceRequest {
 
     public void setPermanentAddress(String permanentAddress) {
         this.permanentAddress = permanentAddress;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public java.time.LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(java.time.LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }

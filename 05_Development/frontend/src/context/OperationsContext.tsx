@@ -15,6 +15,7 @@ import {
   updatePhysicalVillaStatus,
   recordResidenceDeclaration,
   assignPhysicalVilla,
+  completeCheckInApi,
 } from '../api/booking/retreatBookingApi';
 
 import { useAuth } from '../hooks/useAuth';
@@ -184,41 +185,64 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, [role]);
 
-  const getVillaById = (id: string): Villa | undefined => {
-    return villas.find((v) => v.id === id || v.code === id);
+  const getVillaById = (idOrCode?: string): Villa | undefined => {
+    if (!idOrCode) return undefined;
+    const clean = idOrCode.replace(/^Villa\s*#?/i, '').trim();
+    return villas.find(
+      (v) =>
+        v.id === idOrCode ||
+        v.code === idOrCode ||
+        v.id === clean ||
+        v.code === clean ||
+        v.code.toLowerCase() === clean.toLowerCase() ||
+        v.code.toLowerCase() === ('v' + clean).toLowerCase()
+    );
   };
 
   const getArrivalByBookingRef = (bookingRef: string): ArrivalRecord | undefined => {
     return arrivals.find((a) => a.bookingReference === bookingRef || a.id === bookingRef);
   };
 
-  const assignVillaToBooking = (bookingRef: string, villaId: string): { success: boolean; message: string } => {
+  const assignVillaToBooking = async (
+    bookingRef: string,
+    villaId: string
+  ): Promise<{ success: boolean; message: string }> => {
     const arrival = getArrivalByBookingRef(bookingRef);
     if (!arrival) {
-      return { success: false, message: `Arrival record for ${bookingRef} not found.` };
+      return { success: false, message: `Không tìm thấy thông tin đặt chỗ ${bookingRef}.` };
     }
 
     const villa = getVillaById(villaId);
     if (!villa) {
-      return { success: false, message: `Villa ${villaId} not found.` };
+      return { success: false, message: `Không tìm thấy biệt thự ${villaId}.` };
     }
 
     if (villa.status === 'maintenance') {
-      return { success: false, message: `${villa.name.en} is currently undergoing maintenance and cannot be assigned.` };
+      return { success: false, message: `Biệt thự #${villa.code} đang bảo trì, không thể phân bổ.` };
     }
 
     if (villa.status === 'occupied' && villa.currentBookingRef !== bookingRef) {
-      return { success: false, message: `${villa.name.en} is occupied by another customer.` };
+      return { success: false, message: `Biệt thự #${villa.code} hiện đang có khách lưu trú khác.` };
     }
 
     if (villa.capacity < arrival.partySize) {
       return {
         success: false,
-        message: `${villa.name.en} capacity (${villa.capacity}) is insufficient for party size (${arrival.partySize}).`,
+        message: `Sức chứa của Biệt thự #${villa.code} (${villa.capacity} người) không đủ cho đoàn (${arrival.partySize} khách).`,
       };
     }
 
-    // Update Arrival
+    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    const numVillaId = parseInt(villa.id, 10);
+    try {
+      await assignPhysicalVilla(numBookingId, isNaN(numVillaId) ? undefined : numVillaId, villa.code);
+      await syncWithBackend();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi lưu phân bổ biệt thự xuống SQL Server.';
+      return { success: false, message: errorMsg };
+    }
+
+    // Update Arrival locally
     const readiness: 'ready' | 'cleaning' | 'maintenance' =
       villa.status === 'cleaning' ? 'cleaning' : 'ready';
 
@@ -248,7 +272,6 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             currentCustomerName: arrival.customerName,
           };
         }
-        // If this booking previously had another villa assigned, release that villa
         if (v.id !== villa.id && v.currentBookingRef === bookingRef && v.status === 'reserved') {
           return {
             ...v,
@@ -264,16 +287,6 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Remove any unassigned_villa alert for this booking
     setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.id !== `alert-unassigned-${arrival.id}`));
     setDismissedAlertIds((prev) => new Set([...prev, `alert-unassigned-${arrival.id}`]));
-
-    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
-    const numVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
-    if (!isNaN(numBookingId) && !isNaN(numVillaId)) {
-      assignPhysicalVilla(numBookingId, numVillaId)
-        .then(() => syncWithBackend())
-        .catch((err) => {
-          console.warn('Sync assign villa to backend failed:', err);
-        });
-    }
 
     return {
       success: true,
@@ -421,34 +434,53 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
   };
 
-  const completeCheckIn = (
+  const completeCheckIn = async (
     bookingRef: string,
     identityData: CustomerIdentityVerification,
     villaId: string
-  ): { success: boolean; message: string } => {
+  ): Promise<{ success: boolean; message: string }> => {
     const arrival = getArrivalByBookingRef(bookingRef);
     if (!arrival) {
-      return { success: false, message: `Arrival record ${bookingRef} not found.` };
+      return { success: false, message: `Không tìm thấy đặt chỗ ${bookingRef}.` };
     }
 
     if (arrival.depositStatus !== 'paid') {
       return {
         success: false,
-        message: 'Deposit payment must be satisfied prior to check-in completion.',
+        message: 'Khoản tiền đặt cọc phải được thanh toán trước khi hoàn tất nhận phòng.',
       };
     }
 
     const villa = getVillaById(villaId);
     if (!villa) {
-      return { success: false, message: 'Please assign a valid villa before completing check-in.' };
+      return { success: false, message: 'Vui lòng phân bổ biệt thự hợp lệ trước khi hoàn tất nhận phòng.' };
     }
 
     if (villa.status === 'maintenance') {
-      return { success: false, message: 'Assigned villa is under maintenance. Please reassign to an available villa.' };
+      return { success: false, message: 'Biệt thự đã chọn đang bảo trì. Vui lòng đổi sang biệt thự sẵn sàng.' };
     }
 
     if (villa.status === 'cleaning') {
-      return { success: false, message: 'Assigned villa is still in cleaning status. Please confirm housekeeping readiness before final check-in.' };
+      return { success: false, message: 'Biệt thự đang được dọn dẹp. Vui lòng xác nhận buồng phòng sẵn sàng trước khi nhận phòng.' };
+    }
+
+    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    try {
+      if (identityData.idNumber) {
+        await recordResidenceDeclaration(numBookingId, {
+          fullName: identityData.fullLegalName || arrival.customerName,
+          nationality: identityData.nationality,
+          identificationNumber: identityData.idNumber,
+          identificationType: (identityData.idType === 'national_id' ? 'CCCD' : identityData.idType.toUpperCase()) || 'CCCD',
+          dateOfBirth: identityData.dateOfBirth,
+          permanentAddress: identityData.permanentAddress,
+        });
+      }
+      await completeCheckInApi(numBookingId);
+      await syncWithBackend();
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || 'Lỗi khi hoàn tất thủ tục nhận phòng trên SQL Server.';
+      return { success: false, message: errMsg };
     }
 
     // 1. Update Arrival
@@ -502,27 +534,6 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return v;
       })
     );
-
-    // Sync Residence declaration and Physical Villa assignment to backend SQL Server
-    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
-    const numVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
-    if (!isNaN(numBookingId)) {
-      recordResidenceDeclaration(numBookingId, {
-        fullName: identityData.fullLegalName,
-        nationality: identityData.nationality,
-        identificationNumber: identityData.idNumber,
-        identificationType: identityData.idType === 'national_id' ? 'CCCD' : identityData.idType.toUpperCase(),
-        dateOfBirth: identityData.dateOfBirth,
-        permanentAddress: identityData.permanentAddress,
-      }).catch((err) => console.warn('Sync residence record to backend failed:', err));
-    }
-    if (!isNaN(numBookingId) && !isNaN(numVillaId)) {
-      assignPhysicalVilla(numBookingId, numVillaId)
-        .then(() => syncWithBackend())
-        .catch((err) => {
-          console.warn('Sync assign villa check-in to backend failed:', err);
-        });
-    }
 
     // 3. Clear relevant operational alerts
     setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.id !== `alert-unassigned-${arrival.id}`));

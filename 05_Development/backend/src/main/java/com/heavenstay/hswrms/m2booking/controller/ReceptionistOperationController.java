@@ -49,18 +49,27 @@ public class ReceptionistOperationController {
     }
 
     @PostMapping("/check-in/{bookingId}/assign-villa")
-    public ResponseEntity<ApiResponse<BookingSummaryResponse>> assignVillaAndCheckIn(
+    public ResponseEntity<ApiResponse<BookingSummaryResponse>> assignVilla(
             @PathVariable Integer bookingId,
-            @Valid @RequestBody AssignVillaRequest request,
+            @RequestBody AssignVillaRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Integer actorUserId = userDetails != null ? userDetails.getUserId() : 2;
-        BookingSummaryResponse response = receptionistService.assignVillaAndCheckIn(
+        BookingSummaryResponse response = receptionistService.assignVilla(
                 bookingId,
                 request.getPhysicalVillaId(),
-                request.getHealthProfileConfirmed(),
+                request.getVillaNumber(),
                 actorUserId
         );
-        return ResponseEntity.ok(ApiResponse.ok("Physical villa assigned and check-in completed successfully", response));
+        return ResponseEntity.ok(ApiResponse.ok("Biệt thự đã được phân bổ thành công cho đặt chỗ", response));
+    }
+
+    @PostMapping({"/check-in/{bookingId}/complete", "/check-in/{bookingId}/complete-check-in"})
+    public ResponseEntity<ApiResponse<BookingSummaryResponse>> completeCheckIn(
+            @PathVariable Integer bookingId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Integer actorUserId = userDetails != null ? userDetails.getUserId() : 2;
+        BookingSummaryResponse response = receptionistService.completeCheckIn(bookingId, actorUserId);
+        return ResponseEntity.ok(ApiResponse.ok("Hoàn tất thủ tục nhận phòng thành công", response));
     }
 
     @PostMapping("/walk-in")

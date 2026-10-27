@@ -323,7 +323,9 @@ export const BookingDetailPage: React.FC = () => {
                   <div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Biệt Thự Thực Tế</div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent-forest)' }}>
-                      {booking.assignedVillaNumber || 'Phân bổ khi nhận phòng'}
+                      {booking.assignedVillaNumber
+                        ? `Biệt thự #${booking.assignedVillaNumber.replace(/^Villa\s*#?/i, '').replace(/^#/, '')}`
+                        : 'Phân bổ khi nhận phòng'}
                     </div>
                   </div>
                 </div>

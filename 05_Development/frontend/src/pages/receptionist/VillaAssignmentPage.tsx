@@ -29,8 +29,14 @@ export const VillaAssignmentPage: React.FC = () => {
   const arrival = getArrivalByBookingRef(bookingId || '');
   const currentLang = (i18n.language || 'en') as 'en' | 'vi' | 'zh-CN' | 'ja' | 'fr';
 
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>(arrival?.villaCategory || 'all');
   const [readinessFilter, setReadinessFilter] = useState<string>('all');
+
+  React.useEffect(() => {
+    if (arrival?.villaCategory && categoryFilter === 'all') {
+      setCategoryFilter(arrival.villaCategory);
+    }
+  }, [arrival?.villaCategory]);
 
   if (!arrival) {
     return (
@@ -72,7 +78,7 @@ export const VillaAssignmentPage: React.FC = () => {
     return Array.from(new Set(villas.map((v) => v.category)));
   }, [villas]);
 
-  const handleAssign = (villa: Villa) => {
+  const handleAssign = async (villa: Villa) => {
     // Validation checks
     if (villa.status === 'maintenance') {
       showToast(t('operations.villaAssignment.maintenanceAlert', 'Villa is under maintenance and cannot be assigned.'), 'error');
@@ -89,14 +95,13 @@ export const VillaAssignmentPage: React.FC = () => {
       return;
     }
 
-    const res = assignVillaToBooking(arrival.bookingReference, villa.id);
+    const res = await assignVillaToBooking(arrival.bookingReference, villa.id);
     if (res.success) {
       showToast(res.message, 'success');
-      refreshOperationsData();
-      // Return to check-in screen after small delay
+      await refreshOperationsData();
       setTimeout(() => {
         navigate(`/receptionist/check-in/${arrival.bookingReference}`);
-      }, 400);
+      }, 300);
     } else {
       showToast(res.message, 'error');
     }

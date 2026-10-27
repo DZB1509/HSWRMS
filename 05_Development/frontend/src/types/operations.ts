@@ -104,11 +104,11 @@ export interface OperationsContextType {
   alerts: OperationalAlert[];
   getVillaById: (id: string) => Villa | undefined;
   getArrivalByBookingRef: (bookingRef: string) => ArrivalRecord | undefined;
-  assignVillaToBooking: (bookingRef: string, villaId: string) => { success: boolean; message: string };
+  assignVillaToBooking: (bookingRef: string, villaId: string) => Promise<{ success: boolean; message: string }>;
   updateVillaStatus: (villaId: string, status: VillaStatus, housekeeping?: HousekeepingStatus) => { success: boolean; message: string };
   startCheckIn: (bookingRef: string) => void;
   saveCheckInDraft: (bookingRef: string, identityData: Partial<CustomerIdentityVerification>) => void;
-  completeCheckIn: (bookingRef: string, identityData: CustomerIdentityVerification, villaId: string) => { success: boolean; message: string };
+  completeCheckIn: (bookingRef: string, identityData: CustomerIdentityVerification, villaId: string) => Promise<{ success: boolean; message: string }>;
   submitDailyResidenceDeclarations: () => { count: number; message: string };
   markResidenceDeclaration: (bookingRef: string, status: ResidenceDeclarationStatus) => void;
   isLoading: boolean;

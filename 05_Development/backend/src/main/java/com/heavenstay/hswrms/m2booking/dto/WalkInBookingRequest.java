@@ -9,20 +9,21 @@ public class WalkInBookingRequest {
 
     private Integer customerProfileId;
 
-    @NotBlank(message = "Guest full name is required")
     private String guestFullName;
+    private String customerFullName;
 
     private String guestEmail;
+    private String customerEmail;
 
     private String guestPhone;
+    private String customerPhone;
 
     @NotNull(message = "Retreat package ID is required")
     private Integer retreatPackageId;
 
-    @NotNull(message = "Villa category ID is required")
     private Integer villaCategoryId;
+    private Integer requestedVillaCategoryId;
 
-    @NotNull(message = "Physical Villa ID to assign immediately is required")
     private Integer physicalVillaId;
 
     @NotNull(message = "Check-in date is required")
@@ -37,10 +38,8 @@ public class WalkInBookingRequest {
     @jakarta.validation.constraints.Min(value = 1, message = "Guest count must be at least 1")
     private Integer guestCount = 1;
 
-    @NotBlank(message = "Identification number (CCCD/Passport) is required")
     private String identificationNumber;
 
-    @NotBlank(message = "Identification type is required")
     private String identificationType = "CCCD";
 
     private String nationality = "Việt Nam";
@@ -48,6 +47,7 @@ public class WalkInBookingRequest {
     private String permanentAddress;
 
     private String initialPaymentMethod = "CASH"; // CASH, POS, VNPAY
+    private String depositPaymentMethod;
 
     public WalkInBookingRequest() {
     }
@@ -172,11 +172,80 @@ public class WalkInBookingRequest {
         this.initialPaymentMethod = initialPaymentMethod;
     }
 
+    public String getCustomerFullName() {
+        return customerFullName;
+    }
+
+    public void setCustomerFullName(String customerFullName) {
+        this.customerFullName = customerFullName;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone;
+    }
+
+    public Integer getRequestedVillaCategoryId() {
+        return requestedVillaCategoryId;
+    }
+
+    public void setRequestedVillaCategoryId(Integer requestedVillaCategoryId) {
+        this.requestedVillaCategoryId = requestedVillaCategoryId;
+    }
+
+    public String getDepositPaymentMethod() {
+        return depositPaymentMethod;
+    }
+
+    public void setDepositPaymentMethod(String depositPaymentMethod) {
+        this.depositPaymentMethod = depositPaymentMethod;
+    }
+
+    public String getResolvedFullName() {
+        if (guestFullName != null && !guestFullName.trim().isEmpty()) return guestFullName.trim();
+        if (customerFullName != null && !customerFullName.trim().isEmpty()) return customerFullName.trim();
+        return "Khách Vãng Lai";
+    }
+
+    public String getResolvedEmail() {
+        if (guestEmail != null && !guestEmail.trim().isEmpty()) return guestEmail.trim();
+        if (customerEmail != null && !customerEmail.trim().isEmpty()) return customerEmail.trim();
+        return null;
+    }
+
+    public String getResolvedPhone() {
+        if (guestPhone != null && !guestPhone.trim().isEmpty()) return guestPhone.trim();
+        if (customerPhone != null && !customerPhone.trim().isEmpty()) return customerPhone.trim();
+        return null;
+    }
+
+    public Integer getResolvedVillaCategoryId() {
+        if (villaCategoryId != null) return villaCategoryId;
+        return requestedVillaCategoryId;
+    }
+
     public Integer getGuestCount() {
-        return guestCount;
+        return guestCount != null ? guestCount : 1;
     }
 
     public void setGuestCount(Integer guestCount) {
         this.guestCount = guestCount;
+    }
+
+    public String getResolvedPaymentMethod() {
+        if (initialPaymentMethod != null && !initialPaymentMethod.trim().isEmpty()) return initialPaymentMethod.trim().toUpperCase();
+        if (depositPaymentMethod != null && !depositPaymentMethod.trim().isEmpty()) return depositPaymentMethod.trim().toUpperCase();
+        return "CASH";
     }
 }

@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { useOperations } from '../../context/OperationsContext';
+import { useToast } from '../../components/common/Toast';
 import { Button } from '../../components/common/Button';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalStatusChip } from '../../components/operations/OperationalStatusChip';
@@ -25,6 +26,7 @@ import {
 export const DailyArrivalsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { arrivals, todayDate } = useOperations();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +44,8 @@ export const DailyArrivalsPage: React.FC = () => {
   const [walkInPhone, setWalkInPhone] = useState('');
   const [walkInPkgId, setWalkInPkgId] = useState<number>(1);
   const [walkInCatId, setWalkInCatId] = useState<number>(1);
-  const [walkInCheckIn, setWalkInCheckIn] = useState(new Date().toISOString().split('T')[0]);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [walkInCheckIn, setWalkInCheckIn] = useState(todayStr);
   const [walkInCheckOut, setWalkInCheckOut] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 3);
@@ -53,20 +56,66 @@ export const DailyArrivalsPage: React.FC = () => {
   const [walkInSubmitting, setWalkInSubmitting] = useState(false);
   const [walkInError, setWalkInError] = useState<string | null>(null);
 
+  const autoCalcCheckOut = (inDate: string, pkgId: number, currentPkgs: RetreatPackageDto[] = packages) => {
+    const pkg = currentPkgs.find((p) => p.retreatPackageId === pkgId);
+    const nights = pkg ? pkg.durationNights : 3;
+    if (!inDate) return;
+    const parts = inDate.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      d.setDate(d.getDate() + nights);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      setWalkInCheckOut(`${yyyy}-${mm}-${dd}`);
+    }
+  };
+
   useEffect(() => {
-    getRetreatPackages().then(setPackages).catch(() => {});
+    getRetreatPackages().then((pkgs) => {
+      setPackages(pkgs);
+      if (pkgs && pkgs.length > 0) {
+        setWalkInPkgId(pkgs[0].retreatPackageId);
+        autoCalcCheckOut(walkInCheckIn, pkgs[0].retreatPackageId, pkgs);
+        if (pkgs[0].eligibleVillaCategories && pkgs[0].eligibleVillaCategories.length > 0) {
+          setWalkInCatId(pkgs[0].eligibleVillaCategories[0].villaCategoryId);
+        }
+      }
+    }).catch(() => {});
     getVillaCategories().then(setCategories).catch(() => {});
   }, []);
 
   const handleCreateWalkIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setWalkInSubmitting(true);
     setWalkInError(null);
+
+    if (!walkInName.trim()) {
+      setWalkInError('Vui lòng nhập họ và tên đầy đủ của khách (theo CCCD/Hộ chiếu).');
+      return;
+    }
+    if (!walkInEmail.trim() || !walkInEmail.includes('@')) {
+      setWalkInError('Vui lòng nhập địa chỉ email hợp lệ.');
+      return;
+    }
+    if (!walkInPhone.trim()) {
+      setWalkInError('Vui lòng nhập số điện thoại liên hệ.');
+      return;
+    }
+    if (walkInCheckIn < todayStr) {
+      setWalkInError('Ngày nhận phòng không thể ở trong quá khứ.');
+      return;
+    }
+    if (walkInCheckOut <= walkInCheckIn) {
+      setWalkInError('Ngày trả phòng phải sau ngày nhận phòng.');
+      return;
+    }
+
+    setWalkInSubmitting(true);
     try {
       const res = await createWalkInBooking({
-        customerFullName: walkInName,
-        customerEmail: walkInEmail,
-        customerPhone: walkInPhone,
+        customerFullName: walkInName.trim(),
+        customerEmail: walkInEmail.trim(),
+        customerPhone: walkInPhone.trim(),
         retreatPackageId: walkInPkgId,
         requestedVillaCategoryId: walkInCatId,
         checkInDate: walkInCheckIn,
@@ -76,15 +125,15 @@ export const DailyArrivalsPage: React.FC = () => {
       });
 
       setIsWalkInModalOpen(false);
-      alert(`Tạo đặt phòng trực tiếp thành công! Mã đặt chỗ: #${res.retreatBookingId}`);
+      showToast(`Tạo đặt phòng trực tiếp thành công! Mã đặt chỗ: #${res.retreatBookingId}`, 'success');
       navigate(`/receptionist/check-in/${res.retreatBookingId}`);
     } catch (err: any) {
-      setWalkInError(err?.message || 'Không thể tạo đặt phòng trực tiếp.');
+      const errMsg = err?.response?.data?.message || err?.message || 'Không thể tạo đặt phòng trực tiếp.';
+      setWalkInError(errMsg);
     } finally {
       setWalkInSubmitting(false);
     }
   };
-
 
   const currentLang = (i18n.language || 'en') as 'en' | 'vi' | 'zh-CN' | 'ja' | 'fr';
 
@@ -144,7 +193,7 @@ export const DailyArrivalsPage: React.FC = () => {
               onClick={() => setIsWalkInModalOpen(true)}
               icon={<Plus size={14} />}
             >
-              + New Walk-In Booking
+              + Tạo Đặt Phòng Trực Tiếp (Walk-in)
             </Button>
           </div>
         }
@@ -528,7 +577,7 @@ export const DailyArrivalsPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Plus size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>
-                  Create Walk-In Booking (FR-M2-06)
+                  + Tạo Thủ Tục Đặt Phòng Trực Tiếp Tại Quầy
                 </h3>
               </div>
               <button
@@ -548,11 +597,11 @@ export const DailyArrivalsPage: React.FC = () => {
 
             <form onSubmit={handleCreateWalkIn}>
               <div style={{ marginBottom: 'var(--space-3)' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Customer Legal Full Name *</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Họ và Tên Đầy Đủ Của Khách (Theo CCCD/Hộ Chiếu) *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Tran Van An"
+                  placeholder="VD: Nguyễn Văn An"
                   value={walkInName}
                   onChange={(e) => setWalkInName(e.target.value)}
                   style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
@@ -561,18 +610,18 @@ export const DailyArrivalsPage: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Email Address *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Địa Chỉ Email *</label>
                   <input
                     type="email"
                     required
-                    placeholder="customer@example.com"
+                    placeholder="khachhang@example.com"
                     value={walkInEmail}
                     onChange={(e) => setWalkInEmail(e.target.value)}
                     style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Phone Number *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Số Điện Thoại Liên Hệ *</label>
                   <input
                     type="tel"
                     required
@@ -585,7 +634,7 @@ export const DailyArrivalsPage: React.FC = () => {
               </div>
 
               <div style={{ marginBottom: 'var(--space-3)' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Retreat Package *</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Gói Nghỉ Dưỡng *</label>
                 <select
                   value={walkInPkgId}
                   onChange={(e) => {
@@ -595,19 +644,20 @@ export const DailyArrivalsPage: React.FC = () => {
                     if (pkg && pkg.eligibleVillaCategories && pkg.eligibleVillaCategories.length > 0) {
                       setWalkInCatId(pkg.eligibleVillaCategories[0].villaCategoryId);
                     }
+                    autoCalcCheckOut(walkInCheckIn, pkgId);
                   }}
                   style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
                 >
                   {packages.map((p) => (
                     <option key={p.retreatPackageId} value={p.retreatPackageId}>
-                      {p.packageName} ({p.durationNights}N - {p.wellnessGoal})
+                      {p.packageName} ({p.durationNights} Đêm - {p.wellnessGoal})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div style={{ marginBottom: 'var(--space-3)' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Villa Category *</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Hạng Biệt Thự *</label>
                 <select
                   value={walkInCatId}
                   onChange={(e) => setWalkInCatId(parseInt(e.target.value, 10))}
@@ -615,7 +665,7 @@ export const DailyArrivalsPage: React.FC = () => {
                 >
                   {categories.map((c) => (
                     <option key={c.villaCategoryId} value={c.villaCategoryId}>
-                      {c.categoryName} (Max {c.maxOccupancy} Guests)
+                      {c.categoryName} (Tối đa {c.maxOccupancy} khách)
                     </option>
                   ))}
                 </select>
@@ -623,17 +673,22 @@ export const DailyArrivalsPage: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Check-in Date *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Ngày Nhận Phòng *</label>
                   <input
                     type="date"
                     required
+                    min={todayStr}
                     value={walkInCheckIn}
-                    onChange={(e) => setWalkInCheckIn(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setWalkInCheckIn(val);
+                      autoCalcCheckOut(val, walkInPkgId);
+                    }}
                     style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Check-out Date *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Ngày Trả Phòng *</label>
                   <input
                     type="date"
                     required
@@ -646,7 +701,7 @@ export const DailyArrivalsPage: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Number of Guests *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Số Lượng Khách *</label>
                   <input
                     type="number"
                     min={1}
@@ -658,25 +713,25 @@ export const DailyArrivalsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Deposit Method *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Phương Thức Thanh Toán Tiền Cọc *</label>
                   <select
                     value={walkInPaymentMethod}
                     onChange={(e) => setWalkInPaymentMethod(e.target.value as any)}
                     style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
                   >
-                    <option value="CASH">Cash at Desk</option>
-                    <option value="POS">POS Terminal Card</option>
-                    <option value="VNPAY">VNPay QR / Gateway</option>
+                    <option value="CASH">Tiền mặt tại quầy lễ tân</option>
+                    <option value="VNPAY">Quét mã QR VNPay</option>
+                    <option value="POS">Quẹt thẻ POS tại quầy</option>
                   </select>
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
                 <Button variant="secondary" size="sm" type="button" onClick={() => setIsWalkInModalOpen(false)}>
-                  Cancel
+                  Hủy Bỏ
                 </Button>
                 <Button variant="primary" size="sm" type="submit" disabled={walkInSubmitting}>
-                  {walkInSubmitting ? 'Creating Booking...' : 'Create & Proceed to Check-In'}
+                  {walkInSubmitting ? 'Đang tạo đặt phòng...' : 'Tạo Đặt Phòng & Chuyển Sang Nhận Phòng'}
                 </Button>
               </div>
             </form>

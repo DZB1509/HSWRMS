@@ -16,6 +16,8 @@ import {
 } from '../data/mockCustomer';
 import {
   getCustomerBookings,
+  getCustomerProfileApi,
+  updateCustomerProfileApi,
 } from '../api/booking/retreatBookingApi';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
@@ -66,6 +68,31 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return INITIAL_DELETION_REQUEST;
     }
   });
+
+  // Fetch real customer profile from SQL Server on mount
+  useEffect(() => {
+    getCustomerProfileApi()
+      .then((data) => {
+        if (data) {
+          setProfile((prev) => ({
+            ...prev,
+            fullName: data.fullName || prev.fullName,
+            email: data.email || prev.email,
+            phone: data.phone || prev.phone,
+            dateOfBirth: data.dateOfBirth ? String(data.dateOfBirth) : prev.dateOfBirth,
+            address: data.residentialAddress || prev.address,
+            emergencyContact: {
+              name: data.emergencyContactName || prev.emergencyContact.name,
+              phone: data.emergencyContactPhone || prev.emergencyContact.phone,
+              relationship: data.emergencyContactRelationship || prev.emergencyContact.relationship,
+            },
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load profile from SQL Server:', err);
+      });
+  }, []);
 
   // Fetch bookings directly from SQL Server Backend API
   const fetchCustomerBookingsFromBackend = useCallback(async () => {
@@ -174,8 +201,22 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [deletionRequest]);
 
-  const updateProfile = (updated: Partial<CustomerProfile>) => {
+  const updateProfile = async (updated: Partial<CustomerProfile>) => {
     setProfile((prev) => ({ ...prev, ...updated }));
+    try {
+      await updateCustomerProfileApi({
+        fullName: updated.fullName,
+        phone: updated.phone,
+        address: updated.address,
+        dateOfBirth: updated.dateOfBirth,
+        emergencyName: updated.emergencyContact?.name,
+        emergencyPhone: updated.emergencyContact?.phone,
+        emergencyRelationship: updated.emergencyContact?.relationship,
+        preferredLanguage: updated.preferredLanguage,
+      });
+    } catch (err) {
+      console.warn('Could not save customer profile to SQL Server:', err);
+    }
   };
 
   const updateWellnessProfile = (updated: Partial<WellnessProfile>) => {

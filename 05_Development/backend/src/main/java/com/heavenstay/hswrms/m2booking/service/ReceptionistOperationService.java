@@ -120,6 +120,12 @@ public class ReceptionistOperationService {
         record.setIdentificationType(request.getIdentificationType().trim());
         record.setNationality(request.getNationality() != null ? request.getNationality().trim() : "Việt Nam");
         record.setPermanentAddress(request.getPermanentAddress() != null ? request.getPermanentAddress().trim() : "");
+        if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+            record.setFullName(request.getFullName().trim());
+        }
+        if (request.getDateOfBirth() != null) {
+            record.setDateOfBirth(request.getDateOfBirth());
+        }
         record.setCollectedAt(bookingClock.utcNow());
 
         ResidenceRecord saved = residenceRecordRepository.save(record);
@@ -138,8 +144,105 @@ public class ReceptionistOperationService {
         res.setIdentificationType(saved.getIdentificationType());
         res.setNationality(saved.getNationality());
         res.setPermanentAddress(saved.getPermanentAddress());
+        res.setFullName(saved.getFullName());
+        res.setDateOfBirth(saved.getDateOfBirth());
         res.setCollectedAt(saved.getCollectedAt());
         return res;
+    }
+
+    /**
+     * M2 Check-In Step: Assign Physical Villa to Booking without completing check-in yet.
+     */
+    public BookingSummaryResponse assignVilla(Integer bookingId, Integer physicalVillaId, String villaNumber, Integer actorUserId) {
+        RetreatBooking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt chỗ #" + bookingId + " không tồn tại"));
+
+        PhysicalVilla villa = null;
+        if (physicalVillaId != null) {
+            villa = physicalVillaRepository.findById(physicalVillaId).orElse(null);
+        }
+        if (villa == null && villaNumber != null && !villaNumber.trim().isEmpty()) {
+            String cleanNum = villaNumber.trim();
+            villa = physicalVillaRepository.findByVillaNumber(cleanNum).orElse(null);
+            if (villa == null && !cleanNum.startsWith("V")) {
+                villa = physicalVillaRepository.findByVillaNumber("V" + cleanNum).orElse(null);
+            }
+        }
+        if (villa == null && physicalVillaId != null) {
+            // Check if physicalVillaId matches villa number directly (e.g. 101 -> V101, 201 -> V201)
+            villa = physicalVillaRepository.findByVillaNumber("V" + physicalVillaId).orElse(null);
+        }
+        if (villa == null) {
+            throw new ResourceNotFoundException("Không tìm thấy biệt thự tương ứng (ID: " + physicalVillaId + ", Số hiệu: " + villaNumber + ")");
+        }
+
+        if (bookingRepository.existsByAssignedVilla_VillaIdAndBookingStatus(villa.getVillaId(), "CHECKED_IN")) {
+            throw new BusinessRuleException("Biệt thự #" + villa.getVillaNumber() + " hiện đang có khách lưu trú (CHECKED_IN).");
+        }
+
+        int guests = booking.getGuestCount() != null ? booking.getGuestCount() : 1;
+        if (villa.getMaxOccupancy() != null && guests > villa.getMaxOccupancy()) {
+            throw new BusinessRuleException("Sức chứa của Biệt thự #" + villa.getVillaNumber() +
+                    " (" + villa.getMaxOccupancy() + " khách) không đủ cho đoàn " + guests + " khách.");
+        }
+
+        booking.setAssignedVilla(villa);
+        RetreatBooking saved = bookingRepository.save(booking);
+
+        bookingAuditService.record(
+                actorUserId != null ? actorUserId : 2,
+                "ASSIGN_VILLA",
+                "Booking #" + bookingId + " assigned to Villa #" + villa.getVillaNumber(),
+                "SUCCESS"
+        );
+
+        return toSummaryResponse(saved);
+    }
+
+    /**
+     * M2 Finalize Check-In: Validate deposit, residence record, assigned villa and mark stay active.
+     */
+    public BookingSummaryResponse completeCheckIn(Integer bookingId, Integer actorUserId) {
+        RetreatBooking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt chỗ #" + bookingId + " không tồn tại"));
+
+        if ("CHECKED_IN".equalsIgnoreCase(booking.getBookingStatus())) {
+            return toSummaryResponse(booking);
+        }
+
+        if (!"CONFIRMED".equalsIgnoreCase(booking.getBookingStatus())) {
+            throw new BusinessRuleException("Không thể nhận phòng cho đặt chỗ #" + bookingId + " với trạng thái '" +
+                    booking.getBookingStatus() + "'. Đặt chỗ phải ở trạng thái ĐÃ XÁC NHẬN (CONFIRMED).");
+        }
+
+        boolean hasResidence = residenceRecordRepository.existsByRetreatBooking_RetreatBookingId(bookingId);
+        if (!hasResidence) {
+            throw new BusinessRuleException("Không thể hoàn tất nhận phòng: Thiếu thông tin khai báo cư trú bắt buộc theo Luật Cư trú 2020.");
+        }
+
+        if (booking.getAssignedVilla() == null) {
+            throw new BusinessRuleException("Không thể hoàn tất nhận phòng: Chưa phân bổ biệt thự cho đặt chỗ #" + bookingId);
+        }
+
+        PhysicalVilla villa = booking.getAssignedVilla();
+        if (bookingRepository.existsByAssignedVilla_VillaIdAndBookingStatus(villa.getVillaId(), "CHECKED_IN")) {
+            throw new BusinessRuleException("Biệt thự #" + villa.getVillaNumber() + " hiện đang có khách lưu trú khác.");
+        }
+
+        villa.setVillaStatus("OCCUPIED");
+        physicalVillaRepository.save(villa);
+
+        booking.setBookingStatus("CHECKED_IN");
+        RetreatBooking saved = bookingRepository.save(booking);
+
+        bookingAuditService.record(
+                actorUserId != null ? actorUserId : 2,
+                "COMPLETE_CHECK_IN",
+                "Completed check-in for Booking #" + bookingId + " into Villa #" + villa.getVillaNumber(),
+                "SUCCESS"
+        );
+
+        return toSummaryResponse(saved);
     }
 
     /**
@@ -231,8 +334,9 @@ public class ReceptionistOperationService {
         RetreatPackage pkg = packageRepository.findById(request.getRetreatPackageId())
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat package not found: " + request.getRetreatPackageId()));
 
-        VillaCategory category = villaCategoryRepository.findByIdForUpdate(request.getVillaCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Villa category not found: " + request.getVillaCategoryId()));
+        Integer resolvedCatId = request.getResolvedVillaCategoryId();
+        VillaCategory category = villaCategoryRepository.findByIdForUpdate(resolvedCatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Villa category not found: " + resolvedCatId));
 
         // Sửa lỗi B6: Eligibility check
         boolean isEligible = pkg.getEligibleVillaCategories() == null || pkg.getEligibleVillaCategories().isEmpty()
@@ -253,15 +357,23 @@ public class ReceptionistOperationService {
                     category.getMaxOccupancy() + ") for villa category '" + category.getCategoryName() + "'");
         }
 
-        PhysicalVilla villa = physicalVillaRepository.findByIdForUpdate(request.getPhysicalVillaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Physical Villa #" + request.getPhysicalVillaId() + " not found"));
+        PhysicalVilla villa = null;
+        if (request.getPhysicalVillaId() != null) {
+            villa = physicalVillaRepository.findByIdForUpdate(request.getPhysicalVillaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Physical Villa #" + request.getPhysicalVillaId() + " not found"));
 
-        if (!"AVAILABLE".equalsIgnoreCase(villa.getVillaStatus())) {
-            throw new BusinessRuleException("Physical Villa " + villa.getVillaNumber() + " is currently " + villa.getVillaStatus());
-        }
+            if (!"AVAILABLE".equalsIgnoreCase(villa.getVillaStatus())) {
+                throw new BusinessRuleException("Physical Villa " + villa.getVillaNumber() + " is currently " + villa.getVillaStatus());
+            }
 
-        if (!villa.getVillaCategory().getVillaCategoryId().equals(category.getVillaCategoryId())) {
-            throw new BusinessRuleException("Selected physical villa does not belong to category: " + category.getCategoryName());
+            if (!villa.getVillaCategory().getVillaCategoryId().equals(category.getVillaCategoryId())) {
+                throw new BusinessRuleException("Selected physical villa does not belong to category: " + category.getCategoryName());
+            }
+        } else {
+            List<PhysicalVilla> avail = physicalVillaRepository.findByVillaCategory_VillaCategoryIdAndVillaStatus(category.getVillaCategoryId(), "AVAILABLE");
+            if (!avail.isEmpty()) {
+                villa = avail.get(0);
+            }
         }
 
         // Resolve or create customer profile
@@ -270,9 +382,9 @@ public class ReceptionistOperationService {
             resolvedProfileId = request.getCustomerProfileId();
         } else {
             resolvedProfileId = customerIdentityPort.getOrCreateCustomerProfile(
-                    request.getGuestFullName(),
-                    request.getGuestEmail(),
-                    request.getGuestPhone()
+                    request.getResolvedFullName(),
+                    request.getResolvedEmail(),
+                    request.getResolvedPhone()
             );
         }
 
@@ -284,18 +396,23 @@ public class ReceptionistOperationService {
         calcReq.setGuestCount(guestCount);
         BookingCalculationResponse calcRes = availabilityService.calculateBooking(calcReq);
 
+        boolean hasIdInfo = request.getIdentificationNumber() != null && !request.getIdentificationNumber().trim().isEmpty();
+        boolean immediateCheckIn = (villa != null && hasIdInfo);
+
         RetreatBooking booking = new RetreatBooking();
         booking.setCustomerProfileId(resolvedProfileId);
         booking.setRetreatPackage(pkg);
         booking.setRequestedVillaCategory(category);
-        booking.setAssignedVilla(villa);
+        if (villa != null) {
+            booking.setAssignedVilla(villa);
+        }
         booking.setCheckInDate(request.getCheckInDate());
         booking.setCheckOutDate(request.getCheckOutDate());
-        booking.setBookingStatus("CHECKED_IN");
+        booking.setBookingStatus(immediateCheckIn ? "CHECKED_IN" : "CONFIRMED");
         booking.setTotalEstimatedAmount(calcRes.getTotalEstimatedAmount());
         booking.setDepositAmount(calcRes.getRequiredDepositAmount());
         booking.setGuestCount(guestCount);
-        booking.setSpecialRequest(request.getSpecialRequest() != null ? request.getSpecialRequest() : "Walk-in Booking (Paid by " + request.getInitialPaymentMethod() + ")");
+        booking.setSpecialRequest(request.getSpecialRequest() != null ? request.getSpecialRequest() : "Walk-in Booking (Paid by " + request.getResolvedPaymentMethod() + ")");
         booking.setCreatedAt(bookingClock.utcNow());
 
         RetreatBooking savedBooking = bookingRepository.save(booking);
@@ -304,51 +421,48 @@ public class ReceptionistOperationService {
         PaymentTransaction txn = new PaymentTransaction();
         txn.setRetreatBookingId(savedBooking.getRetreatBookingId());
         txn.setPaymentType(PaymentTransaction.TYPE_DEPOSIT);
-        txn.setPaymentMethod(request.getInitialPaymentMethod() != null ? request.getInitialPaymentMethod().toUpperCase() : PaymentTransaction.METHOD_CASH);
+        txn.setPaymentMethod(request.getResolvedPaymentMethod());
         txn.setTransactionReference("WALK_IN_" + savedBooking.getRetreatBookingId() + "_" + System.currentTimeMillis());
         txn.setAmountPaid(calcRes.getRequiredDepositAmount());
         txn.setPaymentStatus(PaymentTransaction.STATUS_SUCCESSFUL);
         txn.setTransactionDate(bookingClock.utcNow());
         paymentTransactionRepository.save(txn);
 
-        // Record residence record
-        ResidenceRecord record = new ResidenceRecord();
-        record.setRetreatBooking(savedBooking);
-        record.setIdentificationNumber(request.getIdentificationNumber().trim());
-        record.setIdentificationType(request.getIdentificationType().trim());
-        record.setNationality(request.getNationality() != null ? request.getNationality().trim() : "Việt Nam");
-        record.setPermanentAddress(request.getPermanentAddress() != null ? request.getPermanentAddress().trim() : "");
-        record.setCollectedAt(bookingClock.utcNow());
-        residenceRecordRepository.save(record);
+        if (hasIdInfo) {
+            // Record residence record
+            ResidenceRecord record = new ResidenceRecord();
+            record.setRetreatBooking(savedBooking);
+            record.setIdentificationNumber(request.getIdentificationNumber().trim());
+            record.setIdentificationType(request.getIdentificationType() != null ? request.getIdentificationType().trim() : "CCCD");
+            record.setNationality(request.getNationality() != null ? request.getNationality().trim() : "Việt Nam");
+            record.setPermanentAddress(request.getPermanentAddress() != null ? request.getPermanentAddress().trim() : "");
+            record.setFullName(request.getResolvedFullName());
+            record.setCollectedAt(bookingClock.utcNow());
+            residenceRecordRepository.save(record);
+        }
 
-        villa.setVillaStatus("OCCUPIED");
-        physicalVillaRepository.save(villa);
+        if (immediateCheckIn && villa != null) {
+            villa.setVillaStatus("OCCUPIED");
+            physicalVillaRepository.save(villa);
 
-        bookingAuditService.record(
-                actorUserId != null ? actorUserId : 2,
-                "WALK_IN_CHECK_IN",
-                "Walk-in Booking #" + savedBooking.getRetreatBookingId() + " -> Villa " + villa.getVillaNumber(),
-                "SUCCESS"
-        );
+            bookingAuditService.record(
+                    actorUserId != null ? actorUserId : 2,
+                    "WALK_IN_CHECK_IN",
+                    "Walk-in Booking #" + savedBooking.getRetreatBookingId() + " -> Villa " + villa.getVillaNumber(),
+                    "SUCCESS"
+            );
+        } else {
+            bookingAuditService.record(
+                    actorUserId != null ? actorUserId : 2,
+                    "WALK_IN_CREATE",
+                    "Walk-in Booking #" + savedBooking.getRetreatBookingId() + " created and confirmed",
+                    "SUCCESS"
+            );
+        }
 
-        BookingSummaryResponse res = new BookingSummaryResponse();
-        res.setRetreatBookingId(savedBooking.getRetreatBookingId());
-        res.setCustomerProfileId(savedBooking.getCustomerProfileId());
-        res.setPackageName(pkg.getPackageName());
-        res.setRequestedCategoryName(category.getCategoryName());
-        res.setAssignedVillaId(villa.getVillaId());
-        res.setAssignedVillaNumber(villa.getVillaNumber());
-        res.setCheckInDate(savedBooking.getCheckInDate());
-        res.setCheckOutDate(savedBooking.getCheckOutDate());
-        res.setBookingStatus(savedBooking.getBookingStatus());
-        res.setDepositAmount(savedBooking.getDepositAmount());
-        res.setTotalEstimatedAmount(savedBooking.getTotalEstimatedAmount());
-        res.setGuestCount(guestCount);
-        res.setCreatedAt(savedBooking.getCreatedAt());
-        res.setHasResidenceRecord(true);
-        res.setPaymentStatus("SUCCESSFUL");
+        BookingSummaryResponse res = toSummaryResponse(savedBooking);
         res.setTransactionReference(txn.getTransactionReference());
-
+        res.setPaymentStatus("SUCCESSFUL");
         return res;
     }
 
@@ -499,6 +613,8 @@ public class ReceptionistOperationService {
             rRes.setIdentificationType(resRec.getIdentificationType());
             rRes.setNationality(resRec.getNationality());
             rRes.setPermanentAddress(resRec.getPermanentAddress());
+            rRes.setFullName(resRec.getFullName());
+            rRes.setDateOfBirth(resRec.getDateOfBirth());
             rRes.setCollectedAt(resRec.getCollectedAt());
             detail.setResidenceRecord(rRes);
         }
@@ -700,6 +816,35 @@ public class ReceptionistOperationService {
         res.setHasPrivatePool(pv.getHasPrivatePool());
         res.setPoolInfo(pv.getPoolInfo());
         res.setViewAndOperationalNotes(pv.getViewAndOperationalNotes());
+        return res;
+    }
+
+    public BookingSummaryResponse toSummaryResponse(RetreatBooking saved) {
+        BookingSummaryResponse res = new BookingSummaryResponse();
+        res.setRetreatBookingId(saved.getRetreatBookingId());
+        res.setBookingReference("HSW-BK-" + saved.getRetreatBookingId());
+        res.setCustomerProfileId(saved.getCustomerProfileId());
+        res.setRetreatPackageId(saved.getRetreatPackage().getRetreatPackageId());
+        res.setPackageName(saved.getRetreatPackage().getPackageName());
+        res.setRequestedVillaCategoryId(saved.getRequestedVillaCategory().getVillaCategoryId());
+        res.setRequestedCategoryName(saved.getRequestedVillaCategory().getCategoryName());
+        if (saved.getAssignedVilla() != null) {
+            res.setAssignedVillaId(saved.getAssignedVilla().getVillaId());
+            res.setAssignedVillaNumber(saved.getAssignedVilla().getVillaNumber());
+        }
+        res.setCheckInDate(saved.getCheckInDate());
+        res.setCheckOutDate(saved.getCheckOutDate());
+        res.setBookingStatus(saved.getBookingStatus());
+        res.setDepositAmount(saved.getDepositAmount());
+        res.setTotalEstimatedAmount(saved.getTotalEstimatedAmount());
+        res.setSpecialRequest(saved.getSpecialRequest());
+        res.setGuestCount(saved.getGuestCount() != null ? saved.getGuestCount() : 1);
+        res.setCreatedAt(saved.getCreatedAt());
+        res.setHasResidenceRecord(residenceRecordRepository.existsByRetreatBooking_RetreatBookingId(saved.getRetreatBookingId()));
+        boolean isPaid = "CONFIRMED".equalsIgnoreCase(saved.getBookingStatus())
+                || "CHECKED_IN".equalsIgnoreCase(saved.getBookingStatus())
+                || "COMPLETED".equalsIgnoreCase(saved.getBookingStatus());
+        res.setPaymentStatus(isPaid ? "SUCCESSFUL" : "PENDING");
         return res;
     }
 }
