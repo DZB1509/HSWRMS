@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   CheckCircle2,
@@ -10,15 +10,22 @@ import {
   CreditCard,
   Key,
   Heart,
+  RotateCw,
+  Download,
+  Printer,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
+import { useCustomer } from '../../context/CustomerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import { resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
 
 export const CheckoutConfirmationPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { bookingId } = useParams<{ bookingId?: string }>();
   const { role } = useAuth();
   const {
@@ -27,37 +34,110 @@ export const CheckoutConfirmationPage: React.FC = () => {
     isStayCheckedOut,
     getCheckoutRecord,
   } = useFolio();
+  const { activeBooking } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
   const folioData = getFolioForBooking(bookingId);
 
+  const numericBookingId = useMemo(() => {
+    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
+  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+
+  const queryInvoiceId = searchParams.get('invoiceId');
+  const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(() => {
+    if (queryInvoiceId && /^\d+$/.test(queryInvoiceId.trim())) {
+      const parsed = parseInt(queryInvoiceId.trim(), 10);
+      if (parsed > 0) return parsed;
+    }
+    return null;
+  });
+
+  // Resolve backend invoice ID if not present in URL
+  useEffect(() => {
+    let isMounted = true;
+    if (resolvedInvoiceId || !numericBookingId) return;
+
+    const resolveInvoice = async () => {
+      try {
+        const folioRes = await billingApi.getFolio(numericBookingId);
+        if (isMounted && folioRes.invoiceId) {
+          setResolvedInvoiceId(folioRes.invoiceId);
+        }
+      } catch {
+        // Backend offline or error; will rely on verified local state
+      }
+    };
+    resolveInvoice();
+    return () => {
+      isMounted = false;
+    };
+  }, [numericBookingId, resolvedInvoiceId]);
+
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [justCompleted, setJustCompleted] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState<boolean>(false);
+  const [justCompleted, setJustCompleted] = useState<boolean>(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
   const alreadyCheckedOut = isStayCheckedOut(folioData.bookingReference) || justCompleted;
   const existingRecord = getCheckoutRecord(folioData.bookingReference);
+
+  const handleDownloadPdf = async () => {
+    if (!resolvedInvoiceId) {
+      setCheckoutError('Cannot download official PDF: No verified invoice ID found for this stay.');
+      return;
+    }
+    setIsDownloadingPdf(true);
+    try {
+      await billingApi.downloadInvoicePdf(resolvedInvoiceId, folioData.bookingReference);
+    } catch (err) {
+      console.error('Failed to download invoice PDF:', err);
+      setCheckoutError('Failed to download official invoice PDF from server.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const folioRoute = isStaff && bookingId
     ? `/receptionist/folio/${bookingId}`
     : '/customer/folio';
 
   const paymentRoute = isStaff && bookingId
-    ? `/receptionist/checkout/${bookingId}/payment`
-    : '/customer/checkout/payment';
+    ? `/receptionist/checkout/${bookingId}/payment${resolvedInvoiceId ? `?invoiceId=${resolvedInvoiceId}` : ''}`
+    : `/customer/checkout/payment${resolvedInvoiceId ? `?invoiceId=${resolvedInvoiceId}` : ''}`;
 
   const reviewRoute = `/customer/review/${folioData.bookingReference}`;
 
-  const handleConfirmCheckout = () => {
+  const handleConfirmCheckout = async () => {
     setCheckoutError(null);
-    const result = completeResortCheckout(
-      folioData.bookingReference,
-      isStaff ? 'receptionist' : 'customer'
-    );
+    setIsFinalizing(true);
+    try {
+      // Attempt backend atomic checkout finalization if verified invoice ID exists
+      if (resolvedInvoiceId) {
+        try {
+          await billingApi.finalizeCheckout(resolvedInvoiceId);
+        } catch (err: any) {
+          setCheckoutError(err?.message || 'Cannot checkout: Server rejected the departure request.');
+          setIsFinalizing(false);
+          return;
+        }
+      } else if (!import.meta.env.DEV) {
+        setCheckoutError('Cannot complete checkout: No verified invoice found on server.');
+        setIsFinalizing(false);
+        return;
+      }
 
-    if (result.success) {
-      setJustCompleted(true);
-    } else {
-      setCheckoutError(result.message);
+      const result = completeResortCheckout(
+        folioData.bookingReference,
+        isStaff ? 'receptionist' : 'customer'
+      );
+
+      if (result.success) {
+        setJustCompleted(true);
+      } else {
+        setCheckoutError(result.message);
+      }
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -190,7 +270,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
                   backgroundColor: 'var(--bg-surface)',
                   borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-4)',
-                  marginBottom: 'var(--space-6)',
+                  marginBottom: 'var(--space-5)',
                   fontSize: 'var(--text-sm)',
                 }}
               >
@@ -231,6 +311,48 @@ export const CheckoutConfirmationPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Room Key Return Reminder Box */}
+              <div
+                style={{
+                  backgroundColor: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: 'var(--space-6)',
+                  color: '#92400e',
+                  fontSize: '13px',
+                }}
+              >
+                <Key size={18} style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>Key Card Return Reminder:</strong> Please present your RFID room key card at the front desk counter during final departure handover.
+                </span>
+              </div>
+
+              {!resolvedInvoiceId && !import.meta.env.DEV && (
+                <div
+                  style={{
+                    padding: 'var(--space-3) var(--space-4)',
+                    backgroundColor: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    color: '#92400e',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    marginBottom: 'var(--space-4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                  id="checkout-unverified-warning"
+                >
+                  <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                  <span>Chưa tìm thấy hóa đơn hợp lệ từ máy chủ cho lượt lưu trú này. Vui lòng liên hệ quầy lễ tân để kiểm tra trước khi hoàn tất trả phòng.</span>
+                </div>
+              )}
+
               {checkoutError && (
                 <div style={{ padding: 'var(--space-3)', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', fontSize: '13px', marginBottom: 'var(--space-4)' }}>
                   {checkoutError}
@@ -243,12 +365,17 @@ export const CheckoutConfirmationPage: React.FC = () => {
                   type="button"
                   className="hsw-btn hsw-btn-retreat-primary"
                   onClick={handleConfirmCheckout}
+                  disabled={isFinalizing || (!resolvedInvoiceId && !import.meta.env.DEV)}
                   style={{ width: '100%', justifyContent: 'center' }}
                   id="btn-confirm-departure"
                 >
-                  <Key size={16} />
-                  <span>{t('checkout.btnConfirmDeparture', 'Complete Resort Checkout & Release Villa')}</span>
-                  <ArrowRight size={16} />
+                  {isFinalizing ? <RotateCw size={16} className="animate-spin" /> : <Key size={16} />}
+                  <span>
+                    {isFinalizing
+                      ? 'Finalizing Resort Departure...'
+                      : t('checkout.btnConfirmDeparture', 'Complete Resort Checkout & Release Villa')}
+                  </span>
+                  {!isFinalizing && <ArrowRight size={16} />}
                 </button>
 
                 <button
@@ -292,7 +419,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
             )}
           </p>
 
-          {/* Operational notification */}
+          {/* Operational notification: PhysicalVilla transition to NEEDS_CLEANING */}
           <div
             style={{
               display: 'inline-flex',
@@ -308,7 +435,9 @@ export const CheckoutConfirmationPage: React.FC = () => {
             }}
           >
             <Home size={14} />
-            <span>{t('checkout.housekeepingNotified', 'Villa {{villa}} released · Housekeeping sanitization dispatched', { villa: folioData.villaCode })}</span>
+            <span>
+              Sanctuary Villa #{folioData.villaCode} status changed to <strong>NEEDS_CLEANING</strong> · Housekeeping sanitization dispatched
+            </span>
           </div>
 
           {/* Meta Grid */}
@@ -327,7 +456,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
                 {t('checkout.villaHandover', 'Villa Handover')}
               </div>
               <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {folioData.villaCode} (Cleared)
+                {folioData.villaCode} (Needs Cleaning)
               </div>
             </div>
 
@@ -362,6 +491,31 @@ export const CheckoutConfirmationPage: React.FC = () => {
               <span>{t('checkout.btnLeaveReview', 'Leave a Stay Review (Optional)')}</span>
               <ArrowRight size={16} />
             </Link>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-secondary"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                style={{ width: '100%', justifyContent: 'center' }}
+                id="btn-checkout-download-pdf"
+              >
+                {isDownloadingPdf ? <RotateCw size={15} className="animate-spin" /> : <Download size={15} />}
+                <span>{isDownloadingPdf ? 'Downloading...' : 'Download PDF Invoice'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-secondary"
+                onClick={() => window.print()}
+                style={{ width: '100%', justifyContent: 'center' }}
+                id="btn-checkout-print"
+              >
+                <Printer size={15} />
+                <span>Print Official Receipt</span>
+              </button>
+            </div>
 
             <Link
               to={folioRoute}

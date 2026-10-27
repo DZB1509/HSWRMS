@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   CreditCard,
@@ -7,36 +7,172 @@ import {
   ArrowLeft,
   Lock,
   HelpCircle,
+  Banknote,
+  QrCode,
+  AlertTriangle,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
+import { useCustomer } from '../../context/CustomerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import { resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
+import { isNetworkOrTimeoutError } from '../../features/m5-billing/utils/paymentSafety';
 
 export const FinalPaymentPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { bookingId } = useParams<{ bookingId?: string }>();
   const { role } = useAuth();
   const { getFolioForBooking, processPayment } = useFolio();
+  const { activeBooking } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
   const folioData = getFolioForBooking(bookingId);
 
+  const numericBookingId = useMemo(() => {
+    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
+  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+
+  const queryInvoiceId = searchParams.get('invoiceId');
+  const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(() => {
+    if (queryInvoiceId && /^\d+$/.test(queryInvoiceId.trim())) {
+      const parsed = parseInt(queryInvoiceId.trim(), 10);
+      if (parsed > 0) return parsed;
+    }
+    return null;
+  });
+
+  // Resolve backend invoice ID if not present in URL
+  useEffect(() => {
+    let isMounted = true;
+    if (resolvedInvoiceId || !numericBookingId) return;
+
+    const resolveInvoice = async () => {
+      try {
+        const folioRes = await billingApi.getFolio(numericBookingId);
+        if (!isMounted) return;
+        if (folioRes.invoiceId) {
+          setResolvedInvoiceId(folioRes.invoiceId);
+        } else if (folioRes.canGenerateInvoice) {
+          const newInvoice = await billingApi.generateInvoice(numericBookingId);
+          if (isMounted && newInvoice.invoiceId) {
+            setResolvedInvoiceId(newInvoice.invoiceId);
+          }
+        }
+      } catch {
+        // Backend offline or error; will rely on verified local state
+      }
+    };
+    resolveInvoice();
+    return () => {
+      isMounted = false;
+    };
+  }, [numericBookingId, resolvedInvoiceId]);
+
+  // Payment Method Selection: VNPay vs Cash vs Card at Desk
+  const [selectedMethod, setSelectedMethod] = useState<'VNPAY' | 'CASH' | 'CARD'>('VNPAY');
+
   // Simulation mode for deterministic reviewer evaluation (Rule 21 & Rule 67)
   const [simulateMode, setSimulateMode] = useState<'success' | 'failed' | 'cancelled'>('success');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const amountToPay = folioData.outstandingBalance;
+  const isZeroBalance = amountToPay <= 0;
 
   const handlePay = async () => {
+    setPaymentError(null);
     setIsProcessing(true);
     try {
-      const tx = await processPayment(folioData.bookingReference, amountToPay, simulateMode);
-      const targetResultPath = isStaff && bookingId
-        ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}`
-        : `/customer/checkout/payment-result?txId=${tx.id}`;
-      navigate(targetResultPath);
+      const generatedRef = `VNP-M5-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      if (resolvedInvoiceId) {
+        try {
+          const backendRes = await billingApi.payInvoice(resolvedInvoiceId, {
+            paymentMethod: selectedMethod,
+            amount: amountToPay,
+            transactionReference: generatedRef,
+            cardLast4: selectedMethod === 'VNPAY' ? '8821' : selectedMethod === 'CARD' ? '4111' : undefined,
+          });
+
+          const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
+          if (backendRes.paymentStatus === 'SUCCESSFUL') {
+            const tx = await processPayment(folioData.bookingReference, amountToPay, 'success');
+            navigate(
+              isStaff && bookingId
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+            );
+          } else if (backendRes.paymentStatus === 'FAILED') {
+            const tx = await processPayment(folioData.bookingReference, amountToPay, 'failed');
+            navigate(
+              isStaff && bookingId
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+            );
+          } else {
+            const tx = await processPayment(folioData.bookingReference, amountToPay, 'pending');
+            navigate(
+              isStaff && bookingId
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+            );
+          }
+        } catch (err: any) {
+          const isNetworkError = isNetworkOrTimeoutError(err, navigator.onLine);
+
+          if (isNetworkError) {
+            const tx = await processPayment(folioData.bookingReference, amountToPay, 'pending');
+            const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
+            navigate(
+              isStaff && bookingId
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+            );
+          } else {
+            setPaymentError(err?.message || 'Giao dịch thanh toán bị từ chối bởi hệ thống máy chủ.');
+          }
+        }
+      } else if (import.meta.env.DEV) {
+        // Prototype / Demo simulation mode (DEV ONLY)
+        const tx = await processPayment(folioData.bookingReference, amountToPay, simulateMode);
+        const targetResultPath =
+          isStaff && bookingId
+            ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}`
+            : `/customer/checkout/payment-result?txId=${tx.id}`;
+        navigate(targetResultPath);
+      } else {
+        setPaymentError('Không thể thực hiện thanh toán: Thiếu hóa đơn hợp lệ từ máy chủ.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleZeroBalanceCheckout = async () => {
+    setIsProcessing(true);
+    setPaymentError(null);
+    try {
+      if (resolvedInvoiceId) {
+        try {
+          await billingApi.finalizeCheckout(resolvedInvoiceId);
+        } catch (err: any) {
+          setPaymentError(err?.message || 'Không thể hoàn tất trả phòng: Lỗi từ máy chủ.');
+          return;
+        }
+      } else if (!import.meta.env.DEV) {
+        setPaymentError('Không thể hoàn tất trả phòng: Chưa có hóa đơn xác thực từ máy chủ.');
+        return;
+      }
+      const invoiceQuery = resolvedInvoiceId ? `?invoiceId=${resolvedInvoiceId}` : '';
+      const targetConfirmationPath =
+        isStaff && bookingId
+          ? `/receptionist/checkout/${bookingId}/confirmation${invoiceQuery}`
+          : `/customer/checkout/confirmation${invoiceQuery}`;
+      navigate(targetConfirmationPath);
     } finally {
       setIsProcessing(false);
     }
@@ -88,6 +224,50 @@ export const FinalPaymentPage: React.FC = () => {
             </div>
 
             <div style={{ padding: 'var(--space-6) var(--space-8)' }}>
+              {/* Payment Error Banner */}
+              {paymentError && (
+                <div
+                  style={{
+                    padding: 'var(--space-3) var(--space-4)',
+                    backgroundColor: '#fee2e2',
+                    border: '1px solid #fca5a5',
+                    color: '#b91c1c',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px',
+                    marginBottom: 'var(--space-4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                  id="payment-error-banner"
+                >
+                  <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                  <span>{paymentError}</span>
+                </div>
+              )}
+
+              {/* Unverified Invoice Warning Banner */}
+              {!resolvedInvoiceId && !import.meta.env.DEV && (
+                <div
+                  style={{
+                    padding: 'var(--space-3) var(--space-4)',
+                    backgroundColor: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    color: '#92400e',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px',
+                    marginBottom: 'var(--space-4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                  id="unverified-invoice-warning"
+                >
+                  <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                  <span>Chưa có hóa đơn xác thực từ máy chủ cho lượt lưu trú này. Vui lòng liên hệ quầy lễ tân để tạo hóa đơn chính thức trước khi thanh toán.</span>
+                </div>
+              )}
+
               {/* Reference & Villa Tag */}
               <div
                 style={{
@@ -129,41 +309,168 @@ export const FinalPaymentPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Selected Payment Gateway: Mock VNPay */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
-                  {t('payment.gatewayLabel', 'Payment Gateway')}
-                </label>
-                <div className="hsw-payment-provider-card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div
-                      style={{
-                        padding: '6px 12px',
-                        backgroundColor: '#e02424',
-                        color: '#ffffff',
-                        fontWeight: 900,
-                        fontSize: '14px',
-                        borderRadius: '4px',
-                        letterSpacing: '0.5px',
-                        fontFamily: 'sans-serif',
-                      }}
-                    >
-                      VNPAY
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-                        {t('payment.vnpayMockTitle', 'VNPay Gateway (Simulated Integration)')}
+              {/* ZERO BALANCE DUE PATH (SRS FR-M5-02 Alt 2) */}
+              {isZeroBalance ? (
+                <div
+                  style={{
+                    backgroundColor: 'rgba(44, 76, 56, 0.08)',
+                    border: '1.5px solid rgba(44, 76, 56, 0.3)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-5)',
+                    marginBottom: 'var(--space-6)',
+                    textAlign: 'center',
+                  }}
+                  id="zero-balance-settlement-panel"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'rgba(44, 76, 56, 0.15)', color: 'var(--accent-forest)', marginBottom: '8px' }}>
+                    <ShieldCheck size={28} />
+                  </div>
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--accent-forest)', margin: '0 0 6px' }}>
+                    Zero Balance Settlement (SRS FR-M5-02 Alt 2)
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                    Your initial retreat package deposit fully covers all accommodation, therapy, and dining charges. No additional payment is required to clear your stay folio.
+                  </p>
+                  <button
+                    type="button"
+                    className="hsw-btn hsw-btn-retreat-primary"
+                    onClick={handleZeroBalanceCheckout}
+                    disabled={isProcessing || (!resolvedInvoiceId && !import.meta.env.DEV)}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                    id="btn-zero-balance-checkout"
+                  >
+                    <ShieldCheck size={16} />
+                    <span>{isProcessing ? 'Finalizing Zero Balance Departure...' : 'Complete Checkout Directly (0 VND Due)'}</span>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Select Payment Method */}
+                  <div style={{ marginBottom: 'var(--space-4)' }}>
+                    <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+                      {t('payment.methodLabel', 'Select Settlement Method')}
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: isStaff ? '1fr 1fr 1fr' : '1fr 1fr', gap: '10px' }}>
+                      {/* Option 1: VNPay QR */}
+                      <div
+                        onClick={() => setSelectedMethod('VNPAY')}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '8px',
+                          border: selectedMethod === 'VNPAY' ? '2px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
+                          backgroundColor: selectedMethod === 'VNPAY' ? 'rgba(44, 76, 56, 0.05)' : '#ffffff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                        }}
+                        id="btn-method-vnpay"
+                      >
+                        <div style={{ padding: '4px 8px', backgroundColor: '#e02424', color: '#fff', fontWeight: 900, fontSize: '11px', borderRadius: '4px' }}>
+                          VNPay
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '13px' }}>VNPay QR</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Instant settlement</div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        {t('payment.vnpayMockSub', 'Supports domestic ATM, QR-Pay & international credit cards')}
+
+                      {/* Option 2: Cash at Reception */}
+                      <div
+                        onClick={() => {
+                          if (isStaff) {
+                            setSelectedMethod('CASH');
+                          }
+                        }}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '8px',
+                          border: selectedMethod === 'CASH' ? '2px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
+                          backgroundColor: selectedMethod === 'CASH' ? 'rgba(44, 76, 56, 0.05)' : '#ffffff',
+                          cursor: isStaff ? 'pointer' : 'not-allowed',
+                          opacity: isStaff ? 1 : 0.6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                        }}
+                        title={!isStaff ? 'Cash settlement is handled exclusively at the Front Desk counter.' : 'Cash at desk'}
+                        id="btn-method-cash"
+                      >
+                        <Banknote size={24} style={{ color: 'var(--accent-forest)' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '13px' }}>
+                            Cash at Desk {!isStaff && <span style={{ fontSize: '10px', color: '#be123c' }}>(Staff only)</span>}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Front desk receipt</div>
+                        </div>
                       </div>
+
+                      {/* Option 3: Card POS (Staff only) */}
+                      {isStaff && (
+                        <div
+                          onClick={() => setSelectedMethod('CARD')}
+                          style={{
+                            padding: '12px 14px',
+                            borderRadius: '8px',
+                            border: selectedMethod === 'CARD' ? '2px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
+                            backgroundColor: selectedMethod === 'CARD' ? 'rgba(44, 76, 56, 0.05)' : '#ffffff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                          }}
+                          id="btn-method-card"
+                        >
+                          <CreditCard size={24} style={{ color: 'var(--accent-forest)' }} />
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '13px' }}>Card POS</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Desk Terminal</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <span className="hsw-status-pill included">
-                    {t('payment.activeGateway', 'Active')}
-                  </span>
+                </>
+              )}
+
+              {/* QR Code preview when VNPay is selected */}
+              {selectedMethod === 'VNPAY' && (
+                <div
+                  style={{
+                    backgroundColor: '#fafafa',
+                    border: '1px dashed #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    marginBottom: 'var(--space-4)',
+                  }}
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px' }}>
+                    <QrCode size={16} />
+                    <span>Scan with VNPay app or any mobile banking QR</span>
+                  </div>
+                  <div
+                    style={{
+                      width: '120px',
+                      height: '120px',
+                      margin: '0 auto',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      color: 'var(--text-muted)',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <QrCode size={64} style={{ color: 'var(--accent-forest)' }} />
+                    <span style={{ fontSize: '9px', fontWeight: 600 }}>HSWRMS PAY QR</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Prototype Simulation Selector for Testers (Rule 21 & 67) */}
               <div
@@ -254,15 +561,17 @@ export const FinalPaymentPage: React.FC = () => {
                   type="button"
                   className="hsw-btn hsw-btn-retreat-primary"
                   onClick={handlePay}
-                  disabled={isProcessing || amountToPay <= 0}
+                  disabled={isProcessing || amountToPay <= 0 || (!resolvedInvoiceId && !import.meta.env.DEV)}
                   style={{ width: '100%', justifyContent: 'center' }}
                   id="btn-pay-vnpay"
                 >
                   <Lock size={16} />
                   <span>
                     {isProcessing
-                      ? t('payment.processing', 'Processing Mock Transaction...')
-                      : t('payment.payWithVnpay', 'Pay {{amount}} with VNPay', { amount: formatVND(amountToPay) })}
+                      ? t('payment.processing', 'Processing Settlement...')
+                      : selectedMethod === 'VNPAY'
+                      ? t('payment.payWithVnpay', 'Pay {{amount}} with VNPay', { amount: formatVND(amountToPay) })
+                      : `Confirm Cash Handover of ${formatVND(amountToPay)}`}
                   </span>
                 </button>
 

@@ -320,10 +320,26 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const processPayment = async (
     bookingRef: string,
     amount: number,
-    simulateMode: 'success' | 'failed' | 'cancelled' = 'success'
+    simulateMode: 'success' | 'failed' | 'cancelled' | 'pending' = 'success'
   ): Promise<PaymentTransaction> => {
     const txnId = `VNP-M5-${Math.floor(100000 + Math.random() * 900000)}`;
     const now = new Date().toISOString();
+
+    if (simulateMode === 'pending') {
+      const pendingTxn: PaymentTransaction = {
+        id: txnId,
+        bookingReference: bookingRef,
+        amount,
+        provider: 'vnpay_mock',
+        status: 'pending',
+        createdAt: now,
+        failureReason: 'Transaction outcome unverified due to network interruption or gateway processing delay. Debit status is unconfirmed; do not retry immediately.',
+        cardLast4: '8821',
+      };
+      setTransactions((prev) => [pendingTxn, ...prev]);
+      setLatestTransaction(pendingTxn);
+      return pendingTxn;
+    }
 
     if (simulateMode === 'failed') {
       const failedTxn: PaymentTransaction = {

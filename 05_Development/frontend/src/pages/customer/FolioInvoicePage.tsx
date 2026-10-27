@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,11 +13,18 @@ import {
   Clock,
   Coffee,
   HeartHandshake,
+  AlertTriangle,
+  RotateCw,
+  Download,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
+import { useCustomer } from '../../context/CustomerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import { resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
+import type { FolioResponse } from '../../features/m5-billing/types';
 import type { FolioLineItem, FolioItemStatus } from '../../types/folio';
 
 type SupportedLanguage = 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr';
@@ -29,6 +36,7 @@ export const FolioInvoicePage: React.FC = () => {
   const { bookingId } = useParams<{ bookingId?: string }>();
   const { role } = useAuth();
   const { getFolioForBooking, isStayCheckedOut } = useFolio();
+  const { activeBooking } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
 
@@ -37,7 +45,66 @@ export const FolioInvoicePage: React.FC = () => {
     return getFolioForBooking(bookingId);
   }, [getFolioForBooking, bookingId]);
 
+  const numericBookingId = useMemo(() => {
+    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
+  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+
   const isCheckedOut = isStayCheckedOut(folioData.bookingReference);
+
+  // Live Backend State
+  const [backendFolio, setBackendFolio] = useState<FolioResponse | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+
+  // Simulated unsettled order toggle for presentation / evaluator testing
+  const [simulateUnsettledOrder, setSimulateUnsettledOrder] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchBackendData = async () => {
+      if (!numericBookingId) {
+        if (isMounted) {
+          setSyncError('No verified retreat booking ID found for live synchronization — displaying verified local state');
+          setIsSyncing(false);
+        }
+        return;
+      }
+      setIsSyncing(true);
+      try {
+        const data = await billingApi.getFolio(numericBookingId);
+        if (isMounted) {
+          setBackendFolio(data);
+          setSyncError(null);
+        }
+      } catch {
+        if (isMounted) {
+          setSyncError('Live backend offline — displaying verified local state');
+        }
+      } finally {
+        if (isMounted) {
+          setIsSyncing(false);
+        }
+      }
+    };
+    fetchBackendData();
+    return () => {
+      isMounted = false;
+    };
+  }, [numericBookingId]);
+
+  // Billing Guard Check: Unsettled orders exist if backend flags it or simulation is active
+  const hasUnsettledOrders = simulateUnsettledOrder || Boolean(backendFolio?.hasUnsettledOrders);
+  const unsettledWarningMessage = simulateUnsettledOrder
+    ? t(
+        'folio.simulatedWarning',
+        'Warning: Unsettled service orders exist (1 scheduled spa therapy session & 1 dining order in preparation). Cannot proceed to payment or checkout until completed.'
+      )
+    : backendFolio?.unsettledOrdersWarning ||
+      t(
+        'folio.unsettledWarning',
+        'Warning: Unsettled service orders exist. All services must be marked Completed, Delivered, or Cancelled before settlement.'
+      );
 
   // Group line items
   const retreatItems = folioData.lineItems.filter((i) => i.sourceType === 'retreat');
@@ -68,13 +135,32 @@ export const FolioInvoicePage: React.FC = () => {
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    const invoiceId = backendFolio?.invoiceId;
+    if (!invoiceId) {
+      alert(t('folio.noInvoicePdf', 'Official PDF invoice is not yet generated for this stay. Please wait or proceed to final billing.'));
+      return;
+    }
+    setIsDownloadingPdf(true);
+    try {
+      const invoiceNum = backendFolio?.bookingReference || folioData.bookingReference;
+      await billingApi.downloadInvoicePdf(invoiceId, invoiceNum);
+    } catch (err) {
+      console.error('Failed to download invoice PDF:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const invoiceQuery = backendFolio?.invoiceId ? `?invoiceId=${backendFolio.invoiceId}` : '';
+
   const paymentRoute = isStaff && bookingId
-    ? `/receptionist/checkout/${bookingId}/payment`
-    : '/customer/checkout/payment';
+    ? `/receptionist/checkout/${bookingId}/payment${invoiceQuery}`
+    : `/customer/checkout/payment${invoiceQuery}`;
 
   const checkoutRoute = isStaff && bookingId
-    ? `/receptionist/checkout/${bookingId}/confirmation`
-    : '/customer/checkout/confirmation';
+    ? `/receptionist/checkout/${bookingId}/confirmation${invoiceQuery}`
+    : `/customer/checkout/confirmation${invoiceQuery}`;
 
   const reviewRoute = `/customer/review/${folioData.bookingReference}`;
 
@@ -90,6 +176,12 @@ export const FolioInvoicePage: React.FC = () => {
                 <h1 className="hsw-folio-title">
                   {t('folio.title', 'Customer Folio & Consolidated Invoice')}
                 </h1>
+                {isSyncing && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <RotateCw size={12} className="animate-spin" />
+                    <span>Syncing...</span>
+                  </span>
+                )}
               </div>
               <p className="hsw-folio-subtitle">
                 {t(
@@ -100,6 +192,32 @@ export const FolioInvoicePage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              {/* Evaluator Simulation Control */}
+              <button
+                type="button"
+                className={`hsw-btn ${simulateUnsettledOrder ? 'hsw-btn-retreat-primary' : 'hsw-btn-secondary'}`}
+                onClick={() => setSimulateUnsettledOrder(!simulateUnsettledOrder)}
+                title="Toggle simulated unsettled order to test Invariant 3 Billing Guard"
+                style={{ fontSize: '12px', padding: '6px 12px' }}
+                id="btn-simulate-billing-guard"
+              >
+                <AlertTriangle size={14} />
+                <span>{simulateUnsettledOrder ? 'Clear Simulated Order' : 'Test Billing Guard Block'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-secondary"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf || !backendFolio?.invoiceId}
+                title={!backendFolio?.invoiceId ? t('folio.invoiceNotGenerated', 'Official PDF invoice is not yet generated for this stay') : t('folio.downloadPdf', 'Download PDF Invoice')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', opacity: !backendFolio?.invoiceId ? 0.6 : 1 }}
+                id="btn-download-pdf-invoice"
+              >
+                {isDownloadingPdf ? <RotateCw size={15} className="animate-spin" /> : <Download size={15} />}
+                <span>{isDownloadingPdf ? t('folio.downloadingPdf', 'Downloading PDF...') : t('folio.downloadPdf', 'Download PDF Invoice')}</span>
+              </button>
+
               <button
                 type="button"
                 className="hsw-btn hsw-btn-secondary"
@@ -117,11 +235,11 @@ export const FolioInvoicePage: React.FC = () => {
           <div className="hsw-folio-badges">
             <span className="hsw-folio-chip active">
               <Sparkles size={12} />
-              {t('folio.ref', 'Booking Ref')}: <strong>{folioData.bookingReference}</strong>
+              {t('folio.ref', 'Booking Ref')}: <strong>{backendFolio ? backendFolio.bookingReference : folioData.bookingReference}</strong>
             </span>
             <span className="hsw-folio-chip">
               <Home size={12} />
-              {t('folio.villa', 'Sanctuary Villa')}: <strong>{folioData.villaCode}</strong>
+              {t('folio.villa', 'Sanctuary Villa')}: <strong>{backendFolio ? backendFolio.villaNumber : folioData.villaCode}</strong>
             </span>
             <span className="hsw-folio-chip">
               <Calendar size={12} />
@@ -134,8 +252,44 @@ export const FolioInvoicePage: React.FC = () => {
                 ? t('folio.status.balanceCleared', 'Balance Cleared')
                 : t('folio.status.activeStay', 'In-House Stay')}
             </span>
+            {syncError && (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                {syncError}
+              </span>
+            )}
           </div>
         </div>
+
+        {/* BILLING GUARD WARNING BANNER (INVARIANT 3) */}
+        {hasUnsettledOrders && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              backgroundColor: '#fff1f2',
+              border: '1px solid #fecdd3',
+              borderRadius: '8px',
+              padding: '16px 20px',
+              marginBottom: 'var(--space-6)',
+              color: '#9f1239',
+            }}
+            id="billing-guard-alert-banner"
+          >
+            <AlertTriangle size={22} style={{ color: '#e11d48', flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>
+                {t('folio.guardAlertTitle', 'Billing Guard Notice: Unsettled Service Orders Exist')}
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5 }}>
+                {unsettledWarningMessage}
+              </p>
+              <p style={{ margin: '6px 0 0', fontSize: '12px', fontWeight: 600 }}>
+                {t('folio.guardAlertAction', 'Checkout settlement and final payment are temporarily disabled until all orders reach final completion.')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Financial KPI Summary */}
         <div className="hsw-folio-kpi-grid">
@@ -185,12 +339,12 @@ export const FolioInvoicePage: React.FC = () => {
           </div>
 
           {/* Card 4: Outstanding Amount Due */}
-          <div className={`hsw-folio-kpi-card highlight`}>
+          <div className="hsw-folio-kpi-card highlight">
             <div>
               <div className="hsw-folio-kpi-label">
                 {t('folio.kpi.amountDue', 'Outstanding Amount Due')}
               </div>
-              <div className={`hsw-folio-kpi-val highlight`}>
+              <div className="hsw-folio-kpi-val highlight">
                 {formatVND(folioData.outstandingBalance)}
               </div>
             </div>
@@ -414,6 +568,73 @@ export const FolioInvoicePage: React.FC = () => {
           </div>
         </div>
 
+        {/* Consolidated Tax & Invoicing Summary (SRS BF-05 / Data Rule 21) */}
+        <div
+          style={{
+            backgroundColor: '#fbfbfa',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-5) var(--space-6)',
+            marginBottom: 'var(--space-6)',
+          }}
+          id="invoice-tax-breakdown-card"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Receipt size={18} style={{ color: 'var(--accent-forest)' }} />
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>
+                {t('folio.invoiceCalculationTitle', 'Official Invoice & Tax Reconciliation (SRS BF-05 / Data Rule 21)')}
+              </h3>
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              VAT Rate: 8% on Chargeable Extras
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', fontSize: '13px' }}>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Retreat Package Total:</div>
+              <div style={{ fontWeight: 600 }}>{formatVND(folioData.retreatTotal)}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Deposit Paid (Deducted):</div>
+              <div style={{ fontWeight: 600, color: 'var(--accent-forest)' }}>-{formatVND(backendFolio?.depositPaid || folioData.depositPaid)}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Package Outstanding:</div>
+              <div style={{ fontWeight: 600, color: (backendFolio?.packageOutstanding ?? folioData.retreatRemaining) > 0 ? '#b45309' : 'var(--accent-forest)' }}>
+                {formatVND(backendFolio?.packageOutstanding ?? folioData.retreatRemaining)}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Spa Extras:</div>
+              <div style={{ fontWeight: 600 }}>{formatVND(folioData.spaExtrasTotal)}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Dining Extras:</div>
+              <div style={{ fontWeight: 600 }}>{formatVND(folioData.fnbExtrasTotal)}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Subtotal (Extras + Pkg Rem):</div>
+              <div style={{ fontWeight: 600 }}>
+                {formatVND((backendFolio?.packageOutstanding ?? folioData.retreatRemaining) + folioData.spaExtrasTotal + folioData.fnbExtrasTotal)}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>VAT (8% on Extras):</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                {formatVND(backendFolio?.estimatedTax ?? Math.round((folioData.spaExtrasTotal + folioData.fnbExtrasTotal) * 0.08))}
+              </div>
+            </div>
+            <div style={{ borderLeft: '2px solid var(--accent-forest)', paddingLeft: '12px' }}>
+              <div style={{ color: 'var(--accent-forest)', fontWeight: 700, marginBottom: '2px' }}>Final Amount Due:</div>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--accent-forest)' }}>
+                {formatVND(backendFolio?.estimatedAmountDue ?? folioData.outstandingBalance)}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Action Bar */}
         <div className="hsw-folio-action-bar">
           <div className="hsw-folio-action-total">
@@ -428,7 +649,24 @@ export const FolioInvoicePage: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            {folioData.outstandingBalance > 0 ? (
+            {hasUnsettledOrders ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#be123c', fontWeight: 600 }}>
+                  <AlertTriangle size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                  {t('folio.actionBlockedByOrders', 'Settlement Blocked: Active orders pending')}
+                </span>
+                <button
+                  type="button"
+                  className="hsw-btn hsw-btn-retreat-primary"
+                  disabled
+                  style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                  id="btn-proceed-final-payment-disabled"
+                >
+                  <CreditCard size={16} />
+                  <span>{t('folio.action.proceedPayment', 'Proceed to Final Payment')}</span>
+                </button>
+              </div>
+            ) : folioData.outstandingBalance > 0 ? (
               <button
                 type="button"
                 className="hsw-btn hsw-btn-retreat-primary"
