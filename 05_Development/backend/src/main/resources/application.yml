@@ -72,6 +72,23 @@ app:
     login-ticket-ttl-ms: 300000
     registration-ticket-ttl-ms: 600000
 
+  billing:
+    # VAT applied to chargeable extras (Spa / F&B). Typical values: 0.08 or 0.10
+    vat-rate: ${BILLING_VAT_RATE:0.08}
+
+  # VNPay Gateway Configuration for M2 retreat booking deposit & M5 billing.
+  # Values default to empty/placeholder and are externalized via environment variables.
+  # If VNPAY_HASH_SECRET is not provided, the gateway safely refuses payment generation.
+  # Never hardcode production secrets into source control.
+  vnpay:
+    tmn-code: ${VNPAY_TMN_CODE:HEAVENSTAY}
+    hash-secret: ${VNPAY_HASH_SECRET:}
+    pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+    mock-auto-confirm: ${VNPAY_MOCK_AUTO_CONFIRM:false}
+
+  seed:
+    # Seeds the Eleanor Vance demo stay. Keep false outside local demos.
+    demo-data: ${SEED_DEMO_DATA:false}
 
 logging:
   level:
