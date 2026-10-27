@@ -3,6 +3,8 @@ package com.heavenstay.hswrms.m3spa.repository;
 import com.heavenstay.hswrms.m3spa.entity.SpaSession;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,9 +13,14 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM SpaSession s WHERE s.spaSessionId = :spaSessionId")
+    Optional<SpaSession> findByIdWithLock(@Param("spaSessionId") Long spaSessionId);
 
     @Query("SELECT COUNT(s) > 0 FROM SpaSession s " +
            "WHERE s.sessionStatus IN ('SCHEDULED', 'RESCHEDULING') " +
@@ -56,6 +63,11 @@ public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
            "                            com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.NO_SHOW) " +
            "ORDER BY s.scheduledStartAt ASC")
     List<SpaSession> findUnsettledSessionsForBooking(@Param("retreatBookingId") Integer retreatBookingId);
+
+    default List<SpaSession> findUnsettledSessionsForBooking(Long retreatBookingId) {
+        if (retreatBookingId == null || retreatBookingId > Integer.MAX_VALUE) return java.util.Collections.emptyList();
+        return findUnsettledSessionsForBooking(retreatBookingId.intValue());
+    }
 
     @Query("SELECT s FROM SpaSession s " +
            "LEFT JOIN FETCH s.therapist " +

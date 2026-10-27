@@ -1,5 +1,7 @@
 package com.heavenstay.hswrms.m3spa.port;
 
+import com.heavenstay.hswrms.m6admin.service.AuditLogService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -19,9 +21,17 @@ import java.util.List;
 public class DefaultTherapistHealthProjectionAdapter implements TherapistHealthProjectionPort {
 
     private final JdbcTemplate jdbcTemplate;
+    private final AuditLogService auditLogService;
+
+    @Autowired
+    public DefaultTherapistHealthProjectionAdapter(JdbcTemplate jdbcTemplate,
+                                                   @Autowired(required = false) AuditLogService auditLogService) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.auditLogService = auditLogService;
+    }
 
     public DefaultTherapistHealthProjectionAdapter(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+        this(jdbcTemplate, null);
     }
 
     @Override
@@ -49,6 +59,10 @@ public class DefaultTherapistHealthProjectionAdapter implements TherapistHealthP
             }, retreatBookingId);
 
             if (!results.isEmpty()) {
+                if (auditLogService != null) {
+                    auditLogService.record(null, "THERAPIST", "View Treatment Safety Projection", "DATA_HEALTH_TREATMENT",
+                            String.valueOf(retreatBookingId), AuditLogService.SUCCESS, null, null);
+                }
                 return results.get(0);
             }
         } catch (Exception ignored) {
