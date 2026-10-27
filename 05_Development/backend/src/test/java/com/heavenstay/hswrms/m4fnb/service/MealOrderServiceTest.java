@@ -11,13 +11,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyInt;
 
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderStatus;
 import com.heavenstay.hswrms.m4fnb.entity.FnbOrderType;
-import com.heavenstay.hswrms.m4fnb.entity.MealOrder;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderItem;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderItemPreparationStatus;
 import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
@@ -95,7 +97,7 @@ class MealOrderServiceTest {
     void listKitchenOrdersReturnsOrdersOrderedByCreatedAtDesc() {
         LocalDate targetDate = LocalDate.of(2026, 9, 24);
 
-        MealOrder order1 = mock(MealOrder.class);
+        MealOrderEntity order1 = mock(MealOrderEntity.class);
         when(order1.getId()).thenReturn(1001);
         when(order1.getRetreatBookingId()).thenReturn(1);
         when(order1.getOrderDate()).thenReturn(targetDate);
@@ -107,7 +109,7 @@ class MealOrderServiceTest {
         when(order1.getSpecialNotes()).thenReturn("Warm water and light honey on the side, please");
         when(order1.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 9, 24, 7, 0));
 
-        MealOrder order2 = mock(MealOrder.class);
+        MealOrderEntity order2 = mock(MealOrderEntity.class);
         when(order2.getId()).thenReturn(1002);
         when(order2.getRetreatBookingId()).thenReturn(1);
         when(order2.getOrderDate()).thenReturn(targetDate);
@@ -184,7 +186,7 @@ class MealOrderServiceTest {
     void getKitchenOrderReturnsCompleteOrderDetails() {
         LocalDate orderDate = LocalDate.of(2026, 9, 24);
 
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(1001);
         when(order.getRetreatBookingId()).thenReturn(1);
         when(order.getOrderDate()).thenReturn(orderDate);
@@ -250,7 +252,7 @@ class MealOrderServiceTest {
     @DisplayName("updateStatus from PENDING to PREPARING automatically consumes inventory and updates item status")
     void updateStatusToPreparingTriggersInventoryDeduction() {
         Integer orderId = 2001;
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(orderId);
         when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
         when(order.getRetreatBookingId()).thenReturn(1);
@@ -301,7 +303,7 @@ class MealOrderServiceTest {
     @DisplayName("updateStatus rejects invalid transition from DELIVERED to PENDING")
     void updateStatusRejectsDisallowedTransitions() {
         Integer orderId = 2002;
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(orderId);
         when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.DELIVERED);
         when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
@@ -313,10 +315,79 @@ class MealOrderServiceTest {
     }
 
     @Test
+    @DisplayName("updateStatus from PREPARING to READY advances lines to READY and does not consume inventory")
+    void updateStatusToReadyAdvancesLinesWithoutDeduction() {
+        Integer orderId = 2003;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PREPARING);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("LUNCH");
+        when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(99);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PREPARING);
+
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Cháo Yến Mạch");
+        when(menuItem.getPrice()).thenReturn(BigDecimal.ZERO);
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        mealOrderService.updateStatus(orderId, "READY");
+
+        // Verify inventory service was NEVER called on transitioning to READY
+        verify(inventoryService, never()).processConsumptionForOrderItem(anyInt(), any(LocalDate.class));
+        // Verify line preparation status set to READY and saved
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.READY);
+        verify(orderItemRepository).save(item);
+        // Verify order status set to READY and saved
+        verify(order).setOrderStatus(FnbOrderStatus.READY);
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    @DisplayName("updateStatus rejects jumping directly from PENDING to READY or DELIVERED")
+    void updateStatusRejectsSkippingOrderStages() {
+        Integer orderId = 2004;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        ConflictException exReady = assertThrows(ConflictException.class, () ->
+                mealOrderService.updateStatus(orderId, "READY"));
+        assertEquals("INVALID_ORDER_TRANSITION", exReady.getConflictCode());
+
+        ConflictException exDelivered = assertThrows(ConflictException.class, () ->
+                mealOrderService.updateStatus(orderId, "DELIVERED"));
+        assertEquals("INVALID_ORDER_TRANSITION", exDelivered.getConflictCode());
+    }
+
+    @Test
     @DisplayName("Kitchen projection reflects UNVERIFIED dietary status and UNVERIFIED location when applicable")
     void kitchenOrderReflectsUnverifiedDietaryAndLocationStatus() {
         Integer orderId = 3001;
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(orderId);
         when(order.getRetreatBookingId()).thenReturn(10);
         when(order.getOrderDate()).thenReturn(LocalDate.now());
@@ -357,7 +428,7 @@ class MealOrderServiceTest {
     @DisplayName("listUnpostedAlaCarteOrders correctly filters unposted A-la-carte orders for folio reconciliation")
     void listUnpostedAlaCarteOrdersFiltersCorrectly() {
         Integer orderId = 4001;
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(orderId);
         when(order.getRetreatBookingId()).thenReturn(1);
         when(order.getOrderDate()).thenReturn(LocalDate.now());
@@ -394,7 +465,7 @@ class MealOrderServiceTest {
     @DisplayName("Meal preparation status PREPARING is preserved when inventory returns NOT_CONFIGURED")
     void updateStatusToPreparingPersistsWhenRecipeNotConfigured() {
         Integer orderId = 5001;
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(orderId);
         when(order.getRetreatBookingId()).thenReturn(1);
         when(order.getOrderDate()).thenReturn(LocalDate.now());
@@ -449,7 +520,7 @@ class MealOrderServiceTest {
     @DisplayName("Meal preparation status PREPARING is preserved when inventory returns INSUFFICIENT_STOCK")
     void updateStatusToPreparingPersistsWhenInventoryInsufficient() {
         Integer orderId = 5002;
-        MealOrder order = mock(MealOrder.class);
+        MealOrderEntity order = mock(MealOrderEntity.class);
         when(order.getId()).thenReturn(orderId);
         when(order.getRetreatBookingId()).thenReturn(1);
         when(order.getOrderDate()).thenReturn(LocalDate.now());
