@@ -90,30 +90,41 @@ public class FnbControllersSecurityTest {
     private User customerUser;
     private String fnbStaffToken;
     private String customerToken;
+    private String managerToken;
+    private String adminToken;
     private RetreatBooking testBooking;
     private MenuItemEntity testMenuItem;
     private MealOrderEntity testOrder;
 
     @BeforeEach
     void setUp() {
-        Role fnbRole = roleRepository.findByRoleNameIgnoreCase("Fnb_Staff")
+        Role fnbRole = roleRepository.findByRoleNameIgnoreCase("F&B Staff")
+                .or(() -> roleRepository.findByRoleNameIgnoreCase("Fnb_Staff"))
                 .or(() -> roleRepository.findByRoleNameIgnoreCase("FNB_STAFF"))
-                .orElseGet(() -> roleRepository.saveAndFlush(new Role("FNB_STAFF", "F&B Staff role")));
+                .orElseGet(() -> roleRepository.saveAndFlush(new Role("F&B Staff", "F&B Staff role")));
 
         Role customerRole = roleRepository.findByRoleNameIgnoreCase("Customer")
                 .or(() -> roleRepository.findByRoleNameIgnoreCase("CUSTOMER"))
-                .orElseGet(() -> roleRepository.saveAndFlush(new Role("CUSTOMER", "Customer role")));
+                .orElseGet(() -> roleRepository.saveAndFlush(new Role("Customer", "Customer role")));
+
+        Role managerRole = roleRepository.findByRoleNameIgnoreCase("Manager")
+                .or(() -> roleRepository.findByRoleNameIgnoreCase("MANAGER"))
+                .orElseGet(() -> roleRepository.saveAndFlush(new Role("Manager", "Manager role")));
+
+        Role adminRole = roleRepository.findByRoleNameIgnoreCase("Admin")
+                .or(() -> roleRepository.findByRoleNameIgnoreCase("ADMIN"))
+                .orElseGet(() -> roleRepository.saveAndFlush(new Role("Admin", "Admin role")));
 
         long ts = System.currentTimeMillis();
 
-        // Create FNB staff user
+        // Create FNB staff user with canonical DB role "F&B Staff"
         fnbStaffUser = new User("Chef Anton " + ts, "fnb." + ts + "@heavenstay.com", "enc_hash");
         fnbStaffUser.setAccountStatus("ACTIVE");
         fnbStaffUser.setEmailVerified(true);
         fnbStaffUser = userRepository.saveAndFlush(fnbStaffUser);
         userRoleRepository.saveAndFlush(new UserRole(fnbStaffUser, fnbRole));
         fnbStaffToken = jwtTokenProvider.generateToken(
-                fnbStaffUser.getUserId(), fnbStaffUser.getEmail(), fnbStaffUser.getFullName(), List.of("FNB_STAFF"));
+                fnbStaffUser.getUserId(), fnbStaffUser.getEmail(), fnbStaffUser.getFullName(), List.of("F&B Staff"));
 
         // Create Customer user
         customerUser = new User("Guest Lucy " + ts, "lucy." + ts + "@heavenstay.com", "enc_hash");
@@ -122,7 +133,25 @@ public class FnbControllersSecurityTest {
         customerUser = userRepository.saveAndFlush(customerUser);
         userRoleRepository.saveAndFlush(new UserRole(customerUser, customerRole));
         customerToken = jwtTokenProvider.generateToken(
-                customerUser.getUserId(), customerUser.getEmail(), customerUser.getFullName(), List.of("CUSTOMER"));
+                customerUser.getUserId(), customerUser.getEmail(), customerUser.getFullName(), List.of("Customer"));
+
+        // Create Manager user
+        User managerUser = new User("Manager Mike " + ts, "mgr." + ts + "@heavenstay.com", "enc_hash");
+        managerUser.setAccountStatus("ACTIVE");
+        managerUser.setEmailVerified(true);
+        managerUser = userRepository.saveAndFlush(managerUser);
+        userRoleRepository.saveAndFlush(new UserRole(managerUser, managerRole));
+        managerToken = jwtTokenProvider.generateToken(
+                managerUser.getUserId(), managerUser.getEmail(), managerUser.getFullName(), List.of("Manager"));
+
+        // Create Admin user
+        User adminUser = new User("Admin Alice " + ts, "admin." + ts + "@heavenstay.com", "enc_hash");
+        adminUser.setAccountStatus("ACTIVE");
+        adminUser.setEmailVerified(true);
+        adminUser = userRepository.saveAndFlush(adminUser);
+        userRoleRepository.saveAndFlush(new UserRole(adminUser, adminRole));
+        adminToken = jwtTokenProvider.generateToken(
+                adminUser.getUserId(), adminUser.getEmail(), adminUser.getFullName(), List.of("Admin"));
 
         CustomerProfile cp = new CustomerProfile(customerUser);
         cp = customerProfileRepository.saveAndFlush(cp);
@@ -186,7 +215,7 @@ public class FnbControllersSecurityTest {
     }
 
     @Test
-    @DisplayName("FNB-SEC-03: FNB_STAFF role is permitted to access /api/v1/fnb/kds/queue (200 OK)")
+    @DisplayName("FNB-SEC-03: FNB_STAFF role (DB 'F&B Staff') is permitted to access /api/v1/fnb/kds/queue (200 OK)")
     void fnbStaffAccessToKdsQueue_Returns200() throws Exception {
         mockMvc.perform(get("/api/v1/fnb/kds/queue")
                         .header("Authorization", "Bearer " + fnbStaffToken))
@@ -207,7 +236,7 @@ public class FnbControllersSecurityTest {
     }
 
     @Test
-    @DisplayName("FNB-SEC-05: FNB_STAFF is permitted to update order status (200 OK)")
+    @DisplayName("FNB-SEC-05: FNB_STAFF role (DB 'F&B Staff') is permitted to update order status (200 OK)")
     void fnbStaffUpdateStatus_Returns200() throws Exception {
         UpdateOrderStatusRequest req = new UpdateOrderStatusRequest("PREPARING", null);
 
@@ -263,5 +292,68 @@ public class FnbControllersSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("FNB-SEC-09: FNB_STAFF role (DB 'F&B Staff') is permitted to access /api/v1/fnb/kds/dashboard-kpis (200 OK)")
+    void fnbStaffAccessToKdsDashboardKpis_Returns200() throws Exception {
+        mockMvc.perform(get("/api/v1/fnb/kds/dashboard-kpis")
+                        .header("Authorization", "Bearer " + fnbStaffToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("FNB-SEC-10: FNB_STAFF role (DB 'F&B Staff') is permitted to access order details (200 OK)")
+    void fnbStaffAccessToOrderDetails_Returns200() throws Exception {
+        mockMvc.perform(get("/api/v1/fnb/kds/orders/" + testOrder.getMealOrderId())
+                        .header("Authorization", "Bearer " + fnbStaffToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(testOrder.getMealOrderId()));
+    }
+
+    @Test
+    @DisplayName("FNB-SEC-11: Manager role is permitted to access KDS queue and dashboard KPIs (200 OK)")
+    void managerAccessToKdsEndpoints_Returns200() throws Exception {
+        mockMvc.perform(get("/api/v1/fnb/kds/queue")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/fnb/kds/dashboard-kpis")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("FNB-SEC-12: Admin role is permitted to access KDS queue and dashboard KPIs (200 OK)")
+    void adminAccessToKdsEndpoints_Returns200() throws Exception {
+        mockMvc.perform(get("/api/v1/fnb/kds/queue")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/fnb/kds/dashboard-kpis")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("FNB-SEC-13: Customer role is FORBIDDEN from accessing KDS dashboard KPIs (403)")
+    void customerAccessToDashboardKpis_Returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/fnb/kds/dashboard-kpis")
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("FNB-SEC-14: Customer role is FORBIDDEN from accessing KDS order details (403)")
+    void customerAccessToOrderDetails_Returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/fnb/kds/orders/" + testOrder.getMealOrderId())
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isForbidden());
     }
 }
