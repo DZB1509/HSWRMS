@@ -276,7 +276,15 @@ GO
 ```
 
 ### Step 2: Live JDBC Smoke Test Execution
-Configure process-scoped environment variables in a single command line and execute the opt-in smoke test:
+
+#### Option 1: Automated Persistent Runner via Windows Credential Manager (Recommended)
+Once the test login credential is saved to Windows Credential Manager (see Section 8), execute the smoke test runner script directly without prompting or exposing passwords:
+```powershell
+.\05_Development\database\scripts\run_hswrms_jdbc_smoke_test.ps1
+```
+
+#### Option 2: Manual Ephemeral Process-Scoped Environment Variables
+Alternatively, configure process-scoped environment variables in a single session and execute the opt-in smoke test:
 ```powershell
 # In PowerShell:
 $env:SQLSERVER_TEST_USERNAME = "hswrms_test_user"
@@ -308,3 +316,78 @@ If an operation encounters an unexpected failure mid-stage:
    - **Password Mismatch Warning:** SQL Server stores passwords as one-way salted hashes (`sys.sql_logins.password_hash`). If an existing login is reused, the script skips `CREATE LOGIN` and does NOT alter its password. SQL Server provides zero capability to inspect or infer whether the supplied `$(TEST_PASSWORD)` matches the stored hash.
    - If the passwords differ, the Stage B live JDBC smoke test will fail with SQL Server Error 18456 (Login failed for user).
    - **Recommended Procedure:** Initial Stage A provisioning should always run in a clean environment where `hswrms_test_user` does not pre-exist. If reusing an existing login, the operator must independently verify credentials or administratively synchronize the password beforehand via `ALTER LOGIN [hswrms_test_user] WITH PASSWORD = N'...'`.
+
+---
+
+## 8. Persistent Local Credential Storage & Automated Smoke Test Runner (Windows Credential Manager)
+
+To allow repeatable and automated execution of the isolated JDBC smoke test without prompting for credentials each time and without persisting secrets to repository files, a native Windows Credential Manager integration is provided.
+
+### A. Security Architecture
+1. **Target Name:** `HSWRMS_TEST_SQLSERVER`
+2. **Credential Type:** `CRED_TYPE_GENERIC` (1), `CRED_PERSIST_LOCAL_MACHINE` (2).
+3. **Current-Windows-User Scoping:**
+   - Generic credentials written via Win32 `CredWriteW` are encrypted with Windows DPAPI (Data Protection API) and tied directly to the current Windows user profile (`%USERPROFILE%`).
+   - Other local Windows accounts, unprivileged services, or remote users cannot read or decrypt these credentials.
+4. **Zero-Disk / Zero-Git Invariant:**
+   - Credentials exist strictly inside Windows Credential Manager (DPAPI vault).
+   - No plaintext passwords, hashes, tokens, or connection strings are stored in files, `.env` configs, scripts, reports, or Git repository history.
+   - Child processes inherit the password strictly in their transient process environment block (`$env:SQLSERVER_TEST_PASSWORD`), which is scrubbed in a guaranteed `finally` block upon test termination.
+5. **No Third-Party Dependencies:**
+   - Built directly using native Win32 P/Invoke declarations (`advapi32.dll`: `CredWriteW`, `CredReadW`, `CredDeleteW`, `CredFree`) compiled via PowerShell's built-in `Add-Type`.
+
+### B. One-Time Setup: Storing the Test Credential
+Run the setup script interactively. The password prompt masks input (`Read-Host -AsSecureString`) and never echoes the secret to the console or PowerShell command history (`ConsoleHost_history.txt`):
+
+```powershell
+# Interactive one-time configuration:
+.\05_Development\database\scripts\set_hswrms_test_credential.ps1
+```
+
+The script performs client-side validation:
+- Login name is verified to be `hswrms_test_user`.
+- Password must be 12-128 characters long and cannot match default placeholder patterns.
+- Credential is saved under target `HSWRMS_TEST_SQLSERVER`.
+- Memory buffers are cleared immediately via `Marshal.ZeroFreeBSTR` and garbage collection.
+
+### C. Checking Credential Status
+Verify that the credential exists without displaying the secret:
+```powershell
+.\05_Development\database\scripts\set_hswrms_test_credential.ps1 -VerifyOnly
+```
+Output displays the target name, username, and last-modified timestamp, while keeping the password redacted.
+
+You can also run readiness checking with the runner script:
+```powershell
+.\05_Development\database\scripts\run_hswrms_jdbc_smoke_test.ps1 -CheckOnly
+```
+
+### D. Executing the Smoke Test Runner
+Once stored, run the smoke test repeatedly:
+```powershell
+.\05_Development\database\scripts\run_hswrms_jdbc_smoke_test.ps1
+```
+Operational workflow executed by the runner:
+1. Retrieves `hswrms_test_user` credentials from Windows Credential Manager.
+2. Fails closed (exit code 1) if the credential does not exist or username is not `hswrms_test_user`.
+3. Injects credentials exclusively into the current script process's environment variables (`SQLSERVER_TEST_USERNAME`, `SQLSERVER_TEST_PASSWORD`).
+4. Executes the isolated Maven test:
+   `mvnw.cmd test "-Dtest=SqlServerJdbcSmokeTest" "-Dspring.profiles.active=sqlserver-test" "-Dhswrms.sqlserver.test.enabled=true"`
+5. Captures and propagates the Maven exit code.
+6. Enforces cleanup in a `finally` block: zeroes out process environment variables and unsets memory references.
+
+### E. Credential Deletion / Replacement
+To delete or reset the stored credential:
+```powershell
+# Remove credential from Windows Credential Manager:
+.\05_Development\database\scripts\set_hswrms_test_credential.ps1 -DeleteCredential
+
+# Re-run setup to replace:
+.\05_Development\database\scripts\set_hswrms_test_credential.ps1
+```
+
+### F. Security Limitations
+- **Local Elevation Bounds:** Any process running under the same Windows user token or an elevated Administrator process on the same machine has access to DPAPI-protected credentials for that user profile.
+- **Process Memory Lifetime:** During Maven test execution, the child JVM process holds the password in memory until JVM termination.
+- **No Remote Roaming:** Generic credentials with `CRED_PERSIST_LOCAL_MACHINE` do not roam across different machines or domain accounts. Each workstation used for testing must perform the one-time interactive setup.
+

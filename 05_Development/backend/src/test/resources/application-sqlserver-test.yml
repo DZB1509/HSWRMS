@@ -30,12 +30,20 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-      naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    generate-ddl: false
+    naming:
+      physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
+  sql:
+    init:
+      mode: never
+  flyway:
+    enabled: false
+  liquibase:
+    enabled: false
 
 hswrms:
   sqlserver:
@@ -60,3 +68,8 @@ app:
     mock-auto-confirm: false
   seed:
     demo-data: false
+  initializer:
+    m6:
+      enabled: false
+  scheduling:
+    enabled: false
