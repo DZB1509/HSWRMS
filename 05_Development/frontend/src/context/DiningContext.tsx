@@ -16,6 +16,7 @@ import {
 } from '../data/mockDining';
 import { useCustomer } from './CustomerContext';
 import { fnbApi, type MenuItemBackendDto, type MealPrepEntryBackendDto } from '../features/m4-fnb/api/fnbApi';
+import { extractNumericId } from '../features/m4-fnb/utils/fnbIdUtils';
 
 const DiningContext = createContext<DiningContextType | undefined>(undefined);
 
@@ -82,8 +83,9 @@ function mapBackendMenuItem(item: MenuItemBackendDto): DietaryMenuItem {
 
 // Helper to map backend MealPrepEntry to frontend MealPrepEntry
 function mapBackendPrepEntry(dto: MealPrepEntryBackendDto): MealPrepEntry {
+  const safeId = String(dto.id);
   return {
-    id: dto.id,
+    id: safeId,
     type: dto.type,
     date: dto.date,
     targetTime: dto.targetTime,
@@ -101,14 +103,7 @@ function mapBackendPrepEntry(dto: MealPrepEntryBackendDto): MealPrepEntry {
   };
 }
 
-function extractNumericId(id: string): number | null {
-  const digits = id.replace(/\D/g, '');
-  if (digits) {
-    const parsed = parseInt(digits, 10);
-    return isNaN(parsed) ? null : parsed;
-  }
-  return null;
-}
+export { extractNumericId } from '../features/m4-fnb/utils/fnbIdUtils';
 
 export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [menuItems, setMenuItems] = useState<DietaryMenuItem[]>(MOCK_MENU_ITEMS);
@@ -152,30 +147,52 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const saveMealSelection = (selection: Omit<DailyMealSelection, 'id' | 'status'>) => {
+    const tempId = `MS-${Date.now()}`;
     const newSelection: DailyMealSelection = {
       ...selection,
-      id: `MS-${Date.now()}`,
+      id: tempId,
       status: 'pending',
     };
     
-    setMealSelections(prev => {
-      const filtered = prev.filter(s => 
-        !(s.bookingId === selection.bookingId && s.date === selection.date && s.mealPeriod === selection.mealPeriod)
-      );
-      return [...filtered, newSelection];
-    });
-
-    // Try posting to real backend
     const numBookingId = extractNumericId(selection.bookingId);
     if (numBookingId) {
+      // Optimistic addition
+      setMealSelections(prev => {
+        const filtered = prev.filter(s => 
+          !(s.bookingId === selection.bookingId && s.date === selection.date && s.mealPeriod === selection.mealPeriod)
+        );
+        return [...filtered, newSelection];
+      });
+      setError(null);
+
       fnbApi.createDailyMealOrder({
-        bookingId: numBookingId,
+        retreatBookingId: numBookingId,
         orderDate: selection.date,
         mealPeriod: selection.mealPeriod.toUpperCase(),
         menuItemIds: selection.menuItemIds.map(id => extractNumericId(id) || 1),
-        specialNotes: selection.notes,
+        notes: selection.notes,
+      }).then(res => {
+        if (res && res.mealOrderId) {
+          setMealSelections(prev => prev.map(s => s.id === tempId ? {
+            ...s,
+            id: `MEAL-${res.mealOrderId}`,
+            status: (res.orderStatus?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+          } : s));
+        }
       }).catch(err => {
-        console.warn('Backend daily meal submission failed, kept in local state:', err.message);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Backend daily meal submission failed:', msg);
+        setError(`Daily meal submission failed: ${msg}`);
+        // Rollback un-persisted selection from local state so user is not deceived
+        setMealSelections(prev => prev.filter(s => s.id !== tempId));
+      });
+    } else {
+      // Standalone mock mode without booking ID
+      setMealSelections(prev => {
+        const filtered = prev.filter(s => 
+          !(s.bookingId === selection.bookingId && s.date === selection.date && s.mealPeriod === selection.mealPeriod)
+        );
+        return [...filtered, newSelection];
       });
     }
   };
@@ -185,39 +202,48 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const createAlaCarteOrder = (order: Omit<AlaCarteOrder, 'id' | 'createdAt' | 'status' | 'chargeType' | 'folioPostingStatus'>) => {
+    const tempId = `ORD-${Date.now()}`;
     const newOrder: AlaCarteOrder = {
       ...order,
-      id: `ORD-${Date.now()}`,
+      id: tempId,
       createdAt: new Date().toISOString(),
       status: 'pending',
       chargeType: 'fnb_extra',
       folioPostingStatus: 'pending_checkout_folio',
     };
-    setAlaCarteOrders(prev => [...prev, newOrder]);
 
-    // Send order to backend without client-trusted total
     const numBookingId = extractNumericId(order.bookingId);
     if (numBookingId) {
+      setAlaCarteOrders(prev => [...prev, newOrder]);
+      setError(null);
+
       fnbApi.createAlaCarteOrder({
-        bookingId: numBookingId,
-        deliveryLocation: order.location,
-        deliveryTime: order.targetTime,
+        retreatBookingId: numBookingId,
+        location: order.location,
+        targetTime: order.targetTime,
         items: order.lines.map(line => ({
           menuItemId: extractNumericId(line.menuItemId) || 1,
           quantity: line.quantity,
-          specialNotes: line.notes,
+          notes: line.notes,
         })),
       }).then(res => {
         if (res && res.mealOrderId) {
-          setAlaCarteOrders(prev => prev.map(o => o.id === newOrder.id ? {
+          setAlaCarteOrders(prev => prev.map(o => o.id === tempId ? {
             ...o,
             id: `MEAL-${res.mealOrderId}`,
             totalAmount: res.totalAmount || o.totalAmount,
           } : o));
         }
       }).catch(err => {
-        console.warn('Backend a-la-carte order failed, kept in local state:', err.message);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Backend a-la-carte order failed:', msg);
+        setError(`A-la-carte order submission failed: ${msg}`);
+        // Rollback un-saved order from state to avoid false success display
+        setAlaCarteOrders(prev => prev.filter(o => o.id !== tempId));
       });
+    } else {
+      // Standalone mock mode without booking ID
+      setAlaCarteOrders(prev => [...prev, newOrder]);
     }
 
     return newOrder;
@@ -260,12 +286,17 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       updateAlaCarteOrderStatus(id, status);
     }
 
-    setKdsRemoteQueue(prev => prev.map(item => item.id === id ? { ...item, status } : item));
+    setKdsRemoteQueue(prev => prev.map(item => String(item.id) === String(id) ? { ...item, status } : item));
 
     const numericId = extractNumericId(id);
     if (numericId) {
       fnbApi.updateKdsOrderStatus(numericId, status.toUpperCase()).catch(err => {
-        console.warn('Backend status update failed, kept in local state:', err.message);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Backend status update failed:', msg);
+        setError(`Failed to update status on server: ${msg}`);
+        if (refreshKitchenQueue) {
+          refreshKitchenQueue();
+        }
       });
     }
   };
@@ -276,9 +307,9 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       await fnbApi.cancelKdsOrder(numericId, reason || 'Cancelled by staff');
-      setKdsRemoteQueue(prev => prev.map(item => item.id === id ? { ...item, status: 'cancelled' } : item));
-      setAlaCarteOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'cancelled' } : o));
-      setMealSelections(prev => prev.map(s => s.id === id ? { ...s, status: 'cancelled' } : s));
+      setKdsRemoteQueue(prev => prev.map(item => String(item.id) === String(id) ? { ...item, status: 'cancelled' } : item));
+      setAlaCarteOrders(prev => prev.map(o => String(o.id) === String(id) ? { ...o, status: 'cancelled' } : o));
+      setMealSelections(prev => prev.map(s => String(s.id) === String(id) ? { ...s, status: 'cancelled' } : s));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);

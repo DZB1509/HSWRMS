@@ -1,4 +1,9 @@
 import { apiClient } from '../../../api/client/apiClient';
+import {
+  buildDailyMealOrderPayload,
+  buildAlaCarteOrderPayload,
+  buildCancelOrderPayload,
+} from '../utils/fnbPayloadUtils';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -24,27 +29,35 @@ export interface MealOrderItemBackendDto {
   itemName: string;
   quantity: number;
   unitPrice: number;
+  lineTotal?: number;
+  notes?: string;
   specialNotes?: string;
 }
 
 export interface MealOrderBackendDto {
   mealOrderId: number;
-  bookingId: number;
+  retreatBookingId: number;
+  bookingId?: number; // Backward-compatibility alias
   orderType: string;
   orderDate: string;
+  mealType?: string;
   deliveryTime?: string;
   deliveryLocation?: string;
   orderStatus: string;
   totalAmount: number;
+  notes?: string;
   specialNotes?: string;
+  cancellationReason?: string;
+  cancelledBy?: number;
+  cancelledAt?: string;
   items: MealOrderItemBackendDto[];
   createdAt: string;
   updatedAt?: string;
 }
 
 export interface MealPrepEntryBackendDto {
-  id: string;
-  rawMealOrderId: number;
+  id: string | number;
+  rawMealOrderId?: number;
   type: 'retreat_meal' | 'a_la_carte';
   date: string;
   targetTime?: string;
@@ -52,10 +65,12 @@ export interface MealPrepEntryBackendDto {
   customerName: string;
   villaNumber?: string;
   items: {
-    menuItemId: string;
-    itemName: string;
+    menuItemId: string | number;
+    itemName?: string;
     quantity: number;
     notes?: string;
+    unitPrice?: number;
+    lineTotal?: number;
   }[];
   customerNotes?: string;
   dietaryNotes: string[];
@@ -73,23 +88,31 @@ export interface KdsDashboardKpiBackendDto {
 }
 
 export interface CreateDailyMealPayload {
-  bookingId: number;
+  retreatBookingId?: number;
   orderDate: string;
   mealPeriod: string;
   menuItemIds: number[];
+  notes?: string;
+  // Aliases for backward-compatibility
+  bookingId?: number;
   specialNotes?: string;
 }
 
 export interface CreateAlaCartePayload {
-  bookingId: number;
+  retreatBookingId?: number;
   orderDate?: string;
-  deliveryTime?: string;
-  deliveryLocation?: string;
+  targetTime?: string;
+  location?: string;
   items: {
     menuItemId: number;
     quantity: number;
+    notes?: string;
     specialNotes?: string;
   }[];
+  // Aliases for backward-compatibility
+  bookingId?: number;
+  deliveryTime?: string;
+  deliveryLocation?: string;
 }
 
 export const fnbApi = {
@@ -103,13 +126,15 @@ export const fnbApi = {
 
   // Daily Meal Order
   createDailyMealOrder: async (payload: CreateDailyMealPayload): Promise<MealOrderBackendDto> => {
-    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>('/fnb/customer/daily-meals', payload);
+    const body = buildDailyMealOrderPayload(payload);
+    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>('/fnb/customer/daily-meals', body);
     return res.data;
   },
 
   // A-la-carte Order
   createAlaCarteOrder: async (payload: CreateAlaCartePayload): Promise<MealOrderBackendDto> => {
-    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>('/fnb/customer/a-la-carte', payload);
+    const body = buildAlaCarteOrderPayload(payload);
+    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>('/fnb/customer/a-la-carte', body);
     return res.data;
   },
 
@@ -122,10 +147,9 @@ export const fnbApi = {
   },
 
   // Customer Cancel Order
-  cancelCustomerOrder: async (orderId: number, reason?: string): Promise<MealOrderBackendDto> => {
-    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>(`/fnb/customer/orders/${orderId}/cancel`, {
-      reason,
-    });
+  cancelCustomerOrder: async (orderId: number, cancellationReason?: string): Promise<MealOrderBackendDto> => {
+    const body = buildCancelOrderPayload(cancellationReason, 'Customer cancelled');
+    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>(`/fnb/customer/orders/${orderId}/cancel`, body);
     return res.data;
   },
 
@@ -177,10 +201,9 @@ export const fnbApi = {
   },
 
   // Staff Cancel Order
-  cancelKdsOrder: async (orderId: number, reason: string): Promise<MealOrderBackendDto> => {
-    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>(`/fnb/kds/orders/${orderId}/cancel`, {
-      reason,
-    });
+  cancelKdsOrder: async (orderId: number, cancellationReason: string): Promise<MealOrderBackendDto> => {
+    const body = buildCancelOrderPayload(cancellationReason, 'Cancelled by staff');
+    const res = await apiClient.post<ApiResponse<MealOrderBackendDto>>(`/fnb/kds/orders/${orderId}/cancel`, body);
     return res.data;
   },
 };

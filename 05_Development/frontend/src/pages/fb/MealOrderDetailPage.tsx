@@ -60,7 +60,7 @@ export const MealOrderDetailPage: React.FC = () => {
           .then(res => {
             if (res) {
               setRemoteItem({
-                id: res.id,
+                id: String(res.id),
                 type: res.type,
                 date: res.date,
                 targetTime: res.targetTime,
