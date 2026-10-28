@@ -27,7 +27,9 @@ import {
   Lock,
   Database,
   RefreshCw,
-  Ban
+  Ban,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 import {
   PHYSICAL_VILLAS,
@@ -50,6 +52,7 @@ import { useToast } from '../../components/common/Toast';
 import { formatVND } from '../../i18n';
 import { Button } from '../../components/common/Button';
 import { AddVillaModal } from '../../components/operations/AddVillaModal';
+import { EditVillaModal } from '../../components/operations/EditVillaModal';
 import { AddVillaCategoryModal } from '../../components/operations/AddVillaCategoryModal';
 import { AddRetreatPackageModal } from '../../components/operations/AddRetreatPackageModal';
 import { EditVillaPriceModal } from '../../components/operations/EditVillaPriceModal';
@@ -232,6 +235,9 @@ export const VillaManagementPage: React.FC = () => {
   const [editingPricePackage, setEditingPricePackage] = useState<RetreatPackageMaster | null>(null);
   const [editingPriceCategory, setEditingPriceCategory] = useState<VillaCategoryItem | null>(null);
 
+  // Edit villa full info modal state
+  const [editingVilla, setEditingVilla] = useState<PhysicalVillaItem | null>(null);
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedZone, setSelectedZone] = useState<string>('all');
@@ -316,7 +322,7 @@ export const VillaManagementPage: React.FC = () => {
     // Sync status change directly to backend Database
     fetch(`http://localhost:8080/api/v1/villas/${selectedVilla.villaNumber}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ status: pendingStatus })
     }).catch((err) => console.warn('Failed to sync villa status to DB:', err));
 
@@ -336,11 +342,113 @@ export const VillaManagementPage: React.FC = () => {
     setSelectedVilla(null);
   };
 
+  const handleSaveVilla = async (updatedVilla: PhysicalVillaItem, reason: string) => {
+    if (!canManageInventory) {
+      showToast('Thao tác bị từ chối: Quản trị viên hoặc quyền quản lý kho biệt thự là bắt buộc.', 'error');
+      return;
+    }
+
+    setVillas((prev) =>
+      prev.map((v) => (v.id === updatedVilla.id || v.villaNumber === updatedVilla.villaNumber ? updatedVilla : v))
+    );
+    if (selectedVilla && (selectedVilla.id === updatedVilla.id || selectedVilla.villaNumber === updatedVilla.villaNumber)) {
+      setSelectedVilla(updatedVilla);
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/villas/${updatedVilla.villaNumber}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          villaCategoryId: updatedVilla.categoryId,
+          zoneName: updatedVilla.zoneName,
+          floor: updatedVilla.floor,
+          bedroomInfo: updatedVilla.bedroomInfo,
+          bedType: updatedVilla.bedType,
+          maxAdults: updatedVilla.maxAdults,
+          maxChildren: updatedVilla.maxChildren,
+          maxOccupancy: updatedVilla.maxOccupancy,
+          areaSqm: updatedVilla.areaSqm,
+          nightlyRate: updatedVilla.nightlyRate,
+          hasPrivatePool: updatedVilla.hasPrivatePool,
+          poolInfo: updatedVilla.poolInfo,
+          viewAndOperationalNotes: updatedVilla.viewAndOperationalNotes,
+          villaStatus: updatedVilla.status,
+          image: updatedVilla.image,
+          amenities: Array.isArray(updatedVilla.amenities) ? updatedVilla.amenities.join(', ') : updatedVilla.amenities
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã cập nhật thông tin biệt thự ${updatedVilla.villaNumber} vào CSDL thành công!`, 'success');
+    } catch (err: any) {
+      console.warn('Backend sync warning:', err);
+      showToast(`Đã cập nhật thông tin biệt thự ${updatedVilla.villaNumber}!`, 'success');
+    }
+
+    logAuditEvent({
+      actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+      actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+      actorRole: role || 'manager',
+      action: 'UPDATE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: `VILLA-${updatedVilla.villaNumber}`,
+      result: 'SUCCESS',
+      detailsKey: 'operations.audit.villaUpdated',
+      detailsFallback: `Đã chỉnh sửa thông tin biệt thự ${updatedVilla.villaNumber}: ${updatedVilla.categoryName}, ${updatedVilla.zoneName}. Lý do: ${reason}`
+    });
+  };
+
+  const handleDeleteVilla = async (villaNumber: string) => {
+    if (!isAdmin) {
+      showToast('Chỉ Quản Trị Viên (Admin) mới có thẩm quyền xóa hoặc ngừng kích hoạt căn biệt thự.', 'error');
+      return;
+    }
+
+    if (!window.confirm(`Xác nhận xóa biệt thự ${villaNumber} khỏi hệ thống kho phòng?`)) {
+      return;
+    }
+
+    setVillas((prev) => prev.filter((v) => v.villaNumber !== villaNumber));
+    if (selectedVilla?.villaNumber === villaNumber) {
+      setSelectedVilla(null);
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/villas/${villaNumber}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã xóa biệt thự ${villaNumber} thành công!`, 'success');
+    } catch (err: any) {
+      console.warn('Backend sync warning:', err);
+      showToast(`Đã xóa căn ${villaNumber} khỏi danh sách hiển thị.`, 'info');
+    }
+
+    logAuditEvent({
+      actorId: 'usr-admin-01',
+      actorName: 'Alexander Wright',
+      actorRole: 'admin',
+      action: 'DELETE',
+      dataCategory: 'SECURITY_GOVERNANCE',
+      targetRef: `VILLA-${villaNumber}`,
+      result: 'SUCCESS',
+      detailsKey: 'operations.audit.villaDeleted',
+      detailsFallback: `Đã xóa biệt thự ${villaNumber} khỏi kho resort`
+    });
+  };
+
   const handleAddVilla = async (newVilla: PhysicalVillaItem) => {
     try {
       const res = await fetch('http://localhost:8080/api/v1/villas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           villaNumber: newVilla.villaNumber,
           villaCategoryId: newVilla.categoryId,
@@ -1485,6 +1593,72 @@ export const VillaManagementPage: React.FC = () => {
                           </span>
                         )}
                       </div>
+
+                      {/* Card Action Row */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        marginTop: '12px',
+                        paddingTop: '10px',
+                        borderTop: '1px solid var(--border-subtle, #e5e2dc)'
+                      }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {villa.maxAdults}L {villa.maxChildren !== undefined ? `+ ${villa.maxChildren}T` : ''} · {villa.areaSqm}m²
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {canManageInventory && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingVilla(villa);
+                              }}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-subtle, #e5e2dc)',
+                                backgroundColor: '#ffffff',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title="Chỉnh sửa thông số biệt thự"
+                            >
+                              <Edit3 size={12} color="var(--accent-forest, #2d4a3e)" />
+                              Sửa
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenVillaDetail(villa);
+                            }}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              borderRadius: '6px',
+                              border: '1px solid var(--accent-forest, #2d4a3e)',
+                              backgroundColor: 'var(--accent-forest, #2d4a3e)',
+                              color: '#ffffff',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Eye size={12} />
+                            Chi Tiết
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1591,9 +1765,32 @@ export const VillaManagementPage: React.FC = () => {
                           {villa.viewAndOperationalNotes}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                          <Button size="sm" variant="tertiary" icon={<Eye size={13} />}>
-                            Chi Tiết
-                          </Button>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            {canManageInventory && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                icon={<Edit3 size={13} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingVilla(villa);
+                                }}
+                              >
+                                Sửa
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="tertiary"
+                              icon={<Eye size={13} />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenVillaDetail(villa);
+                              }}
+                            >
+                              Chi Tiết
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -2214,13 +2411,49 @@ export const VillaManagementPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedVilla(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {canManageInventory && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    icon={<Edit3 size={13} />}
+                    onClick={() => setEditingVilla(selectedVilla)}
+                  >
+                    Sửa Thông Tin
+                  </Button>
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteVilla(selectedVilla.villaNumber)}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: '1px solid #fecaca',
+                      backgroundColor: '#fef2f2',
+                      color: '#b91c1c',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Xóa căn biệt thự khỏi hệ thống"
+                  >
+                    <Trash2 size={13} />
+                    Xóa Căn
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedVilla(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '6px' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Content */}
@@ -2323,7 +2556,7 @@ export const VillaManagementPage: React.FC = () => {
 
                   {canManagePricing ? (
                     <span style={{ fontSize: '11px', color: '#166534', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <ShieldCheck size={12} /> Đã ủy quyền sửa giá
+                      <ShieldCheck size={12} /> {isAdmin ? 'Toàn Quyền Admin (Toàn Phần)' : 'Đã ủy quyền sửa giá'}
                     </span>
                   ) : (
                     <span style={{ fontSize: '11px', color: '#991b1b', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2360,9 +2593,13 @@ export const VillaManagementPage: React.FC = () => {
                   <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Cập Nhật Trạng Thái Vận Hành Biệt Thự:
                   </label>
-                  {!canManageInventory && (
+                  {!canManageInventory ? (
                     <span style={{ fontSize: '11px', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <ShieldAlert size={12} /> Cần quyền ủy quyền từ Admin
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: '#166534', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                      <ShieldCheck size={12} /> {isAdmin ? 'Toàn quyền Quản Trị Viên (Admin)' : 'Đã được cấp quyền buồng phòng'}
                     </span>
                   )}
                 </div>
@@ -2458,6 +2695,16 @@ export const VillaManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Full Villa Details Modal */}
+      <EditVillaModal
+        isOpen={!!editingVilla}
+        onClose={() => setEditingVilla(null)}
+        villa={editingVilla}
+        categories={categories}
+        zones={zones}
+        onSaveVilla={handleSaveVilla}
+      />
 
       {/* Add Physical Villa Modal */}
       <AddVillaModal

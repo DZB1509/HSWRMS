@@ -13,10 +13,12 @@ import com.heavenstay.hswrms.m2booking.repository.VillaFunctionalAreaRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -66,6 +68,7 @@ public class VillaInventoryController {
     }
 
     // Operational status (S24) is Receptionist work; Admin always allowed. Manager is read-only.
+    @PatchMapping("/villas/{villaNumber}/status")
     public ResponseEntity<ApiResponse<PhysicalVilla>> updateVillaStatus(
             @PathVariable String villaNumber,
             @RequestBody Map<String, String> payload) {
@@ -77,6 +80,80 @@ public class VillaInventoryController {
                 .orElseThrow(() -> new ResourceNotFoundException("PhysicalVilla", "villaNumber", villaNumber));
         villa.setVillaStatus(newStatus.toUpperCase());
         return ResponseEntity.ok(ApiResponse.ok("Villa status updated successfully", villaRepo.save(villa)));
+    }
+
+    @PutMapping("/villas/{villaNumber}")
+    @PreAuthorize("@perm.has('S12','U')")
+    public ResponseEntity<ApiResponse<PhysicalVilla>> updateVilla(
+            @PathVariable String villaNumber,
+            @RequestBody Map<String, Object> payload) {
+        PhysicalVilla villa = villaRepo.findByVillaNumber(villaNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("PhysicalVilla", "villaNumber", villaNumber));
+
+        if (payload.containsKey("villaCategoryId") && payload.get("villaCategoryId") != null) {
+            Integer catId = Integer.valueOf(payload.get("villaCategoryId").toString());
+            VillaCategory cat = categoryRepo.findById(catId)
+                    .orElseThrow(() -> new ResourceNotFoundException("VillaCategory", "villaCategoryId", catId));
+            villa.setVillaCategory(cat);
+        }
+        if (payload.containsKey("floor") && payload.get("floor") != null) {
+            villa.setFloor((String) payload.get("floor"));
+        }
+        if (payload.containsKey("zoneName") && payload.get("zoneName") != null) {
+            villa.setZoneName((String) payload.get("zoneName"));
+        }
+        if (payload.containsKey("bedroomInfo") && payload.get("bedroomInfo") != null) {
+            villa.setBedroomInfo((String) payload.get("bedroomInfo"));
+        }
+        if (payload.containsKey("bedType") && payload.get("bedType") != null) {
+            villa.setBedType((String) payload.get("bedType"));
+        }
+        if (payload.containsKey("maxAdults") && payload.get("maxAdults") != null) {
+            villa.setMaxAdults(Integer.parseInt(payload.get("maxAdults").toString()));
+        }
+        if (payload.containsKey("maxChildren") && payload.get("maxChildren") != null) {
+            villa.setMaxChildren(Integer.parseInt(payload.get("maxChildren").toString()));
+        }
+        if (payload.containsKey("maxOccupancy") && payload.get("maxOccupancy") != null) {
+            villa.setMaxOccupancy(Integer.parseInt(payload.get("maxOccupancy").toString()));
+        }
+        if (payload.containsKey("areaSqm") && payload.get("areaSqm") != null) {
+            villa.setAreaSqm(new BigDecimal(payload.get("areaSqm").toString()));
+        }
+        if (payload.containsKey("nightlyRate") && payload.get("nightlyRate") != null) {
+            villa.setNightlyRate(new BigDecimal(payload.get("nightlyRate").toString()));
+        }
+        if (payload.containsKey("hasPrivatePool") && payload.get("hasPrivatePool") != null) {
+            villa.setHasPrivatePool(Boolean.parseBoolean(payload.get("hasPrivatePool").toString()));
+        }
+        if (payload.containsKey("poolInfo") && payload.get("poolInfo") != null) {
+            villa.setPoolInfo((String) payload.get("poolInfo"));
+        }
+        if (payload.containsKey("viewAndOperationalNotes") && payload.get("viewAndOperationalNotes") != null) {
+            villa.setViewAndOperationalNotes((String) payload.get("viewAndOperationalNotes"));
+        }
+        if (payload.containsKey("villaStatus") && payload.get("villaStatus") != null) {
+            villa.setVillaStatus((String) payload.get("villaStatus"));
+        }
+        if (payload.containsKey("amenities") && payload.get("amenities") != null) {
+            Object am = payload.get("amenities");
+            villa.setAmenities(am instanceof List<?> list ? String.join(", ", list.stream().map(Object::toString).toList()) : am.toString());
+        }
+        if (payload.containsKey("image") && payload.get("image") != null) {
+            villa.setImage((String) payload.get("image"));
+        }
+
+        PhysicalVilla saved = villaRepo.save(villa);
+        return ResponseEntity.ok(ApiResponse.ok("Villa updated successfully", saved));
+    }
+
+    @DeleteMapping("/villas/{villaNumber}")
+    @PreAuthorize("@perm.has('S12','D')")
+    public ResponseEntity<ApiResponse<Void>> deleteVilla(@PathVariable String villaNumber) {
+        PhysicalVilla villa = villaRepo.findByVillaNumber(villaNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("PhysicalVilla", "villaNumber", villaNumber));
+        villaRepo.delete(villa);
+        return ResponseEntity.ok(ApiResponse.ok("Villa deleted successfully", null));
     }
 
     @GetMapping("/villa-categories")
