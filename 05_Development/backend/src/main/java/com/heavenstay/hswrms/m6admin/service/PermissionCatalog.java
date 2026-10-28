@@ -71,6 +71,7 @@ public final class PermissionCatalog {
                 d("S20", "V", false, false, RECEPTIONIST),
                 d("S31", "V", false, false, THERAPIST),
                 d("S38", "V", false, false, FNB_STAFF),
+                d("S39", "V", false, false, FNB_STAFF), d("S39", "U", false, false, FNB_STAFF),
                 d("S46", "V", false, false, MANAGER, ADMIN),
                 d("S47", "V", false, false, MANAGER, ADMIN), d("S47", "E", false, false, MANAGER),
                 d("S48", "V", false, false, MANAGER, ADMIN), d("S48", "E", false, false, MANAGER),

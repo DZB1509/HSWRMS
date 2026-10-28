@@ -108,7 +108,7 @@ public class AdminDashboardController {
                 Map.of("totalRecords", totalAudit, "past24HoursCount", past24hAudit),
                 "Tamper-evident audit logging"));
 
-        boolean canViewAdminWidgets = actor.admin() || permissionService.userHas(actor.userId(), "S55_ADMIN_WIDGETS", "V");
+        boolean canViewAdminWidgets = actor.admin() || (permissionService != null && permissionService.userHas(actor.userId(), "S55_ADMIN_WIDGETS", "V"));
         if (canViewAdminWidgets) {
             long activeParams = configRepository.findByConfigurationTypeOrderByConfigurationKeyAsc(
                     SystemConfiguration.TYPE_BUSINESS_PARAMETER).size();

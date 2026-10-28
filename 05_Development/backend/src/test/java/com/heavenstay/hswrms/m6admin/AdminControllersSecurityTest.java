@@ -72,6 +72,18 @@ public class AdminControllersSecurityTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.heavenstay.hswrms.m6admin.service.StaffAccountService staffAccountService;
+
+    @Autowired
+    private com.heavenstay.hswrms.m6admin.repository.SystemConfigurationRepository configRepository;
+
+    @Autowired
+    private com.heavenstay.hswrms.m6admin.service.AuditLogService auditLogService;
+
+    @Autowired
+    private com.heavenstay.hswrms.m6admin.security.PermissionEvaluator permissionEvaluator;
+
     private User managerUser;
     private User adminUser;
     private String managerToken;
@@ -331,7 +343,13 @@ public class AdminControllersSecurityTest {
         mockMvc.perform(get("/api/v1/admin/dashboard/system-overview")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title", is("System Operational Overview")));
+                .andExpect(jsonPath("$.data.title", is("System Operational Overview")))
+                .andExpect(jsonPath("$.data.widgets[0].key", is("auditActivity")))
+                .andExpect(jsonPath("$.data.widgets[0].available", is(true)))
+                .andExpect(jsonPath("$.data.widgets[1].key", is("businessParameters")))
+                .andExpect(jsonPath("$.data.widgets[1].available", is(true)))
+                .andExpect(jsonPath("$.data.widgets[2].key", is("managerDelegations")))
+                .andExpect(jsonPath("$.data.widgets[2].available", is(true)));
     }
 
     @Test
@@ -348,7 +366,15 @@ public class AdminControllersSecurityTest {
         mockMvc.perform(get("/api/v1/admin/dashboard/system-overview")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title", is("System Operational Overview")));
+                .andExpect(jsonPath("$.data.title", is("System Operational Overview")))
+                .andExpect(jsonPath("$.data.widgets[0].key", is("auditActivity")))
+                .andExpect(jsonPath("$.data.widgets[0].available", is(true)))
+                .andExpect(jsonPath("$.data.widgets[1].key", is("businessParameters")))
+                .andExpect(jsonPath("$.data.widgets[1].available", is(false)))
+                .andExpect(jsonPath("$.data.widgets[1].note", is("Requires administrative widgets permission")))
+                .andExpect(jsonPath("$.data.widgets[2].key", is("managerDelegations")))
+                .andExpect(jsonPath("$.data.widgets[2].available", is(false)))
+                .andExpect(jsonPath("$.data.widgets[2].note", is("Requires administrative widgets permission")));
     }
 
     @Test
@@ -401,5 +427,79 @@ public class AdminControllersSecurityTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is("DELEGATION_NOT_REVOCABLE")));
+    }
+
+    @Test
+    @DisplayName("SECURITY-13: Manager WITH S55_ADMIN_WIDGETS delegation can view admin widgets on S55 System Overview")
+    void managerWithDelegatedAdminWidgets_canViewAdminWidgets() throws Exception {
+        Permission pAdminWidgets = permissionRepository.findByModuleOrScreenAndActionType("S55_ADMIN_WIDGETS", "V").orElseThrow();
+
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        RightDelegation delegation = new RightDelegation(
+                adminUser.getUserId(),
+                managerUser.getUserId(),
+                now.minusHours(1),
+                now.plusHours(24),
+                RightDelegation.ACTIVE
+        );
+        delegation = delegationRepository.saveAndFlush(delegation);
+        delegationPermissionRepository.saveAndFlush(
+                new RightDelegationPermission(delegation.getDelegationId(), pAdminWidgets.getPermissionId()));
+
+        mockMvc.perform(get("/api/v1/admin/dashboard/system-overview")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.widgets[0].key", is("auditActivity")))
+                .andExpect(jsonPath("$.data.widgets[0].available", is(true)))
+                .andExpect(jsonPath("$.data.widgets[1].key", is("businessParameters")))
+                .andExpect(jsonPath("$.data.widgets[1].available", is(true)))
+                .andExpect(jsonPath("$.data.widgets[2].key", is("managerDelegations")))
+                .andExpect(jsonPath("$.data.widgets[2].available", is(true)));
+    }
+
+    @Test
+    @DisplayName("SECURITY-14: Fail-closed principle - AdminDashboardController masks widgets without NPE when PermissionService is null")
+    void systemOverview_failClosedWhenPermissionServiceIsNull() {
+        com.heavenstay.hswrms.m6admin.controller.AdminDashboardController controllerWithoutPerm =
+                new com.heavenstay.hswrms.m6admin.controller.AdminDashboardController(
+                        staffAccountService, configRepository, delegationRepository, auditLogService, permissionEvaluator, null);
+
+        try {
+            // 1. Manager actor: widgets masked without NPE
+            org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                    new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                            new com.heavenstay.hswrms.security.CustomUserDetails(
+                                    managerUser.getUserId(), managerUser.getEmail(), "", "Manager", true, List.of("MANAGER")),
+                            null,
+                            List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_MANAGER"))));
+
+            var managerResponse = controllerWithoutPerm.getSystemOverview();
+            org.junit.jupiter.api.Assertions.assertNotNull(managerResponse.getBody());
+            var managerWidgets = managerResponse.getBody().getData().widgets();
+            org.junit.jupiter.api.Assertions.assertFalse(managerWidgets.get(1).available());
+            org.junit.jupiter.api.Assertions.assertNull(managerWidgets.get(1).value());
+            org.junit.jupiter.api.Assertions.assertEquals("Requires administrative widgets permission", managerWidgets.get(1).note());
+            org.junit.jupiter.api.Assertions.assertFalse(managerWidgets.get(2).available());
+            org.junit.jupiter.api.Assertions.assertNull(managerWidgets.get(2).value());
+            org.junit.jupiter.api.Assertions.assertEquals("Requires administrative widgets permission", managerWidgets.get(2).note());
+
+            // 2. Admin actor: admin retains full widget access without relying on PermissionService
+            org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                    new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                            new com.heavenstay.hswrms.security.CustomUserDetails(
+                                    adminUser.getUserId(), adminUser.getEmail(), "", "Admin", true, List.of("ADMIN")),
+                            null,
+                            List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+            var adminResponse = controllerWithoutPerm.getSystemOverview();
+            org.junit.jupiter.api.Assertions.assertNotNull(adminResponse.getBody());
+            var adminWidgets = adminResponse.getBody().getData().widgets();
+            org.junit.jupiter.api.Assertions.assertTrue(adminWidgets.get(1).available());
+            org.junit.jupiter.api.Assertions.assertNotNull(adminWidgets.get(1).value());
+            org.junit.jupiter.api.Assertions.assertTrue(adminWidgets.get(2).available());
+            org.junit.jupiter.api.Assertions.assertNotNull(adminWidgets.get(2).value());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
     }
 }
