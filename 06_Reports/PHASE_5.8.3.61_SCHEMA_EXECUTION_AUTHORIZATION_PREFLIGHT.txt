@@ -1,0 +1,221 @@
+================================================================================
+HSWRMS SCHEMA EXECUTION AUTHORIZATION PREFLIGHT
+PHASE 5.8.3.61 — FINAL STATIC AUTHORIZATION & PERMISSION BOUNDARY AUDIT
+================================================================================
+Date: 2026-10-28
+Workspace Target: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Final Pre-Execution Authorization Audit for [HSWRMS_TEST] DDL Payload
+Execution Mode: STRICTLY STATIC REVIEW (Zero SQL executions; zero database
+                mutations; zero script modifications; zero Git mutations)
+================================================================================
+
+1. EXECUTIVE SUMMARY & SAFETY BOUNDARIES HONORED
+--------------------------------------------------------------------------------
+Phase 5.8.3.61 performs the final static authorization review before any decision
+to execute the dedicated schema payload against [HSWRMS_TEST].
+
+STRICT CONSTRAINTS FULLY MAINTAINED:
+  [X] Zero network connections opened to Microsoft SQL Server.
+  [X] Zero execution of sqlcmd, PowerShell scripts, DDL, DML, or migrations.
+  [X] Zero database objects created, dropped, altered, or permissions modified.
+  [X] Authoritative baseline (schema.sql) remains 100% UNTOUCHED (SHA256 verified).
+  [X] Dedicated payload (HSWRMS_TEST_schema.sql) remains UNTOUCHED (SHA256 verified).
+  [X] Application source code and migrations remain untouched.
+  [X] Workspace B untouched.
+  [X] Git working tree completely unmutated.
+  [X] Zero credential or secret exposure.
+
+GATE DECISION: READY FOR EXPLICIT HUMAN EXECUTION APPROVAL.
+
+
+2. EXECUTION IDENTITY & PRIVILEGE BOUNDARY VERIFICATION
+--------------------------------------------------------------------------------
+A. Analysis of the Test Runtime Login (`hswrms_test_user`):
+   - Confirmed Live State (Phase 5.8.3.58):
+     * Server Roles: 0 (No sysadmin, no dbcreator).
+     * Server Permissions: Strictly `CONNECT SQL`.
+     * Database Roles in HSWRMS_TEST: 0 (No db_owner, no db_ddladmin).
+     * Database Permissions in HSWRMS_TEST: Strictly `CONNECT`.
+     * Database Permissions in HSWRMS: 0 (Zero mapping; access blocked).
+   - DDL Execution Capability Assessment:
+     * DDL execution of `HSWRMS_TEST_schema.sql` requires:
+       - `CREATE TABLE` permission in database `HSWRMS_TEST`.
+       - `ALTER` permission on schema `dbo` (for constraints, triggers, indexes).
+       - `CREATE TRIGGER` permission in database `HSWRMS_TEST`.
+       - `INSERT` permission on `dbo.[Role]` (for initial role seeds).
+     * FINDING: `hswrms_test_user` DOES NOT have sufficient permissions to execute
+       the schema payload. If `hswrms_test_user` attempts execution, Batch 3 fails
+       immediately with Error 262: `CREATE TABLE permission denied in database 'HSWRMS_TEST'`.
+
+B. Rejection of Privileged Escalation for Runtime User:
+   - PROHIBITED PRACTICE: Granting `db_owner` or DDL permissions to `hswrms_test_user`.
+   - Rationale: The runtime test user must adhere to least-privilege principles.
+     Granting DDL capabilities to the test account would allow potential runtime
+     test defects or SQL injection flaws to modify database schema.
+
+C. Approved Deployment Identity Model (Clean Separation):
+   1. One-Time Deployment Identity (Schema Creation):
+      - Identity: Local Windows Administrative account via Windows Integrated
+        Authentication (`-E`), i.e. `MYLIFE-MYRULE-1\ADMIN`.
+      - Privilege: Scoped by the execution command to `localhost` and `HSWRMS_TEST`.
+        Possesses necessary DDL rights to create all 42 tables, indexes, triggers,
+        and initial role seed records.
+      - Advantage: Requires zero password transmission and zero credentials in scripts.
+   2. Runtime Test Identity (`hswrms_test_user`):
+      - Remains unprivileged during schema deployment.
+      - AFTER schema deployment and menu seeding are completed (Stage 7 of the
+        provisioning plan), `hswrms_test_user` is granted ONLY least-privilege DML:
+        `GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [hswrms_test_user];`
+      - Retains ZERO DDL permissions and ZERO access to primary database `HSWRMS`.
+
+
+3. TARGET BINDING & FAIL-CLOSED EXECUTION MECHANICS
+--------------------------------------------------------------------------------
+A. Proposed Client-Side CLI Invocation:
+   `sqlcmd -S localhost -d HSWRMS_TEST -E -b -i 05_Development/database/generated/HSWRMS_TEST_schema.sql`
+
+B. Layered Target Binding Analysis:
+   1. Host / Instance Binding:
+      - Bound via `-S localhost`. Eliminates dynamic host resolution ambiguity.
+   2. Database Context Binding:
+      - Bound at client level via `-d HSWRMS_TEST` in the initial TDS login packet.
+      - Redundantly bound at script level via Line 19: `USE [HSWRMS_TEST]; GO`.
+   3. Missing Target Database Behavior:
+      - If `HSWRMS_TEST` does not exist on the host, SQLCMD fails at connection time
+        with Error 4060 (`Cannot open database "HSWRMS_TEST" requested by the login`).
+      - With `-b`, SQLCMD exits immediately with ERRORLEVEL 1. Zero SQL batches executed.
+   4. Unintended Server Connection Behavior:
+      - If the client connects to an unintended host where `HSWRMS_TEST` also exists,
+        the internal script guard (`DB_NAME() == 'HSWRMS_TEST'`) CANNOT detect that
+        the host is incorrect.
+      - Mitigation: Client-side preflight assertion must query and verify `@@SERVERNAME`
+        and `SERVERPROPERTY('MachineName')` before piping the schema file.
+   5. Script Guard Fail-Closed Action:
+      - If connection lands on `HSWRMS` or `master` (e.g. if `-d` was omitted and
+        `USE [HSWRMS_TEST]` failed):
+        * Line 23 detects `DB_NAME() <> N'HSWRMS_TEST'`.
+        * Line 26 executes `SET NOEXEC ON;`.
+        * Line 27 executes `THROW 51000, ...;`.
+        * Even if SQLCMD processes subsequent batches, `SET NOEXEC ON` forces SQL
+          Server to compile but REFUSE EXECUTION of all subsequent DDL statements.
+   6. Cross-Batch Autocommit Limitation:
+      - `sqlcmd -b` halts on error, but DOES NOT roll back prior successful batches.
+      - Therefore, `SET NOEXEC ON`, `THROW`, and `sqlcmd -b` are internal containment
+        barriers, NOT substitutes for pre-execution target verification.
+
+
+4. SAFE PARTIAL-FAILURE RECOVERY DECISION TREE
+--------------------------------------------------------------------------------
+A. Resume vs Clean-Slate Assessment:
+   - Resuming execution of `HSWRMS_TEST_schema.sql` after a failure is NOT possible
+     without modifications because DDL statements (`CREATE TABLE dbo.[User]`, etc.)
+     are not idempotent and will fail with Error 2714 (Object already exists).
+
+B. Prohibition on Automatic Destruction:
+   - PROHIBITED: Automatically running `DROP DATABASE [HSWRMS_TEST]` in scripts.
+   - Any destructive action carries catastrophic risk if accidentally directed at
+     the primary database `HSWRMS`.
+
+C. Safe Human-Supervised Recovery Procedure:
+   ```
+   [Execution Failure Occurs]
+          |
+          v
+   Step 1: Read-Only Diagnosis
+     - Capture exact SQLCMD exit code and failing batch line number.
+     - Inspect SQL error message in stderr/log.
+          |
+          v
+   Step 2: Read-Only Target & State Verification
+     - Connect via read-only admin query:
+       `SELECT DB_NAME() AS CurrentDb, COUNT(*) AS TablesCreated FROM sys.tables WHERE is_ms_shipped = 0;`
+     - Verify primary DB integrity:
+       `SELECT name, create_date FROM sys.databases WHERE name = 'HSWRMS';`
+       Confirm HSWRMS table count and create_date are completely unchanged.
+          |
+          v
+   Step 3: Root Cause Remediation
+     - Resolve underlying resource/syntax/permission issue.
+          |
+          v
+   Step 4: Explicit Human-Authorized Clean Slate
+     - Option A (Preferred): Drop all user tables in HSWRMS_TEST via scoped cleanup.
+     - Option B: Drop and recreate HSWRMS_TEST manually under explicit DBA prompt:
+       `USE [master]; IF DB_ID('HSWRMS_TEST') IS NOT NULL DROP DATABASE [HSWRMS_TEST];`
+       Followed by re-running `provision_hswrms_test.ps1 -AllowExistingLogin`.
+   ```
+
+
+5. PAYLOAD COMPLETENESS & STATIC AUDIT EVIDENCE
+--------------------------------------------------------------------------------
+A. Cryptographic Integrity Verification:
+   - Original Baseline (`05_Development/database/schema.sql`):
+     * Size: 47,083 bytes (1,221 lines).
+     * SHA256: `04E3F1D107DE289B058C53A468E1E8EA92B677D5B53EEAC644D6D7BCECEDF0D6`
+     * Status: 100% UNTOUCHED since project baseline.
+   - Dedicated Payload (`05_Development/database/generated/HSWRMS_TEST_schema.sql`):
+     * Size: 46,206 bytes (1,223 lines).
+     * SHA256: `DB643DDBC0E5CF5BE848D1CF6EA33DC51B124B89DFAC0CE327CAEEE0C91E6D70`
+     * Status: 100% UNTOUCHED since generation in Phase 5.8.3.59.
+
+B. Object Parity Confirmation:
+   - 42 User Tables (`dbo.*`)
+   - 42 Primary Key Constraints
+   - 56 Foreign Key Constraints
+   - 21 Unique Constraints
+   - 12 Non-Clustered Indexes
+   - 3 Triggers (`TR_SpaSession_ValidateScheduling`, `TR_FolioItem_RecalculateTotal`,
+     `TR_PaymentTransaction_RecalculateFolioPaid`)
+   - 6 Initial Roles (`Customer`, `Receptionist`, `Therapist`, `F&B Staff`, `Manager`, `Admin`)
+   - Zero occurrences of `USE [HSWRMS]`, `USE [master]`, or `CREATE DATABASE`.
+
+C. Compilation Disclaimer:
+   - In accordance with safety rules, no DDL has been executed against SQL Server.
+   - While static structural, relational, and batch syntax audits indicate complete
+     parity with the proven baseline, definitive engine compilation occurs only
+     upon live execution authorized by the human operator.
+
+
+6. STATICALLY CONFIRMED FACTS VS. REQUIRED LIVE PRE-CHECKS
+--------------------------------------------------------------------------------
+A. Statically Confirmed Facts:
+   1. `HSWRMS_TEST_schema.sql` targets solely `HSWRMS_TEST` and contains fail-closed
+      containment guards.
+   2. Original `schema.sql` is preserved untouched.
+   3. Runtime user `hswrms_test_user` lacks DDL permissions and CANNOT deploy schema.
+   4. Deployment must be executed under administrative Windows Authentication (`-E`).
+   5. Least-privilege DML must be granted to `hswrms_test_user` in a later stage.
+
+B. Required Live (Read-Only) Pre-Execution Checks:
+   1. Confirm SQL Server service `MSSQLSERVER` remains in RUNNING state.
+   2. Confirm `HSWRMS_TEST` remains ONLINE with 0 user tables.
+   3. Confirm `HSWRMS` remains ONLINE with 0 mappings for `hswrms_test_user`.
+   4. Confirm deploying administrator possesses active `sysadmin` role on `localhost`.
+
+
+7. PRECONDITIONS FOR STAGE 4 EXECUTION
+--------------------------------------------------------------------------------
+Execution of Stage 4 (Schema Application) may proceed ONLY if the following
+preconditions are satisfied:
+  1. EXPLICIT HUMAN AUTHORIZATION: The human operator explicitly requests execution.
+  2. DEPLOYMENT IDENTITY: Execution is performed via Windows Authentication (`-E`),
+     NOT via `hswrms_test_user`.
+  3. CLI BINDING: Invoked with explicit parameters:
+     `sqlcmd -S localhost -d HSWRMS_TEST -E -b -i 05_Development/database/generated/HSWRMS_TEST_schema.sql`
+  4. POST-EXECUTION AUDIT: Immediate verification of 42 tables in `HSWRMS_TEST` and
+     0 mappings in `HSWRMS`.
+  5. ZERO AUTOMATIC ROLLBACK ASSUMPTION: In case of error, follow the human-supervised
+     recovery decision tree in Section 4.
+
+
+8. CONCLUSION & FINAL DECISION
+--------------------------------------------------------------------------------
+FINAL ASSESSMENT: READY FOR EXPLICIT HUMAN EXECUTION APPROVAL
+
+All static safety preflights, privilege boundary definitions, payload audits,
+and recovery protocols are complete, verified, and documented.
+
+The decision to execute Stage 4 (Schema Deployment) now rests with the human operator.
+================================================================================
+END OF REPORT — PHASE 5.8.3.61
+================================================================================

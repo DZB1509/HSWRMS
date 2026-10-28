@@ -1,0 +1,703 @@
+================================================================================
+HSWRMS INTEGRATION AUDIT & PLANNING REPORT - PHASE 5.8.3.49
+PHÂN TÍCH KHOẢNG TRỐNG BACKEND KDS VÀ LẬP KẾ HOẠCH TRIỂN KHAI
+================================================================================
+
+Date: 2026-10-28
+Auditor: Antigravity AI Agent
+Repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Scope: Module 4 (F&B / Kitchen Display System) Gap Analysis & Implementation Plan
+Preceding Phases:
+  - Phase 5.8.3.45: M1-M6 System Integration Audit
+  - Phase 5.8.3.46: M1-M6 Evidence Reconciliation Report
+  - Phase 5.8.3.47: Residual Risk & Integration Readiness Report
+  - Phase 5.8.3.48: M6 Authorization Regression Report (18 suites, 197 tests, 0 failures)
+
+================================================================================
+1. EXECUTIVE SUMMARY (TÓM TẮT ĐIỀU HÀNH)
+================================================================================
+
+Khảo sát toàn diện hệ thống hiện tại đối với Module 4 (F&B) và Kitchen Display
+System (KDS) cho thấy một sự chênh lệch (mismatch) rất lớn giữa Frontend và Backend:
+
+1. Thực trạng Frontend:
+   - Các màn hình vận hành F&B bao gồm Screen 38 (FnbDashboardPage.tsx - KPI bếp),
+     Screen 39 (MealPrepListPage.tsx - Hàng đợi chế biến), MealOrderDetailPage.tsx
+     (Chi tiết đơn & thông tin dị ứng), cùng các trang khách hàng (DailyMealSelectionPage.tsx
+     và AlaCarteOrderPage.tsx) đã được xây dựng giao diện hoàn chỉnh, giàu tính năng
+     lọc, phân trang, hiển thị nhãn dị ứng và chuyển trạng thái.
+   - TUY NHIÊN, 100% logic phía client hiện đang chạy trên in-memory state của React
+     thông qua DiningContext.tsx và bộ dữ liệu giả lập mockDining.ts.
+   - Thư mục client API 'features/m4-fnb/api/' hoàn toàn trống rỗng (chỉ có file .gitkeep).
+     Không có bất kỳ lệnh gọi HTTP/REST nào được kết nối về backend.
+
+2. Thực trạng Backend:
+   - Module 4 (com.heavenstay.hswrms.m4fnb) chỉ tồn tại ở mức "minimal stub" phục vụ
+     M5 Billing, bao gồm duy nhất 2 file:
+     * MealOrderEntity.java: Ánh xạ bảng dbo.MealOrder, chỉ có các trường cơ bản
+       (meal_order_id, retreat_booking_id, order_date, meal_type, order_type,
+       order_status, created_at).
+     * MealOrderRepository.java: Cung cấp các câu truy vấn khóa bi quan (findByIdWithLock),
+       tìm đơn chưa thanh toán (findUnsettledOrdersForBooking), và hàng đợi bếp tích cực
+       (findActiveKitchenQueue, findActiveKitchenQueueByDate).
+   - KHÔNG CÓ bất kỳ REST Controller nào (Zero @RestController).
+   - KHÔNG CÓ bất kỳ Service nào (Zero @Service).
+   - KHÔNG CÓ bất kỳ DTO nào cho Meal Order hay Menu Item.
+   - KHÔNG CÓ entity JPA cho MenuItem và MealOrderItem (dù 2 bảng này đã có sẵn trong DDL schema.sql).
+
+3. Tương tác với M5 Billing & Rào chắn thanh toán (Billing Guard):
+   - M5 FolioBillingService đã tích hợp chặt chẽ với MealOrderEntity:
+     * validateBillingGuard(bookingId): Chặn tuyệt đối việc phát hành hóa đơn (Invoice)
+       hoặc Checkout nếu còn bất kỳ đơn ăn uống nào ở trạng thái PENDING, PREPARING,
+       hoặc READY (thông qua findUnsettledOrdersForBooking).
+     * postFolioCharge(FNB): Khóa bi quan (findByIdWithLock), kiểm tra chống tính phí trùng
+       (existsBySourceMealOrderId), từ chối đơn DAILY_MEAL (CANNOT_CHARGE_INCLUDED_SERVICE),
+       và từ chối đơn CANCELLED (INVALID_ORDER_STATE).
+   - Do đó, nếu KDS chưa chuyển đơn sang DELIVERED hoặc CANCELLED, khách hàng không thể
+     thực hiện checkout ở M5!
+
+4. Bảo mật & Giảm thiểu dữ liệu (Data Minimization):
+   - Role FNB_STAFF được cấu hình quyền S38:V và DATA_FOOD_ALLERGY:V trong PermissionCatalog.java.
+   - Theo nguyên tắc bảo mật UC20 và GB-M6-04, nhân viên bếp CHỈ ĐƯỢC PHÉP xem thông tin
+     dị ứng, chế độ ăn (DATA_FOOD_ALLERGY), tên khách, số villa/phòng; TUYỆT ĐỐI KHÔNG ĐƯỢC
+     tiếp cận hồ sơ bệnh án (DATA_HEALTH_FULL, DATA_HEALTH_TREATMENT), số tiền hoặc chi tiết
+     thanh toán của khách.
+   - Quyền S39 (Daily Meal Prep Queue) hiện CHƯA được khai báo trong PermissionCatalog.java.
+
+5. Định hướng giải pháp:
+   - Cần triển khai trọn vẹn tầng backend cho M4 (Entity -> Repository -> Service -> Controller).
+   - Không áp dụng WebSocket/STOMP phức tạp vì kiến trúc hiện tại là stateless REST; thay vào
+     đó đề xuất cơ chế Short-Polling (10-15s) kết hợp nút Manual Refresh trên giao diện KDS.
+   - Giữ nguyên vẹn 100% các rào chắn M5 Billing Guard hiện tại, không nới lỏng hay sửa đổi
+     để tránh rủi ro thất thoát doanh thu hoặc hóa đơn sai lệch.
+
+================================================================================
+2. BẢN ĐỒ LUỒNG: FRONTEND -> API -> SERVICE -> REPOSITORY -> M5 BILLING
+================================================================================
+
+Luồng hoạt động hoàn chỉnh của đơn ăn uống từ lúc tạo đến khi thanh toán:
+
++----------------------------------------------------------------------------------------------------+
+| 1. GIAI ĐOẠN ĐẶT MÓN (CUSTOMER FACING)                                                             |
++----------------------------------------------------------------------------------------------------+
+  [Khách hàng tại Villa / Web App]
+         |
+         +--> A. Đơn suất ăn trọn gói (Daily Meal Selection - Retreat Package)
+         |      - Giao diện: DailyMealSelectionPage.tsx
+         |      - Dữ liệu: bookingId, date, mealPeriod ('breakfast'/'lunch'/'dinner'), menuItemIds, notes
+         |      - API đề xuất: POST /api/fnb/daily-meals
+         |      - Service: MealOrderService.saveDailyMealSelection(...)
+         |      - DB: INSERT/UPDATE dbo.MealOrder (order_type='DAILY_MEAL', order_status='PENDING')
+         |            INSERT dbo.MealOrderItem (menu_item_id, quantity)
+         |
+         +--> B. Đơn gọi món ngoài gói (Extra A-la-carte)
+                - Giao diện: AlaCarteOrderPage.tsx
+                - Dữ liệu: bookingId, targetTime, location (villa), cart items [menuItemId, qty, notes]
+                - API đề xuất: POST /api/fnb/a-la-carte
+                - Service: MealOrderService.createAlaCarteOrder(...)
+                - DB: INSERT dbo.MealOrder (order_type='A_LA_CARTE', order_status='PENDING')
+                      INSERT dbo.MealOrderItem (menu_item_id, quantity)
+
++----------------------------------------------------------------------------------------------------+
+| 2. GIAI ĐOẠN CHẾ BIẾN TẠI BẾP (KITCHEN DISPLAY SYSTEM - KDS)                                       |
++----------------------------------------------------------------------------------------------------+
+  [Nhân viên Bếp / FNB_STAFF]
+         |
+         +--> A. Xem Dashboard & KPI Bếp (Screen 38)
+         |      - Giao diện: FnbDashboardPage.tsx
+         |      - API đề xuất: GET /api/fnb/kds/dashboard-kpis?date=YYYY-MM-DD
+         |      - Service: MealOrderService.getKitchenDashboardKpis(date)
+         |      - Repo: findActiveKitchenQueueByDate, countByType, countPendingPreparing
+         |
+         +--> B. Xem Hàng đợi chế biến chi tiết (Screen 39)
+         |      - Giao diện: MealPrepListPage.tsx
+         |      - API đề xuất: GET /api/fnb/kds/queue?date=...&type=...&status=...&page=...&size=...
+         |      - Service: MealOrderService.getKitchenPrepQueue(...)
+         |      - Repo: findActiveKitchenQueue / findNonTerminalOrders
+         |      - Chiếu dữ liệu (Data Minimization): Trả về FnbDietaryProjection (chỉ có tên khách,
+         |        villa, dị ứng, kiêng khem, ghi chú món; không lộ thông tin y tế/tài chính).
+         |
+         +--> C. Chuyển trạng thái đơn (State Transition)
+                - Giao diện: Dropdown tại Screen 39 hoặc nút bấm tại MealOrderDetailPage.tsx
+                - Thao tác: PENDING -> PREPARING -> READY -> DELIVERED (hoặc CANCELLED)
+                - API đề xuất: PATCH /api/fnb/orders/{id}/status
+                - Body: { "status": "PREPARING" | "READY" | "DELIVERED" | "CANCELLED" }
+                - Service: MealOrderService.updateOrderStatus(id, newStatus, staffId)
+                - Khóa & Đồng thời: Dùng @Version (Optimistic Locking) hoặc findByIdWithLock để
+                  serialize các thao tác song song của nhiều đầu bếp.
+
++----------------------------------------------------------------------------------------------------+
+| 3. GIAI ĐOẠN TÍCH HỢP M5 BILLING & CHECKOUT GUARD                                                  |
++----------------------------------------------------------------------------------------------------+
+  [Hệ thống Lễ tân / Checkout / Khách trả phòng]
+         |
+         +--> A. Kiểm tra Rào chắn Thanh toán (Billing Guard)
+         |      - Vị trí code: FolioBillingService.validateBillingGuard(retreatBookingId)
+         |      - Repo gọi: mealOrderRepository.findUnsettledOrdersForBooking(bookingId)
+         |      - Quy tắc: Nếu TỒN TẠI bất kỳ đơn nào ở trạng thái 'PENDING', 'PREPARING', 'READY':
+         |        --> NÉM BusinessRuleException("UNSETTLED_SERVICE_ORDERS")!
+         |        --> Chặn phát hành Hóa đơn (Invoice), chặn quy trình Checkout!
+         |      - Điều kiện giải phóng: Tất cả đơn của Booking BẮT BUỘC phải chuyển sang 'DELIVERED'
+         |        hoặc 'CANCELLED'.
+         |
+         +--> B. Tính phí Folio cho Đơn gọi ngoài (A-la-carte Billing Settlement)
+                - Điều kiện: Đơn A_LA_CARTE đã chuyển sang 'DELIVERED'.
+                - Vị trí code: FolioBillingService.postFolioCharge(chargeRequest)
+                - Tham số: chargeCategory = "FNB", sourceMealOrderId = mealOrderId, amount = total
+                - Kiểm tra an toàn M5:
+                  1. findByIdWithLock(sourceMealOrderId): Khóa dòng MealOrder bi quan.
+                  2. existsBySourceMealOrderId(sourceMealOrderId): Chống tạo FolioItem trùng (Idempotent).
+                  3. bookingMismatch: Đảm bảo MealOrder thuộc đúng RetreatBooking của Folio.
+                  4. orderType != "DAILY_MEAL": Từ chối đơn trong gói (CANNOT_CHARGE_INCLUDED_SERVICE).
+                  5. orderStatus != "CANCELLED": Từ chối đơn đã hủy (INVALID_ORDER_STATE).
+                - Kết quả: Tạo dòng dbo.FolioItem (charge_category='FNB', source_meal_order_id=...).
+
+================================================================================
+3. BẢNG MA TRẬN CHỨC NĂNG: ĐÃ CÓ, ĐANG MOCK, THIẾU, CHƯA XÁC MINH
+================================================================================
+
++-------------------------------------+------------------+-------------------+---------------------+
+| Chức năng nghiệp vụ                | Frontend         | Backend           | Tình trạng tích hợp |
++-------------------------------------+------------------+-------------------+---------------------+
+| 1. Xem danh mục món ăn (Menu Item)  | ĐANG MOCK        | THIẾU             | THIẾU               |
+|    - Danh sách món, phân loại       | mockDining.ts    | (Có bảng DDL      | Chưa có API         |
+|    - Dietary tags & allergen tags   | DiningContext.tsx| dbo.MenuItem,     | GET /api/fnb/menu   |
+|    - Giá cho món a-la-carte         |                  | chưa có Entity)   |                     |
++-------------------------------------+------------------+-------------------+---------------------+
+| 2. Đặt suất ăn theo gói (Daily)     | ĐANG MOCK        | THIẾU             | THIẾU               |
+|    - Chọn món theo ngày & bữa       | DailyMealSelection| (Chưa có service  | Chưa có API         |
+|    - Cập nhật ghi chú sở thích      | Page.tsx (state) | & controller)     | POST /daily-meals   |
++-------------------------------------+------------------+-------------------+---------------------+
+| 3. Đặt món a-la-carte ngoài gói     | ĐANG MOCK        | THIẾU             | THIẾU               |
+|    - Giỏ hàng & tính tổng tiền      | AlaCarteOrderPage| (Chưa có service  | Chưa có API         |
+|    - Chọn địa điểm (villa)          | .tsx (state)     | & controller)     | POST /a-la-carte    |
++-------------------------------------+------------------+-------------------+---------------------+
+| 4. Bảng điều khiển KDS (Screen 38)  | ĐANG MOCK        | THIẾU API         | THIẾU               |
+|    - 4 chỉ số KPI bếp               | FnbDashboardPage | (Có repo query    | Chưa có API         |
+|    - Hàng đợi khẩn cấp (Preview)    | .tsx             | findActiveQueue,  | GET /kds/dashboard  |
+|                                     |                  | thiếu controller) |                     |
++-------------------------------------+------------------+-------------------+---------------------+
+| 5. Hàng đợi chế biến KDS (Screen 39)| ĐANG MOCK        | THIẾU API         | THIẾU               |
+|    - Lọc ngày, loại đơn, trạng thái | MealPrepListPage | (Có repo query    | Chưa có API         |
+|    - Tìm kiếm theo khách/villa      | .tsx             | findActiveQueue,  | GET /kds/queue      |
+|    - Phân trang chuẩn Ops           |                  | thiếu controller) |                     |
++-------------------------------------+------------------+-------------------+---------------------+
+| 6. Chi tiết đơn & cảnh báo dị ứng   | ĐANG MOCK        | THIẾU API         | THIẾU               |
+|    - Hiển thị nhãn dị ứng đỏ        | MealOrderDetail  | (Chưa có service  | Chưa có API         |
+|    - Data Minimization (chặn y tế)  | Page.tsx         | chiếu dữ liệu)    | GET /orders/{id}    |
++-------------------------------------+------------------+-------------------+---------------------+
+| 7. Chuyển trạng thái đơn KDS        | ĐANG MOCK        | THIẾU CONTROLLER  | THIẾU               |
+|    - PENDING -> PREPARING           | Dropdown tại     | (Có Entity trạng  | Chưa có API         |
+|    - PREPARING -> READY             | Screen 39 & chi  | thái, chưa có     | PATCH /status       |
+|    - READY -> DELIVERED             | tiết đơn         | service đổi state)|                     |
++-------------------------------------+------------------+-------------------+---------------------+
+| 8. Hủy đơn (CANCELLED)              | ĐANG MOCK        | THIẾU CONTROLLER  | THIẾU               |
+|    - Khách hủy / Bếp hủy            | DiningContext    | (Có check state ở | Chưa có quy tắc     |
+|                                     |                  | M5, thiếu API M4) | phân quyền hủy đơn  |
++-------------------------------------+------------------+-------------------+---------------------+
+| 9. Khóa hàng đợi khi thanh toán     | KHÔNG CÓ TRÊN UI | ĐÃ CÓ (100%)      | ĐÃ XÁC MINH         |
+|    - Billing Guard chặn checkout    | (UI chỉ nhận lỗi | FolioBillingService| Có test kiểm chứng  |
+|      khi còn đơn chưa DELIVERED     | từ M5 khi gọi)   | validateBillingGuard| ở M5                |
++-------------------------------------+------------------+-------------------+---------------------+
+| 10. Tính phí A-la-carte vào Folio   | ĐANG MOCK        | ĐÃ CÓ Ở M5 (100%) | THIẾU ADAPTER       |
+|    - Tạo FolioItem FNB              | (Mock field      | postFolioCharge   | Chưa có luồng tự    |
+|    - Chống tính trùng               | pending_folio)   | kiểm tra kỹ lưỡng | động hoặc nút gọi M5|
++-------------------------------------+------------------+-------------------+---------------------+
+| 11. Cơ chế đồng bộ Real-time        | ĐANG MOCK        | CHƯA XÁC MINH     | THIẾU               |
+|    - Cập nhật KDS khi có đơn mới    | (Chỉ dùng React  | (Chưa có STOMP/   | Đề xuất Polling     |
+|    - Đồng bộ giữa nhiều màn hình    | memory state)    | WebSocket/SSE)    | thay vì WebSocket   |
++-------------------------------------+------------------+-------------------+---------------------+
+
+================================================================================
+4. DANH SÁCH FILE VÀ VỊ TRÍ CODE LÀM BẰNG CHỨNG
+================================================================================
+
+Các bằng chứng kiểm tra trực tiếp từ mã nguồn:
+
+1. Bằng chứng Backend M4 (Stub hiện tại):
+   - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java:
+     * Dòng 8-10: Chú thích rõ "Temporary minimal stub for Module 4 (F&B) required by Module 5 billing settlement."
+     * Dòng 31-35: orderType ("DAILY_MEAL", "A_LA_CARTE"), orderStatus ("PENDING", "PREPARING", "READY", "DELIVERED", "CANCELLED").
+     * Thiếu: @Version cho optimistic lock; thiếu quan hệ @OneToMany với MealOrderItem.
+   - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java:
+     * Dòng 22-24: findByIdWithLock(@Param("mealOrderId") Long mealOrderId) - Khóa PESSIMISTIC_WRITE.
+     * Dòng 34-35: findUnsettledOrdersForBooking - Tìm đơn ở trạng thái PENDING, PREPARING, READY.
+     * Dòng 50-51: findActiveKitchenQueue - Hàng đợi chế biến loại trừ DELIVERED và CANCELLED.
+     * Dòng 57-58: findActiveKitchenQueueByDate - Lọc hàng đợi theo ngày chỉ định.
+   - 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepositoryTest.java:
+     * Dòng 90-100: Test activeQueueExcludesDeliveredOrders() xác nhận DELIVERED bị loại bỏ khỏi hàng đợi.
+     * 8/8 tests pass kiểm chứng các truy vấn của MealOrderRepository.
+
+2. Bằng chứng M5 Billing Guard & Folio Integration:
+   - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/FolioBillingService.java:
+     * Dòng 132-162: Logic postFolioCharge cho hạng mục "FNB":
+       - Dòng 143: mealOrderRepository.findByIdWithLock(request.getSourceMealOrderId())
+       - Dòng 146: folioItemRepository.existsBySourceMealOrderId(...) -> DUPLICATE_CHARGE
+       - Dòng 155: "DAILY_MEAL".equalsIgnoreCase(mealOrder.getOrderType()) -> CANNOT_CHARGE_INCLUDED_SERVICE
+       - Dòng 159: "CANCELLED".equalsIgnoreCase(mealOrder.getOrderStatus()) -> INVALID_ORDER_STATE
+     * Dòng 313-318: validateBillingGuard:
+       - mealOrderRepository.findUnsettledOrdersForBooking(retreatBookingId) -> nếu có đơn chưa xong,
+         ném BusinessRuleException("UNSETTLED_SERVICE_ORDERS").
+
+3. Bằng chứng Cơ sở dữ liệu (Database Schema DDL):
+   - 05_Development/database/schema.sql:
+     * Dòng 660-677: CREATE TABLE dbo.MenuItem (menu_item_id, item_name, category, meal_type, price,
+       dietary_tags, allergen_information, availability_status).
+     * Dòng 727-746: CREATE TABLE dbo.MealOrder (meal_order_id, retreat_booking_id, order_date,
+       meal_type, order_type, order_status, created_at).
+     * Dòng 749-764: CREATE TABLE dbo.MealOrderItem (meal_order_item_id, meal_order_id,
+       menu_item_id, quantity).
+     * Dòng 820-822: dbo.FolioItem có khóa ngoại source_meal_order_id REFERENCES dbo.MealOrder(meal_order_id).
+     * Dòng 836-842: CHECK CONSTRAINT CK_FolioItem_Source đảm bảo charge_category='FNB'
+       bắt buộc source_meal_order_id NOT NULL và các source khác NULL.
+
+4. Bằng chứng Phân quyền & Giảm thiểu dữ liệu (M6 Security):
+   - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java:
+     * Dòng 34: SENSITIVE_DATA_ALLOWED_ROLES: "DATA_FOOD_ALLERGY" chỉ dành cho CUSTOMER và FNB_STAFF.
+     * Dòng 73: d("S38", "V", false, false, FNB_STAFF) - Quyền xem Kitchen Dashboard.
+     * Dòng 80: d("DATA_FOOD_ALLERGY", "V", false, false, CUSTOMER, FNB_STAFF).
+     * Dòng 78-79: DATA_HEALTH_FULL, DATA_HEALTH_TREATMENT tuyệt đối không có FNB_STAFF.
+     * Thiếu: Quyền S39:V, S39:U chưa được định nghĩa trong catalog.
+
+5. Bằng chứng Frontend F&B & Mock State:
+   - 05_Development/frontend/src/types/dining.ts:
+     * Dòng 2: export type FnbFulfillmentStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+     * Dòng 62-69: FnbDietaryProjection (customerId, customerName, bookingReference, villaNumber, allergies, dietaryRestrictions).
+     * Dòng 71-87: MealPrepEntry.
+   - 05_Development/frontend/src/context/DiningContext.tsx:
+     * Dòng 22-24: const [menuItems] = useState(MOCK_MENU_ITEMS); const [mealSelections] = useState(MOCK_MEAL_SELECTIONS);
+     * Dòng 41-55: saveMealSelection chỉ cập nhật React state trong bộ nhớ.
+     * Dòng 61-72: createAlaCarteOrder chỉ tạo ID giả 'ORD-${Date.now()}' và ghi vào state.
+     * Dòng 107-113: updateFulfillmentStatus chỉ sửa status trong mảng state.
+     * Dòng 167-172: getActiveKitchenQueue lọc các status pending, preparing, ready.
+   - 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx:
+     * Dòng 102: id="screen-39-meal-prep-list"
+     * Dòng 330-358: Dropdown chuyển trạng thái: pending, preparing, ready, delivered.
+   - 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx:
+     * Dòng 228-280: Tách bạch rõ rệt Allergies (màu đỏ) và Dietary Preferences; hiển thị Shield Privacy Notice.
+   - 05_Development/frontend/src/features/m4-fnb/kitchenQueueSafety.test.ts:
+     * Dòng 11-15: filterActiveKitchenQueue kiểm tra loại bỏ 'delivered' và 'cancelled'.
+
+================================================================================
+5. ĐỀ XUẤT API CONTRACT VÀ MA TRẬN CHUYỂN TRẠNG THÁI (STATE-TRANSITION MATRIX)
+================================================================================
+
+5.1. Đề xuất API Contract cho Module 4:
+
+A. Danh mục món ăn (Menu Catalog):
+   - GET /api/fnb/menu-items
+     * Params: category (optional), mealPeriod (optional), isExtra (optional)
+     * Response: 200 OK [ MenuItemDto { menuItemId, itemName, category, mealType, price,
+       dietaryTags[], allergenTags[], availabilityStatus } ]
+     * Quyền: Public hoặc xác thực bất kỳ (CUSTOMER, FNB_STAFF, RECEPTIONIST, ADMIN).
+
+B. Khách hàng đặt món (Customer Ordering):
+   - POST /api/fnb/customer/daily-meals
+     * Header: Authorization: Bearer <token> (Role: CUSTOMER)
+     * Body: {
+         "bookingId": 101,
+         "date": "2026-09-24",
+         "mealPeriod": "BREAKFAST",
+         "menuItemIds": [1, 4],
+         "notes": "No coriander"
+       }
+     * Xử lý: Kiểm tra bookingId thuộc về customer đang đăng nhập. Nếu đã có đơn cho ngày/bữa đó,
+       thực hiện UPSERT (cập nhật). Nếu đơn cũ đã ở trạng thái PREPARING/READY/DELIVERED, từ chối sửa.
+     * Response: 200 OK / 201 Created -> MealOrderSummaryDto.
+
+   - POST /api/fnb/customer/a-la-carte
+     * Header: Authorization: Bearer <token> (Role: CUSTOMER)
+     * Body: {
+         "bookingId": 101,
+         "targetTime": "19:30",
+         "location": "Villa 102",
+         "items": [
+           { "menuItemId": 12, "quantity": 2, "notes": "Extra spicy" }
+         ]
+       }
+     * Xử lý: Kiểm tra bookingId hợp lệ & active. Tính toán tổng tiền dựa trên giá trong bảng MenuItem.
+       Tạo MealOrder (order_type='A_LA_CARTE', order_status='PENDING') và các dòng MealOrderItem.
+     * Response: 201 Created -> MealOrderDetailDto.
+
+C. Vận hành bếp & KDS (Kitchen Operations):
+   - GET /api/fnb/kds/dashboard-kpis?date=YYYY-MM-DD
+     * Header: Authorization: Bearer <token> (Role: FNB_STAFF, MANAGER, ADMIN)
+     * Response: 200 OK {
+         "retreatMealsToday": 14,
+         "extraOrdersToday": 5,
+         "dietaryAlertsCount": 6,
+         "pendingCount": 4,
+         "preparingCount": 3
+       }
+
+   - GET /api/fnb/kds/queue
+     * Header: Authorization: Bearer <token> (Role: FNB_STAFF, MANAGER, ADMIN)
+     * Params: date (YYYY-MM-DD), type ('all'|'retreat_meal'|'a_la_carte'),
+       status ('active'|'all'|'pending'|'preparing'|'ready'|'delivered'|'cancelled'),
+       dietaryOnly (boolean), search (string), page (0-based), size (default 10)
+     * Response: 200 OK {
+         "content": [ MealPrepEntryDto {
+           "mealOrderId": 101,
+           "orderType": "DAILY_MEAL",
+           "orderDate": "2026-09-24",
+           "mealPeriod": "LUNCH",
+           "targetTime": null,
+           "customerName": "Eleanor Vance",
+           "villaNumber": "102",
+           "dietaryNotes": ["Vegan", "Peanut Allergy"],
+           "customerNotes": "Please make sure no peanuts touch the pan",
+           "status": "PREPARING",
+           "items": [ { "menuItemId": 2, "itemName": "Green Curry", "quantity": 1, "notes": "" } ]
+         } ],
+         "totalElements": 25,
+         "totalPages": 3,
+         "number": 0
+       }
+
+   - GET /api/fnb/kds/orders/{id}
+     * Header: Authorization: Bearer <token> (Role: FNB_STAFF, MANAGER, ADMIN)
+     * Response: 200 OK MealOrderDetailDto (chi tiết đầy đủ, kèm chiếu thông tin dị ứng).
+
+   - PATCH /api/fnb/kds/orders/{id}/status
+     * Header: Authorization: Bearer <token> (Role: FNB_STAFF, MANAGER, ADMIN)
+     * Body: {
+         "status": "PREPARING" | "READY" | "DELIVERED" | "CANCELLED",
+         "cancellationReason": "Customer requested cancel" (chỉ khi CANCELLED)
+       }
+     * Response: 200 OK MealOrderSummaryDto { "mealOrderId": 101, "status": "READY", "updatedAt": "..." }
+
+D. Tích hợp thanh toán Folio (F&B -> M5 Billing Adapter):
+   - POST /api/fnb/orders/{id}/post-to-folio
+     * Header: Authorization: Bearer <token> (Role: FNB_STAFF, RECEPTIONIST, ADMIN)
+     * Xử lý: Kiểm tra đơn phải là A_LA_CARTE và đã ở trạng thái DELIVERED. Gọi
+       FolioBillingService.postFolioCharge(...) với category "FNB", sourceMealOrderId.
+     * Response: 200 OK { "folioItemId": 204, "amount": 450000, "postedAt": "..." }
+
+--------------------------------------------------------------------------------
+5.2. Ma trận chuyển trạng thái (State-Transition Matrix):
+
+Bảng quy định tính hợp lệ của việc chuyển đổi trạng thái:
+
++-------------------+-----------------------------------------------------------------------+
+| Trạng thái hiện tại| Trạng thái đích cho phép và hành vi tương ứng                          |
++-------------------+-----------------------------------------------------------------------+
+| PENDING           | -> PREPARING : Hợp lệ (Bếp bắt đầu nấu).                             |
+|                   | -> CANCELLED : Hợp lệ (Khách hoặc bếp hủy đơn khi chưa nấu).         |
+|                   | -> PENDING   : Idempotent no-op (Trả về 200 OK, không đổi).          |
+|                   | -> READY     : TỪ CHỐI (400 - INVALID_TRANSITION: Bếp phải nhận nấu). |
+|                   | -> DELIVERED : TỪ CHỐI (400 - INVALID_TRANSITION: Chưa nấu sao giao?).|
++-------------------+-----------------------------------------------------------------------+
+| PREPARING         | -> READY     : Hợp lệ (Món ăn nấu xong, chờ phục vụ/giao villa).     |
+|                   | -> CANCELLED : Hợp lệ có điều kiện (Bếp hủy do hết nguyên liệu).      |
+|                   | -> PREPARING : Idempotent no-op (Trả về 200 OK).                     |
+|                   | -> PENDING   : TỪ CHỐI (400 - Đã bắt đầu nấu, không thể quay lại chờ)|
+|                   | -> DELIVERED : TỪ CHỐI (400 - Bắt buộc qua bước READY để kiểm tra món)|
++-------------------+-----------------------------------------------------------------------+
+| READY             | -> DELIVERED : Hợp lệ (Đã giao tận bàn hoặc villa).                  |
+|                   | -> CANCELLED : TỪ CHỐI thông thường (Chỉ Quản lý/Manager được hủy).   |
+|                   | -> READY     : Idempotent no-op (Trả về 200 OK).                     |
+|                   | -> PREPARING : TỪ CHỐI (400 - Đã hoàn tất, không quay lại nấu).      |
+|                   | -> PENDING   : TỪ CHỐI (400 - Không hợp lệ).                         |
++-------------------+-----------------------------------------------------------------------+
+| DELIVERED         | [TRẠNG THÁI CUỐI CÙNG - TERMINAL STATE]                               |
+|                   | Mọi yêu cầu chuyển sang PENDING, PREPARING, READY, CANCELLED đều     |
+|                   | BỊ TỪ CHỐI TUYỆT ĐỐI (400 - ORDER_ALREADY_DELIVERED).                |
+|                   | Lý do: Đơn DELIVERED có thể đã được kết chuyển hoặc tính phí vào Folio.|
++-------------------+-----------------------------------------------------------------------+
+| CANCELLED         | [TRẠNG THÁI CUỐI CÙNG - TERMINAL STATE]                               |
+|                   | Mọi yêu cầu đổi trạng thái đều BỊ TỪ CHỐI (400 - ORDER_CANCELLED).   |
+|                   | M5 Billing Guard bỏ qua đơn CANCELLED, không tính phí.                |
++-------------------+-----------------------------------------------------------------------+
+
+================================================================================
+6. PHÂN TÍCH BẢO MẬT, IDEMPOTENCY, CONCURRENCY, TRANSACTION VÀ BILLING SAFETY
+================================================================================
+
+6.1. Phân quyền và Bảo vệ dữ liệu nhạy cảm (Authorization & Data Minimization):
+   - Phân quyền theo vai trò:
+     * CUSTOMER: Chỉ được tạo đơn, xem đơn thuộc về retreat_booking_id của chính mình.
+       Không được truy cập hàng đợi KDS (/kds/**).
+     * FNB_STAFF: Được xem KDS Dashboard (S38:V), Hàng đợi KDS (S39:V), đổi trạng thái
+       đơn (S39:U). KHÔNG ĐƯỢC xem thông tin thanh toán, thẻ tín dụng, lịch sử giao dịch.
+     * RECEPTIONIST: Được xem trạng thái đơn khi làm thủ tục checkout, hỗ trợ khách gọi món.
+     * MANAGER & ADMIN: Quyền giám sát, hủy đơn đặc biệt khi có sự cố.
+   - Nguyên tắc Giảm thiểu dữ liệu (Data Minimization - GB-M6-04, UC20):
+     * Trong Module 1, hồ sơ y tế gồm: DATA_HEALTH_FULL (bệnh lý, thuốc đang dùng) và
+       DATA_HEALTH_TREATMENT (chỉ định/chống chỉ định spa).
+     * FNB_STAFF TUYỆT ĐỐI KHÔNG ĐƯỢC CẤP 2 quyền trên!
+     * FNB_STAFF chỉ được cấp DATA_FOOD_ALLERGY:V (dị ứng thực phẩm, kiêng cữ dinh dưỡng).
+     * Backend DTO (FnbDietaryProjectionDto) chỉ ánh xạ các trường:
+       { customerName, villaNumber, allergies, dietaryRestrictions, mealNotes }.
+       Tuyệt đối không bao gồm medicalNotes, treatmentNotes hay paymentInfo trong response!
+
+6.2. Tính lũy thừa (Idempotency):
+   - Khi mạng chập chờn, nhân viên bếp có thể bấm nút "Start Preparing" hoặc "Mark Delivered"
+     hai lần liên tiếp. Nếu trạng thái hiện tại đã trùng với trạng thái yêu cầu, Service
+     phải trả về kết quả thành công ngay (200 OK - No-op), không ném lỗi 400 gây hoang mang
+     cho người dùng.
+   - Đặt suất ăn hàng ngày (Daily Meal Selection): Khách có thể đổi món nhiều lần trước giờ
+     bếp nấu. Hệ thống áp dụng cơ chế UPSERT dựa trên bộ 3 (retreat_booking_id, order_date, meal_type).
+
+6.3. Xử lý đồng thời và Khóa (Concurrency & Locking):
+   - Bài toán: Hai đầu bếp cùng nhìn thấy đơn "READY" và cùng bấm "DELIVERED" tại 2 máy trạm khác nhau.
+   - Giải pháp kỹ thuật:
+     * Bổ sung cột `@Version private Long version;` vào `MealOrderEntity`.
+     * Khi có 2 thao tác cập nhật đồng thời, người thứ 2 sẽ nhận `OptimisticLockingFailureException`.
+       Service bắt ngoại lệ này, tải lại bản ghi mới nhất: nếu trạng thái đã là DELIVERED,
+       trả về thành công (lũy thừa); nếu trạng thái mâu thuẫn, trả lỗi 409 Conflict.
+     * Khi thực hiện thanh toán vào Folio ở M5, `FolioBillingService` đã có sẵn cơ chế
+       `mealOrderRepository.findByIdWithLock(mealOrderId)` (PESSIMISTIC_WRITE), đảm bảo việc
+       tính phí FNB hoàn toàn tuần tự, không bị race condition.
+
+6.4. An toàn ranh giới giao dịch (Transaction Boundary):
+   - Mọi phương thức thay đổi trạng thái và đặt món phải được đóng gói trong `@Transactional`.
+   - Nếu việc lưu `MealOrderItem` bị lỗi, toàn bộ `MealOrder` phải được rollback tự động.
+   - Khi gọi M5 `postFolioCharge`, nếu việc ghi FolioItem thất bại, trạng thái đơn không được
+     bị kẹt ở trạng thái lấp lửng (cần rollback hoặc giữ nguyên trạng thái DELIVERED nhưng
+     chưa đánh dấu folio_posted).
+
+6.5. Bảo đảm an toàn cho M5 Billing (Billing Safety Guard):
+   - M5 Billing Guard là chốt chặn quan trọng nhất của toàn hệ thống trước khi khách rời resort.
+   - Rào chắn `validateBillingGuard`:
+     ```java
+     List<MealOrderEntity> unsettledMeals = mealOrderRepository.findUnsettledOrdersForBooking(retreatBookingId);
+     if (!unsettledMeals.isEmpty()) {
+         throw new BusinessRuleException("UNSETTLED_SERVICE_ORDERS",
+             "Warning: Unsettled service orders exist. Cannot proceed to invoice generation or checkout while "
+             + unsettledMeals.size() + " dining order(s) remain PENDING, PREPARING, or READY.");
+     }
+     ```
+   - NGUYÊN TẮC BẤT DI BẤT DỊCH:
+     1. Tuyệt đối KHÔNG sửa logic `findUnsettledOrdersForBooking` để bỏ qua các đơn chưa nấu.
+     2. Mọi đơn ăn uống phải được đưa về `DELIVERED` (nếu khách đã nhận) hoặc `CANCELLED`
+        (nếu hủy trước khi nấu) thì Lễ tân mới có thể Checkout và in hóa đơn.
+     3. Đơn `A_LA_CARTE` khi chuyển sang `DELIVERED` bắt buộc phải có quy trình kết chuyển
+        vào Folio bằng `postFolioCharge` để đảm bảo tổng tiền hóa đơn không bị thiếu hụt.
+
+================================================================================
+7. DANH SÁCH BỘ KIỂM THỬ CẦN BỔ SUNG (TEST SPECIFICATION)
+================================================================================
+
+Bộ test tối thiểu cần xây dựng khi triển khai code ở các phase tiếp theo:
+
+1. Unit Tests (Domain & Service):
+   - MealOrderServiceTest:
+     * testCreateDailyMealOrder_Success(): Tạo đơn trong gói thành công.
+     * testUpdateDailyMealOrder_UpsertSuccess(): Cập nhật món ăn khi chưa nấu.
+     * testUpdateDailyMealOrder_RejectWhenPreparing(): Chặn khách sửa món khi bếp đang nấu.
+     * testCreateAlaCarteOrder_CalculatesCorrectPrice(): Tính tiền đúng theo giá MenuItem.
+     * testTransition_PendingToPreparing_Success()
+     * testTransition_PreparingToReady_Success()
+     * testTransition_ReadyToDelivered_Success()
+     * testTransition_DeliveredToAny_Rejected(): Chặn đổi trạng thái đơn đã giao.
+     * testTransition_IdempotentSameStatus_ReturnsOk(): Gọi lặp trạng thái không lỗi.
+     * testDataMinimization_ExcludesHealthAndBillingDetails(): Đảm bảo DTO không lộ dữ liệu nhạy cảm.
+
+2. Repository Tests:
+   - MenuItemRepositoryTest:
+     * findByAvailabilityStatus, findByCategoryAndMealPeriod.
+   - MealOrderItemRepositoryTest:
+     * findByMealOrder_MealOrderId.
+
+3. Controller & Security Tests (WebMvcTest):
+   - FnbKdsControllerSecurityTest:
+     * testGetKdsQueue_FnbStaff_Permitted(200 OK).
+     * testGetKdsQueue_Customer_Forbidden(403 Forbidden).
+     * testGetKdsQueue_Unauthenticated_Unauthorized(401 Unauthorized).
+     * testUpdateOrderStatus_FnbStaff_Permitted(200 OK).
+   - FnbCustomerOrderControllerSecurityTest:
+     * testCustomerCreateDailyMeal_OwnBooking_Success(201 Created).
+     * testCustomerCreateDailyMeal_OtherBooking_Forbidden(403 Forbidden).
+
+4. Integration Tests (End-to-End M4 -> M5):
+   - FnbToBillingIntegrationTest:
+     * testCompleteLifecycle_DailyMeal_AllowsCheckoutWithoutExtraCharge():
+       Tạo đơn DAILY_MEAL -> PREPARING -> READY -> DELIVERED -> Billing Guard PASS -> Checkout thành công.
+     * testCompleteLifecycle_AlaCarte_BlocksCheckoutUntilDeliveredAndCharged():
+       Tạo đơn A_LA_CARTE -> Giữ ở PREPARING -> Checkout gọi M5 BỊ CHẶN (UNSETTLED_SERVICE_ORDERS) ->
+       Chuyển DELIVERED -> Gọi postFolioCharge -> Billing Guard PASS -> Checkout thành công.
+     * testConcurrentStatusUpdate_OptimisticLockingHandled():
+       Mô phỏng 2 luồng đồng thời cập nhật cùng 1 đơn hàng.
+     * testPostFolioCharge_DuplicateChargeRejected():
+       Thử gọi postFolioCharge lần 2 cho cùng 1 đơn a-la-carte -> Ném DUPLICATE_CHARGE.
+
+5. Frontend Unit & Integration Tests:
+   - diningApi.test.ts: Kiểm thử các hàm gọi API fetch và xử lý mã lỗi HTTP 400/403/409.
+   - DiningContextWithApi.test.tsx: Kiểm thử Provider khi kết nối API thật, kiểm tra cơ chế
+     polling 15s và cập nhật UI.
+   - kitchenQueueSafety.test.ts: Giữ nguyên để bảo đảm tính tương thích hồi quy.
+
+================================================================================
+8. KẾ HOẠCH TRIỂN KHAI CHI TIẾT THEO BƯỚC NHỎ (IMPLEMENTATION PLAN)
+================================================================================
+
+Kế hoạch được chia thành 5 phase nhỏ độc lập, có thứ tự phụ thuộc chặt chẽ:
+
+--------------------------------------------------------------------------------
+BƯỚC 1: THIẾT KẾ DOMAIN ENTITY & REPOSITORY (M4 BACKEND PERSISTENCE)
+--------------------------------------------------------------------------------
+- Phụ thuộc: Không (dựa trên bảng DDL có sẵn trong schema.sql).
+- Công việc cụ thể:
+  1. Tạo `MenuItemEntity.java` ánh xạ bảng `dbo.MenuItem`.
+  2. Tạo `MealOrderItemEntity.java` ánh xạ bảng `dbo.MealOrderItem`.
+  3. Cập nhật `MealOrderEntity.java`:
+     - Bổ sung `@Version private Long version;` (hỗ trợ kiểm soát đồng thời).
+     - Bổ sung `@OneToMany(mappedBy = "mealOrder", cascade = CascadeType.ALL) List<MealOrderItemEntity> items;`.
+  4. Tạo `MenuItemRepository.java` (Spring Data JPA).
+  5. Tạo `MealOrderItemRepository.java` (Spring Data JPA).
+  6. Viết Unit Test cho các Repository mới (`MenuItemRepositoryTest`).
+- Tiêu chí nghiệm thu (Acceptance Criteria):
+  * JPA ánh xạ 100% khớp với schema.sql mà không cần chạy bất kỳ lệnh DDL nào.
+  * Test lưu đơn kèm món con (cascade persist) thành công.
+  * Bộ test 197 hiện tại không bị ảnh hưởng.
+
+--------------------------------------------------------------------------------
+BƯỚC 2: TẦNG DỊCH VỤ & QUY TẮC NGHIỆP VỤ (M4 SERVICE & STATE MACHINE)
+--------------------------------------------------------------------------------
+- Phụ thuộc: Bước 1 hoàn thành.
+- Công việc cụ thể:
+  1. Tạo các DTO: `MealOrderDto`, `MealOrderItemDto`, `CreateDailyMealRequest`,
+     `CreateAlaCarteRequest`, `UpdateOrderStatusRequest`, `KdsDashboardKpiDto`.
+  2. Tạo DTO chiếu dữ liệu `FnbDietaryProjectionDto` (chỉ lộ dị ứng & dinh dưỡng, che giấu y tế).
+  3. Tạo `MealOrderService.java` và `MealOrderServiceImpl.java`:
+     - Implement logic chuyển trạng thái theo đúng State-Transition Matrix ở Mục 5.2.
+     - Implement xử lý lũy thừa (Idempotent transitions).
+     - Xử lý `OptimisticLockingFailureException`.
+     - Implement `getKitchenDashboardKpis(LocalDate date)`.
+     - Implement `getKitchenPrepQueue(LocalDate date, ...)`.
+  4. Viết Unit Test `MealOrderServiceTest` bao phủ toàn bộ ma trận chuyển trạng thái.
+- Tiêu chí nghiệm thu (Acceptance Criteria):
+  * 100% các chuyển trạng thái không hợp lệ bị từ chối với ngoại lệ BusinessRuleException rõ ràng.
+  * Chuyển trạng thái lặp trả về kết quả thành công mà không gây lỗi.
+  * Không có dữ liệu y tế hoặc tài chính nào xuất hiện trong DTO trả về cho KDS.
+
+--------------------------------------------------------------------------------
+BƯỚC 3: PHÂN QUYỀN & REST CONTROLLER (M4 CONTROLLER & SECURITY)
+--------------------------------------------------------------------------------
+- Phụ thuộc: Bước 2 hoàn thành.
+- Công việc cụ thể:
+  1. Cập nhật `PermissionCatalog.java`:
+     - Khai báo thêm mã màn hình `S39` (Daily Meal Prep Queue):
+       `d("S39", "V", false, false, FNB_STAFF), d("S39", "U", false, false, FNB_STAFF)`
+  2. Tạo `FnbKdsController.java`:
+     - `@PreAuthorize("hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+     - Endpoint: `GET /api/fnb/kds/dashboard-kpis`, `GET /api/fnb/kds/queue`,
+       `GET /api/fnb/kds/orders/{id}`, `PATCH /api/fnb/kds/orders/{id}/status`.
+  3. Tạo `FnbCustomerOrderController.java`:
+     - `@PreAuthorize("hasRole('CUSTOMER')")`
+     - Endpoint: `GET /api/fnb/menu-items`, `POST /api/fnb/customer/daily-meals`,
+       `POST /api/fnb/customer/a-la-carte`.
+  4. Viết `FnbControllersSecurityTest.java` kiểm tra chặt chẽ 401/403 cho từng vai trò.
+- Tiêu chí nghiệm thu (Acceptance Criteria):
+  * CUSTOMER không thể truy cập bất kỳ endpoint nào của KDS.
+  * FNB_STAFF có thể truy vấn hàng đợi và đổi trạng thái.
+  * Unauthenticated request bị từ chối 401.
+
+--------------------------------------------------------------------------------
+BƯỚC 4: KẾT NỐI M5 BILLING ADAPTER CHO ĐƠN A-LA-CARTE
+--------------------------------------------------------------------------------
+- Phụ thuộc: Bước 3 hoàn thành.
+- Công việc cụ thể:
+  1. Xây dựng phương thức kết chuyển Folio trong `MealOrderService`:
+     - Khi đơn A_LA_CARTE đạt trạng thái `DELIVERED`, cung cấp cơ chế gọi sang
+       `FolioBillingService.postFolioCharge(...)`.
+  2. Viết Integration Test `FnbToBillingIntegrationTest`:
+     - Kiểm chứng đơn A_LA_CARTE khi ở PENDING/PREPARING thì M5 Billing Guard chặn checkout.
+     - Khi chuyển sang DELIVERED và tính phí vào Folio -> Billing Guard cho phép checkout.
+     - Đơn DAILY_MEAL tuyệt đối không bị tính phí vào Folio.
+- Tiêu chí nghiệm thu (Acceptance Criteria):
+  * Test tích hợp M4 -> M5 chạy xuyên suốt, kiểm chứng toàn bộ chu trình sống.
+  * Không vi phạm các ràng buộc khóa ngoại hay check constraint của dbo.FolioItem.
+
+--------------------------------------------------------------------------------
+BƯỚC 5: TÍCH HỢP FRONTEND & SHORT-POLLING (FRONTEND API INTEGRATION)
+--------------------------------------------------------------------------------
+- Phụ thuộc: Bước 3 & 4 hoàn thành.
+- Công việc cụ thể:
+  1. Tạo API client trong `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`.
+  2. Cập nhật `DiningContext.tsx`:
+     - Thay thế state giả lập bằng các lệnh gọi `fnbApi`.
+     - Triển khai cơ chế Short-Polling (sử dụng `setInterval` 10-15 giây khi người dùng
+       đang ở Screen 38 hoặc Screen 39) để tự động cập nhật hàng đợi đơn mới.
+     - Bổ sung nút "Làm mới thủ công" (Manual Refresh button) trên header của Screen 38/39.
+     - Xử lý hiển thị thông báo lỗi (Toast error) khi API trả về lỗi hoặc mất mạng.
+  3. Cập nhật `DailyMealSelectionPage.tsx` và `AlaCarteOrderPage.tsx` gọi API backend thật.
+  4. Cập nhật các test frontend tương ứng.
+- Tiêu chí nghiệm thu (Acceptance Criteria):
+  * Thao tác trên giao diện Screen 38/39 gửi request HTTP thật về backend.
+  * Dropdown trạng thái cập nhật DB và đồng bộ UI sau mỗi chu kỳ polling.
+  * Không phát sinh lỗi console, giữ nguyên trải nghiệm mượt mà hiện có.
+
+================================================================================
+9. CÁC QUYẾT ĐỊNH NGHIỆP VỤ CẦN NGƯỜI DÙNG XÁC NHẬN TRƯỚC KHI CODE
+================================================================================
+
+Trước khi bắt tay vào triển khai code (Phase 5.8.3.50+), cần người dùng xác nhận
+5 câu hỏi nghiệp vụ quan trọng sau:
+
+1. THỜI ĐIỂM TÍNH PHÍ VÀO FOLIO CHO ĐƠN A-LA-CARTE:
+   - Lựa chọn A (Khuyến nghị): Tự động kết chuyển vào Folio khi đơn chuyển sang 'DELIVERED'.
+     * Ưu điểm: Đảm bảo khách chỉ trả tiền khi thức ăn đã được nấu và giao thành công.
+       Tránh việc hủy đơn ở bếp dẫn đến phải hoàn tiền (refund) phức tạp trên Folio.
+   - Lựa chọn B: Tính phí ngay khi khách bấm đặt món (PENDING).
+     * Rủi ro: Nếu bếp hết món hoặc khách đổi ý hủy, phải xử lý hủy/hoàn khoản phí Folio.
+   - Lựa chọn C: Nhân viên bếp bấm nút "Chuyển thanh toán Folio" thủ công sau khi giao.
+
+2. QUYỀN HỦY ĐƠN VÀ THỜI ĐIỂM HỦY (CANCELLATION RULES):
+   - Khi đơn đang ở trạng thái 'PREPARING' (bếp đang nấu) hoặc 'READY' (món đã nấu xong):
+     Khách hàng có được phép tự hủy đơn trên ứng dụng không?
+   - Khuyến nghị: Khách chỉ được tự hủy khi đơn còn 'PENDING'. Khi đã sang 'PREPARING' trở đi,
+     chỉ Quản lý (MANAGER) hoặc Nhân viên Bếp (FNB_STAFF) mới có quyền hủy đơn (kèm lý do bắt buộc).
+
+3. MỨC ĐỘ QUẢN LÝ TỒN KHO NGUYÊN LIỆU (INVENTORY INTEGRATION):
+   - Trong schema.sql có các bảng `dbo.Ingredient`, `dbo.MenuItemIngredient`, `dbo.IngredientBatch`.
+   - Trong Phase triển khai KDS này, chúng ta chỉ quản lý trạng thái món ăn theo cờ
+     `MenuItem.availability_status` ('AVAILABLE' / 'UNAVAILABLE') hay cần trừ trực tiếp
+     số lượng nguyên liệu tồn kho trong `dbo.IngredientBatch`?
+   - Khuyến nghị: Phase KDS này chỉ sử dụng `availability_status` để tránh phình to phạm vi
+     sang quản lý chuỗi cung ứng/kho (Supply Chain/Inventory Module).
+
+4. BỔ SUNG MÃ MÀN HÌNH S39 VÀO PERMISSION CATALOG:
+   - Hiện tại PermissionCatalog chỉ có `S38` (FnbDashboardPage).
+   - Xác nhận việc bổ sung chính thức `S39:V` và `S39:U` cho vai trò `FNB_STAFF` để bảo vệ
+     trang `MealPrepListPage.tsx`.
+
+5. CƠ CHẾ ĐỒNG BỘ REAL-TIME CHO BẾP:
+   - Xác nhận sử dụng cơ chế Short-Polling (10-15s) kết hợp nút Refresh thủ công thay vì
+     xây dựng hệ thống WebSocket/STOMP phức tạp.
+
+================================================================================
+10. NHỮNG VIỆC NẰM NGOÀI PHẠM VI VÀ BỊ CHẶN BỞI MÔI TRƯỜNG
+================================================================================
+
+1. Bị chặn bởi môi trường:
+   - Không thể kết nối hoặc khởi chạy SQL Server thật do thiếu quyền quản trị / tiến trình
+     hệ điều hành không cho phép chạy SQL Server instance trong container/local.
+   - Mọi kiểm thử backend tiếp tục được thực thi an toàn và đáng tin cậy trên profile kiểm thử
+     chuẩn (H2/In-memory giả lập SQL Server mode) đã được hoàn thiện từ Phase 46-48.
+   - Không chạy bất kỳ script DDL/migration trực tiếp trên database thật.
+
+2. Nằm ngoài phạm vi của Phase phân tích này (Out of Scope):
+   - Không viết code thực thi sản phẩm (production code) trong Phase 5.8.3.49.
+   - Không thay đổi hoặc sửa đổi mã nguồn của M5 FolioBillingService hay M6 PermissionEvaluator.
+   - Không cấu hình WebSocket, SSE, Message Broker (RabbitMQ, Kafka) cho KDS.
+   - Không tích hợp máy in nhiệt (POS Kitchen Printer) hay phần cứng chuyên dụng của bếp.
+   - Không quản lý nghiệp vụ nhập xuất kho nguyên liệu chi tiết (IngredientBatch FIFO).
+
+================================================================================
+11. KẾT LUẬN VÀ TRẠNG THÁI HỆ THỐNG
+================================================================================
+
+- Báo cáo đã hoàn tất việc khảo sát, lập bản đồ luồng, phân tích chi tiết khoảng trống,
+  thiết kế API contract, ma trận trạng thái, phân tích an toàn M5 Billing và lập kế hoạch
+  5 bước triển khai khả thi.
+- Không có bất kỳ thay đổi mã nguồn, staging, commit, push, merge hoặc chỉnh sửa migration
+  nào được thực hiện trong phase này.
+- Bộ hồi quy 18 lớp kiểm thử (197 tests) từ Phase 5.8.3.48 vẫn giữ nguyên vẹn trạng thái toàn vẹn.
+- Dừng công việc theo đúng yêu cầu; chờ xác nhận từ người dùng về các quyết định nghiệp vụ
+  ở Mục 9 trước khi tiến hành Phase tiếp theo.
+
+================================================================================
+END OF REPORT - PHASE 5.8.3.49
+================================================================================

@@ -1,0 +1,140 @@
+================================================================================
+HSWRMS — PHASE 5.8.3.67: GROUP 1 DATABASE BASELINE COMMIT EXECUTION REPORT
+ATOMIC EXECUTION OF COMMIT 1 (AUTHORITATIVE SCHEMA & TEST PROVISIONING GUIDE)
+================================================================================
+Date: 2026-10-28
+Operating Mode: AUTHORIZED COMMIT EXECUTION (Commit 1 Only)
+Authoritative Integration Workspace:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Integration Branch:
+  feature/hswrms-m1-m6-integration
+================================================================================
+
+1. AUTHORIZATION & PRE-COMMIT AUDIT SUMMARY
+--------------------------------------------------------------------------------
+A. User Authorization:
+   The user explicitly authorized Option A from Phase 5.8.3.65 (executing baseline
+   commits 1–3 as separate, atomic commits). This phase authorized COMMIT 1 ONLY:
+   - File 1: `05_Development/database/schema.sql`
+   - File 2: `05_Development/database/README.md`
+   - Authorized Subject: `schema(database): align authoritative 42-table schema and test provisioning guide`
+
+B. Pre-Commit Verification Gate:
+   [X] Repository Root confirmed: E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules
+   [X] Branch confirmed: feature/hswrms-m1-m6-integration
+   [X] Parent HEAD confirmed: 46ab465a1dbfbccfd027d6fa4f4eaab0e9818998
+   [X] Staging area clean prior to staging: 0 files staged (`git diff --cached` was empty)
+   [X] Staging verification: Exactly the 2 authorized files were staged using explicit paths.
+   [X] Zero stray content: schema.sql diff contains solely validated 42-table enhancements
+       across M1–M6; README.md documents manual migration architecture accurately.
+   [X] Excluded files verified untouched:
+       - 05_Development/database/generated/HSWRMS_TEST_schema.sql (untracked, unmodified)
+       - 05_Development/database/migrations/draft_m6_governance_and_delegation.sql (untracked, unmodified)
+       - 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql (untracked, unmodified)
+   [X] Discrepancies found: ZERO discrepancies.
+
+
+2. COMMIT EXECUTION DETAILS
+--------------------------------------------------------------------------------
+A. Execution Commands:
+   1. Staging Command:
+      git add 05_Development/database/schema.sql 05_Development/database/README.md
+   2. Commit Command:
+      git commit -m "schema(database): align authoritative 42-table schema and test provisioning guide"
+
+B. New Commit Metadata:
+   - Commit Hash (Full): d0a17dbbbeb94ce4464dacdb6eae73cfd5733a18
+   - Commit Hash (Short): d0a17db
+   - Author: datnthe181883 <datnthe181883@fpt.edu.vn>
+   - Date: Wed Oct 28 15:17:30 2026 +0700
+   - Commit Subject: schema(database): align authoritative 42-table schema and test provisioning guide
+   - Parent Commit: 46ab465 (docs(audit): add M1-M6 integration and provisioning evidence)
+
+C. Committed Files & Net Diff Metrics:
+   - Files Committed: Exactly 2 files
+     * 05_Development/database/README.md  (+92 lines, -18 lines)
+     * 05_Development/database/schema.sql (+95 lines, -6 lines)
+   - Total Diff Metrics: 2 files changed, 171 insertions(+), 16 deletions(-)
+
+
+3. COMMITTED CONTENT SUMMARY
+--------------------------------------------------------------------------------
+A. `05_Development/database/schema.sql`:
+   - dbo.[User]: Added `failed_login_count`, `locked_at`, `last_login_at` (M1 Account Lockout).
+   - dbo.RetreatPackage: Added `package_code`, `duration_unit`, `base_price_unit`,
+     `included_treatments`, `dietary_plan`, `extra_charge_policy`, `target_guest` (M2).
+   - dbo.VillaCategory: Added `inventory_count`, `bedroom_count`, `bedroom_description`,
+     `area_description`, `has_private_pool`, `pool_description`, `features_and_amenities`,
+     `eligible_packages` (M2).
+   - dbo.PhysicalVilla: Added `zone_name`, `bedroom_info`, `max_occupancy`, `area_sqm`,
+     `has_private_pool`, `pool_info`, `view_and_operational_notes` (M2).
+   - dbo.RetreatPackageSpaTreatment: Added `included_sessions`, `entitlement_status`, `notes` (M3).
+   - dbo.CustomerReview: Added `room_rating`, `spa_rating`, `dining_rating` and
+     `CK_CustomerReview_CategoryRatings` check constraint (M5).
+   - dbo.[Permission]: Added `is_delegable`, `is_admin_only`, `created_at` (M6).
+   - dbo.SystemConfiguration: Added `value_type`, `min_value`, `max_value`, `unit`,
+     `description`, `manager_editable` (M6).
+   - dbo.RightDelegation: Added `revoked_at`, `revoked_by_admin_user_id` (M6).
+   - dbo.AuditLog: Added `actor_role`, `target_ref_id`, `old_value`, `new_value`,
+     `delegation_id` (M6).
+   - Filtered Indexes:
+     * `IX_User_AccountStatus_LockedAt`
+     * `IX_RightDelegation_Status_Expiry`
+     * `IX_AuditLog_TargetRefId`
+     * `IX_PhysicalVilla_Status_Category`
+
+B. `05_Development/database/README.md`:
+   - Updated directory structure defining `schema.sql` as master DDL across M1–M6.
+   - Formally documented the absence of automated migration runners (no Flyway/Liquibase).
+   - Defined database initialization workflows (Fresh installation vs manual incremental upgrades).
+   - Documented migration preconditions and failure modes for State 1, State 2, and State 3.
+
+
+4. POST-COMMIT WORKING-TREE STATUS AUDIT
+--------------------------------------------------------------------------------
+A. Current Staging Area:
+   - Staged Files: Exactly 0 files (`git diff --cached` is completely clean).
+
+B. Tracked Modified Files Remaining (11 files):
+   These 11 files remain unstaged and intact for subsequent commit phases:
+   - Backend M6 (3 files):
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java
+     * 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/AdminControllersSecurityTest.java
+   - Backend M4 / Security (3 files):
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java
+   - Frontend M4 (5 files):
+     * 05_Development/frontend/src/context/DiningContext.tsx
+     * 05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx
+     * 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+     * 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx
+     * 05_Development/frontend/src/types/dining.ts
+
+C. Untracked Artifacts Preserved (53 files):
+   - M4 Backend source, tests, resources, and frontend (28 files): Untouched.
+   - Database migrations (V003, V004, V005, draft_m6): Untouched.
+   - Generated test payload (HSWRMS_TEST_schema.sql): Untouched.
+   - Audit and preflight reports in 06_Reports/: Untouched.
+
+D. Git Operations Constraint Audit:
+   - Zero commits amended.
+   - Zero push operations performed.
+   - Zero merge, rebase, cherry-pick, reset, checkout, switch, stash, or clean operations performed.
+   - Zero SQL DDL, DML, or migrations executed.
+
+
+5. NEXT STEP & GATE RECOMMENDATION
+--------------------------------------------------------------------------------
+GATE STATUS: COMMIT 1 SUCCESSFULLY EXECUTED.
+
+Standing Order Honored:
+- Execution halted immediately following Commit 1 completion and verification.
+- Commit 2 (Module 6 Governance & Security Hardening) has NOT been started.
+- Awaiting explicit user instruction before initiating Phase 5.8.3.68 (Commit 2 Execution).
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.67
+================================================================================
+

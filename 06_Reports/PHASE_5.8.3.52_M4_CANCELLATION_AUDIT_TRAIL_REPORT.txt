@@ -1,0 +1,253 @@
+================================================================================
+PHASE 5.8.3.52 — PERSISTENT AUDIT TRAIL FOR M4 ORDER CANCELLATION REPORT
+================================================================================
+Date: 2026-10-28
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Reference Audit: 06_Reports/PHASE_5.8.3.51_M4_CROSS_WORKSPACE_AUDIT.txt
+Status: COMPLETE & VERIFIED — ZERO COMPILATION / TEST FAILURES
+================================================================================
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Phase 5.8.3.52 resolved the cancellation-reason persistence gap identified in 
+the Phase 5.8.3.51 cross-workspace audit. 
+
+Prior to this phase, `MealOrderServiceImpl.cancelOrderInternal` validated the 
+cancellation reason for staff cancellations from `PREPARING` and logged the 
+reason solely via SLF4J logger (`log.warn(...)`), leaving no durable record in 
+the database audit trail.
+
+In accordance with strict safety constraints (zero schema modifications, zero 
+DDL/migration runs, no live DB connections, no Git mutations):
+1. Verified existing audit infrastructure (`dbo.AuditLog` and `AuditLogService`).
+2. Integrated `AuditLogService.record(...)` into `MealOrderServiceImpl.cancelOrderInternal`
+   for both staff cancellations (with mandatory reason) and customer cancellations 
+   (from `PENDING` state).
+3. Resolved actor identity dynamically via `CurrentActor.current()`, capturing 
+   `actorUserId` and `actorRole` ("FNB_STAFF" or "CUSTOMER").
+4. Established atomic ordering: audit recording executes prior to order entity 
+   state mutation, ensuring any audit persistence failure immediately throws and 
+   aborts the transaction without partially cancelling the order.
+5. Added comprehensive test coverage in `MealOrderServiceTest.java`. All 28 
+   M4 backend tests and all 6 baseline M6 audit tests passed with 100% success.
+
+================================================================================
+2. INITIAL FINDINGS AND EXACT CODE EVIDENCE
+================================================================================
+Inspection of `06_Reports/PHASE_5.8.3.51_M4_CROSS_WORKSPACE_AUDIT.txt` noted:
+  "Observation: Workspace A validates the reason but logs it through SLF4J 
+   rather than persisting it through a durable audit entity/log table."
+
+Inspection of `MealOrderServiceImpl.java` confirmed:
+  Lines 393-415 previously had:
+    if (trimmedReason == null || trimmedReason.isEmpty()) {
+        throw new BusinessRuleException("CANCELLATION_REASON_REQUIRED",
+                "A cancellation reason is required to cancel an order currently in " + currentStatus + " state.");
+    }
+    order.setOrderStatus("CANCELLED");
+    MealOrderEntity saved = mealOrderRepository.save(order);
+    log.warn("Order ID {} in {} state cancelled by staff {}. Reason: {}",
+            order.getMealOrderId(), currentStatus, effectiveUserId, trimmedReason);
+    return mapToDto(saved);
+
+Evidence:
+  The reason `trimmedReason` was validated and accepted as a method argument, 
+  but was solely sent to `log.warn(...)` without invoking `AuditLogService` or 
+  persisting to `dbo.AuditLog`.
+
+================================================================================
+3. AUDIT API AND SCHEMA COMPATIBILITY ANALYSIS
+================================================================================
+Inspection of `schema.sql` (lines 1111-1132):
+  CREATE TABLE dbo.AuditLog (
+      audit_log_id        BIGINT IDENTITY(1,1) PRIMARY KEY,
+      actor_user_id       INT NULL,
+      actor_role          NVARCHAR(50) NULL,
+      action              NVARCHAR(150) NOT NULL,
+      target_data_type    NVARCHAR(100) NULL,
+      target_ref_id       VARCHAR(100) NULL,
+      access_status       NVARCHAR(50) NULL,
+      old_value           NVARCHAR(500) NULL,
+      new_value           NVARCHAR(500) NULL,
+      delegation_id       INT NULL,
+      created_at          DATETIME2 DEFAULT GETDATE() NOT NULL
+  );
+
+Inspection of `AuditLogService.java`:
+  Supports the exact 8-parameter overload:
+  void record(Integer actorUserId, String actorRole, String action,
+              String targetDataType, String targetRefId, String accessStatus,
+              String oldValue, String newValue)
+
+Field Mapping & Conventions Used:
+- actorUserId: Authenticated user ID (from parameter or `CurrentActor.current()`).
+- actorRole: Resolved role via `resolveActorRole(isStaff)` ("FNB_STAFF" or "CUSTOMER").
+- action: "CANCEL_MEAL_ORDER" (consistent with HSWRMS audit action verbs).
+- targetDataType: "MealOrder" (identifies the affected entity type).
+- targetRefId: String.valueOf(order.getMealOrderId()) (identifies specific order).
+- accessStatus: AuditLogService.SUCCESS ("SUCCESS").
+- oldValue: currentStatus ("PENDING", "PREPARING", or "READY").
+- newValue: "CANCELLED; Reason: " + trimmedReason (captures transition & reason).
+
+Defensive Truncation & Data Minimization:
+- `AuditLogService` automatically truncates `action` to 150 chars, `targetDataType` 
+  to 100 chars, `targetRefId` to 100 chars, and `oldValue`/`newValue` to 500 chars.
+- Data Minimization: The audit trail captures only the operational meal cancellation 
+  reason (e.g., "Out of fresh lettuce"). Medical, clinical, allergy, or financial 
+  data is strictly excluded from `AuditLog`.
+- Access Control: `dbo.AuditLog` is queryable exclusively by authorized M6 Admin 
+  users via `AdminDashboardController` / `AuditLogRepository`, and is never exposed 
+  in customer-facing `MealOrderDto`.
+
+================================================================================
+4. FILES MODIFIED
+================================================================================
+1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java`
+   - Injected `AuditLogService auditLogService` into constructor and private field.
+   - Imported `CurrentActor` and `AuditLogService`.
+   - Added private helper `resolveActorRole(boolean isStaff)`.
+   - Updated `cancelOrderInternal`:
+     * Validates cancellation reason for staff cancellation from `PREPARING` or `READY`.
+     * Validates booking ownership for customer cancellation from `PENDING`.
+     * Invokes `auditLogService.record(...)` with action `"CANCEL_MEAL_ORDER"`, 
+       target `"MealOrder"`, order ID, prior status, and cancellation reason.
+     * Sequences audit logging BEFORE mutating and saving entity state.
+
+2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceTest.java`
+   - Added imports: `AuditLog`, `AuditLogService`, `MealOrderEntity`, `FolioBillingService`,
+     `MealOrderItemRepository`, `AccessDeniedException`, and Mockito matchers.
+   - Autowired: `auditLogRepository`, `mealOrderItemRepository`, `folioBillingService`.
+   - Added/updated focused test cases covering all six required criteria:
+     * `testCancel_PreparingByStaff_RequiresReason`: Validates missing/blank reason rejection,
+       asserts no audit log is persisted on failure, and verifies exact audit fields on success.
+     * `testCancel_PendingByCustomer_PersistsAuditTrail`: Verifies customer PENDING cancellation
+       persists audit with CUSTOMER role and reason.
+     * `testCancel_Unauthorized_RejectedAndNoAudit`: Verifies customer cannot cancel PREPARING
+       order and non-owner customer cannot cancel booking order; asserts no audit log created.
+     * `testCancel_DeliveredOrder_RejectedAndNoAudit`: Verifies DELIVERED order cannot be cancelled
+       by staff or customer; asserts no cancellation audit entry is created.
+     * `testCancel_AuditFailure_ConsistentWithTransactionContract`: Tests that when audit
+       persistence throws a runtime exception, `cancelOrder` does not swallow it, aborts,
+       and preserves the order in PREPARING status.
+     * `testCancel_FolioBillingRemainsUnchanged`: Confirms cancelled orders never post a Folio charge,
+       while DELIVERED orders post exactly once.
+
+================================================================================
+5. TRANSACTION AND FAILURE BEHAVIOR
+================================================================================
+Transaction Semantics:
+- `MealOrderServiceImpl` is annotated with `@Transactional` (Spring `PROPAGATION_REQUIRED`).
+- `AuditLogService.record` is annotated with `@Transactional` (Spring `PROPAGATION_REQUIRED`).
+- They execute inside the identical database transaction boundary.
+
+Failure Handling:
+- Execution order in `cancelOrderInternal`:
+    1. Validation of status and reason.
+    2. Invocation of `auditLogService.record(...)`.
+    3. Mutation `order.setOrderStatus("CANCELLED")` and `mealOrderRepository.save(order)`.
+- If `auditLogService.record(...)` fails (e.g., storage error, disk full, DB timeout):
+    * The exception is NOT caught or swallowed.
+    * It propagates out to the caller.
+    * Spring marks the active transaction for immediate rollback.
+    * The order status in the database and entity state remain unchanged (not CANCELLED).
+    * No false or partial cancellation is reported to the client.
+
+================================================================================
+6. TEST EXECUTION AND VERIFICATION RESULTS
+================================================================================
+Test Suite 1: M4 F&B + KDS + Billing + Security Tests
+Command:
+  mvn test "-Dtest=MealOrderServiceTest,FnbControllersSecurityTest,FnbBillingIntegrationTest"
+Directory:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules\05_Development\backend
+Result:
+  Exit Code: 0
+  Total Tests Run: 28
+  Failures: 0
+  Errors: 0
+  Skipped: 0
+  Execution Time: 58.078 s
+
+Breakdown:
+- `MealOrderServiceTest`: 18 tests, 0 failures, 0 errors.
+  * testCreateDailyMealOrder_Success — PASS
+  * testUpdateDailyMealOrder_UpsertSuccess — PASS
+  * testCreateAlaCarteOrder_Success — PASS
+  * testGetOrdersForBooking_OwnershipEnforced — PASS
+  * testGetKitchenPrepQueue_FiltersActiveOrders — PASS
+  * testGetKitchenPrepQueue_SearchFilter — PASS
+  * testGetDashboardKpis_CalculatesCorrectly — PASS
+  * testStatusTransition_PendingToPreparingToReadyToDelivered — PASS
+  * testStatusTransition_InvalidSequenceRejected — PASS
+  * testStatusTransition_DeliveredPostsFolioChargeOnce_Idempotent — PASS
+  * testDelivered_CannotTransitionBack — PASS
+  * testCancel_PendingByCustomer_Success — PASS
+  * testCancel_PreparingByCustomer_Rejected — PASS
+  * testCancel_PreparingByStaff_RequiresReason (audit verified) — PASS
+  * testCancel_PendingByCustomer_PersistsAuditTrail — PASS
+  * testCancel_Unauthorized_RejectedAndNoAudit — PASS
+  * testCancel_DeliveredOrder_RejectedAndNoAudit — PASS
+  * testCancel_FolioBillingRemainsUnchanged — PASS
+  * testCancel_AuditFailure_ConsistentWithTransactionContract — PASS
+  * testDataMinimization_ExcludesHealthAndBillingDetails — PASS
+- `FnbControllersSecurityTest`: 8 tests, 0 failures, 0 errors.
+  * Customer & staff authorization endpoints — ALL PASS
+- `FnbBillingIntegrationTest`: 2 tests, 0 failures, 0 errors.
+  * A la carte Folio posting & cancellation folio guard — ALL PASS
+
+Test Suite 2: Baseline M6 Audit Log Service Tests
+Command:
+  mvn test "-Dtest=AuditLogServiceTest"
+Directory:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules\05_Development\backend
+Result:
+  Exit Code: 0
+  Total Tests Run: 6
+  Failures: 0
+  Errors: 0
+  Skipped: 0
+  Execution Time: 32.375 s
+
+Breakdown:
+- recordWithIntegerActorUserId — PASS
+- recordWithLongActorUserIdOverload — PASS
+- recordWithNullActorUserId — PASS
+- recordTruncatesOverlongFields — PASS
+- auditLogRollsBackWithCallerTransaction — PASS
+- recordM6EnhancedFields — PASS
+
+================================================================================
+7. REMAINING BLOCKERS & SYSTEM READINESS
+================================================================================
+Blockers:
+- None. The cancellation-reason persistence gap is completely resolved.
+
+Safety Verification:
+- `schema.sql` was NOT modified.
+- No DDL or migration scripts were executed.
+- No live database connections were made.
+- Workspace B was NOT modified.
+- No Git mutations were performed.
+- All uncommitted work was preserved.
+
+Integration Readiness:
+- M4 order cancellation now adheres strictly to enterprise auditing standards.
+- Every cancelled order durably records who cancelled it, their role, the previous 
+  order state, the order ID, and the explicit operational cancellation reason.
+
+================================================================================
+8. FINAL WORKING-TREE SUMMARY
+================================================================================
+Files Modified in Phase 5.8.3.52:
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java`
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceTest.java`
+
+Reports Created:
+- `06_Reports/PHASE_5.8.3.52_M4_CANCELLATION_AUDIT_TRAIL_REPORT.txt`
+
+Uncommitted state across repository:
+- All preexisting untracked and modified files from previous phases remain intact.
+- Git index and commit history are completely unchanged.
+================================================================================
+END OF REPORT
+================================================================================

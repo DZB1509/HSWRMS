@@ -1,0 +1,179 @@
+================================================================================
+HSWRMS PHASE 5.8.3.80 — READ-ONLY SQL SERVER PRE-DEPLOYMENT CHECK REPORT
+================================================================================
+Timestamp: 2026-10-28T18:15:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Execution Identity: Windows Administrator (MYLIFE-MYRULE-1\ADMIN via -E)
+Target Instance: localhost (Port 1433)
+Target Catalog: HSWRMS_TEST
+Execution Mode: STRICTLY READ-ONLY LIVE PREFLIGHT (ZERO MUTATIONS)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Phase 5.8.3.80 executes the authorized read-only pre-deployment verification
+against the live Microsoft SQL Server 2019 instance prior to requesting human
+authorization for schema payload deployment.
+
+All 9 mandatory pre-deployment checks passed with zero discrepancies:
+  [PASS] 1. Server identity matches expected: MYLIFE-MYRULE-1.
+  [PASS] 2. Active database catalog matches expected: HSWRMS_TEST.
+  [PASS] 3. Target database HSWRMS_TEST exists and is in state ONLINE (ID: 45).
+  [PASS] 4. Operator execution identity verified as Windows Administrator (sysadmin/dbo).
+  [PASS] 5. HSWRMS_TEST contains zero user tables, views, triggers, or procedures (clean slate).
+  [PASS] 6. Dedicated test login [hswrms_test_user] exists, is enabled, with default DB HSWRMS_TEST.
+  [PASS] 7. Test login possesses zero server-level privileged roles (only public).
+  [PASS] 8. Test login has zero mappings in primary database HSWRMS (guest access disabled).
+  [PASS] 9. Test user in HSWRMS_TEST currently has only CONNECT permission (no data roles).
+
+Final Verdict: PRE-CHECK PASSED — READY TO REQUEST SCHEMA DEPLOYMENT APPROVAL
+
+--------------------------------------------------------------------------------
+2. DETAILED READ-ONLY QUERY AUDIT LOG
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+QUERY 1: FAIL-FAST SERVER IDENTITY, ACTIVE DATABASE & STATE ASSERTION
+--------------------------------------------------------------------------------
+Execution Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+Command:
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; IF @@SERVERNAME <> N'MYLIFE-MYRULE-1' OR DB_NAME() <> N'HSWRMS_TEST' THROW 53000, 'SERVER OR DB MISMATCH', 1; SELECT @@SERVERNAME AS [ServerName], DB_NAME() AS [CurrentDb], (SELECT state_desc FROM sys.databases WHERE name = N'HSWRMS_TEST') AS [DbState], (SELECT database_id FROM sys.databases WHERE name = N'HSWRMS_TEST') AS [DatabaseId];"
+
+Exit Code: 0
+Output:
+  ServerName        CurrentDb    DbState   DatabaseId
+  ---------------   -----------  -------   ----------
+  MYLIFE-MYRULE-1   HSWRMS_TEST  ONLINE            45
+
+Audit Assessment:
+  - `@@SERVERNAME` exactly equals `MYLIFE-MYRULE-1`.
+  - `DB_NAME()` exactly equals `HSWRMS_TEST`.
+  - Target database exists, is `ONLINE`, and has `database_id = 45`.
+  - Fail-fast condition evaluated cleanly; no exception thrown.
+
+
+--------------------------------------------------------------------------------
+QUERY 2: OPERATOR IDENTITY & EFFECTIVE DEPLOYMENT PERMISSIONS
+--------------------------------------------------------------------------------
+Execution Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+Command:
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; SELECT SUSER_SNAME() AS [ServerLogin], SYSTEM_USER AS [SystemUser], CURRENT_USER AS [CurrentDbUser], IS_SRVROLEMEMBER('sysadmin') AS [IsSysadmin], HAS_PERMS_BY_NAME(N'HSWRMS_TEST', 'DATABASE', 'CONTROL') AS [HasDbControl], HAS_PERMS_BY_NAME(N'HSWRMS_TEST', 'DATABASE', 'CREATE TABLE') AS [HasCreateTable];"
+
+Exit Code: 0
+Output:
+  ServerLogin            SystemUser             CurrentDbUser  IsSysadmin  HasDbControl  HasCreateTable
+  ---------------------  ---------------------  -------------  ----------  ------------  --------------
+  MYLIFE-MYRULE-1\ADMIN  MYLIFE-MYRULE-1\ADMIN  dbo                     1             1               1
+
+Audit Assessment:
+  - Confirmed operator is authenticated via Windows Integrated Authentication.
+  - Server principal is `MYLIFE-MYRULE-1\ADMIN`.
+  - Database principal maps to `dbo`.
+  - Operator holds `sysadmin` role (`IsSysadmin = 1`) and holds full `CONTROL` and `CREATE TABLE` rights in `HSWRMS_TEST`.
+  - Authorized to execute subsequent schema DDL upon separate approval.
+
+
+--------------------------------------------------------------------------------
+QUERY 3: TARGET DATABASE SCHEMA OBJECT INVENTORY
+--------------------------------------------------------------------------------
+Execution Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+Command:
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; SELECT (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0) AS [UserTableCount], (SELECT COUNT(*) FROM sys.views WHERE is_ms_shipped = 0) AS [UserViewCount], (SELECT COUNT(*) FROM sys.triggers WHERE is_ms_shipped = 0) AS [UserTriggerCount], (SELECT COUNT(*) FROM sys.procedures WHERE is_ms_shipped = 0) AS [UserProcCount];"
+
+Exit Code: 0
+Output:
+  UserTableCount  UserViewCount  UserTriggerCount  UserProcCount
+  --------------  -------------  ----------------  -------------
+               0              0                 0              0
+
+Audit Assessment:
+  - Database `HSWRMS_TEST` is a verified clean slate.
+  - Exactly 0 user tables, 0 views, 0 triggers, and 0 stored procedures exist.
+  - No legacy or partial schema objects present.
+
+
+--------------------------------------------------------------------------------
+QUERY 4: RUNTIME TEST LOGIN CONFIGURATION & SERVER ROLES
+--------------------------------------------------------------------------------
+Execution Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+Command:
+  sqlcmd -S localhost -d master -E -b -Q "SET NOCOUNT ON; SELECT name, is_disabled, default_database_name, IS_SRVROLEMEMBER('sysadmin', name) AS [IsSysadmin], IS_SRVROLEMEMBER('securityadmin', name) AS [IsSecadmin], IS_SRVROLEMEMBER('serveradmin', name) AS [IsSrvadmin], IS_SRVROLEMEMBER('setupadmin', name) AS [IsSetupadmin], IS_SRVROLEMEMBER('processadmin', name) AS [IsProcadmin], IS_SRVROLEMEMBER('diskadmin', name) AS [IsDiskadmin], IS_SRVROLEMEMBER('dbcreator', name) AS [IsDbcreator], IS_SRVROLEMEMBER('bulkadmin', name) AS [IsBulkadmin] FROM sys.server_principals WHERE name = N'hswrms_test_user';"
+
+Exit Code: 0
+Output:
+  name              is_disabled  default_database_name  IsSysadmin  IsSecadmin  IsSrvadmin  IsSetupadmin  IsProcadmin  IsDiskadmin  IsDbcreator  IsBulkadmin
+  ----------------  -----------  ---------------------  ----------  ----------  ----------  ------------  -----------  -----------  -----------  -----------
+  hswrms_test_user            0  HSWRMS_TEST                     0           0           0             0            0            0            0            0
+
+Audit Assessment:
+  - Login `hswrms_test_user` exists and is enabled (`is_disabled = 0`).
+  - Default database is correctly pinned to `HSWRMS_TEST`.
+  - Zero fixed server roles assigned (`sysadmin = 0`, `securityadmin = 0`, `dbcreator = 0`, etc.).
+  - Server-level least-privilege boundary verified.
+
+
+--------------------------------------------------------------------------------
+QUERY 5: ISOLATION PROBE AGAINST PROTECTED DATABASE [HSWRMS]
+--------------------------------------------------------------------------------
+Execution Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+Command:
+  sqlcmd -S localhost -d master -E -b -Q "SET NOCOUNT ON; SELECT (SELECT COUNT(*) FROM HSWRMS.sys.database_principals WHERE name = N'hswrms_test_user' OR sid = SUSER_SID(N'hswrms_test_user')) AS [HswrmsMappings], (SELECT hasdbaccess FROM HSWRMS.sys.sysusers WHERE name = N'guest') AS [HswrmsGuestAccess];"
+
+Exit Code: 0
+Output:
+  HswrmsMappings  HswrmsGuestAccess
+  --------------  -----------------
+               0                  0
+
+Audit Assessment:
+  - Exactly 0 user mappings for `hswrms_test_user` exist in primary database `HSWRMS`.
+  - Guest access in `HSWRMS` is strictly disabled (`hasdbaccess = 0`).
+  - Total isolation of the protected primary database is confirmed.
+
+
+--------------------------------------------------------------------------------
+QUERY 6: CURRENT DATABASE ROLES & PERMISSIONS FOR TEST USER IN [HSWRMS_TEST]
+--------------------------------------------------------------------------------
+Execution Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+Command:
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; SELECT CAST(dp.name AS VARCHAR(25)) AS [UserName], CAST(dp.type_desc AS VARCHAR(15)) AS [UserType], CAST(ISNULL(STRING_AGG(r.name, ', '), 'NONE') AS VARCHAR(30)) AS [DatabaseRoles], CAST((SELECT STRING_AGG(p.state_desc + ' ' + p.permission_name, ', ') FROM sys.database_permissions p WHERE p.grantee_principal_id = dp.principal_id) AS VARCHAR(30)) AS [ExplicitPermissions] FROM sys.database_principals dp LEFT JOIN sys.database_role_members m ON m.member_principal_id = dp.principal_id LEFT JOIN sys.database_principals r ON r.principal_id = m.role_principal_id WHERE dp.name = N'hswrms_test_user' GROUP BY dp.name, dp.type_desc, dp.principal_id;"
+
+Exit Code: 0
+Output:
+  UserName           UserType         DatabaseRoles   ExplicitPermissions
+  -----------------  ---------------  --------------  -------------------
+  hswrms_test_user   SQL_USER         NONE            GRANT CONNECT
+
+Audit Assessment:
+  - Database principal `hswrms_test_user` exists inside `HSWRMS_TEST`.
+  - Current role memberships: `NONE` (not a member of `db_datareader`, `db_datawriter`, `db_owner`, or any role).
+  - Explicit database permissions: Strictly `GRANT CONNECT`.
+  - Zero state mutations were made during this inspection.
+  - Confirms readiness for Step 4 of the deployment plan (`ALTER ROLE db_datareader / db_datawriter ADD MEMBER [hswrms_test_user]`) following schema deployment.
+
+--------------------------------------------------------------------------------
+3. DISCREPANCIES & RESIDUAL RISKS
+--------------------------------------------------------------------------------
+- Discrepancies: ZERO discrepancies found. All operational facts match the preflight specifications from Phase 5.8.3.76 and Phase 5.8.3.79.
+- State Changes: ZERO state changes or DDL/DML statements were executed.
+- Database Target Integrity: `HSWRMS` remains completely isolated and untouched.
+
+--------------------------------------------------------------------------------
+4. FINAL CONCLUSION & GATE STATUS
+--------------------------------------------------------------------------------
+PRE-CHECK PASSED — READY TO REQUEST SCHEMA DEPLOYMENT APPROVAL
+
+The environment is in a known, clean, verified state. All prerequisites for executing
+the controlled schema deployment of `HSWRMS_TEST_schema.sql` via Windows Admin (`-E`)
+have been satisfied.
+
+Awaiting explicit human authorization before executing Step 2 (schema deployment)
+and Step 4 (runtime DML role grants).
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.80
+================================================================================
+

@@ -1,0 +1,130 @@
+================================================================================
+HSWRMS — PHASE 5.8.3.68: GROUP 2 M6 GOVERNANCE COMMIT EXECUTION REPORT
+ATOMIC EXECUTION OF COMMIT 2 (M6 ADMIN DELEGATION & S39 KITCHEN PERMISSIONS)
+================================================================================
+Date: 2026-10-28
+Operating Mode: AUTHORIZED COMMIT EXECUTION (Commit 2 Only)
+Authoritative Integration Workspace:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Integration Branch:
+  feature/hswrms-m1-m6-integration
+================================================================================
+
+1. AUTHORIZATION & PRE-COMMIT AUDIT SUMMARY
+--------------------------------------------------------------------------------
+A. User Authorization:
+   The user explicitly authorized Option A from Phase 5.8.3.65 (executing baseline
+   commits as separate atomic commits). Following successful completion of Commit 1
+   (`d0a17db`), this phase authorized COMMIT 2 ONLY:
+   - File 1: `05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java`
+   - File 2: `05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java`
+   - File 3: `05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/AdminControllersSecurityTest.java`
+   - Authorized Subject: `feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions`
+
+B. Pre-Commit Verification Gate:
+   [X] Repository Root confirmed: E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules
+   [X] Branch confirmed: feature/hswrms-m1-m6-integration
+   [X] Parent HEAD confirmed: d0a17dbbbeb94ce4464dacdb6eae73cfd5733a18 (Commit 1)
+   [X] Staging area clean prior to staging: 0 files staged (`git diff --cached` was empty)
+   [X] Staging verification: Exactly the 3 authorized M6 files were staged using explicit paths.
+   [X] Zero stray content: Diff contains solely M6 widget delegation null safety,
+       S39:V and S39:U permission registrations, and regression tests.
+   [X] Zero accidental secrets or credential exposure.
+   [X] Excluded files verified untouched:
+       - 05_Development/database/generated/HSWRMS_TEST_schema.sql (untracked, unmodified)
+       - 05_Development/database/migrations/draft_m6_governance_and_delegation.sql (untracked, unmodified)
+       - 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql (untracked, unmodified)
+   [X] Discrepancies found: ZERO discrepancies.
+
+
+2. COMMIT EXECUTION DETAILS
+--------------------------------------------------------------------------------
+A. Execution Commands:
+   1. Staging Command:
+      git add \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java \
+        05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/AdminControllersSecurityTest.java
+   2. Commit Command:
+      git commit -m "feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions"
+
+B. New Commit Metadata:
+   - Commit Hash (Full): 258c7bd23d1dc733c83b466bdfd9c52ce994b8a6
+   - Commit Hash (Short): 258c7bd
+   - Author: datnthe181883 <datnthe181883@fpt.edu.vn>
+   - Date: Wed Oct 28 15:23:42 2026 +0700
+   - Commit Subject: feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions
+   - Parent Commit: d0a17db (schema(database): align authoritative 42-table schema and test provisioning guide)
+
+C. Committed Files & Net Diff Metrics:
+   - Files Committed: Exactly 3 files
+     * AdminDashboardController.java (+1 line, -1 line)
+     * PermissionCatalog.java        (+1 line, -0 lines)
+     * AdminControllersSecurityTest.java (+104 lines, -2 lines)
+   - Total Diff Metrics: 3 files changed, 104 insertions(+), 3 deletions(-)
+
+
+3. COMMITTED CONTENT SUMMARY
+--------------------------------------------------------------------------------
+A. `AdminDashboardController.java`:
+   - Hardened `getSystemOverview()` by checking `(permissionService != null && permissionService.userHas(...))`
+     before evaluating S55 admin widgets visibility for non-admin actors.
+   - Enforces fail-closed security: if `PermissionService` is not injected (e.g. in standalone slice tests),
+     administrative widgets are masked safely rather than throwing a `NullPointerException`.
+
+B. `PermissionCatalog.java`:
+   - Registered permissions `S39:V` and `S39:U` (Kitchen Management View and Update) mapped
+     statically to role `FNB_STAFF`.
+   - Satisfies the prerequisite RBAC definition required by Module 4 KDS security tests.
+
+C. `AdminControllersSecurityTest.java`:
+   - Added `testAdminOverviewDelegatedWidgets()`: Verifies that a manager holding active S55
+     delegation can view admin widgets on `/api/v1/admin/dashboard/system-overview`.
+   - Added `systemOverview_failClosedWhenPermissionServiceIsNull()`: Verifies that the controller
+     safely masks widgets without NPE when PermissionService is null, while admin retains full access.
+
+
+4. POST-COMMIT WORKING-TREE STATUS AUDIT
+--------------------------------------------------------------------------------
+A. Current Staging Area:
+   - Staged Files: Exactly 0 files (`git diff --cached` is completely clean).
+
+B. Tracked Modified Files Remaining (8 files):
+   These 8 files remain unstaged and intact for Commit 3 (Module 4 KDS):
+   - Backend M4 / Security (3 files):
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java
+   - Frontend M4 (5 files):
+     * 05_Development/frontend/src/context/DiningContext.tsx
+     * 05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx
+     * 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+     * 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx
+     * 05_Development/frontend/src/types/dining.ts
+
+C. Untracked Artifacts Preserved (53 files):
+   - M4 Backend source, tests, resources, and frontend (28 files): Untouched.
+   - Database migrations (V003, V004, V005, draft_m6): Untouched.
+   - Generated test payload (HSWRMS_TEST_schema.sql): Untouched.
+   - Audit and preflight reports in 06_Reports/: Untouched.
+
+D. Git Operations Constraint Audit:
+   - Zero commits amended.
+   - Zero push operations performed.
+   - Zero merge, rebase, cherry-pick, reset, checkout, switch, stash, or clean operations performed.
+   - Zero SQL DDL, DML, or migrations executed.
+
+
+5. NEXT STEP & GATE RECOMMENDATION
+--------------------------------------------------------------------------------
+GATE STATUS: COMMIT 2 SUCCESSFULLY EXECUTED.
+
+Standing Order Honored:
+- Execution halted immediately following Commit 2 completion and verification.
+- Commit 3 (Module 4 Kitchen Display System & Dining) has NOT been started.
+- Awaiting explicit user instruction before initiating Phase 5.8.3.69 (Commit 3 Execution).
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.68
+================================================================================
+

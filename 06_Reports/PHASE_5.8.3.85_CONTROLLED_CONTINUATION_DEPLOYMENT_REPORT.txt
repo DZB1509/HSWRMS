@@ -1,0 +1,219 @@
+================================================================================
+HSWRMS PHASE 5.8.3.85 — CONTROLLED CONTINUATION DEPLOYMENT REPORT
+================================================================================
+Timestamp: 2026-10-28T19:00:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Target Instance: localhost (Port 1433, Server: MYLIFE-MYRULE-1)
+Target Catalog: HSWRMS_TEST
+Protected Catalog: HSWRMS
+Execution Identity: Windows Integrated Authentication (MYLIFE-MYRULE-1\ADMIN via -E)
+Executed Payload: 05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & VERDICT
+--------------------------------------------------------------------------------
+Phase 5.8.3.85 executed the controlled deployment of the reviewed schema continuation
+payload against database [HSWRMS_TEST] following explicit user authorization.
+
+Key Execution & Verification Highlights:
+1. Baseline & Hash Assertion:
+   - Branch: `feature/hswrms-m1-m6-integration`
+   - HEAD: `c2d2d6b01cb757319b3d4805b8b0262a261ca111`
+   - Payload SHA-256: `2479ED70438B808538EFEEF3B440924E8128BD9FCABBC0C2473E1598A3433D68` (Exact Match).
+2. Fail-Closed Preflight:
+   - All preflight checks passed 100%.
+   - Active host confirmed as `MYLIFE-MYRULE-1`, catalog as `HSWRMS_TEST` (ONLINE).
+   - Pre-existing state: exactly 20 tables, 20 PKs, 21 FKs, 11 UQs, 19 CKs, 39 DFs,
+     1 standalone index (`IX_PhysicalVilla_Status_Category`), 0 triggers, 0 roles.
+   - Primary database [HSWRMS] confirmed untouched (39 user tables, ONLINE).
+   - Test user `hswrms_test_user` confirmed with CONNECT only in [HSWRMS_TEST] and
+     zero mapping in [HSWRMS].
+3. Controlled Execution:
+   - Command: `sqlcmd -S localhost -d HSWRMS_TEST -E -b -I -i "05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql"`
+   - Exit code: 0.
+   - Zero SQL Server errors or warnings.
+4. Comprehensive Post-Deployment Verification:
+   - User Tables: exactly 42 (20 existing + 22 created = 42).
+   - Primary Keys: exactly 42 (1 per table).
+   - Foreign Keys: exactly 56 (21 existing + 35 created = 56).
+   - Unique Constraints: exactly 21 (11 existing + 10 created = 21).
+   - Triggers: exactly 3 (`TR_SpaSession_ValidateScheduling`, `TR_FolioItem_RecalculateTotal`,
+     `TR_PaymentTransaction_RecalculateFolioPaid`).
+   - Standalone Indexes: exactly 14 (1 existing + 13 created = 14).
+   - Filtered Indexes: all 4 verified active with exact `WHERE ... IS NOT NULL` predicates.
+   - Total `sys.indexes` on User Tables: exactly 77 (42 PK + 21 UQ + 14 Standalone = 77).
+   - Role Seeds: `dbo.[Role]` contains exactly 0 rows (Section 9 role seeds remained 100% excluded).
+   - Protected DB [HSWRMS]: 39 user tables, ONLINE, 0 modifications.
+   - Runtime Permissions: `hswrms_test_user` retains CONNECT only. Zero role or table grants.
+
+FINAL VERDICT: CONTINUATION DEPLOYED AND VERIFIED
+
+--------------------------------------------------------------------------------
+2. BASELINE & PAYLOAD HASH VERIFICATION
+--------------------------------------------------------------------------------
+- Repository Path: `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`
+- Current Branch: `feature/hswrms-m1-m6-integration`
+- Current HEAD: `c2d2d6b01cb757319b3d4805b8b0262a261ca111`
+- Payload File: `05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql`
+- Expected SHA-256: `2479ED70438B808538EFEEF3B440924E8128BD9FCABBC0C2473E1598A3433D68`
+- Calculated SHA-256: `2479ED70438B808538EFEEF3B440924E8128BD9FCABBC0C2473E1598A3433D68`
+- Hash Match: EXACT MATCH CONFIRMED
+
+--------------------------------------------------------------------------------
+3. LIVE PREFLIGHT AUDIT & BASELINE VERIFICATION
+--------------------------------------------------------------------------------
+Executed Preflight Command:
+```powershell
+sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "..."
+```
+
+Preflight Query Results:
+| Metric / Check | Expected | Actual | Status |
+| :--- | :--- | :--- | :--- |
+| `@@SERVERNAME` | `MYLIFE-MYRULE-1` | `MYLIFE-MYRULE-1` | MATCH |
+| `DB_NAME()` | `HSWRMS_TEST` | `HSWRMS_TEST` | MATCH |
+| `HSWRMS_TEST` State | `ONLINE` | `ONLINE` | MATCH |
+| `HSWRMS` State | `ONLINE` | `ONLINE` | MATCH |
+| `HSWRMS_TEST` Table Count | 20 | 20 | MATCH |
+| `HSWRMS` Table Count | 39 | 39 | MATCH |
+| `HSWRMS_TEST` Primary Keys | 20 | 20 | MATCH |
+| `HSWRMS_TEST` Foreign Keys | 21 | 21 | MATCH |
+| `HSWRMS_TEST` Unique Constraints | 11 | 11 | MATCH |
+| `HSWRMS_TEST` Check Constraints | 19 | 19 | MATCH |
+| `HSWRMS_TEST` Default Constraints | 39 | 39 | MATCH |
+| `HSWRMS_TEST` Trigger Count | 0 | 0 | MATCH |
+| `HSWRMS_TEST` Standalone Indexes | 1 (`IX_PhysicalVilla_Status_Category`) | 1 | MATCH |
+| `dbo.[Role]` Row Count | 0 | 0 | MATCH |
+| `hswrms_test_user` in `HSWRMS_TEST` | `GRANT CONNECT` only | `GRANT CONNECT` | MATCH |
+| `hswrms_test_user` in `HSWRMS` | 0 mappings | 0 | MATCH |
+
+Preflight Decision: ALL CHECKS PASSED. PROCEEDED TO EXECUTION.
+
+--------------------------------------------------------------------------------
+4. EXACT EXECUTION DETAILS
+--------------------------------------------------------------------------------
+Execution Timestamp: 2026-10-28T18:57:50+07:00
+Execution Working Directory: `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`
+Authentication Mode: Windows Integrated Authentication (`-E`)
+Identity: `MYLIFE-MYRULE-1\ADMIN`
+
+Exact Command:
+```powershell
+sqlcmd -S localhost -d HSWRMS_TEST -E -b -I -i "05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql"
+```
+
+Execution Output:
+```text
+Changed database context to 'HSWRMS_TEST'.
+HSWRMS_TEST schema continuation completed successfully.
+```
+
+Exit Code: 0 (Success)
+Error Count: 0
+
+--------------------------------------------------------------------------------
+5. POST-DEPLOYMENT VERIFICATION & OBJECT INVENTORY
+--------------------------------------------------------------------------------
+
+5.1 Target State Inventory Comparison:
+| Object Category | Expected Final | Actual Live | Status |
+| :--- | :--- | :--- | :--- |
+| User Tables | 42 | 42 | MATCH (100% Complete) |
+| Primary Keys | 42 | 42 | MATCH (1 per table) |
+| Foreign Keys | 56 | 56 | MATCH |
+| Unique Constraints | 21 | 21 | MATCH |
+| Check Constraints | 49 | 49 | MATCH |
+| Default Constraints | 67 | 67 | MATCH |
+| Triggers | 3 | 3 | MATCH |
+| Standalone Indexes | 14 | 14 | MATCH |
+| Total `sys.indexes` (User Tables) | 77 | 77 | MATCH (42 PK + 21 UQ + 14 Standalone) |
+| `dbo.[Role]` Rows | 0 | 0 | MATCH (Segregated) |
+| Protected `HSWRMS` User Tables | 39 | 39 | MATCH (Untouched) |
+
+5.2 Filtered Indexes Verification (4 Total, All Active):
+1. `dbo.AuditLog.IX_AuditLog_TargetRefId`
+   - Filter Definition: `([target_ref_id] IS NOT NULL)`
+   - Unique: 0, Filtered: 1 [VERIFIED]
+2. `dbo.PaymentTransaction.UX_PaymentTransaction_Reference`
+   - Filter Definition: `([transaction_reference] IS NOT NULL)`
+   - Unique: 1, Filtered: 1 [VERIFIED]
+3. `dbo.SpaTreatment.UQ_SpaTreatment_TreatmentCode`
+   - Filter Definition: `([treatment_code] IS NOT NULL)`
+   - Unique: 1, Filtered: 1 [VERIFIED]
+4. `dbo.User.IX_User_AccountStatus_LockedAt`
+   - Filter Definition: `([locked_at] IS NOT NULL)`
+   - Unique: 0, Filtered: 1 [VERIFIED]
+
+5.3 Triggers Verification (3 Total, All Active DML Triggers):
+1. `dbo.TR_SpaSession_ValidateScheduling` on `dbo.SpaSession`
+   - Type: AFTER INSERT, UPDATE | Status: ENABLED [VERIFIED]
+2. `dbo.TR_FolioItem_RecalculateTotal` on `dbo.FolioItem`
+   - Type: AFTER INSERT, UPDATE, DELETE | Status: ENABLED [VERIFIED]
+3. `dbo.TR_PaymentTransaction_RecalculateFolioPaid` on `dbo.PaymentTransaction`
+   - Type: AFTER INSERT, UPDATE, DELETE | Status: ENABLED [VERIFIED]
+
+5.4 Complete Standalone Indexes Inventory (14 Total):
+1. `AuditLog`: `IX_AuditLog_ActorCreatedAt`
+2. `AuditLog`: `IX_AuditLog_TargetRefId` (Filtered)
+3. `FolioItem`: `IX_FolioItem_Folio_Category`
+4. `IngredientBatch`: `IX_IngredientBatch_Ingredient_Expiry`
+5. `MealOrder`: `IX_MealOrder_Booking_Date`
+6. `PaymentTransaction`: `UX_PaymentTransaction_Reference` (Filtered)
+7. `PhysicalVilla`: `IX_PhysicalVilla_Status_Category` (Pre-existing)
+8. `RetreatBooking`: `IX_RetreatBooking_Customer_Status`
+9. `RetreatBooking`: `IX_RetreatBooking_Dates`
+10. `RightDelegation`: `IX_RightDelegation_Status_Expiry`
+11. `SpaSession`: `IX_SpaSession_Room_Time`
+12. `SpaSession`: `IX_SpaSession_Therapist_Time`
+13. `SpaTreatment`: `UQ_SpaTreatment_TreatmentCode` (Filtered, Repaired)
+14. `User`: `IX_User_AccountStatus_LockedAt` (Filtered)
+
+5.5 Complete 42 User Tables in `HSWRMS_TEST`:
+- Pre-Existing (20): `AuthIdentity`, `ConsentRecord`, `CustomerProfile`, `DietaryRequirement`,
+  `EmailOtp`, `FoodAllergy`, `HealthDataDeletionRequest`, `HealthProfile`,
+  `HealthProfileTherapyPreference`, `PhysicalVilla`, `ResidenceRecord`, `RetreatBooking`,
+  `RetreatPackage`, `RetreatPackageVillaCategory`, `Role`, `SpaTreatment`, `Therapist`,
+  `User`, `UserRole`, `VillaCategory`.
+- Deployed via Continuation (22): `AuditLog`, `CustomerReview`, `Folio`, `FolioItem`,
+  `Ingredient`, `IngredientBatch`, `Invoice`, `MealOrder`, `MealOrderItem`, `MenuItem`,
+  `MenuItemIngredient`, `PaymentTransaction`, `Permission`, `RetreatPackageSpaTreatment`,
+  `RightDelegation`, `RightDelegationPermission`, `RolePermission`, `SpaSession`,
+  `SystemConfiguration`, `TherapistTreatmentQualification`, `TreatmentRoom`,
+  `TreatmentRoomCompatibility`.
+
+5.6 Security Principals & Permissions State:
+- `hswrms_test_user` in `HSWRMS_TEST`: Exactly `GRANT CONNECT`. No database roles,
+  no table-level permissions.
+- `hswrms_test_user` in `HSWRMS`: Exactly 0 mappings.
+- Protected database [HSWRMS] remains 100% isolated and unchanged.
+
+--------------------------------------------------------------------------------
+6. GIT STATE VERIFICATION
+--------------------------------------------------------------------------------
+- Branch: `feature/hswrms-m1-m6-integration`
+- HEAD: `c2d2d6b01cb757319b3d4805b8b0262a261ca111`
+- Working Tree: Zero staged files. Zero tracked source modifications.
+- Untracked artifacts: Only generated review/deployment reports and generated DDL files.
+
+--------------------------------------------------------------------------------
+7. NEXT STEPS & PREREQUISITES FOR SEPARATE AUTHORIZATION
+--------------------------------------------------------------------------------
+With the complete 42-table schema baseline fully established and verified in [HSWRMS_TEST]:
+1. Role Seeds Authorization:
+   A separate request may be reviewed to execute the segregated Section 9 baseline
+   role seeds (`Customer`, `Receptionist`, `Therapist`, `F&B Staff`, `Manager`, `Admin`)
+   into `dbo.[Role]`.
+2. Test User DML Permissions:
+   A separate request may be reviewed to grant `db_datareader` and `db_datawriter`
+   to `hswrms_test_user` in [HSWRMS_TEST] only.
+3. Integration Testing & Application Startup:
+   Both remain strictly locked until explicit authorization.
+
+================================================================================
+FINAL VERDICT: CONTINUATION DEPLOYED AND VERIFIED
+================================================================================
+END OF REPORT — PHASE 5.8.3.85
+

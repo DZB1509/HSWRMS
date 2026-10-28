@@ -1,0 +1,238 @@
+================================================================================
+HSWRMS PHASE 5.8.3.83 — CONTINUATION PAYLOAD PREPARATION & VALIDATION REPORT
+================================================================================
+Timestamp: 2026-10-28T18:42:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Target Database: HSWRMS_TEST
+Continuation File: 05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql
+Payload SHA-256: 1EC0A4F1516A57802EC50EF9CCCE2A7D2A07E5FE19855535E50708DB3BD87F40
+Execution Mode: STATIC AUDIT & VALIDATION ONLY (ZERO SQL EXECUTION)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & VERDICT
+--------------------------------------------------------------------------------
+Phase 5.8.3.83 prepares and statically validates the dedicated partial schema
+continuation payload for database [HSWRMS_TEST].
+
+Key Validation Highlights:
+1. Non-Destructive Integrity: Preserves all 20 existing tables, 21 foreign keys,
+   11 unique constraints, 19 check constraints, and 39 default constraints in
+   [HSWRMS_TEST]. Zero DROP statements or table recreations.
+2. Complete Object Coverage: Contains exactly 1 repair index (`UQ_SpaTreatment_TreatmentCode`),
+   22 missing user tables, 3 triggers, and 12 missing non-clustered/filtered indexes.
+   Upon future authorized execution, object counts will reach exactly 42 tables,
+   56 FKs, 21 UQs, 14 indexes, and 3 triggers (100% parity with authoritative schema).
+3. Engine Settings Resolution: Injects mandatory session settings (`SET QUOTED_IDENTIFIER ON`,
+   `SET ANSI_NULLS ON`, etc.) at the script root, fully resolving SQL Server error 1934
+   for all filtered indexes.
+4. Target Safety: Enforces fail-closed target verification (`USE [HSWRMS_TEST]; GO IF DB_NAME() <> N'HSWRMS_TEST' ... THROW 51000`).
+   Zero references to `master` or `HSWRMS`.
+5. Data Segregation: Section 9 initial role seeds are strictly excluded from the
+   schema payload and segregated for separate human review and authorization.
+   Zero data mutations (`INSERT INTO`) exist in the file.
+
+FINAL VERDICT: CONTINUATION PAYLOAD READY FOR HUMAN REVIEW
+
+--------------------------------------------------------------------------------
+2. CONTINUATION PAYLOAD METRICS & CRYPTOGRAPHIC HASH
+--------------------------------------------------------------------------------
+- File Path: `05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql`
+- Size: 27,448 bytes
+- Line Count: 753 lines
+- SHA-256 Hash: `1EC0A4F1516A57802EC50EF9CCCE2A7D2A07E5FE19855535E50708DB3BD87F40`
+
+--------------------------------------------------------------------------------
+3. OBJECT-BY-OBJECT MAPPING & SOURCE RECONCILIATION
+--------------------------------------------------------------------------------
+
+3.1 Repair Item (Filtered Index on Existing Table):
+  - Index Name: `UQ_SpaTreatment_TreatmentCode`
+  - Target Table: `dbo.SpaTreatment` (Table 20, already exists)
+  - Definition: `CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode ON dbo.SpaTreatment (treatment_code) WHERE treatment_code IS NOT NULL;`
+  - Continuation Location: Lines 44-47
+  - Authoritative Source: `schema.sql` lines 473-476 / `HSWRMS_TEST_schema.sql` lines 476-479
+
+3.2 Remaining 22 User Tables (In Verified Dependency Order):
+  1. `dbo.RetreatPackageSpaTreatment` (Lines 54-71)
+     - Source: lines 480-497
+     - References: `dbo.RetreatPackage` (Existing), `dbo.SpaTreatment` (Existing)
+  2. `dbo.TreatmentRoom` (Lines 74-86)
+     - Source: lines 502-514
+     - References: None
+  3. `dbo.TherapistTreatmentQualification` (Lines 89-102)
+     - Source: lines 519-532
+     - References: `dbo.Therapist` (Existing), `dbo.SpaTreatment` (Existing)
+  4. `dbo.TreatmentRoomCompatibility` (Lines 105-117)
+     - Source: lines 537-549
+     - References: `dbo.TreatmentRoom` (Continuation Table 2), `dbo.SpaTreatment` (Existing)
+  5. `dbo.SpaSession` (Lines 120-161)
+     - Source: lines 554-595
+     - References: `dbo.RetreatBooking` (Existing), `dbo.SpaTreatment` (Existing),
+       `dbo.Therapist` (Existing), `dbo.TreatmentRoom` (Continuation Table 2)
+  6. `dbo.MenuItem` (Lines 234-251)
+     - Source: lines 661-678
+     - References: None
+  7. `dbo.Ingredient` (Lines 254-261)
+     - Source: lines 683-690
+     - References: None
+  8. `dbo.MenuItemIngredient` (Lines 264-279)
+     - Source: lines 695-710
+     - References: `dbo.MenuItem` (Continuation Table 6), `dbo.Ingredient` (Continuation Table 7)
+  9. `dbo.IngredientBatch` (Lines 282-298)
+     - Source: lines 715-731
+     - References: `dbo.Ingredient` (Continuation Table 7)
+  10. `dbo.MealOrder` (Lines 301-320)
+     - Source: lines 736-755
+     - References: `dbo.RetreatBooking` (Existing)
+  11. `dbo.MealOrderItem` (Lines 323-337)
+     - Source: lines 760-774
+     - References: `dbo.MealOrder` (Continuation Table 10), `dbo.MenuItem` (Continuation Table 6)
+  12. `dbo.Folio` (Lines 346-367)
+     - Source: lines 783-804
+     - References: `dbo.RetreatBooking` (Existing)
+  13. `dbo.FolioItem` (Lines 370-418)
+     - Source: lines 809-857
+     - References: `dbo.Folio` (Continuation Table 12), `dbo.RetreatBooking` (Existing),
+       `dbo.SpaSession` (Continuation Table 5), `dbo.MealOrder` (Continuation Table 10)
+  14. `dbo.Invoice` (Lines 421-443)
+     - Source: lines 862-884
+     - References: `dbo.Folio` (Continuation Table 12)
+  15. `dbo.PaymentTransaction` (Lines 446-478)
+     - Source: lines 889-921
+     - References: `dbo.RetreatBooking` (Existing), `dbo.Invoice` (Continuation Table 14)
+  16. `dbo.CustomerReview` (Lines 486-507)
+     - Source: lines 929-950
+     - References: `dbo.RetreatBooking` (Existing)
+  17. `dbo.[Permission]` (Lines 581-595)
+     - Source: lines 1024-1038
+     - References: None
+  18. `dbo.RolePermission` (Lines 598-608)
+     - Source: lines 1043-1053
+     - References: `dbo.[Role]` (Existing), `dbo.[Permission]` (Continuation Table 17)
+  19. `dbo.SystemConfiguration` (Lines 611-637)
+     - Source: lines 1058-1084
+     - References: `dbo.[User]` (Existing)
+  20. `dbo.RightDelegation` (Lines 640-667)
+     - Source: lines 1089-1116
+     - References: `dbo.[User]` (Existing, 3 FK references)
+  21. `dbo.RightDelegationPermission` (Lines 670-682)
+     - Source: lines 1121-1133
+     - References: `dbo.RightDelegation` (Continuation Table 20), `dbo.[Permission]` (Continuation Table 17)
+  22. `dbo.AuditLog` (Lines 685-706)
+     - Source: lines 1138-1159
+     - References: `dbo.[User]` (Existing), `dbo.RightDelegation` (Continuation Table 20)
+
+3.3 DML Triggers (3 Triggers):
+  1. `dbo.TR_SpaSession_ValidateScheduling` (Lines 178-228)
+     - Source: lines 606-656
+     - Target: `dbo.SpaSession`
+  2. `dbo.TR_FolioItem_RecalculateTotal` (Lines 512-534)
+     - Source: lines 955-977
+     - Target: `dbo.FolioItem`
+  3. `dbo.TR_PaymentTransaction_RecalculateFolioPaid` (Lines 537-573)
+     - Source: lines 980-1016
+     - Target: `dbo.PaymentTransaction`
+
+3.4 Non-Clustered & Filtered Indexes (12 Indexes):
+  1. `IX_SpaSession_Therapist_Time` (Line 164)
+  2. `IX_SpaSession_Room_Time` (Line 168)
+  3. `UX_PaymentTransaction_Reference` (Line 481, Filtered)
+  4. `IX_AuditLog_ActorCreatedAt` (Line 709)
+  5. `IX_RetreatBooking_Customer_Status` (Line 718)
+  6. `IX_RetreatBooking_Dates` (Line 722)
+  7. `IX_MealOrder_Booking_Date` (Line 726)
+  8. `IX_FolioItem_Folio_Category` (Line 730)
+  9. `IX_IngredientBatch_Ingredient_Expiry` (Line 734)
+  10. `IX_User_AccountStatus_LockedAt` (Line 738, Filtered)
+  11. `IX_RightDelegation_Status_Expiry` (Line 743)
+  12. `IX_AuditLog_TargetRefId` (Line 747, Filtered)
+
+--------------------------------------------------------------------------------
+4. SESSION OPTIONS & FILTERED INDEX ANALYSIS
+--------------------------------------------------------------------------------
+4.1 Root Cause & Required Options:
+    SQL Server Engine rules mandate specific connection settings when evaluating
+    filtered indexes or indexed views. The continuation script injects these settings
+    at lines 30-38:
+    ```sql
+    SET QUOTED_IDENTIFIER ON;
+    SET ANSI_NULLS ON;
+    SET ANSI_PADDING ON;
+    SET ANSI_WARNINGS ON;
+    SET ARITHABORT ON;
+    SET CONCAT_NULL_YIELDS_NULL ON;
+    SET NUMERIC_ROUNDABORT OFF;
+    GO
+    ```
+
+4.2 Scope of Protection:
+    - `QUOTED_IDENTIFIER ON` and `ANSI_NULLS ON` remain in effect for the entire
+      duration of the SQLCMD session.
+    - All four filtered indexes (`UQ_SpaTreatment_TreatmentCode`, `UX_PaymentTransaction_Reference`,
+      `IX_User_AccountStatus_LockedAt`, `IX_AuditLog_TargetRefId`) are protected and
+      will compile without error 1934.
+    - Planned invocation includes the client-level `-I` flag as defense-in-depth:
+      `sqlcmd -S localhost -d HSWRMS_TEST -E -b -I -i ...`
+
+--------------------------------------------------------------------------------
+5. SEGREGATION OF SECTION 9 INITIAL ROLE SEED DATA
+--------------------------------------------------------------------------------
+5.1 Segregation Compliance:
+    - As instructed, Section 9 role seed statements (`INSERT INTO dbo.[Role]...`)
+      have been STRICTLY EXCLUDED from `HSWRMS_TEST_schema_continuation.sql`.
+    - The continuation script contains ZERO `INSERT INTO` statements.
+    - Zero data mutations will occur when this continuation payload executes.
+
+5.2 Planned Separate Role Seed Fragment (For Future Review):
+    Once the 42-table schema deployment is completely verified, the following
+    isolated fragment may be reviewed for separate execution:
+    ```sql
+    USE [HSWRMS_TEST];
+    GO
+    IF DB_NAME() = N'HSWRMS_TEST' AND (SELECT COUNT(*) FROM dbo.[Role]) = 0
+    BEGIN
+        INSERT INTO dbo.[Role] (role_name, description) VALUES
+            (N'Customer',     N'Authenticated resort customer.'),
+            (N'Receptionist', N'Front-desk and stay operations staff.'),
+            (N'Therapist',    N'Spa Therapist / Yoga Instructor.'),
+            (N'F&B Staff',    N'Food and beverage operational staff / Chef.'),
+            (N'Manager',      N'Management monitoring and approved delegated functions.'),
+            (N'Admin',        N'System administration and governance.');
+    END
+    GO
+    ```
+
+--------------------------------------------------------------------------------
+6. STATIC VALIDATION AUDIT RESULTS
+--------------------------------------------------------------------------------
+- Database Target Check: Enforced at line 22 (`IF DB_NAME() <> N'HSWRMS_TEST' ... THROW 51000`).
+- Cross-Database References: Exactly 0 occurrences of `USE [master]`, `USE [HSWRMS]`,
+  or 3-part names (`HSWRMS.dbo.*`).
+- Destructive Commands: Exactly 0 occurrences of `DROP TABLE`, `DROP DATABASE`, or `TRUNCATE`.
+- Existing Object Collisions: None of the 20 existing tables are recreated.
+- Foreign Key Completeness: All 35 missing foreign keys reference valid parents
+  (either among the 20 existing tables or defined earlier in the continuation script).
+- GO Batch Boundaries: Every DDL statement and trigger definition is cleanly separated by `GO`.
+- SQLCMD Directives: Zero client directives (`:r`, etc.) present.
+
+--------------------------------------------------------------------------------
+7. RESIDUAL RISKS & PREREQUISITES
+--------------------------------------------------------------------------------
+1. Execution Identity: Must be executed by Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`).
+2. Live Pre-Check: Prior to execution, a read-only check must confirm that the 20 existing
+   tables in `HSWRMS_TEST` remain present, online, and empty.
+3. Verification Suite: Following execution, a read-only query must assert:
+   - Total Tables: exactly 42
+   - Foreign Keys: exactly 56
+   - Unique Constraints: exactly 21
+   - Indexes: exactly 14
+   - Triggers: exactly 3
+   - Primary DB `HSWRMS`: 0 modifications
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.83
+================================================================================
+

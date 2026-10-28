@@ -1,0 +1,277 @@
+================================================================================
+HSWRMS READ-ONLY SQL SERVER PREFLIGHT REPORT
+PHASE 5.8.3.58 — LIVE METADATA & STATIC SAFEGUARD AUDIT
+================================================================================
+Date: 2026-10-28
+Workspace Target: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Read-Only OS & SQL Server Instance Preflight Inspection
+Execution Mode: STRICTLY READ-ONLY
+                (Zero database mutations; zero DDL/DML; zero script executions;
+                zero Git mutations; zero application source modifications;
+                zero secret exposure)
+================================================================================
+
+1. EXECUTIVE SUMMARY & SAFETY BOUNDARY COMPLIANCE
+--------------------------------------------------------------------------------
+Phase 5.8.3.58 executes the first approved, read-only preflight inspection for the
+HSWRMS test-environment provisioning plan formulated in Phase 5.8.3.57.
+
+STRICT READ-ONLY SAFETY BOUNDARIES HONORED IN THIS PHASE:
+  [X] Zero databases created, altered, dropped, truncated, or renamed.
+  [X] Zero logins, users, credentials, or certificates created or modified.
+  [X] Zero permissions granted, revoked, or denied.
+  [X] Zero DDL, DML, migration scripts, or seed data executed.
+  [X] Zero provisioning scripts executed (including DryRun or WhatIf).
+  [X] Zero application connections opened against SQL Server.
+  [X] Zero JDBC smoke tests or E2E tests executed.
+  [X] Zero modifications to schema.sql, migrations, or application code.
+  [X] Zero mutations of Git state (no commit, checkout, reset, stash, or branch switch).
+  [X] Workspace B untouched.
+  [X] Zero passwords, tokens, or sensitive credentials printed or recorded.
+
+ALL preflight checks were completed with live operating system and SQL Server
+engine metadata.
+
+GATE DECISION: PREFLIGHT PASS — READY TO REVIEW THE NEXT STAGE.
+
+
+2. STEP 1: LOCAL ENVIRONMENT & OPERATING SYSTEM INSPECTION
+--------------------------------------------------------------------------------
+A. Windows Services Inspection:
+   - Tool: PowerShell Get-Service query (read-only OS service manager).
+   - Evidence:
+     * Service Name: 'MSSQLSERVER'
+       Display Name: 'SQL Server (MSSQLSERVER)'
+       Status: RUNNING
+     * Service Name: 'MSSQL$SQLEXPRESS'
+       Display Name: 'SQL Server (SQLEXPRESS)'
+       Status: Stopped
+     * Service Name: 'SQLSERVERAGENT'
+       Display Name: 'SQL Server Agent (MSSQLSERVER)'
+       Status: Stopped
+     * Service Name: 'SQLWriter'
+       Display Name: 'SQL Server VSS Writer'
+       Status: RUNNING
+   - Finding: The primary default instance 'MSSQLSERVER' is active and running.
+     No service states were modified or reconfigured.
+
+B. TCP Network Listener Inspection:
+   - Tool: Test-NetConnection -ComputerName localhost -Port 1433 (read-only TCP probe).
+   - Evidence:
+     * ComputerName: 'localhost'
+     * RemoteAddress: '::1' (IPv6 Loopback) / '127.0.0.1' (IPv4 Loopback)
+     * RemotePort: 1433
+     * TcpTestSucceeded: True
+   - Finding: Microsoft SQL Server is listening and responding to incoming TCP
+     connections on default port 1433.
+
+C. Client Tooling Inspection:
+   - Tool: Get-Command sqlcmd (read-only executable resolution).
+   - Evidence:
+     * Command: 'SQLCMD.EXE'
+     * Source: 'C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\SQLCMD.EXE'
+   - Finding: Official Microsoft ODBC 17 SQLCMD client utility is installed and
+     available for administrative maintenance.
+
+
+3. STEP 2: LIVE DATABASE & SECURITY METADATA INSPECTION
+--------------------------------------------------------------------------------
+Read-only metadata inspection was executed via administrative Windows Integrated
+Security (`sqlcmd -S localhost -E -b`) with zero state modification.
+
+A. Server Authentication Mode:
+   - Query: SELECT SERVERPROPERTY('IsIntegratedSecurityOnly') AS IsIntegratedSecurityOnly;
+   - Evidence: Output = 0
+   - Finding: '0' signifies Mixed Mode Authentication (both Windows Authentication
+     and SQL Server Authentication are enabled). This satisfies the requirement
+     for dedicated SQL login 'hswrms_test_user'.
+   - Admin Context: SYSTEM_USER = 'MYLIFE-MYRULE-1\ADMIN', IS_SRVROLEMEMBER('sysadmin') = 1.
+
+B. Database Existence & State Verification:
+   - Query: SELECT name, database_id, state_desc, collation_name, create_date FROM sys.databases;
+   - Evidence:
+     * 'HSWRMS':
+       - database_id: 44
+       - state_desc: ONLINE
+       - create_date: 2026-10-05 03:20:56.840
+     * 'HSWRMS_TEST':
+       - database_id: 45
+       - state_desc: ONLINE
+       - create_date: 2026-10-27 16:56:02.727
+   - Finding: Both databases exist and are ONLINE.
+     'HSWRMS_TEST' was provisioned during previous infrastructure setup (2026-10-27).
+
+C. Test Database Table Inventory:
+   - Query: USE [HSWRMS_TEST]; SELECT COUNT(*) AS TableCount FROM sys.tables WHERE is_ms_shipped = 0;
+   - Evidence: TableCount = 0
+   - Finding: 'HSWRMS_TEST' contains ZERO user tables. It is completely clean and
+     unpopulated, ready for sanitized baseline schema application.
+
+D. Test Login Existence & Privilege Verification:
+   - Query: SELECT name, principal_id, type_desc, is_disabled, default_database_name FROM sys.server_principals;
+   - Evidence:
+     * Principal Name: 'hswrms_test_user'
+     * principal_id: 276
+     * type_desc: SQL_LOGIN
+     * is_disabled: 0 (Enabled)
+     * default_database_name: 'HSWRMS_TEST'
+     * create_date: 2026-10-27 16:56:02.870
+
+E. Test Login Server Role & Permission Boundary:
+   - Query 1: SELECT r.name AS ServerRole FROM sys.server_role_members rm
+              JOIN sys.server_principals r ON rm.role_principal_id = r.principal_id
+              WHERE rm.member_principal_id = SUSER_ID('hswrms_test_user');
+   - Evidence: Output = (0 rows returned)
+   - Finding: 'hswrms_test_user' has ZERO server roles (not sysadmin, not serveradmin,
+     not dbcreator, etc.).
+
+   - Query 2: SELECT permission_name, state_desc FROM sys.server_permissions
+              WHERE grantee_principal_id = SUSER_ID('hswrms_test_user');
+   - Evidence: Output = [CONNECT SQL | GRANT] (1 row)
+   - Finding: 'hswrms_test_user' possesses ONLY 'CONNECT SQL'. Zero elevated server
+     permissions exist.
+
+F. Primary Database Isolation Verification (Crucial):
+   - Query 1: USE [HSWRMS]; SELECT name, type_desc FROM sys.database_principals
+              WHERE name = 'hswrms_test_user' OR sid = SUSER_SID('hswrms_test_user');
+   - Evidence: Output = (0 rows returned)
+   - Finding: 'hswrms_test_user' has ZERO user mappings in primary database 'HSWRMS'.
+
+   - Query 2: USE [HSWRMS]; SELECT name, hasdbaccess FROM sys.sysusers WHERE name = 'guest';
+   - Evidence: guest.hasdbaccess = 0
+   - Finding: Guest access in 'HSWRMS' is strictly disabled. No login without an explicit
+     user mapping can connect to or access 'HSWRMS'.
+
+G. Test Database User Mapping & Permissions:
+   - Query 1: USE [HSWRMS_TEST]; SELECT name, type_desc FROM sys.database_principals
+              WHERE name = 'hswrms_test_user';
+   - Evidence: Output = [hswrms_test_user | SQL_USER]
+
+   - Query 2: USE [HSWRMS_TEST]; SELECT r.name AS DbRole FROM sys.database_role_members rm
+              JOIN sys.database_principals r ON rm.role_principal_id = r.principal_id
+              WHERE rm.member_principal_id = DATABASE_PRINCIPAL_ID('hswrms_test_user');
+   - Evidence: Output = (0 rows returned)
+   - Finding: 'hswrms_test_user' has ZERO database roles in 'HSWRMS_TEST' (not db_owner).
+
+   - Query 3: USE [HSWRMS_TEST]; SELECT permission_name, state_desc FROM sys.database_permissions
+              WHERE grantee_principal_id = DATABASE_PRINCIPAL_ID('hswrms_test_user');
+   - Evidence: Output = [CONNECT | GRANT] (1 row)
+   - Finding: User currently has only CONNECT permission in 'HSWRMS_TEST'.
+
+
+4. STEP 3: STATIC REVIEW OF PROVISIONING SCRIPT SAFEGUARDS
+--------------------------------------------------------------------------------
+Inspected File: `05_Development/database/scripts/provision_hswrms_test.ps1` (440 lines).
+(Inspected statically without execution).
+
+A. Parameter & Boundary Whitelisting:
+   - Line 61: `[ValidateSet("HSWRMS_TEST")] [string]$DatabaseName = "HSWRMS_TEST"`
+   - Line 65: `[ValidateSet("hswrms_test_user")] [string]$LoginName = "hswrms_test_user"`
+   - Line 108: Regex check `^[A-Za-z0-9_\-\.\\]+$` prevents connection string manipulation.
+   - Lines 113-118: Explicit fail-fast assertions enforce strictly `$Db -eq "HSWRMS_TEST"`
+     and `$Login -eq "hswrms_test_user"`.
+
+B. Password Transport & Injection Resistance:
+   - Lines 120-145: Reject null, empty, whitespace-only, lengths < 12 or > 128, forbidden
+     placeholders ('REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION', 'CHANGE_ME_STRONG_PASSWORD!'),
+     and unresolved macro patterns ('$(':').
+   - Lines 328-335: Transmits credentials over TDS as typed RPC parameter
+     `System.Data.SqlDbType.NVarChar(128)` into `sys.sp_executesql`, wrapped with
+     server-side `QUOTENAME(@password, '''''''')`.
+   - Complete immunity against SQLCMD macro string interpolation attacks.
+
+C. Primary Database Isolation Guard:
+   - Lines 291-304: Explicit preflight queries `HSWRMS.sys.database_principals`.
+     Throws `CRITICAL ISOLATION FAILURE` if `$LoginName` is mapped in 'HSWRMS'.
+
+D. Fail-Closed Handling for Existing Objects:
+   - By default, `$AllowExistingDb` and `$AllowExistingLogin` are `$false`.
+   - If database exists, script halts with `FAIL CLOSED` (line 241).
+   - If login exists, script halts with `FAIL CLOSED` (line 257).
+   - When `-AllowExistingDb` and `-AllowExistingLogin` are authorized:
+     Lines 260-283 actively assert that existing login is enabled, has default DB in
+     `('HSWRMS_TEST', 'master')`, has ZERO server roles, and has ZERO server permissions
+     other than `CONNECT SQL`.
+   - Note for Future Execution: Since 'HSWRMS_TEST' and 'hswrms_test_user' already exist,
+     future execution of `provision_hswrms_test.ps1` will safely require `-AllowExistingDb`
+     and `-AllowExistingLogin` switches.
+
+
+5. STEP 4: RECONFIRMATION OF SCHEMA EXECUTION HAZARD
+--------------------------------------------------------------------------------
+Inspected File: `05_Development/database/schema.sql` (1,221 lines).
+(Inspected statically without execution).
+
+A. The Beginning of `schema.sql` (Lines 18-28):
+   ```sql
+   18: USE [master];
+   19: GO
+   20: 
+   21: IF DB_ID(N'HSWRMS') IS NULL
+   22: BEGIN
+   23:     CREATE DATABASE [HSWRMS];
+   24: END
+   25: GO
+   26: 
+   27: USE [HSWRMS];
+   28: GO
+   ```
+
+B. Execution Context Hazard Analysis:
+   - If an administrator or script invokes:
+     `sqlcmd -S localhost -d HSWRMS_TEST -i 05_Development/database/schema.sql`
+   - The CLI parameter `-d HSWRMS_TEST` sets the initial database context.
+   - However, SQLCMD parses and executes batch-by-batch:
+     1. Batch 1 (lines 18-19): Switches context to `master`.
+     2. Batch 2 (lines 21-25): Asserts `HSWRMS` database existence.
+     3. Batch 3 (lines 27-28): Explicitly executes `USE [HSWRMS]; GO`.
+   - Result: All subsequent 1,193 lines of DDL (creating tables, constraints, indexes,
+     and triggers) are executed against the primary database `HSWRMS`, NOT `HSWRMS_TEST`!
+   - This overrides command-line `-d HSWRMS_TEST` completely.
+
+C. Mandatory Mitigation Requirement:
+   - The original `schema.sql` MUST NOT be passed directly to SQLCMD for test provisioning.
+   - A sanitized payload must be prepared prior to Stage 4 execution:
+     Lines 18-28 must be stripped, or line 27 replaced with `USE [HSWRMS_TEST]; GO`.
+
+
+6. STEP 5: EVIDENCE SUMMARY & SAFETY DECISION
+--------------------------------------------------------------------------------
+A. Completed Checks & Evidence Matrix:
+   +-----------------------------+---------------------------------------+---------------------+
+   | Check Item                  | Evidence Source                       | Verified Result     |
+   +-----------------------------+---------------------------------------+---------------------+
+   | 1. SQL Server Service State | Get-Service -Name '*sql*'             | MSSQLSERVER RUNNING |
+   | 2. TCP Port 1433 Listener   | Test-NetConnection localhost:1433     | TcpTestSucceeded    |
+   | 3. SQL Server Auth Mode     | SERVERPROPERTY(IsIntegratedSecurity)  | 0 (Mixed Mode ON)   |
+   | 4. Primary DB [HSWRMS]      | sys.databases (database_id = 44)      | ONLINE              |
+   | 5. Test DB [HSWRMS_TEST]    | sys.databases (database_id = 45)      | ONLINE              |
+   | 6. Test DB Table Count      | sys.tables WHERE is_ms_shipped = 0    | 0 (Clean & Empty)   |
+   | 7. Test Login Existence     | sys.server_principals (id = 276)      | Enabled             |
+   | 8. Test Login Server Roles  | sys.server_role_members               | 0 (Unprivileged)    |
+   | 9. Test Login Server Perms  | sys.server_permissions               | Only CONNECT SQL    |
+   | 10. HSWRMS Isolation        | HSWRMS.sys.database_principals        | 0 Mappings (PASS)   |
+   | 11. HSWRMS Guest Access     | HSWRMS.sys.sysusers (guest)           | hasdbaccess = 0     |
+   | 12. Test DB Permissions     | HSWRMS_TEST.sys.database_permissions  | Only CONNECT        |
+   | 13. Script Safeguards       | Static audit of provision script      | Fully Whitelisted   |
+   | 14. DDL Hazard Identified   | Static audit of schema.sql:18-28      | Documented Hazard   |
+   +-----------------------------+---------------------------------------+---------------------+
+
+B. Incomplete Checks:
+   - None. All required OS, network, and SQL metadata preflight checks were
+     successfully completed using authorized read-only administrative inspection.
+
+C. Safety Blockers:
+   - Zero safety blockers identified.
+   - Isolation between `HSWRMS` and `HSWRMS_TEST` is fully intact and verified.
+
+D. Database Operations Statement:
+   - ZERO database-changing operations occurred during Phase 5.8.3.58.
+   - No data, schema, login, permission, or service state was modified.
+
+E. Final Decision:
+   PREFLIGHT PASS — READY TO REVIEW THE NEXT STAGE.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.58
+================================================================================

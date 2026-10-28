@@ -1,0 +1,226 @@
+================================================================================
+HSWRMS PHASE 5.8.3.76 — ROLE MAPPING REVIEW & TEST-DB READINESS PREFLIGHT
+================================================================================
+Timestamp: 2026-10-28T17:45:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+Execution Mode: STRICTLY READ-ONLY PREFLIGHT & REVIEW
+                (Zero code mutations; zero git commits/staging; zero SQL DDL/DML;
+                zero database connections opened for mutation; zero secrets exposed)
+================================================================================
+
+--------------------------------------------------------------------------------
+SECTION 1: PART A — F&B STAFF ROLE MAPPING CODE REVIEW
+--------------------------------------------------------------------------------
+1.1 Git Working Tree & Staging State Verification
+    - Current Branch: feature/hswrms-m1-m6-integration
+    - Expected & Actual HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+    - Staging Area: Clean (0 files staged, `git diff --cached` is empty)
+    - Tracked Modified Files:
+      1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+      2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+    - Untracked New Test File:
+      3. `05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+    - Untracked Schema & Migration Artifacts Preserved:
+      * `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+      * `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql`
+      * `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql`
+      * `05_Development/database/migrations/V005__m6_audit_log.sql`
+      * `05_Development/database/migrations/draft_m6_governance_and_delegation.sql`
+      * All historical reports in `06_Reports/`
+
+1.2 Detailed Diff Review
+    A. `CustomUserDetails.java`:
+       - Previous implementation performed naive uppercase conversion:
+         `role.startsWith("ROLE_") ? role : "ROLE_" + role.toUpperCase()`
+         converting DB role "F&B Staff" into "ROLE_F&B STAFF".
+       - New implementation delegates to static helper `normalizeRoleAuthorities(String role)`:
+         * Strips any leading "ROLE_" prefix (case-insensitive).
+         * Strips whitespace and underscores to form a compact token.
+         * Evaluates tokens "F&BSTAFF", "FBSTAFF", "FNBSTAFF" and maps to
+           `List.of("ROLE_FNB_STAFF", "ROLE_F&B STAFF")`.
+         * Maps all standard roles ("Customer", "Receptionist", "Therapist", "Manager", "Admin")
+           to `"ROLE_" + upper.replace(' ', '_')`.
+         * Returns empty list for null, empty, or whitespace-only inputs.
+         * Wraps in `.flatMap(...).distinct().map(SimpleGrantedAuthority::new)`.
+
+    B. `CustomUserDetailsTest.java`:
+       - Introduces 6 comprehensive unit tests covering:
+         * ROLE-MAP-01: Canonical DB role "F&B Staff" maps to ROLE_FNB_STAFF.
+         * ROLE-MAP-02: Aliases ("FB_STAFF", "fnb_staff", "ROLE_FNB_STAFF", etc.) map to ROLE_FNB_STAFF.
+         * ROLE-MAP-03: Standard non-F&B roles map cleanly without side effects.
+         * ROLE-MAP-04: Null and whitespace handling is fail-safe.
+         * ROLE-MAP-05: Authorities set in CustomUserDetails for DB role "F&B Staff".
+         * ROLE-MAP-06: Null roles list handled without NullPointerException.
+
+    C. `FnbControllersSecurityTest.java`:
+       - Updated test fixtures:
+         * `fnbRole` created as `Role("F&B Staff", ...)`, exactly matching `schema.sql` Section 9.
+         * `fnbStaffToken` issued with `List.of("F&B Staff")`, exercising real `AuthService.login()` flow.
+         * Added authentic `customerToken`, `managerToken`, `adminToken` fixtures.
+       - Extended test coverage from 8 to 14 tests:
+         * FNB-SEC-01: Unauthenticated -> 401 Unauthorized.
+         * FNB-SEC-02: Customer -> 403 Forbidden on KDS queue.
+         * FNB-SEC-03: F&B Staff (DB 'F&B Staff') -> 200 OK on KDS queue.
+         * FNB-SEC-04: Customer -> 403 Forbidden on KDS status update.
+         * FNB-SEC-05: F&B Staff -> 200 OK on KDS status update.
+         * FNB-SEC-06: Public menu catalog -> 200 OK.
+         * FNB-SEC-07: Customer meal ordering for own stay -> 201 Created.
+         * FNB-SEC-08: Unauthenticated meal order -> 401 Unauthorized.
+         * FNB-SEC-09: F&B Staff -> 200 OK on KDS dashboard KPIs.
+         * FNB-SEC-10: F&B Staff -> 200 OK on KDS order details.
+         * FNB-SEC-11: Manager -> 200 OK on KDS queue and dashboard KPIs.
+         * FNB-SEC-12: Admin -> 200 OK on KDS queue and dashboard KPIs.
+         * FNB-SEC-13: Customer -> 403 Forbidden on KDS dashboard KPIs.
+         * FNB-SEC-14: Customer -> 403 Forbidden on KDS order details.
+
+1.3 Analysis of `normalizeRoleAuthorities()`
+    - Authority Alignment:
+      Spring Security's `@PreAuthorize("hasAnyRole('FNB_STAFF', 'MANAGER', 'ADMIN')")`
+      and `SecurityConfig.java` line 153 `.hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN")`
+      both check for `ROLE_FNB_STAFF`. The mapping guarantees this authority is granted.
+    - Evaluation of Redundant Alias `ROLE_F&B STAFF`:
+      * Question: Is generating `ROLE_F&B STAFF` in addition to `ROLE_FNB_STAFF` strictly necessary?
+      * Finding: NO. Zero components, endpoints, or tests in either backend or frontend check
+        for `ROLE_F&B STAFF`. All authorization checks use `FNB_STAFF` or `ROLE_FNB_STAFF`.
+      * Security Impact: Harmless. `ROLE_F&B STAFF` does not match any Spring Security rules
+        or grant any elevated privileges.
+      * Recommendation: If strict purity is desired, changing line 58 of `CustomUserDetails.java`
+        from `return List.of("ROLE_FNB_STAFF", "ROLE_F&B STAFF");` to `return List.of("ROLE_FNB_STAFF");`
+        is a clean 1-line simplification. However, keeping both is also completely safe.
+    - Security Invariance:
+      * Zero privilege escalation: F&B Staff cannot access Admin endpoints (`/api/v1/admin/**`)
+        or manage users.
+      * Customer, Receptionist, Therapist, Manager, and Admin roles retain their exact mappings:
+        `ROLE_CUSTOMER`, `ROLE_RECEPTIONIST`, `ROLE_THERAPIST`, `ROLE_MANAGER`, `ROLE_ADMIN`.
+      * Detailed S39 view/update evaluation via `@perm.has('S39', 'V')` remains enforced.
+
+1.4 Verification of Canonical Database Role Usage in Tests
+    - `FnbControllersSecurityTest` now generates tokens using `List.of("F&B Staff")`.
+    - This accurately replicates production behavior where `AuthService.login()` reads
+      `Role.getRoleName()` directly from database table `dbo.[Role]`.
+    - Bypasses and artificial test mocks using `FNB_STAFF` as role claim have been eliminated.
+
+1.5 Part A Conclusion
+    >>> ROLE FIX READY FOR COMMIT <<<
+    The role mapping fix is robust, clean, well-tested (100% pass across 37 security tests),
+    and strictly preserves all RBAC security invariants.
+
+--------------------------------------------------------------------------------
+SECTION 2: PART B — TEST DATABASE READINESS PREFLIGHT
+--------------------------------------------------------------------------------
+2.1 Target Database State ([HSWRMS_TEST])
+    - Database Existence: Database `[HSWRMS_TEST]` exists on the local Microsoft SQL Server
+      instance (`database_id = 45`) and is `ONLINE`.
+    - Schema Status: Clean / Empty Slate.
+      `SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0` returns `0`.
+      Zero user tables have been deployed to date.
+
+2.2 Schema Deployment Mechanism & Identity Requirements
+    - Prohibited Action:
+      `05_Development/database/schema.sql` MUST NOT be executed directly against `[HSWRMS_TEST]`.
+      Lines 18-28 of `schema.sql` hardcode:
+        `USE [master]; GO IF DB_ID(N'HSWRMS') IS NULL CREATE DATABASE [HSWRMS]; GO USE [HSWRMS]; GO`
+      Direct execution would divert DDL execution into the primary production database `[HSWRMS]`.
+    - Authorized Payload:
+      `05_Development/database/generated/HSWRMS_TEST_schema.sql` is the verified, dedicated
+      payload. It enforces an immediate fail-closed guard:
+        `USE [HSWRMS_TEST]; GO IF DB_NAME() <> N'HSWRMS_TEST' THROW 51000, '...', 1;`
+      Cryptographic hash SHA-256: `DB643DDBC0E5CF5BE848D1CF6EA33DC51B124B89DFAC0CE327CAEEE0C91E6D70`.
+    - Execution Identity:
+      DDL deployment requires an administrative identity (Windows Administrator via `-E`,
+      specifically `MYLIFE-MYRULE-1\ADMIN` with sysadmin role).
+      The runtime test user `hswrms_test_user` CANNOT and MUST NOT execute the DDL payload.
+
+2.3 Startup Seeders & Bootstrap Trigger Conditions
+    - `DevAccountBootstrap` (`05_Development/backend/src/main/java/com/heavenstay/hswrms/config/DevAccountBootstrap.java`):
+      * Trigger Condition: `@Profile("dev")`.
+      * Action: Seeds 6 canonical roles and 6 active demo accounts sharing password `DevDemo123!`.
+      * Behavior in Test Profile: Under profile `sqlserver-test` (without `dev`), this runner is INACTIVE.
+    - `M5DataInitializer` (`05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/M5DataInitializer.java`):
+      * Trigger Condition: `@ConditionalOnProperty(name = "app.seed.demo-data", havingValue = "true")`.
+      * Action: Seeds Eleanor Vance stay, folio, and billing transactions.
+      * Behavior in Test Profile: Property defaults to `false` in `application.yml` and
+        `application-sqlserver-test.yml`. It will NOT run unless explicitly enabled.
+    - `M6DataInitializer` (`05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/M6DataInitializer.java`):
+      * Trigger Condition: Unconditional `@Component` (runs on full application startup).
+      * Action: Idempotently ensures baseline permissions catalogue (`DEFAULT_PERMISSIONS`),
+        role-permission links (`RolePermission`), and system configuration parameters exist.
+
+2.4 Runtime Test Identity Verification (`hswrms_test_user`)
+    - Server Level:
+      * Server Roles: 0 (no sysadmin, no dbcreator).
+      * Server Permissions: Exactly 1 (`CONNECT SQL`).
+    - Isolation Against Primary Database `[HSWRMS]`:
+      * User mappings in `[HSWRMS]`: Exactly 0.
+      * Guest user in `[HSWRMS]`: `hasdbaccess = 0` (strictly disabled).
+      * Total isolation confirmed: `hswrms_test_user` has zero access to `[HSWRMS]`.
+    - Permissions in `[HSWRMS_TEST]`:
+      * Current status: User exists (`SQL_USER`) with ONLY `CONNECT` permission.
+      * Gap: Spring Boot runs with `spring.jpa.hibernate.ddl-auto: none`. While no DDL is
+        required from `hswrms_test_user`, the application repositories require DML
+        (`SELECT, INSERT, UPDATE, DELETE`) to operate.
+      * Remediation Plan: Following DDL deployment by Windows Admin, `hswrms_test_user`
+        must be granted `db_datareader` and `db_datawriter` role membership inside `[HSWRMS_TEST]`.
+
+2.5 Schema & Migration Parity
+    - Structural Parity:
+      `diff --no-index schema.sql HSWRMS_TEST_schema.sql` confirms 100% parity across
+      all 42 tables, 56 foreign keys, 21 unique constraints, 12 indexes, and 3 triggers.
+    - Migrations Relationship:
+      Migrations `V003`, `V004`, and `V005` were incremental development patches.
+      All their structural additions are already incorporated into the authoritative 42-table
+      `schema.sql` and `HSWRMS_TEST_schema.sql`.
+      Therefore, re-running migrations on a fresh deployment of `HSWRMS_TEST_schema.sql`
+      is NOT required and would be redundant.
+
+2.6 Planned Sequential Deployment Order (For Planning Only — Not Executed)
+    Step 1: Fail-Fast Target Assertion (Windows Admin via SQLCMD):
+      `sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "IF @@SERVERNAME <> N'MYLIFE-MYRULE-1' OR DB_NAME() <> N'HSWRMS_TEST' THROW 52000, 'Mismatch', 1; PRINT 'PASS';"`
+    Step 2: Schema Payload Deployment (Windows Admin via SQLCMD):
+      `sqlcmd -S localhost -d HSWRMS_TEST -E -b -i 05_Development/database/generated/HSWRMS_TEST_schema.sql`
+    Step 3: Verification of Object Counts (Windows Admin via SQLCMD):
+      Assert exactly 42 tables, 3 triggers, and 6 baseline roles in `[HSWRMS_TEST]`.
+    Step 4: Grant Least-Privilege DML to Test User (Windows Admin via SQLCMD):
+      `sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "ALTER ROLE db_datareader ADD MEMBER [hswrms_test_user]; ALTER ROLE db_datawriter ADD MEMBER [hswrms_test_user];"`
+    Step 5: Post-Grant Security Re-Audit (Windows Admin via SQLCMD):
+      Verify `hswrms_test_user` has zero access to `[HSWRMS]` and zero server roles.
+    Step 6: Opt-In Application Smoke Test:
+      Execute Spring Boot test with `-Dspring.profiles.active=sqlserver-test`.
+
+2.7 Safety Guardrails Reconfirmed
+    - No raw `schema.sql` execution.
+    - No automatic `DROP DATABASE` or `DROP TABLE` on failure.
+    - Zero SQL execution in this preflight phase.
+
+2.8 Part B Conclusion
+    >>> TEST DATABASE PREFLIGHT COMPLETE — READY FOR HUMAN AUTHORIZATION <<<
+
+--------------------------------------------------------------------------------
+SECTION 3: CONDITIONS REQUIRING EXPLICIT USER APPROVAL
+--------------------------------------------------------------------------------
+Before any destructive or mutative actions can proceed, the user must explicitly approve:
+1. Approval to stage and commit the F&B Staff role mapping fix:
+   - Option A1: Commit as-is (with both `ROLE_FNB_STAFF` and `ROLE_F&B STAFF`).
+   - Option A2: Apply 1-line simplification (return only `List.of("ROLE_FNB_STAFF")`) then commit.
+2. Approval to execute Step 1 & Step 2 (Schema Deployment into `[HSWRMS_TEST]`).
+3. Approval to execute Step 4 (Grant `db_datareader` and `db_datawriter` to `hswrms_test_user` in `[HSWRMS_TEST]`).
+4. Approval to supply the test password via `SQLSERVER_TEST_PASSWORD` environment variable
+   for opt-in integration test runs.
+
+--------------------------------------------------------------------------------
+SECTION 4: RESIDUAL RISKS & UNVERIFIED LIMITATIONS
+--------------------------------------------------------------------------------
+1. SQL Server DDL execution has not been tested in live runtime yet, pending human approval.
+2. Frontend Node.js ESM loader resolution on 6 M6 test files remains an isolated test runner
+   configuration quirk; frontend production build (`tsc -b && vite build`) and 41 functional
+   tests pass cleanly.
+3. The SQL login `hswrms_test_user` currently lacks DML rights (`db_datareader`/`db_datawriter`)
+   in `[HSWRMS_TEST]`; application connections will fail with permission errors until Step 4
+   is executed.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.76
+================================================================================
+

@@ -1,0 +1,226 @@
+================================================================================
+HSWRMS - PHASE 5.8.3.72: M4 FIX REVIEW & COMMIT PREFLIGHT REPORT
+INDEPENDENT VERIFICATION, CODE REVIEW, TEST AUDIT, AND COMMIT READINESS
+================================================================================
+Date: 2026-10-28
+Repository Root: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Branch: feature/hswrms-m1-m6-integration
+Current Commit HEAD: f1757e1c6cbafe70249006444dcc99bfa3fc7eee (Parent: 258c7bd)
+Readiness Status: READY FOR EXPLICIT COMMIT APPROVAL
+
+--------------------------------------------------------------------------------
+1. GIT BASELINE VERIFICATION
+--------------------------------------------------------------------------------
+A. Working Tree State:
+   - Branch: `feature/hswrms-m1-m6-integration` (ahead of isp-origin by 3 commits)
+   - HEAD Commit: `f1757e1` (Commit 3: M4 F&B baseline commit)
+   - Staging Area: Clean (Exit code 0, `git diff --cached` is 100% empty)
+   - Tracked Modified Files: Exactly 3 files:
+     1. `05_Development/frontend/src/context/DiningContext.tsx`
+     2. `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`
+     3. `05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx`
+   - Untracked Files from M4 Fix: Exactly 3 files:
+     1. `05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts`
+     2. `05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts`
+     3. `05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts`
+   - Preserved Artifacts (Untracked, untouched, uncommitted):
+     * `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+     * `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql`
+     * `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql`
+     * `05_Development/database/migrations/V005__m6_audit_log.sql`
+     * `05_Development/database/migrations/draft_m6_governance_and_delegation.sql`
+     * 24 historical reports in `06_Reports/`
+
+B. Discrepancy Check:
+   - Working tree strictly matches Phase 5.8.3.71 report.
+   - Zero unexpected files staged or modified.
+   - Zero SQL schema or migration files touched.
+
+--------------------------------------------------------------------------------
+2. IN-DEPTH CODE REVIEW FINDINGS (10 VERIFICATION POINTS)
+--------------------------------------------------------------------------------
+
+Point 1: Daily Meal Selection Payload Alignment
+- Backend Contract: `com.heavenstay.hswrms.m4fnb.dto.CreateDailyMealRequest`
+  (`@NotNull Long retreatBookingId`, `@NotNull LocalDate orderDate`, `@NotBlank String mealPeriod`, `@NotEmpty List<Long> menuItemIds`, `String notes`).
+- Code Audit:
+  * In `fnbPayloadUtils.ts`: `buildDailyMealOrderPayload` builds payload containing `retreatBookingId`, `orderDate`, `mealPeriod`, `menuItemIds`, and `notes`.
+  * Throws fail-fast error `retreatBookingId is required to submit a daily meal selection` if ID is absent.
+  * In `DiningContext.tsx`: `saveMealSelection` invokes `fnbApi.createDailyMealOrder` with `retreatBookingId: numBookingId` and `notes: selection.notes`.
+- Finding: PASS. Compliant with authoritative backend DTO.
+
+Point 2: A-la-carte Order Payload Alignment
+- Backend Contract: `com.heavenstay.hswrms.m4fnb.dto.CreateAlaCarteRequest`
+  (`@NotNull Long retreatBookingId`, `LocalDate orderDate`, `String targetTime`, `String location`, `@NotEmpty List<CreateAlaCarteItemRequest> items`).
+- Code Audit:
+  * In `fnbPayloadUtils.ts`: `buildAlaCarteOrderPayload` serializes `retreatBookingId`, `orderDate`, `targetTime`, `location`, and `items: [{ menuItemId, quantity, notes }]`.
+  * Throws fail-fast error `retreatBookingId is required to place an a-la-carte order` if ID is absent.
+  * In `DiningContext.tsx`: `createAlaCarteOrder` passes `location: order.location`, `targetTime: order.targetTime`, and `notes: line.notes`.
+- Finding: PASS. Eliminates legacy `deliveryLocation`, `deliveryTime`, and `specialNotes` mismatch.
+
+Point 3: Cancellation Payload Alignment
+- Backend Contract: `com.heavenstay.hswrms.m4fnb.dto.CancelOrderRequest`
+  (`@NotBlank(message = "Cancellation reason is required") String cancellationReason`).
+- Code Audit:
+  * In `fnbPayloadUtils.ts`: `buildCancelOrderPayload` creates `{ cancellationReason: trimmed || defaultReason }`.
+  * In `fnbApi.ts`: Both `cancelCustomerOrder` and `cancelKdsOrder` send `{ cancellationReason }`.
+  * Replaces legacy `{ reason }` key entirely.
+- Finding: PASS. Guarantees Jackson deserialization populates `cancellationReason`.
+
+Point 4: Identifier Type Coercion & Safety
+- Crash Symptom: `TypeError: id.replace is not a function` when receiving numeric `Long` IDs.
+- Code Audit:
+  * In `fnbIdUtils.ts`: `extractNumericId(id)` safely branches on `typeof id === 'number'`. It does NOT call `.replace()` on numbers.
+  * For strings, it sanitizes non-digits `str.replace(/\D/g, '')` and parses integer.
+  * Fails safe on `null`, `undefined`, `NaN`, and empty strings by returning `null`.
+  * In `DiningContext.mapBackendPrepEntry`: Coerces ID to string `const safeId = String(dto.id)`.
+  * In `MealOrderDetailPage.tsx`: Coerces ID to string `id: String(res.id)`.
+- Finding: PASS. Resolves KDS rendering crash while preserving integer IDs for backend API calls.
+
+Point 5: Prevention of Silent False-Success Mock Fallbacks
+- Prior Flaw: `catch (err) { console.warn(...) }` kept unpersisted optimistic items in state.
+- Code Audit:
+  * In `DiningContext.saveMealSelection`:
+    `.catch(err => { setError(...); setMealSelections(prev => prev.filter(s => s.id !== tempId)); })`
+  * In `DiningContext.createAlaCarteOrder`:
+    `.catch(err => { setError(...); setAlaCarteOrders(prev => prev.filter(o => o.id !== tempId)); })`
+  * In `DiningContext.updateFulfillmentStatus`:
+    `.catch(err => { setError(...); if (refreshKitchenQueue) refreshKitchenQueue(); })`
+- Finding: PASS. Fail-closed behavior implemented; un-persisted items are rolled back.
+
+Point 6: Rollback Scope Isolation
+- Code Audit:
+  * `tempId` is generated using unique timestamp: `MS-${Date.now()}` and `ORD-${Date.now()}`.
+  * Rollback filter predicates strictly target `s.id !== tempId` and `o.id !== tempId`.
+  * Preexisting confirmed orders and selections remain unaffected.
+- Finding: PASS. Rollback is atomic and scoped to the failed transaction.
+
+Point 7: Preservation of RBAC, Idempotency, and Pricing Integrity
+- Code Audit:
+  * Frontend does NOT send client-calculated total amounts to backend; pricing remains server-authoritative (`totalAmount: res.totalAmount || o.totalAmount`).
+  * Backend RBAC enforcement (S39 permissions) remains intact (verified by `FnbControllersSecurityTest`).
+  * Folio charge idempotency on `DELIVERED` status is intact (verified by `FnbBillingIntegrationTest`).
+  * Cancellation audit trail logging is intact (verified by `MealOrderServiceTest`).
+- Finding: PASS. Core security and business invariants preserved.
+
+Point 8: Isolation of Production vs Mock Paths
+- Code Audit:
+  * When `numBookingId` is present (production flow), real REST endpoints are invoked.
+  * Local state fallback occurs ONLY when booking ID is absent (standalone prototype preview).
+- Finding: PASS. No mock data leaks into active guest bookings.
+
+Point 9: Backward-Compatibility Alias Safety
+- Code Audit:
+  * In `fnbPayloadUtils.ts`, aliases (`bookingId`, `specialNotes`, `deliveryLocation`, `deliveryTime`)
+    are accepted as inputs for backward-compatibility with older UI forms, BUT:
+    1. Validation requires a valid ID: `if (bookingId === undefined || bookingId === null) throw Error(...)`.
+    2. Output DTO strips the aliases and emits only authoritative backend fields.
+- Finding: PASS. Contract ambiguity prevented.
+
+Point 10: Scope Confinement
+- Code Audit:
+  * Only 3 tracked frontend files modified.
+  * Only 3 untracked files added (2 utilities + 1 unit test).
+  * No edits to backend code, database schema, migrations, or other frontend modules.
+- Finding: PASS. Scope strictly confined to M4 integration defect resolution.
+
+--------------------------------------------------------------------------------
+3. DEFECT CLASSIFICATION (P0 / P1 / P2)
+--------------------------------------------------------------------------------
+- P0 (Blockers): 0 issues found.
+- P1 (Critical Contract Mismatches): 0 issues found (all 5 resolved).
+- P2 (Non-blocking Warnings):
+  * 8 preexisting oxlint warnings in untouched legacy files (`ThemeContext.tsx`, `CursorProvider.tsx`, `ExperiencesStickyStory.tsx`, `ManualExtraSpaPage.tsx`). These warnings do not affect M4 and were preexisting before Phase 5.8.3.70.
+
+--------------------------------------------------------------------------------
+4. TEST EVIDENCE & VERIFICATION AUDIT
+--------------------------------------------------------------------------------
+A. Frontend Test Evidence:
+   1. Test Suite: `src/features/m4-fnb/m4IntegrationContract.test.ts`
+      - 14/14 tests pass (Exit Code: 0)
+      - Covers all 5 defect resolutions, validation fail-fast, ID extraction, and state rollback.
+   2. Test Suite: `src/features/m4-fnb/kitchenQueueSafety.test.ts`
+      - 8/8 tests pass (Exit Code: 0)
+      - Covers active kitchen queue filtering and terminal status exclusion.
+   3. Test Suite: `src/features/m5-billing/utils/bookingResolver.test.ts` & `paymentSafety.test.ts`
+      - 19/19 tests pass (Exit Code: 0)
+   4. Combined Frontend Test Run:
+      - Total tests: 41
+      - Passed: 41, Failed: 0
+      - Execution time: 390ms, Exit Code: 0
+   5. Static Analysis (`npm run lint`):
+      - 0 errors, 8 preexisting warnings, Exit Code: 0
+   6. Production Build (`npm run build` -> `tsc -b && vite build`):
+      - 2705 modules transformed, 0 errors, Exit Code: 0
+
+B. Backend Test Evidence (Corroborated by disk Surefire reports in `target/surefire-reports`):
+   1. `com.heavenstay.hswrms.m4fnb.controller.FnbControllersSecurityTest.txt`:
+      - Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 (Time elapsed: 20.78s)
+   2. `com.heavenstay.hswrms.m4fnb.integration.DefaultBookingAndDietaryIntegrationServiceTest.txt`:
+      - Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 (Time elapsed: 0.174s)
+   3. `com.heavenstay.hswrms.m4fnb.service.FnbBillingIntegrationTest.txt`:
+      - Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 (Time elapsed: 0.235s)
+   4. `com.heavenstay.hswrms.m4fnb.service.MealOrderServiceTest.txt`:
+      - Tests run: 25, Failures: 0, Errors: 0, Skipped: 0 (Time elapsed: 2.146s)
+   5. `com.heavenstay.hswrms.m4fnb.repository.MealOrderRepositoryTest.txt`:
+      - Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 (Time elapsed: 0.542s)
+   - Module 4 Total: 57 tests run, 57 passed, 0 failures, 0 errors.
+
+   6. Module 6 Security & Governance Suite:
+      - `AdminControllersSecurityTest`: 14/14 passed
+      - `AccountUnlockJobTest`: 1/1 passed
+      - `AuditLogPurgeDaoTest` & `AuditLogServiceTest`: 7/7 passed
+      - `BusinessParameterServiceTest`: 6/6 passed
+      - `DelegationServiceTest`: 9/9 passed
+      - `PermissionMatrixServiceTest`: 6/6 passed
+      - `StaffAccountServiceTest`: 6/6 passed
+      - `JwtTokenProviderTest` & `SsoJwtRoundTripTest`: 4/4 passed
+   - Module 6 Total: 53 tests run, 53 passed, 0 failures, 0 errors.
+
+C. Verification Limitations:
+   - Tests execute against H2 in-memory database (`MODE=MSSQLServer`), isolating production SQL Server.
+   - End-to-end browser Selenium/Cypress automation is not configured in this repository; UI contracts are verified via Node.js native unit tests and Vite build verification.
+
+--------------------------------------------------------------------------------
+5. COMMIT READINESS DECISION
+--------------------------------------------------------------------------------
+DECISION: READY FOR EXPLICIT COMMIT APPROVAL
+
+Justification:
+- All 5 P1 defect fixes are verified, well-tested, and confined to their proper scope.
+- Zero breaking changes or regressions introduced in frontend or backend.
+- Working tree is clean and prepared for a targeted 6-file commit.
+
+Authorized Scope for Commit (Exactly 6 files):
+1. `05_Development/frontend/src/context/DiningContext.tsx`
+2. `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`
+3. `05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx`
+4. `05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts`
+5. `05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts`
+6. `05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts`
+
+Proposed Commit Message:
+--------------------------------------------------------------------------------
+fix(m4-fnb): align frontend payloads and KDS identifier handling
+
+- Align daily meal selection payload with CreateDailyMealRequest (retreatBookingId, notes)
+- Align a-la-carte order payload with CreateAlaCarteRequest (retreatBookingId, location, targetTime, notes)
+- Align order cancellation payload with CancelOrderRequest (cancellationReason)
+- Ensure safe numeric ID coercion in KDS views and prevent replace() TypeErrors
+- Implement fail-closed optimistic state rollback on API failures in DiningContext
+- Add contract integration unit tests in m4IntegrationContract.test.ts
+--------------------------------------------------------------------------------
+
+Mandatory Next Action:
+- Await user's explicit approval before staging (`git add`) or committing (`git commit`).
+- Do NOT push to remote.
+
+--------------------------------------------------------------------------------
+6. STATUTORY AFFIRMATIONS
+--------------------------------------------------------------------------------
+- No source code, tests, migrations, schema or configuration was modified in Phase 5.8.3.72.
+- No Git commands affecting repository history were executed (no stage, commit, push, merge, rebase, reset).
+- No SQL DDL/DML, migration, provisioning, or seed statements were executed.
+- Database `HSWRMS` remains untouched and untainted.
+================================================================================
+

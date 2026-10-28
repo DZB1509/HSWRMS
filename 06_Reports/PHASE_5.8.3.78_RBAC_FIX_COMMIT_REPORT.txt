@@ -1,0 +1,118 @@
+================================================================================
+HSWRMS PHASE 5.8.3.78 — RBAC FIX COMMIT REPORT
+================================================================================
+Timestamp: 2026-10-28T18:00:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Previous HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+New HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Commit Message: fix(m4-fnb): normalize canonical F&B staff authority
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PRE-COMMIT AUDIT & VERIFICATION
+--------------------------------------------------------------------------------
+1.1 Baseline Validation:
+    - Repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+    - Current Branch: feature/hswrms-m1-m6-integration (Matches expected)
+    - Starting HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa (Matches expected)
+    - Staging Area: Confirmed 100% empty prior to staging.
+
+1.2 Scope Authorization:
+    The user authorized staging and committing strictly 3 files:
+    1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+    2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+    3. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+
+1.3 Staging Integrity:
+    - `git add` executed explicitly on the 3 authorized file paths.
+    - `git diff --cached --name-status` output:
+        M  05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java
+        M  05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java
+        A  05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java
+    - Exactly 3 files staged; zero unrelated files staged.
+    - `git diff --cached --check` returned 0 warnings/errors (no whitespace or conflict artifacts).
+
+--------------------------------------------------------------------------------
+2. COMMIT EXECUTION DETAILS
+--------------------------------------------------------------------------------
+2.1 Commit Command:
+    git commit -m "fix(m4-fnb): normalize canonical F&B staff authority"
+
+2.2 Commit Output:
+    [feature/hswrms-m1-m6-integration c2d2d6b] fix(m4-fnb): normalize canonical F&B staff authority
+     3 files changed, 213 insertions(+), 10 deletions(-)
+     create mode 100644 05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java
+
+2.3 Commit Metadata:
+    - Commit Hash: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+    - Short Hash: c2d2d6b
+    - Author: datnthe181883 <datnthe181883@fpt.edu.vn>
+    - Commit Date: Wed Oct 28 17:59:36 2026 +0700
+    - Exact Message: fix(m4-fnb): normalize canonical F&B staff authority
+
+--------------------------------------------------------------------------------
+3. POST-COMMIT GIT STATE & LINEAGE
+--------------------------------------------------------------------------------
+3.1 Recent Commit History (last 5 commits on feature/hswrms-m1-m6-integration):
+    c2d2d6b fix(m4-fnb): normalize canonical F&B staff authority
+    13fcbd3 fix(m4-fnb): align frontend payloads and KDS identifier handling
+    f1757e1 feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration
+    258c7bd feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions
+    d0a17db schema(database): align authoritative 42-table schema and test provisioning guide
+
+3.2 Working Tree Status:
+    - Staging area: 100% clean (no staged changes).
+    - Tracked files: Clean (no uncommitted tracked modifications).
+    - Untracked artifacts preserved safely:
+        * 05_Development/database/generated/HSWRMS_TEST_schema.sql
+        * 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql
+        * 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql
+        * 05_Development/database/migrations/V005__m6_audit_log.sql
+        * 05_Development/database/migrations/draft_m6_governance_and_delegation.sql
+        * All audit and regression reports in 06_Reports/
+
+--------------------------------------------------------------------------------
+4. SUMMARY OF COMMITTED CHANGES
+--------------------------------------------------------------------------------
+4.1 `CustomUserDetails.java`:
+    - Added `normalizeRoleAuthorities(String role)` utility method.
+    - Normalized database canonical role "F&B Staff" (along with aliases "FB_STAFF", "fnb_staff", "FNBSTAFF") strictly and exclusively to `ROLE_FNB_STAFF`.
+    - Completely removed redundant alias `ROLE_F&B STAFF`.
+    - Robust null and blank filtering on raw role claims.
+    - Standard roles ("Customer", "Receptionist", "Therapist", "Manager", "Admin") preserved without side effects.
+
+4.2 `CustomUserDetailsTest.java` (New test suite):
+    - 6 comprehensive unit tests verifying role normalization:
+      * ROLE-MAP-01: Canonical DB role "F&B Staff" maps strictly to [ROLE_FNB_STAFF].
+      * ROLE-MAP-02: Aliases map cleanly to [ROLE_FNB_STAFF].
+      * ROLE-MAP-03: Standard roles map to standard ROLE_* authorities.
+      * ROLE-MAP-04: Null and blank strings handled safely.
+      * ROLE-MAP-05: CustomUserDetails instance authorities verification.
+      * ROLE-MAP-06: Null roles list handled without NPE.
+
+4.3 `FnbControllersSecurityTest.java`:
+    - Updated mock token setup to issue authentic database role claim `List.of("F&B Staff")`.
+    - Added Manager and Admin access verification tests for KDS queue and KPIs (FNB-SEC-11, FNB-SEC-12).
+    - Added Customer forbidden assertions for KDS KPIs and order details (FNB-SEC-13, FNB-SEC-14).
+    - Verified `MealPrepEntryDto` JSON primary key binding (`$.data.id`).
+
+--------------------------------------------------------------------------------
+5. STRICT SAFETY COMPLIANCE AUDIT
+--------------------------------------------------------------------------------
+- Git operations:
+    * Staged strictly authorized 3 files: YES
+    * No git push performed: YES
+    * No git merge / rebase performed: YES
+    * No git reset / clean / checkout performed: YES
+    * No files deleted: YES
+- Database operations:
+    * Zero SQL executed: YES
+    * Zero schema migrations, provisioning, or seed executed: YES
+    * `SEED_DEMO_DATA` not enabled: YES
+    * Production/local `HSWRMS` database untouched: YES
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.78
+================================================================================
+

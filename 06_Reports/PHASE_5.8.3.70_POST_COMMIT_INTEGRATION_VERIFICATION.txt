@@ -1,0 +1,271 @@
+================================================================================
+HSWRMS — PHASE 5.8.3.70: POST-COMMIT INTEGRATION VERIFICATION REPORT
+REPOSITORY BASELINE, AUTOMATED TEST RESULTS, AND STATIC INTEGRATION AUDIT
+================================================================================
+Date: 2026-10-28
+Operating Mode: READ-ONLY INTEGRATION VERIFICATION & STATIC AUDIT
+Workspace:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Branch:
+  feature/hswrms-m1-m6-integration
+Git Head:
+  f1757e1c6cbafe70249006444dcc99bfa3fc7eee
+================================================================================
+
+1. GIT REPOSITORY INTEGRATION BASELINE & COMMITS
+--------------------------------------------------------------------------------
+A. Workspace & Git Configuration:
+   - Repository Root: E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules
+   - Common Git Dir:  E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/Fall26_ISP392_IS2005_G1/.git/worktrees/HSWRMS-audit-all-modules
+   - Active Branch:   feature/hswrms-m1-m6-integration (ahead of isp-origin by 3 commits)
+   - Current HEAD:    f1757e1c6cbafe70249006444dcc99bfa3fc7eee
+
+B. Sequential Commits Verification & Parent Lineage:
+   - Commit 3: f1757e1 (Parent: 258c7bd)
+     Subject: feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration
+     Files Committed: Exactly 36 files (verified via `git diff-tree -r --name-only`)
+     Diff Stat: 36 files changed, 4338 insertions(+), 51 deletions(-)
+   - Commit 2: 258c7bd (Parent: d0a17db)
+     Subject: feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions
+     Files Committed: Exactly 3 files (AdminDashboardController.java, PermissionCatalog.java, AdminControllersSecurityTest.java)
+     Diff Stat: 3 files changed, 104 insertions(+), 3 deletions(-)
+   - Commit 1: d0a17db (Parent: 46ab465)
+     Subject: schema(database): align authoritative 42-table schema and test provisioning guide
+     Files Committed: Exactly 2 files (05_Development/database/schema.sql, 05_Development/database/README.md)
+     Diff Stat: 2 files changed, 256 insertions(+), 17 deletions(-)
+
+C. Working-Tree & Staging Audit:
+   - Staging Area: Clean (0 files staged, verified via `git diff --cached`).
+   - Tracked Modified Files Remaining: Exactly 0 files.
+   - Uncommitted & Untracked Files Preserved:
+     * 05_Development/database/generated/HSWRMS_TEST_schema.sql (Untracked, untouched)
+     * 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql (Untracked, untouched)
+     * 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql (Untracked, untouched)
+     * 05_Development/database/migrations/V005__m6_audit_log.sql (Untracked, untouched)
+     * 05_Development/database/migrations/draft_m6_governance_and_delegation.sql (Untracked, untouched)
+     * All 22 audit reports in 06_Reports/ (Untracked, untouched)
+
+
+2. COMMANDS EXECUTED & RAW EXIT CODES
+--------------------------------------------------------------------------------
+1. Git Verification Commands:
+   - `git rev-parse --show-toplevel` -> Exit Code: 0
+   - `git branch --show-current` -> Exit Code: 0
+   - `git log -n 4 --format="%h %p %s"` -> Exit Code: 0
+   - `git diff-tree --no-commit-id --name-only -r <commit>` -> Exit Code: 0
+   - `git diff --cached` -> Exit Code: 0 (Empty)
+
+2. Backend Build & Test Commands:
+   - `mvn test-compile` -> Exit Code: 0 (Build Success, 4.957s)
+   - `mvn test "-Dtest=FnbControllersSecurityTest,DefaultBookingAndDietaryIntegrationServiceTest,FnbBillingIntegrationTest,MealOrderServiceTest,MealOrderRepositoryTest"`
+     -> Exit Code: 0 (Tests: 57 run, 0 failures, 0 errors, 0 skipped, 39.821s)
+   - `mvn test "-Dtest=AdminControllersSecurityTest,AccountUnlockJobTest,AuditLogPurgeDaoTest,AuditLogServiceTest,BusinessParameterServiceTest,DelegationServiceTest,PermissionMatrixServiceTest,StaffAccountServiceTest,JwtTokenProviderTest,SsoJwtRoundTripTest"`
+     -> Exit Code: 0 (Tests: 53 run, 0 failures, 0 errors, 0 skipped, 37.892s)
+   - `mvn test "-Dtest=HswrmsApplicationTests"`
+     -> Exit Code: 0 (Tests: 3 run, 0 failures, 0 errors, 0 skipped, 28.953s)
+   - `mvn test "-Dtest=SqlServerJdbcSmokeTestOptInBehaviorTest,SqlServerTestConfigValidatorTest"`
+     -> Exit Code: 0 (Tests: 97 run, 0 failures, 0 errors, 0 skipped, 8.038s)
+   - `mvn test` (Full Backend Suite across all modules)
+     -> Exit Code: 0 (Tests: 407 run, 0 failures, 0 errors, 1 skipped, 3m 28s)
+
+3. Frontend Build & Test Commands:
+   - `npm run lint` (oxlint) -> Exit Code: 0 (0 errors, 8 warnings, 111ms)
+   - `npm run build` (tsc -b && vite build) -> Exit Code: 0 (2703 modules transformed, 2.33s)
+   - `node --test src/features/m4-fnb/kitchenQueueSafety.test.ts`
+     -> Exit Code: 0 (8 tests run, 8 passed, 0 failed, 290ms)
+   - `node --test src/features/m5-billing/utils/bookingResolver.test.ts`
+     -> Exit Code: 0 (5 tests run, 5 passed, 0 failed, 7.6ms)
+   - `node --test src/features/m5-billing/utils/paymentSafety.test.ts`
+     -> Exit Code: 0 (14 tests run, 14 passed, 0 failed, 18.9ms)
+   - `node --test (Get-ChildItem -Path src -Recurse -Filter "*.test.ts").FullName`
+     -> Exit Code: 1 (27 passed, 6 failed due to Node ESM extensionless import resolution)
+
+
+3. BACKEND VERIFICATION DETAILS
+--------------------------------------------------------------------------------
+A. Datasource & Safety Profile:
+   - Default test suite uses in-memory H2 database:
+     `jdbc:h2:mem:testdb;MODE=MSSQLServer;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS DBO`
+     `spring.jpa.hibernate.ddl-auto: create-drop`
+   - Complete isolation from external SQL Server and development database (`HSWRMS`).
+   - Zero SQL DDL/DML executed on live servers; zero test data pollution.
+
+B. Module Test Results:
+   - Module 4 (F&B / KDS): 57 tests passed (0 failures, 0 errors).
+     * `FnbControllersSecurityTest`: 8/8 passed (RBAC S39, role permissions, public menu).
+     * `DefaultBookingAndDietaryIntegrationServiceTest`: 14/14 passed (Boundary port mocks).
+     * `FnbBillingIntegrationTest`: 2/2 passed (Unsettled order guard, folio charge on DELIVERED).
+     * `MealOrderServiceTest`: 25/25 passed (State machine, audit logging, cancellation).
+     * `MealOrderRepositoryTest`: 8/8 passed (Custom queries, prep list filtering).
+   - Module 6 (Admin & Security): 53 tests passed (0 failures, 0 errors).
+     * `AdminControllersSecurityTest`: 14/14 passed (Widget delegation, fail-closed null checks).
+     * `StaffAccountServiceTest`: 6/6 passed.
+     * `PermissionMatrixServiceTest`: 6/6 passed.
+     * `DelegationServiceTest`: 9/9 passed.
+     * `BusinessParameterServiceTest`: 6/6 passed.
+     * `AuditLogServiceTest` & `AuditLogPurgeDaoTest`: 7/7 passed.
+     * `AccountUnlockJobTest`: 1/1 passed.
+     * `JwtTokenProviderTest` & `SsoJwtRoundTripTest`: 4/4 passed.
+   - Core & Context Loading:
+     * `HswrmsApplicationTests`: 3/3 passed (Spring context boot, /health endpoint, 401 guard).
+   - Full Suite Summary:
+     * Total Tests: 407
+     * Passed: 406
+     * Failures: 0
+     * Errors: 0
+     * Skipped: 1 (com.heavenstay.hswrms.integration.SqlServerJdbcSmokeTest)
+
+C. Skipped Test Justification:
+   - Test: `com.heavenstay.hswrms.integration.SqlServerJdbcSmokeTest`
+   - Reason: This integration smoke test is strictly opt-in (`@EnabledIf("isSqlServerTestEnabled")`).
+     Per Phase 5.8.3.70 safety rules, tests requiring external SQL Server connectivity were
+     intentionally skipped because `HSWRMS_TEST` has not yet been provisioned or executed,
+     and executing unverified SQL or provisioning scripts was strictly prohibited.
+
+
+4. FRONTEND VERIFICATION DETAILS
+--------------------------------------------------------------------------------
+A. Build & Lint Pipeline:
+   - Tooling: TypeScript ~6.0.2, Vite 8.3.4, oxlint 1.81.0, Node v24.4.1.
+   - `npm run lint`: Exit Code 0. Found 8 warnings and 0 errors across 182 files.
+     Warnings are non-breaking unused catch parameters (`catch (_) {}`, `catch (e) {}`).
+   - `npm run build`: Exit Code 0. Successfully compiled and emitted:
+     * `dist/index.html` (1.58 kB)
+     * `dist/assets/index-6iHKxhlB.css` (212.20 kB)
+     * `dist/assets/index-FNfYCEXF.js` (2,369.02 kB)
+
+B. Unit Tests Execution (Node Native Test Runner):
+   - Passed Tests (27/27):
+     * `src/features/m4-fnb/kitchenQueueSafety.test.ts`: 8 tests passed.
+     * `src/features/m5-billing/utils/bookingResolver.test.ts`: 5 tests passed.
+     * `src/features/m5-billing/utils/paymentSafety.test.ts`: 14 tests passed.
+   - Failed Execution (6 files in `src/features/m6-admin/api/*.test.ts`):
+     * Cause: `ERR_MODULE_NOT_FOUND`. In Node native ESM, relative imports require `.ts` extension
+       (e.g., `import { adminDashboardApi } from './adminDashboardApi'`).
+     * Vite bundles these cleanly via `moduleResolution: "bundler"`, but raw `node --test` without
+       bundling cannot resolve extensionless TypeScript files.
+
+
+5. STATIC INTEGRATION CROSS-CHECK & DEFECT ANALYSIS
+--------------------------------------------------------------------------------
+A. Frontend API Paths vs Backend Controller Endpoints:
+   [PROVEN BY CODE] 100% path and HTTP method alignment:
+   - `/api/v1/fnb/customer/menu-items` (GET) -> FnbCustomerOrderController
+   - `/api/v1/fnb/customer/daily-meals` (POST) -> FnbCustomerOrderController
+   - `/api/v1/fnb/customer/a-la-carte` (POST) -> FnbCustomerOrderController
+   - `/api/v1/fnb/customer/orders` (GET) -> FnbCustomerOrderController
+   - `/api/v1/fnb/customer/orders/{id}/cancel` (POST) -> FnbCustomerOrderController
+   - `/api/v1/fnb/kds/dashboard-kpis` (GET) -> FnbKdsController
+   - `/api/v1/fnb/kds/queue` (GET) -> FnbKdsController
+   - `/api/v1/fnb/kds/orders/{id}` (GET) -> FnbKdsController
+   - `/api/v1/fnb/kds/orders/{id}/status` (PATCH) -> FnbKdsController
+   - `/api/v1/fnb/kds/orders/{id}/cancel` (POST) -> FnbKdsController
+
+B. DTO & Request/Response Payload Inconsistencies (CRITICAL INTEGRATION DEFECTS):
+   1. Defect: `CreateDailyMealRequest` Field Mismatch (P1)
+      - Backend: Expects `@NotNull private Integer retreatBookingId` and `private String notes`.
+      - Frontend (`fnbApi.ts` line 75): Sends `{ bookingId, specialNotes }`.
+      - Impact: Backend validation fails with 400 Bad Request (`retreatBookingId is required`).
+        `DiningContext.tsx` catches error and silently falls back to local memory; meal order
+        never reaches the backend database or KDS queue.
+   2. Defect: `CreateAlaCarteRequest` Field Mismatch (P1)
+      - Backend: Expects `@NotNull private Integer retreatBookingId`, `location`, `targetTime`, `items[].notes`.
+      - Frontend (`fnbApi.ts` line 83): Sends `{ bookingId, deliveryLocation, deliveryTime, items[].specialNotes }`.
+      - Impact: Backend validation fails with 400 Bad Request (`retreatBookingId is required`).
+        Order drops to local mock state; billing and kitchen queues are not notified.
+   3. Defect: `CancelOrderRequest` Field Mismatch (P1)
+      - Backend: Expects `private String cancellationReason`.
+      - Frontend (`fnbApi.ts` lines 126, 181): Sends `{ reason }`.
+      - Impact: Jackson deserializes `cancellationReason` as `null`. When staff attempts to cancel
+        an order in `PREPARING` or `READY` status, backend throws `CANCELLATION_REASON_REQUIRED`.
+   4. Defect: `MealPrepEntryDto.id` Numeric Type vs String in Frontend (P1)
+      - Backend: Serializes `id` as `Long` (e.g. `101`).
+      - Frontend (`DiningContext.tsx` line 86, 265): Sets `id: dto.id` without string conversion.
+        `extractNumericId(id)` executes `id.replace(/\D/g, '')`.
+      - Impact: When updating or cancelling a remote backend order on KDS, browser throws
+        `TypeError: id.replace is not a function`.
+
+C. M4 A-la-carte Folio Charge Policy:
+   [PROVEN BY CODE & TESTS]
+   - `MealOrderServiceImpl.java` (line 331) calls `postFolioChargeIfEligible(order)` strictly
+     when transitioning order status to `DELIVERED`.
+   - `DAILY_MEAL` orders are strictly bypassed: `if (!"A_LA_CARTE".equalsIgnoreCase(order.getOrderType())) return;`.
+   - Unsettled service orders guard (`folioBillingService.validateBillingGuard`) blocks checkout
+     while any dining order is `PENDING`, `PREPARING`, or `READY`.
+   - Once marked `DELIVERED`, folio item of category `FNB` is created with order line sum.
+
+D. Billing Idempotency & Transactional Rollback:
+   [PROVEN BY CODE & TESTS]
+   - Idempotency: `folioItemRepository.existsBySourceMealOrderId(orderId)` prevents duplicate charges
+     if `DELIVERED` status is submitted multiple times. Verified by `FnbBillingIntegrationTest`.
+   - Rollback: `MealOrderServiceImpl` is annotated with `@Transactional`. If `postFolioCharge`
+     fails (e.g. folio locked or billing exception), the transaction rolls back, reverting order status.
+
+E. S39 Backend Permission Verification:
+   [PROVEN BY CODE & TESTS]
+   - `FnbKdsController` enforces `@PreAuthorize("@perm.has('S39','V') ...")` on view routes
+     and `@PreAuthorize("@perm.has('S39','U') ...")` on modification routes.
+   - `FnbControllersSecurityTest` verifies HTTP 401 for unauthenticated requests, HTTP 403
+     for customers, and HTTP 200 for `FNB_STAFF`.
+
+F. Order Cancellation State Machine:
+   [PROVEN BY CODE & TESTS]
+   - Guests can only cancel while order is `PENDING`. Attempting to cancel `PREPARING`/`READY`
+     throws `CUSTOMER_CANNOT_CANCEL_PREPARING_ORDER`.
+   - `DELIVERED` and `CANCELLED` are terminal states; cannot be cancelled or transitioned.
+   - All cancellations generate audit log records with actor, timestamp, and reason.
+
+G. PII Data Minimization (M1 -> M4):
+   [PROVEN BY CODE & TESTS]
+   - `DietaryProfilePort` strictly exposes `FoodProfileProjection` containing only `foodAllergies`
+     and `dietaryPreferences`. Personal medical records, diagnoses, and PII are never exposed to kitchen.
+
+H. Out-of-Scope Features (FEFO, Menu Quotas):
+   [PROVEN BY CODE]
+   - Grep verification across all M4 code confirmed zero references to FEFO or menu quota logic.
+   - Implementation adheres strictly to approved architecture.
+
+
+6. DEFECT SEVERITY CLASSIFICATION & ACTIONABLE REMEDIATION
+--------------------------------------------------------------------------------
+Priority 0 (Showstoppers / Build Breakages):
+- NONE. Backend compiles and passes 406 tests; frontend bundles with 0 errors.
+
+Priority 1 (Integration Defects Affecting End-to-End Demo):
+1. [P1] DTO key mismatch on `CreateDailyMealRequest`:
+   - Frontend `fnbApi.ts` lines 75-81 & `DiningContext.tsx` line 171.
+   - Fix required: Change frontend payload keys from `{ bookingId, specialNotes }`
+     to `{ retreatBookingId, notes }` (or add aliases in backend Jackson DTO).
+2. [P1] DTO key mismatch on `CreateAlaCarteRequest`:
+   - Frontend `fnbApi.ts` lines 83-93 & `DiningContext.tsx` line 201.
+   - Fix required: Change frontend payload keys from `{ bookingId, deliveryLocation, deliveryTime, specialNotes }`
+     to `{ retreatBookingId, location, targetTime, notes }` (or backend Jackson aliases).
+3. [P1] DTO key mismatch on `CancelOrderRequest`:
+   - Frontend `fnbApi.ts` lines 126, 181.
+   - Fix required: Change payload `{ reason }` to `{ cancellationReason }`.
+4. [P1] Runtime TypeError on KDS order actions (`id.replace`):
+   - Frontend `DiningContext.tsx` lines 86 & 104-111.
+   - Fix required: In `mapBackendPrepEntry`, coerce `id: String(dto.id)`. In `extractNumericId(id)`,
+     safely handle `typeof id === 'number' ? id : String(id).replace(...)`.
+5. [P1] Frontend M6 Unit Tests Node ESM Extensionless Imports:
+   - Frontend `src/features/m6-admin/api/*.test.ts`.
+   - Fix required: Add `.ts` extension to relative imports to allow clean execution under `node --test`.
+
+Priority 2 (Warnings & Code Hygiene):
+1. [P2] 8 unused catch parameters in frontend (`oxlint` warnings).
+2. [P2] Frontend chunk size warning (>500 kB) for `index.js`.
+3. [P2] Spring JPA Open-in-View warning in backend test logs.
+
+
+7. CONFIRMATION OF NON-MUTATIVE INTEGRATION AUDIT
+--------------------------------------------------------------------------------
+- ZERO source code modifications performed during Phase 5.8.3.70.
+- ZERO Git mutation operations executed (no commit, add, merge, rebase, cherry-pick, reset, push).
+- ZERO SQL DDL, DML, migration, provisioning, or seed operations executed on live database.
+- Database target `HSWRMS_TEST` remains untouched and awaiting explicit authorization.
+- All untracked artifacts, migrations, and reports remain safely preserved.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.70
+================================================================================
+

@@ -1,0 +1,221 @@
+================================================================================
+HSWRMS TEST SCHEMA EXECUTION SAFETY REVIEW
+PHASE 5.8.3.60 — INDEPENDENT STATIC REVIEW OF DDL EXECUTION SEMANTICS
+================================================================================
+Date: 2026-10-28
+Workspace Target: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Static Execution Safety Review of HSWRMS_TEST_schema.sql
+Execution Mode: STRICTLY STATIC REVIEW & DESIGN PROPOSAL
+                (Zero SQL Server connections; zero DDL/DML executions;
+                zero database modifications; zero Git mutations;
+                zero script modifications)
+================================================================================
+
+1. EXECUTIVE SUMMARY & SAFETY BOUNDARY COMPLIANCE
+--------------------------------------------------------------------------------
+Phase 5.8.3.60 conducts an independent, static safety review of the dedicated test
+schema payload (05_Development/database/generated/HSWRMS_TEST_schema.sql) before
+any human execution authorization is sought.
+
+STRICT CONSTRAINTS HONORED:
+  [X] Zero network connections opened to Microsoft SQL Server.
+  [X] Zero execution of sqlcmd, PowerShell scripts, DDL, DML, or migrations.
+  [X] Zero database objects modified or altered.
+  [X] The authoritative baseline (schema.sql) remains 100% untouched.
+  [X] The generated payload (HSWRMS_TEST_schema.sql) remains unmodified.
+  [X] Workspace B untouched.
+  [X] Git state completely unmutated.
+  [X] Zero credential or secret exposure.
+
+GATE DECISION: READY FOR HUMAN EXECUTION APPROVAL.
+
+
+2. VERIFICATION OF THE GENERATED PAYLOAD
+--------------------------------------------------------------------------------
+Inspected File: `05_Development/database/generated/HSWRMS_TEST_schema.sql` (1,223 lines).
+
+A. Database Context Statements:
+   - Line 19: `USE [HSWRMS_TEST];`
+   - Line 20: `GO`
+   - Total `USE` statements in file: Exactly 1 (Line 19).
+   - Zero occurrences of `USE [master]`.
+   - Zero occurrences of `USE [HSWRMS]`.
+   - Zero occurrences of `CREATE DATABASE`, `ALTER DATABASE`, or `DROP DATABASE`.
+
+B. Header and Target Verification Guard:
+   - Lines 22-29:
+     ```sql
+     -- Target Verification Guard: Fail-closed assertion ensuring execution cannot proceed outside HSWRMS_TEST
+     IF DB_NAME() <> N'HSWRMS_TEST'
+     BEGIN
+         PRINT 'CRITICAL TARGET CONTEXT FAILURE: Active database is [' + DB_NAME() + ']; expected [HSWRMS_TEST]. Aborting immediately.';
+         SET NOEXEC ON;
+         THROW 51000, N'CRITICAL TARGET CONTEXT FAILURE: Execution halted because current database is not HSWRMS_TEST.', 1;
+     END
+     GO
+     ```
+
+C. Object Inventory & Dependency Sequence:
+   - Section 1 (Lines 32-140): Identity & Access (`[User]`, `AuthIdentity`, `[Role]`, `UserRole`, `EmailOtp`).
+   - Section 2 (Lines 142-340): Customer & Health Profile (`CustomerProfile`, `ConsentRecord`, `HealthProfile`, etc.).
+   - Section 3 (Lines 342-500): Core Accommodation & Booking (`RetreatPackage`, `VillaCategory`, `PhysicalVilla`, `RetreatBooking`, `ResidenceRecord`).
+   - Section 4 (Lines 502-710): Spa Scheduling (`Therapist`, `SpaTreatment`, `TreatmentRoom`, `SpaSession`, Trigger `TR_SpaSession_ValidateScheduling`).
+   - Section 5 (Lines 712-840): F&B Dining (`MenuItem`, `Ingredient`, `MenuItemIngredient`, `IngredientBatch`, `MealOrder`, `MealOrderItem`).
+   - Section 6 (Lines 842-1010): Folio, Invoice & Billing (`Folio`, `FolioItem`, `Invoice`, `PaymentTransaction`, `CustomerReview`, Triggers `TR_FolioItem_RecalculateTotal`, `TR_PaymentTransaction_RecalculateFolioPaid`).
+   - Section 7 (Lines 1012-1146): Governance & Administration (`[Permission]`, `RolePermission`, `SystemConfiguration`, `RightDelegation`, `AuditLog`).
+   - Section 8 (Lines 1148-1192): Non-Clustered Indexes (12 indexes).
+   - Section 9 (Lines 1194-1208): Idempotent Initial Role Seed Data (6 roles).
+   - Section 10 (Lines 1210-1223): Verification query and completion confirmation.
+
+D. Trigger Isolation Verification:
+   - Trigger 1 (Line 606): `CREATE OR ALTER TRIGGER dbo.TR_SpaSession_ValidateScheduling`
+     Preceded by `GO` on Line 598. Valid T-SQL batch boundary.
+   - Trigger 2 (Line 940): `CREATE OR ALTER TRIGGER dbo.TR_FolioItem_RecalculateTotal`
+     Preceded by `GO` on Line 937. Valid T-SQL batch boundary.
+   - Trigger 3 (Line 965): `CREATE OR ALTER TRIGGER dbo.TR_PaymentTransaction_RecalculateFolioPaid`
+     Preceded by `GO` on Line 962. Valid T-SQL batch boundary.
+
+
+3. TARGET GUARD BEHAVIOR & EXECUTION SEMANTICS ANALYSIS
+--------------------------------------------------------------------------------
+A. Analysis of the Guard Components:
+   1. `USE [HSWRMS_TEST]; GO` (Batch 1):
+      - Switches the active database catalog to `HSWRMS_TEST`.
+      - If `HSWRMS_TEST` does not exist or connecting user lacks access, SQL Server
+        issues Error 911 (Severity 16).
+      - Under `sqlcmd -b`, Error 911 causes immediate process exit (ERRORLEVEL 1).
+      - If `-b` is omitted, SQLCMD prints the error and proceeds to Batch 2.
+
+   2. `IF DB_NAME() <> N'HSWRMS_TEST'` (Batch 2):
+      - Evaluates the current active catalog returned by SQL Server engine function `DB_NAME()`.
+      - If context switch succeeded, condition is FALSE; guard does not fire.
+      - If context switch failed (or script was piped into another database without switching),
+        condition is TRUE; execution enters the fail-closed block.
+
+   3. `SET NOEXEC ON;` (Batch 2):
+      - Instructs the SQL Server query processor to parse and compile syntax but
+        REFUSE TO EXECUTE any statements.
+      - Crucial T-SQL Semantic: In SQL Server, `SET NOEXEC ON` is connection/session-scoped.
+        It persists across `GO` batch boundaries within the same connection until
+        explicitly disabled with `SET NOEXEC OFF` or until disconnection.
+      - Because `SET NOEXEC ON` is placed BEFORE `THROW 51000`, the flag is armed
+        before the error is raised.
+
+   4. `THROW 51000, N'...', 1;` (Batch 2):
+      - Raises a user-defined error with Severity 16.
+      - Under `sqlcmd -b`, this immediately terminates SQLCMD.
+      - If SQLCMD is executed without `-b`, SQLCMD prints error 51000 and attempts to
+        send Batches 3 through 64. However, because `SET NOEXEC ON` is already active
+        in the session, SQL Server will compile but NEVER EXECUTE any table creation,
+        trigger definition, or role seeding!
+
+B. Guard Limitation Identified (Defense-in-Depth Required):
+   - Internal script guards verify `DB_NAME() == 'HSWRMS_TEST'`, but CANNOT verify
+     which server or host instance is executing the script (e.g. `@@SERVERNAME`).
+   - If an operator accidentally connects to an unintended host or remote server
+     where a database named `HSWRMS_TEST` also exists, the script-internal guard
+     alone cannot prevent execution on that host.
+   - Conclusion: Script-internal guards must be coupled with strict client-side
+     preflight checks and explicit connection parameters.
+
+
+4. FAILURE AND PARTIAL-EXECUTION BEHAVIOR ANALYSIS
+--------------------------------------------------------------------------------
+A. Batch Structure & Transactional Reality:
+   - `HSWRMS_TEST_schema.sql` contains 64 separate `GO` batch separators.
+   - SQLCMD transmits each batch as an independent TDS request over the network.
+   - In SQL Server default mode (`IMPLICIT_TRANSACTIONS OFF`), every batch operates
+     under autocommit semantics: statements that succeed in Batch N are committed
+     immediately.
+
+B. What `sqlcmd -b` Does and DOES NOT Do:
+   - `sqlcmd -b` is a client-side process control flag.
+   - When a statement raises an error with Severity > 10:
+     * `sqlcmd -b` stops processing and exits with a non-zero exit code.
+     * `sqlcmd -b` DOES NOT initiate a transaction rollback on SQL Server.
+     * Batches 1 to N-1 that completed successfully REMAIN COMMITTED in the database.
+   - Result: If failure occurs on Batch 35, the target database is left in a
+     PARTIALLY PROVISIONED STATE (e.g. half the tables exist, half are missing).
+
+C. Safe Recovery Strategy for Partial Execution:
+   - Because `HSWRMS_TEST` is a dedicated, isolated test database, attempting complex
+     in-place patching or rerunning the script (which would fail on existing objects)
+     is prohibited.
+   - Prescribed Recovery Procedure:
+     1. In case of any execution failure, log the error and halt.
+     2. Drop the corrupted test database: `DROP DATABASE [HSWRMS_TEST];`.
+     3. Re-create a clean, empty `HSWRMS_TEST` via `provision_hswrms_test.ps1`.
+     4. Address the root cause of the DDL failure before retrying.
+     5. The primary database `HSWRMS` remains completely untouched.
+
+
+5. RECOMMENDED SAFER EXECUTION DESIGN (STAGE 4 PROPOSAL)
+--------------------------------------------------------------------------------
+The following 5-layer execution design is proposed for Stage 4 implementation.
+(Design proposal only — no execution in this phase).
+
+Layer 1: Pre-Execution Target & Instance Assertion (Client Preflight)
+   - Before invoking SQLCMD, a lightweight read-only verification query must execute:
+     `SELECT @@SERVERNAME AS Srv, DB_NAME() AS ActiveDb, SERVERPROPERTY('IsIntegratedSecurityOnly') AS AuthMode;`
+   - Explicit assertions:
+     * Server instance must strictly match expected test instance (e.g. `localhost` / `MSSQLSERVER`).
+     * Active connection must not be pointing to `HSWRMS` or system databases.
+
+Layer 2: Explicit CLI Binding & Fail-Fast Parameterization
+   - Invoke SQLCMD with mandatory, explicit parameters:
+     `sqlcmd -S localhost -d HSWRMS_TEST -b -i 05_Development/database/generated/HSWRMS_TEST_schema.sql`
+     * `-S localhost`: Eliminates ambiguity in host routing.
+     * `-d HSWRMS_TEST`: Explicitly sets initial database context in TDS connection packet.
+     * `-b`: Enforces client-side immediate exit on any T-SQL error.
+
+Layer 3: Script-Internal Double Guard
+   - Maintain `USE [HSWRMS_TEST]; GO` and the `IF DB_NAME() <> N'HSWRMS_TEST'` guard
+     with `SET NOEXEC ON` in `HSWRMS_TEST_schema.sql` as defense-in-depth.
+
+Layer 4: Post-Execution Schema & Object Verification
+   - Immediately following script execution, execute a verification audit:
+     * `SELECT COUNT(*) FROM HSWRMS_TEST.sys.tables WHERE is_ms_shipped = 0;` (Assert: 42).
+     * `SELECT COUNT(*) FROM HSWRMS_TEST.sys.triggers;` (Assert: 3).
+     * `SELECT COUNT(*) FROM HSWRMS_TEST.dbo.[Role];` (Assert: 6).
+     * `SELECT COUNT(*) FROM HSWRMS.sys.database_principals WHERE name = 'hswrms_test_user';` (Assert: 0).
+
+Layer 5: Formal Human Approval Gate
+   - Execution of the Stage 4 schema load command must be explicitly authorized
+     by the operator after reviewing this report.
+
+
+6. SUMMARY OF VERIFIED SAFEGUARDS & LIMITATIONS
+--------------------------------------------------------------------------------
++-----------------------------------+-----------------------------------+-----------------------------------+
+| Safeguard Mechanism               | Protection Provided               | Limitation / Required Mitigation  |
++-----------------------------------+-----------------------------------+-----------------------------------+
+| 1. Stripped schema.sql Lines 18-28| Prevents automatic switch to      | None. Primary hazard eliminated.  |
+|                                   | primary database HSWRMS.          |                                   |
+| 2. Script USE [HSWRMS_TEST]       | Switches context to test DB.      | Fails if DB missing; needs guard. |
+| 3. SET NOEXEC ON + THROW Guard    | Disables all DDL execution if     | Cannot verify server hostname;    |
+|                                   | database context is not test DB.  | requires client CLI `-S` binding. |
+| 4. sqlcmd -b flag                 | Halts execution on first error.   | Does NOT roll back prior batches; |
+|                                   |                                   | requires clean-slate recovery.    |
+| 5. Zero-mutation Test Profile     | Hibernate ddl-auto: none prevents | Requires manual initial schema    |
+|                                   | runtime alteration.               | provisioning (this plan).         |
++-----------------------------------+-----------------------------------+-----------------------------------+
+
+
+7. CONCLUSION & FINAL DECISION
+--------------------------------------------------------------------------------
+FINAL ASSESSMENT: READY FOR HUMAN EXECUTION APPROVAL
+
+Justification:
+- The generated payload `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+  is verified statically: zero references to `HSWRMS`, zero `CREATE DATABASE`,
+  and 100% object parity with the approved baseline.
+- The target guard with `SET NOEXEC ON` provides fail-closed session protection
+  against unintended database execution.
+- Partial execution risks are fully analyzed and mitigated via the clean-slate
+  recovery strategy (DROP & recreate test DB).
+- Layered execution safeguards are established and ready for human authorization.
+- Zero database modifications occurred during Phase 5.8.3.60.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.60
+================================================================================

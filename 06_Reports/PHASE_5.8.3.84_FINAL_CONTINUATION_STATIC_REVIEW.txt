@@ -1,0 +1,301 @@
+================================================================================
+HSWRMS PHASE 5.8.3.84 — FINAL CONTINUATION PAYLOAD STATIC REVIEW
+================================================================================
+Timestamp: 2026-10-28T18:55:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Target Instance: localhost (Port 1433, Instance: MYLIFE-MYRULE-1)
+Target Catalog: HSWRMS_TEST
+Reviewed Payload: 05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql
+Execution Mode: STRICTLY READ-ONLY STATIC AUDIT (ZERO SQL EXECUTION)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & VERDICT
+--------------------------------------------------------------------------------
+Phase 5.8.3.84 conducts the final, exhaustive static review of the continuation
+payload `05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql`
+prior to seeking explicit human authorization for execution.
+
+Key Review Findings:
+1. Cryptographic Hash & Line Verification:
+   The continuation payload on disk has been verified:
+   - SHA-256: 2479ED70438B808538EFEEF3B440924E8128BD9FCABBC0C2473E1598A3433D68
+   - Size: 27,449 bytes (754 lines, 42 batches separated by GO).
+   - Traceability: Corresponds to initial write hash 1EC0A4F1516A57802EC50EF9CCCE2A7D2A07E5FE19855535E50708DB3BD87F40
+     (27,448 bytes) documented in Phase 5.8.3.83, with trailing newline normalized.
+2. Complete Coverage & Zero Redundancy:
+   - Contains exactly 1 repair index (UQ_SpaTreatment_TreatmentCode).
+   - Contains exactly 22 missing user tables (RetreatPackageSpaTreatment through AuditLog).
+   - Contains exactly 35 missing foreign keys, 10 unique constraints, and 3 triggers.
+   - Contains exactly 13 standalone indexes (including 4 filtered indexes).
+   - Zero objects from the 20 existing tables in HSWRMS_TEST are recreated or dropped.
+3. Precise Index Accounting:
+   - Avoids double-counting between table-level unique constraints and standalone indexes.
+   - Final SQL Server sys.indexes count will reach exactly 77 (42 PK + 21 UQ + 14 Standalone).
+4. Error 1934 Prevention:
+   - Explicit session settings (QUOTED_IDENTIFIER ON, ANSI_NULLS ON, etc.) are injected at
+     the script root (lines 31-37).
+   - Recommendation includes client-level `-I` switch for SQLCMD execution.
+5. Strict Data Segregation:
+   - Section 9 initial role seeds remain 100% excluded.
+   - Zero DML statements (INSERT, UPDATE, DELETE, MERGE) exist in the file.
+6. Topological Dependency Order:
+   - All 35 foreign keys reference valid tables that either exist from Phase 5.8.3.81 or
+     are created earlier in the continuation sequence. Zero circular dependencies.
+
+FINAL VERDICT: READY TO REQUEST EXECUTION AUTHORIZATION
+
+--------------------------------------------------------------------------------
+2. CONTINUATION PAYLOAD CRYPTOGRAPHIC IDENTIFICATION
+--------------------------------------------------------------------------------
+- File: 05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql
+- Current On-Disk SHA-256: 2479ED70438B808538EFEEF3B440924E8128BD9FCABBC0C2473E1598A3433D68
+- Initial Creation SHA-256: 1EC0A4F1516A57802EC50EF9CCCE2A7D2A07E5FE19855535E50708DB3BD87F40
+  (Identical syntax, difference is a single normalized trailing newline)
+- File Length: 27,449 bytes
+- Line Count: 754 lines
+- Batch Delimiter Count: 42 `GO` statements separating isolated DDL batches
+
+--------------------------------------------------------------------------------
+3. STATEMENT-BY-STATEMENT COMPARISON & LIVE INVENTORY RECONCILIATION
+--------------------------------------------------------------------------------
+
+3.1 Target Guard & Session Settings (Batches 1-3, Lines 18-38):
+- Batch 1: `USE [HSWRMS_TEST]; GO`
+- Batch 2: Target Verification Guard:
+  ```sql
+  IF DB_NAME() <> N'HSWRMS_TEST'
+  BEGIN
+      PRINT 'CRITICAL TARGET CONTEXT FAILURE: Active database is [' + DB_NAME() + ']; expected [HSWRMS_TEST]. Aborting immediately.';
+      SET NOEXEC ON;
+      THROW 51000, N'CRITICAL TARGET CONTEXT FAILURE: Execution halted because current database is not HSWRMS_TEST.', 1;
+  END
+  GO
+  ```
+- Batch 3: Mandatory Session Settings for Filtered Indexes:
+  `SET QUOTED_IDENTIFIER ON;`
+  `SET ANSI_NULLS ON;`
+  `SET ANSI_PADDING ON;`
+  `SET ANSI_WARNINGS ON;`
+  `SET ARITHABORT ON;`
+  `SET CONCAT_NULL_YIELDS_NULL ON;`
+  `SET NUMERIC_ROUNDABORT OFF;`
+  `GO`
+
+3.2 Repair Item (Batch 4, Lines 44-47):
+- Index: `UQ_SpaTreatment_TreatmentCode`
+  Target Table: `dbo.SpaTreatment` (Existing Table 20)
+  Definition: `CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode ON dbo.SpaTreatment (treatment_code) WHERE treatment_code IS NOT NULL;`
+  Status: Resolves failed filtered index from Phase 5.8.3.81 line 476.
+
+3.3 Missing User Tables (22 Tables, Strict Dependency Order):
+1. `dbo.RetreatPackageSpaTreatment` (Lines 54-71, PK, 2 FKs [RetreatPackage, SpaTreatment], 2 DFs)
+2. `dbo.TreatmentRoom` (Lines 74-86, PK, 1 UQ [room_name], 1 CK, 1 DF)
+3. `dbo.TherapistTreatmentQualification` (Lines 89-102, PK, 2 FKs [Therapist, SpaTreatment])
+4. `dbo.TreatmentRoomCompatibility` (Lines 105-117, PK, 2 FKs [TreatmentRoom, SpaTreatment])
+5. `dbo.SpaSession` (Lines 120-161, PK, 4 FKs [RetreatBooking, SpaTreatment, Therapist, TreatmentRoom], 4 CKs, 3 DFs)
+6. `dbo.MenuItem` (Lines 234-251, PK, 1 UQ [item_name], 2 CKs, 2 DFs)
+7. `dbo.Ingredient` (Lines 254-261, PK, 1 UQ [ingredient_name])
+8. `dbo.MenuItemIngredient` (Lines 264-279, PK, 2 FKs [MenuItem, Ingredient], 1 CK)
+9. `dbo.IngredientBatch` (Lines 282-298, PK, 1 FK [Ingredient], 2 CKs)
+10. `dbo.MealOrder` (Lines 301-320, PK, 1 FK [RetreatBooking], 2 CKs, 2 DFs)
+11. `dbo.MealOrderItem` (Lines 323-337, PK, 2 FKs [MealOrder, MenuItem], 1 UQ, 1 CK)
+12. `dbo.Folio` (Lines 346-367, PK, 1 FK [RetreatBooking], 1 UQ [retreat_booking_id], 2 CKs, 3 DFs, 1 Persisted Computed Column)
+13. `dbo.FolioItem` (Lines 370-418, PK, 4 FKs [Folio, RetreatBooking, SpaSession, MealOrder], 3 CKs, 1 DF)
+14. `dbo.Invoice` (Lines 421-443, PK, 1 FK [Folio], 2 UQs [folio_id, invoice_number], 2 CKs, 2 DFs)
+15. `dbo.PaymentTransaction` (Lines 446-478, PK, 2 FKs [RetreatBooking, Invoice], 4 CKs, 2 DFs)
+16. `dbo.CustomerReview` (Lines 486-507, PK, 1 FK [RetreatBooking], 1 UQ [retreat_booking_id], 2 CKs, 1 DF)
+17. `dbo.[Permission]` (Lines 581-595, PK, 1 UQ [module_or_screen, action_type], 3 DFs)
+18. `dbo.RolePermission` (Lines 598-608, PK, 2 FKs [Role, Permission])
+19. `dbo.SystemConfiguration` (Lines 611-637, PK, 1 FK [User], 1 UQ [configuration_key], 1 CK, 4 DFs)
+20. `dbo.RightDelegation` (Lines 640-667, PK, 3 FKs [User, User, User], 3 CKs, 1 DF)
+21. `dbo.RightDelegationPermission` (Lines 670-682, PK, 2 FKs [RightDelegation, Permission])
+22. `dbo.AuditLog` (Lines 685-706, PK, 2 FKs [User, RightDelegation], 1 DF)
+
+3.4 DML Triggers (3 Triggers, Cleanly Scoped):
+1. `dbo.TR_SpaSession_ValidateScheduling` (Lines 178-228, on `dbo.SpaSession`, AFTER INSERT, UPDATE)
+2. `dbo.TR_FolioItem_RecalculateTotal` (Lines 512-534, on `dbo.FolioItem`, AFTER INSERT, UPDATE, DELETE)
+3. `dbo.TR_PaymentTransaction_RecalculateFolioPaid` (Lines 537-573, on `dbo.PaymentTransaction`, AFTER INSERT, UPDATE, DELETE)
+
+3.5 Standalone & Filtered Indexes (13 Indexes in Continuation):
+1. `UQ_SpaTreatment_TreatmentCode` (Line 44, on `SpaTreatment`, Filtered: `WHERE treatment_code IS NOT NULL`)
+2. `IX_SpaSession_Therapist_Time` (Line 164, on `SpaSession`)
+3. `IX_SpaSession_Room_Time` (Line 168, on `SpaSession`)
+4. `UX_PaymentTransaction_Reference` (Line 481, on `PaymentTransaction`, Filtered: `WHERE transaction_reference IS NOT NULL`)
+5. `IX_AuditLog_ActorCreatedAt` (Line 709, on `AuditLog`)
+6. `IX_RetreatBooking_Customer_Status` (Line 718, on `RetreatBooking`)
+7. `IX_RetreatBooking_Dates` (Line 722, on `RetreatBooking`)
+8. `IX_MealOrder_Booking_Date` (Line 726, on `MealOrder`)
+9. `IX_FolioItem_Folio_Category` (Line 730, on `FolioItem`)
+10. `IX_IngredientBatch_Ingredient_Expiry` (Line 734, on `IngredientBatch`)
+11. `IX_User_AccountStatus_LockedAt` (Line 738, on `User`, Filtered: `WHERE locked_at IS NOT NULL`)
+12. `IX_RightDelegation_Status_Expiry` (Line 743, on `RightDelegation`)
+13. `IX_AuditLog_TargetRefId` (Line 747, on `AuditLog`, Filtered: `WHERE target_ref_id IS NOT NULL`)
+
+--------------------------------------------------------------------------------
+4. EXACT INDEX ACCOUNTING & PREVENTING DOUBLE-COUNTING
+--------------------------------------------------------------------------------
+In SQL Server internal metadata (`sys.indexes`), indexes originate from three
+distinct DDL sources. Proper accounting requires distinguishing constraint-backed
+indexes from standalone indexes to prevent double-counting:
+
+1. Primary Key Clustered Indexes (`is_primary_key = 1`):
+   - Exactly 1 per table.
+   - Already existing in HSWRMS_TEST: 20
+   - Created by continuation: 22
+   - Subtotal PK Indexes: 42
+
+2. Unique Constraint Backing Indexes (`is_unique_constraint = 1`, `type = 2`):
+   - Created automatically by SQL Server when `CONSTRAINT ... UNIQUE` is specified.
+   - Already existing in HSWRMS_TEST (11 UQs):
+     `UQ_User_Email`, `UQ_AuthIdentity_ProviderSubject`, `UQ_Role_Name`,
+     `UQ_CustomerProfile_User`, `UQ_HealthProfile_Customer`, `UQ_RetreatPackage_Name`,
+     `UQ_VillaCategory_Name`, `UQ_PhysicalVilla_Number`, `UQ_ResidenceRecord_Booking`,
+     `UQ_Therapist_User`, `UQ_SpaTreatment_Name`.
+   - Created by continuation (10 UQs):
+     `UQ_TreatmentRoom_Name`, `UQ_MenuItem_Name`, `UQ_Ingredient_Name`,
+     `UQ_MealOrderItem_OrderMenu`, `UQ_Folio_Booking`, `UQ_Invoice_Folio`,
+     `UQ_Invoice_Number`, `UQ_CustomerReview_Booking`, `UQ_Permission`,
+     `UQ_SystemConfiguration_Key`.
+   - Subtotal Unique Constraint Indexes: 21
+
+3. Standalone Non-Clustered Indexes (`is_primary_key = 0`, `is_unique_constraint = 0`):
+   - Created via `CREATE [UNIQUE] [NONCLUSTERED] INDEX ...`
+   - Already existing in HSWRMS_TEST: 1 (`IX_PhysicalVilla_Status_Category`)
+   - Created by continuation: 13
+     * 9 Standard Non-Clustered Indexes:
+       `IX_SpaSession_Therapist_Time`, `IX_SpaSession_Room_Time`, `IX_AuditLog_ActorCreatedAt`,
+       `IX_RetreatBooking_Customer_Status`, `IX_RetreatBooking_Dates`, `IX_MealOrder_Booking_Date`,
+       `IX_FolioItem_Folio_Category`, `IX_IngredientBatch_Ingredient_Expiry`,
+       `IX_RightDelegation_Status_Expiry`.
+     * 4 Filtered Indexes (`has_filter = 1`, `WHERE ... IS NOT NULL`):
+       - `UQ_SpaTreatment_TreatmentCode` (Unique Filtered Index on `SpaTreatment`)
+       - `UX_PaymentTransaction_Reference` (Unique Filtered Index on `PaymentTransaction`)
+       - `IX_User_AccountStatus_LockedAt` (Non-Unique Filtered Index on `User`)
+       - `IX_AuditLog_TargetRefId` (Non-Unique Filtered Index on `AuditLog`)
+   - Subtotal Standalone Indexes: 14
+
+4. Grand Total Accounting (`sys.indexes` for user tables):
+   Existing in HSWRMS_TEST: 20 PK + 11 UQ + 1 Standalone = 32 indexes
+   Continuation Additions:  22 PK + 10 UQ + 13 Standalone = 45 indexes
+   Final Target State:      42 PK + 21 UQ + 14 Standalone = 77 indexes in `sys.indexes`
+
+--------------------------------------------------------------------------------
+5. OBJECT COLLISION & NON-DESTRUCTIVE VERIFICATION
+--------------------------------------------------------------------------------
+- Table Collision Check: Exactly 0 collisions. None of the 20 existing tables
+  (User through SpaTreatment) appear in any `CREATE TABLE` statement.
+- Constraint Collision Check: Exactly 0 collisions. All 22 PKs, 35 FKs, 10 UQs,
+  and check/default constraints carry distinct, non-overlapping names.
+- Destructive Operations Audit:
+  * `DROP TABLE` count: 0
+  * `DROP DATABASE` count: 0
+  * `TRUNCATE TABLE` count: 0
+  * `ALTER TABLE ... DROP` count: 0
+- Fail-Closed Context Guard: Line 22 aborts immediately if executed in any
+  database other than `HSWRMS_TEST`.
+
+--------------------------------------------------------------------------------
+6. FOREIGN KEY DEPENDENCY GRAPH & TOPOLOGICAL SORT
+--------------------------------------------------------------------------------
+All 35 foreign keys in the continuation payload were mapped and evaluated against
+table readiness:
+1. `RetreatPackageSpaTreatment` -> `RetreatPackage` (Existing), `SpaTreatment` (Existing) [OK]
+2. `TherapistTreatmentQualification` -> `Therapist` (Existing), `SpaTreatment` (Existing) [OK]
+3. `TreatmentRoomCompatibility` -> `TreatmentRoom` (Table 2), `SpaTreatment` (Existing) [OK]
+4. `SpaSession` -> `RetreatBooking` (Existing), `SpaTreatment` (Existing), `Therapist` (Existing), `TreatmentRoom` (Table 2) [OK]
+5. `MenuItemIngredient` -> `MenuItem` (Table 6), `Ingredient` (Table 7) [OK]
+6. `IngredientBatch` -> `Ingredient` (Table 7) [OK]
+7. `MealOrder` -> `RetreatBooking` (Existing) [OK]
+8. `MealOrderItem` -> `MealOrder` (Table 10), `MenuItem` (Table 6) [OK]
+9. `Folio` -> `RetreatBooking` (Existing) [OK]
+10. `FolioItem` -> `Folio` (Table 12), `RetreatBooking` (Existing), `SpaSession` (Table 5), `MealOrder` (Table 10) [OK]
+11. `Invoice` -> `Folio` (Table 12) [OK]
+12. `PaymentTransaction` -> `RetreatBooking` (Existing), `Invoice` (Table 14) [OK]
+13. `CustomerReview` -> `RetreatBooking` (Existing) [OK]
+14. `RolePermission` -> `Role` (Existing), `Permission` (Table 17) [OK]
+15. `SystemConfiguration` -> `User` (Existing) [OK]
+16. `RightDelegation` -> `User` (Existing - 3 FK references) [OK]
+17. `RightDelegationPermission` -> `RightDelegation` (Table 20), `Permission` (Table 17) [OK]
+18. `AuditLog` -> `User` (Existing), `RightDelegation` (Table 20) [OK]
+
+Conclusion: The dependency graph is strictly acyclic. Every foreign key references
+a table that either exists in HSWRMS_TEST or is created earlier in the script.
+
+--------------------------------------------------------------------------------
+7. TRIGGER SYNTAX & DATABASE ISOLATION AUDIT
+--------------------------------------------------------------------------------
+- All 3 triggers are table-level DML triggers (`AFTER INSERT, UPDATE[, DELETE]`),
+  NOT database-level or server-level DDL triggers.
+- Target tables (`SpaSession`, `FolioItem`, `PaymentTransaction`) are explicitly
+  scoped to schema `dbo`.
+- Each trigger includes `SET NOCOUNT ON;` and encapsulates multi-row logic using
+  `inserted` and `deleted` pseudo-tables.
+- Trigger syntax uses `CREATE OR ALTER TRIGGER`, ensuring clean, error-free parsing
+  on SQL Server 2016 SP1+.
+- Isolation: Triggers contain zero cross-database references (`master`, `HSWRMS`, etc.).
+
+--------------------------------------------------------------------------------
+8. DATA SEGREGATION & SECTION 9 ROLE SEED CONFIRMATION
+--------------------------------------------------------------------------------
+- Data Modification Audit:
+  * Top-level `INSERT INTO` statements: 0
+  * Top-level `UPDATE` statements: 0
+  * Top-level `DELETE` statements: 0
+  * `MERGE` statements: 0
+- Section 9 Baseline Role Seeds: Strictly excluded from `HSWRMS_TEST_schema_continuation.sql`.
+  Table `dbo.[Role]` will remain at 0 rows upon completion of schema continuation,
+  maintaining pure DDL segregation.
+
+--------------------------------------------------------------------------------
+9. RESIDUAL RISKS & BEHAVIORS UNPROVEN BY STATIC ANALYSIS
+--------------------------------------------------------------------------------
+While static analysis confirms syntactic, structural, and topological correctness,
+the following conditions can only be verified at execution time:
+1. SQLCMD Client-Level Session Option Inheritance:
+   Filtered indexes mandate `QUOTED_IDENTIFIER ON`. The payload sets this explicitly
+   at line 31, but `sqlcmd` must still be invoked with `-I` to ensure pre-parsing
+   of the initial batch honors quoted identifiers.
+2. Concurrent Locks or Active Sessions:
+   Static analysis cannot detect whether another process or connection holds an
+   exclusive schema lock (Sch-M) on `HSWRMS_TEST` tables (e.g. `SpaTreatment`).
+3. Database Storage & Log Growth:
+   Allocating 22 new tables, 45 indexes, and constraints requires sufficient space in
+   `HSWRMS_TEST.mdf` and `HSWRMS_TEST_log.ldf`. The pre-flight check must ensure
+   database files have available space and autogrowth enabled.
+4. Schema State Invariant Assumption:
+   Static analysis assumes the live catalog state of `HSWRMS_TEST` has not changed
+   since Phase 5.8.3.82. A pre-flight verification query must immediately precede
+   execution to verify that the table count is still exactly 20.
+
+--------------------------------------------------------------------------------
+10. RECOMMENDED CONTROLLED EXECUTION PROTOCOL (AWAITING USER AUTHORIZATION)
+--------------------------------------------------------------------------------
+When explicit user authorization is provided, execution should proceed as follows:
+
+1. Pre-Flight Verification Query (Read-Only):
+   Confirm `HSWRMS_TEST` is online, user-table count is exactly 20, and `HSWRMS`
+   is untouched (39 tables).
+
+2. Controlled Continuation Deployment:
+   ```powershell
+   sqlcmd -S localhost -d HSWRMS_TEST -E -b -I -i "05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql"
+   ```
+
+3. Post-Flight Verification Suite (Read-Only):
+   Assert:
+   - User Tables: exactly 42
+   - Foreign Keys: exactly 56
+   - Unique Constraints: exactly 21
+   - Standalone Indexes: exactly 14
+   - Total `sys.indexes`: exactly 77
+   - Triggers: exactly 3
+   - Primary DB `HSWRMS`: 0 modifications
+
+================================================================================
+FINAL VERDICT: READY TO REQUEST EXECUTION AUTHORIZATION
+================================================================================
+END OF REPORT — PHASE 5.8.3.84
+

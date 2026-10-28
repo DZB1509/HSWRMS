@@ -1,0 +1,237 @@
+================================================================================
+HSWRMS — PHASE 5.8.3.69: GROUP 3 M4 F&B COMMIT EXECUTION REPORT
+ATOMIC EXECUTION OF COMMIT 3 (MODULE 4 KITCHEN DISPLAY SYSTEM & CUSTOMER DINING)
+================================================================================
+Date: 2026-10-28
+Operating Mode: AUTHORIZED COMMIT EXECUTION (Commit 3 Only)
+Authoritative Integration Workspace:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Integration Branch:
+  feature/hswrms-m1-m6-integration
+================================================================================
+
+1. AUTHORIZATION & PRE-COMMIT AUDIT SUMMARY
+--------------------------------------------------------------------------------
+A. User Authorization:
+   The user explicitly authorized Option A from Phase 5.8.3.65 (executing baseline
+   commits as separate atomic commits). Following successful completion of Commit 1
+   (`d0a17db`) and Commit 2 (`258c7bd`), this phase authorized COMMIT 3 ONLY:
+   - Group 3 Scope: Exactly the 36-file Module 4 F&B / KDS group defined in Phase 5.8.3.66.
+   - Authorized Subject: `feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration`
+
+B. Pre-Commit Verification Gate:
+   [X] Repository Root confirmed: E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules
+   [X] Branch confirmed: feature/hswrms-m1-m6-integration
+   [X] Parent HEAD confirmed: 258c7bd23d1dc733c83b466bdfd9c52ce994b8a6 (Commit 2)
+   [X] Staging area clean prior to staging: 0 files staged (`git diff --cached` was empty)
+   [X] Exact 36 files staged using explicit file path array (8 modified tracked, 28 untracked).
+   [X] Zero stray content: Staged diff strictly restricted to M4 KDS, dining, boundary integration,
+       security config endpoints, tests, test schema, and frontend UI.
+   [X] Zero accidental secrets or credential exposure.
+   [X] Excluded files verified untouched:
+       - 05_Development/database/generated/HSWRMS_TEST_schema.sql (untracked, unmodified)
+       - 05_Development/database/migrations/draft_m6_governance_and_delegation.sql (untracked, unmodified)
+       - 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql (untracked, unmodified)
+       - 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql (untracked, unmodified)
+       - 05_Development/database/migrations/V005__m6_audit_log.sql (untracked, unmodified)
+       - All audit reports in 06_Reports/ (untracked, unmodified)
+   [X] Discrepancies found: ZERO discrepancies.
+
+
+2. COMMIT EXECUTION DETAILS
+--------------------------------------------------------------------------------
+A. Execution Commands:
+   1. Staging Command:
+      git add \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbCustomerOrderController.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbKdsController.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/AlaCarteItemRequest.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/CancelOrderRequest.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/CreateAlaCarteRequest.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/CreateDailyMealRequest.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/KdsDashboardKpiDto.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MealOrderDto.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MealOrderItemDto.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MealPrepEntryDto.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MenuItemDto.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/UpdateOrderStatusRequest.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderItemEntity.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MenuItemEntity.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/BookingContextPort.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/DefaultBookingAndDietaryIntegrationService.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/DietaryProfilePort.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderItemRepository.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MenuItemRepository.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderService.java \
+        05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java \
+        05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java \
+        05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/integration/DefaultBookingAndDietaryIntegrationServiceTest.java \
+        05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/FnbBillingIntegrationTest.java \
+        05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceTest.java \
+        05_Development/backend/src/test/resources/schema.sql \
+        05_Development/frontend/src/context/DiningContext.tsx \
+        05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts \
+        05_Development/frontend/src/features/m4-fnb/hooks/useKdsPolling.ts \
+        05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx \
+        05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx \
+        05_Development/frontend/src/pages/fb/MealPrepListPage.tsx \
+        05_Development/frontend/src/types/dining.ts
+
+   2. Commit Command:
+      git commit -m "feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration"
+
+B. New Commit Metadata:
+   - Commit Hash (Full): f1757e1c6cbafe70249006444dcc99bfa3fc7eee
+   - Commit Hash (Short): f1757e1
+   - Author: datnthe181883 <datnthe181883@fpt.edu.vn>
+   - Date: Wed Oct 28 15:39:11 2026 +0700
+   - Commit Subject: feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration
+   - Parent Commit: 258c7bd23d1dc733c83b466bdfd9c52ce994b8a6 (Commit 2: feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions)
+
+C. Committed Files & Net Diff Metrics:
+   - Files Committed: Exactly 36 files (8 modified tracked + 28 newly created)
+   - Total Diff Metrics: 36 files changed, 4338 insertions(+), 51 deletions(-)
+
+
+3. COMMITTED INVENTORY BREAKDOWN (36 FILES)
+--------------------------------------------------------------------------------
+A. Backend Security & Configuration (1 file):
+   1. `SecurityConfig.java`: Registered `/api/v1/fnb/kds/**` (requiring S39:V / S39:U)
+      and `/api/v1/fnb/orders/**` (authenticated dining customer endpoints).
+
+B. Backend Controllers (2 files):
+   2. `FnbCustomerOrderController.java`: Customer-facing endpoints for dining orders,
+      daily meal orders, à la carte orders, and order history.
+   3. `FnbKdsController.java`: Kitchen Display System endpoints for active orders, prep lists,
+      status transitions (NEW -> PREPARING -> READY -> SERVED), and KPI dashboard.
+
+C. Backend Data Transfer Objects (10 files):
+   4.  `AlaCarteItemRequest.java`
+   5.  `CancelOrderRequest.java`
+   6.  `CreateAlaCarteRequest.java`
+   7.  `CreateDailyMealRequest.java`
+   8.  `KdsDashboardKpiDto.java`
+   9.  `MealOrderDto.java`
+   10. `MealOrderItemDto.java`
+   11. `MealPrepEntryDto.java`
+   12. `MenuItemDto.java`
+   13. `UpdateOrderStatusRequest.java`
+
+D. Backend JPA Entities (3 files):
+   14. `MealOrderEntity.java` (modified tracked): Added cancellation audit trail fields,
+       item relationships, and helper methods.
+   15. `MealOrderItemEntity.java` (new): Line items with menu item reference, quantity, unit price.
+   16. `MenuItemEntity.java` (new): Menu item definitions, category, dietary flags, price.
+
+E. Backend Integration & Ports (3 files):
+   17. `BookingContextPort.java`: Port contract for cross-module booking context retrieval.
+   18. `DefaultBookingAndDietaryIntegrationService.java`: Adapter handling M1 customer profiles,
+       M2 retreat booking guest count/dates, and dietary restrictions.
+   19. `DietaryProfilePort.java`: Port contract for customer dietary preferences and allergies.
+
+F. Backend Repositories (3 files):
+   20. `MealOrderRepository.java` (modified tracked): Custom queries for KDS prep lists, active status,
+       and date ranges.
+   21. `MealOrderItemRepository.java` (new): JPA repository for order line items.
+   22. `MenuItemRepository.java` (new): JPA repository for menu item lookup and category filtering.
+
+G. Backend Service Layer (2 files):
+   23. `MealOrderService.java`: Core interface for M4 F&B operations.
+   24. `MealOrderServiceImpl.java`: Comprehensive service implementation with strict status state machine,
+       inventory validation, cancellation audit trail recording, and KPI aggregation.
+
+H. Backend Tests & Test Resources (5 files):
+   25. `FnbControllersSecurityTest.java`: Spring Security mock tests verifying S39 RBAC on KDS
+       and customer ownership on order endpoints.
+   26. `DefaultBookingAndDietaryIntegrationServiceTest.java`: Boundary integration tests with mocked ports.
+   27. `FnbBillingIntegrationTest.java`: Billing calculation and order total verification tests.
+   28. `MealOrderServiceTest.java`: Exhaustive business logic, lifecycle transition, and cancellation tests.
+   29. `backend/src/test/resources/schema.sql`: H2 test schema aligned with M4 entities.
+
+I. Frontend Context, API, Hooks & Pages (7 files):
+   30. `DiningContext.tsx` (modified tracked): Enhanced context provider with KDS live updates and order state.
+   31. `fnbApi.ts` (new): Typed Axios client for M4 customer dining and KDS endpoints.
+   32. `useKdsPolling.ts` (new): React hook implementing smart polling for kitchen display screens.
+   33. `FnbDashboardPage.tsx` (modified tracked): KDS overview dashboard with active orders and metrics.
+   34. `MealOrderDetailPage.tsx` (modified tracked): Order details, item listing, and status update actions.
+   35. `MealPrepListPage.tsx` (modified tracked): Chef prep list grouped by recipe/item and time window.
+   36. `dining.ts` (modified tracked): TypeScript interfaces for dining orders, status enums, and prep items.
+
+
+4. COMMITTED CONTENT & FUNCTIONAL ARCHITECTURE SUMMARY
+--------------------------------------------------------------------------------
+A. Kitchen Display System (KDS):
+   - Real-time visibility into incoming meal orders across retreat packages and à la carte dining.
+   - Status transition state machine: PENDING/NEW -> PREPARING -> READY -> SERVED, with validation
+     preventing illegal state jumps.
+   - Live prep list aggregation (`MealPrepListPage.tsx`) optimizing kitchen batch preparation.
+   - Smart polling via `useKdsPolling.ts` providing near real-time kitchen updates without WebSocket overhead.
+
+B. Customer Dining & Order Management:
+   - Support for scheduled retreat daily meals and on-demand à la carte orders.
+   - Pricing calculation, item availability checks, and dietary note attachment.
+   - Cancellation with full audit trail (`cancelledBy`, `cancelledAt`, `cancellationReason`).
+
+C. Cross-Module Boundary Integration:
+   - Decoupled port-adapter architecture (`BookingContextPort`, `DietaryProfilePort`) preventing tight
+     coupling between M4 and M1/M2 database entities.
+   - Fallback and null-safe handling in `DefaultBookingAndDietaryIntegrationService` when external
+     retreat bookings or customer profiles are not yet loaded.
+
+D. Security & RBAC:
+   - S39:V and S39:U permissions registered in Commit 2 protect all KDS management and status modification routes.
+   - Customer-level authentication protects order placement and personal order history.
+
+
+5. POST-COMMIT WORKING-TREE STATUS AUDIT
+--------------------------------------------------------------------------------
+A. Current Staging Area:
+   - Staged Files: Exactly 0 files (`git diff --cached` is completely clean).
+
+B. Tracked Modified Files Remaining:
+   - Exactly 0 files! All 8 modified tracked files have been cleanly committed in Commit 3.
+
+C. Untracked Artifacts Preserved:
+   - Database Migrations (4 files):
+     * 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql
+     * 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql
+     * 05_Development/database/migrations/V005__m6_audit_log.sql
+     * 05_Development/database/migrations/draft_m6_governance_and_delegation.sql
+   - Generated Schema Test Payload (1 file):
+     * 05_Development/database/generated/HSWRMS_TEST_schema.sql
+   - Audit and Preflight Reports:
+     * All 21 reports in 06_Reports/ remain intact.
+
+D. Git Operations Constraint Audit:
+   - Zero commits amended.
+   - Zero push operations performed.
+   - Zero merge, rebase, cherry-pick, reset, checkout, switch, stash, or clean operations performed.
+   - Zero SQL DDL, DML, or migrations executed.
+
+
+6. COMMIT HISTORY VERIFICATION
+--------------------------------------------------------------------------------
+Current branch commit sequence on `feature/hswrms-m1-m6-integration`:
+- f1757e1 (HEAD) feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration
+- 258c7bd        feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions
+- d0a17db        schema(database): align authoritative 42-table schema and test provisioning guide
+- 46ab465        docs(audit): add M1-M6 integration and provisioning evidence
+
+
+7. NEXT STEP & GATE RECOMMENDATION
+--------------------------------------------------------------------------------
+GATE STATUS: COMMIT 3 (GROUP 3) SUCCESSFULLY EXECUTED.
+
+Standing Order Honored:
+- Execution halted immediately following Commit 3 completion and verification.
+- Group 4 (Database Migrations V003, V004, V005) and Group 5 (Audit Reports & Generated Artifacts)
+  have NOT been staged or committed.
+- Awaiting explicit user instruction before initiating any subsequent baseline commit phase.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.69
+================================================================================
+
