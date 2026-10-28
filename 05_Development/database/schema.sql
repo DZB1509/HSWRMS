@@ -42,6 +42,10 @@ CREATE TABLE dbo.[User] (
         CONSTRAINT DF_User_AccountStatus DEFAULT ('PENDING'),
     email_verified      BIT NOT NULL
         CONSTRAINT DF_User_EmailVerified DEFAULT (0),
+    failed_login_count  INT NOT NULL
+        CONSTRAINT DF_User_FailedLoginCount DEFAULT (0),
+    locked_at           DATETIME2(0) NULL,
+    last_login_at       DATETIME2(0) NULL,
     created_at          DATETIME2(0) NOT NULL
         CONSTRAINT DF_User_CreatedAt DEFAULT (SYSUTCDATETIME()),
     updated_at          DATETIME2(0) NOT NULL
@@ -268,10 +272,19 @@ GO
 CREATE TABLE dbo.RetreatPackage (
     retreat_package_id  INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_RetreatPackage PRIMARY KEY,
+    package_code        VARCHAR(50) NULL,
     package_name        NVARCHAR(150) NOT NULL,
     wellness_goal       NVARCHAR(250) NULL,
     duration_nights     INT NOT NULL,
+    duration_unit       NVARCHAR(50) NOT NULL
+        CONSTRAINT DF_RetreatPackage_DurationUnit DEFAULT (N'Đêm (Nights)'),
     base_price          DECIMAL(18,2) NOT NULL,
+    base_price_unit     NVARCHAR(50) NOT NULL
+        CONSTRAINT DF_RetreatPackage_BasePriceUnit DEFAULT (N'VND/khách/gói'),
+    included_treatments NVARCHAR(MAX) NULL,
+    dietary_plan        NVARCHAR(1000) NULL,
+    extra_charge_policy NVARCHAR(1000) NULL,
+    target_guest        NVARCHAR(500) NULL,
     package_status      VARCHAR(20) NOT NULL
         CONSTRAINT DF_RetreatPackage_Status DEFAULT ('ACTIVE'),
 
@@ -290,6 +303,17 @@ CREATE TABLE dbo.VillaCategory (
     max_occupancy       INT NOT NULL,
     price_modifier      DECIMAL(18,2) NOT NULL
         CONSTRAINT DF_VillaCategory_PriceModifier DEFAULT (0),
+    inventory_count     INT NOT NULL
+        CONSTRAINT DF_VillaCategory_InventoryCount DEFAULT (0),
+    bedroom_count       INT NOT NULL
+        CONSTRAINT DF_VillaCategory_BedroomCount DEFAULT (1),
+    bedroom_description NVARCHAR(100) NULL,
+    area_description    NVARCHAR(50) NULL,
+    has_private_pool    BIT NOT NULL
+        CONSTRAINT DF_VillaCategory_HasPrivatePool DEFAULT (0),
+    pool_description    NVARCHAR(100) NULL,
+    features_and_amenities NVARCHAR(500) NULL,
+    eligible_packages   NVARCHAR(250) NULL,
     category_status     VARCHAR(20) NOT NULL
         CONSTRAINT DF_VillaCategory_Status DEFAULT ('ACTIVE'),
 
@@ -322,6 +346,15 @@ CREATE TABLE dbo.PhysicalVilla (
     villa_category_id   INT NOT NULL,
     villa_number        NVARCHAR(30) NOT NULL,
     floor               NVARCHAR(30) NULL,
+    zone_name           NVARCHAR(100) NULL,
+    bedroom_info        NVARCHAR(100) NULL,
+    max_occupancy       INT NOT NULL
+        CONSTRAINT DF_PhysicalVilla_MaxOccupancy DEFAULT (3),
+    area_sqm            DECIMAL(10,2) NULL,
+    has_private_pool    BIT NOT NULL
+        CONSTRAINT DF_PhysicalVilla_HasPrivatePool DEFAULT (0),
+    pool_info           NVARCHAR(100) NULL,
+    view_and_operational_notes NVARCHAR(500) NULL,
     villa_status        VARCHAR(30) NOT NULL
         CONSTRAINT DF_PhysicalVilla_Status DEFAULT ('AVAILABLE'),
 
@@ -333,6 +366,10 @@ CREATE TABLE dbo.PhysicalVilla (
         CHECK (villa_status IN
             ('AVAILABLE','OCCUPIED','MAINTENANCE','NEEDS_CLEANING','INACTIVE'))
 );
+GO
+
+CREATE NONCLUSTERED INDEX IX_PhysicalVilla_Status_Category
+    ON dbo.PhysicalVilla(villa_status, villa_category_id);
 GO
 
 CREATE TABLE dbo.RetreatBooking (
@@ -443,6 +480,11 @@ GO
 CREATE TABLE dbo.RetreatPackageSpaTreatment (
     retreat_package_id  INT NOT NULL,
     treatment_id        INT NOT NULL,
+    included_sessions   INT NOT NULL
+        CONSTRAINT DF_RPST_included_sessions DEFAULT (1),
+    entitlement_status  VARCHAR(50) NOT NULL
+        CONSTRAINT DF_RPST_entitlement_status DEFAULT ('INCLUDED'),
+    notes               NVARCHAR(500) NULL,
 
     CONSTRAINT PK_RetreatPackageSpaTreatment
         PRIMARY KEY (retreat_package_id, treatment_id),
@@ -873,6 +915,9 @@ CREATE TABLE dbo.CustomerReview (
     retreat_booking_id  INT NOT NULL,
     overall_rating      TINYINT NOT NULL,
     comments            NVARCHAR(2000) NULL,
+    room_rating         TINYINT NULL,
+    spa_rating          TINYINT NULL,
+    dining_rating       TINYINT NULL,
     submitted_at        DATETIME2(0) NOT NULL
         CONSTRAINT DF_CustomerReview_SubmittedAt DEFAULT (SYSUTCDATETIME()),
 
@@ -881,7 +926,11 @@ CREATE TABLE dbo.CustomerReview (
         FOREIGN KEY (retreat_booking_id)
         REFERENCES dbo.RetreatBooking(retreat_booking_id),
     CONSTRAINT CK_CustomerReview_Rating
-        CHECK (overall_rating BETWEEN 1 AND 5)
+        CHECK (overall_rating BETWEEN 1 AND 5),
+    CONSTRAINT CK_CustomerReview_CategoryRatings
+        CHECK ((room_rating   IS NULL OR room_rating   BETWEEN 1 AND 5)
+           AND (spa_rating    IS NULL OR spa_rating    BETWEEN 1 AND 5)
+           AND (dining_rating IS NULL OR dining_rating BETWEEN 1 AND 5))
 );
 GO
 
@@ -960,6 +1009,12 @@ CREATE TABLE dbo.[Permission] (
         CONSTRAINT PK_Permission PRIMARY KEY,
     module_or_screen    NVARCHAR(100) NOT NULL,
     action_type         NVARCHAR(50) NOT NULL,
+    is_delegable        BIT NOT NULL
+        CONSTRAINT DF_Permission_IsDelegable DEFAULT (0),
+    is_admin_only       BIT NOT NULL
+        CONSTRAINT DF_Permission_IsAdminOnly DEFAULT (0),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_Permission_CreatedAt DEFAULT (SYSUTCDATETIME()),
 
     CONSTRAINT UQ_Permission UNIQUE (module_or_screen, action_type)
 );
@@ -990,6 +1045,14 @@ CREATE TABLE dbo.SystemConfiguration (
     updated_by_user_id      INT NULL,
     updated_at              DATETIME2(0) NOT NULL
         CONSTRAINT DF_SystemConfiguration_UpdatedAt DEFAULT (SYSUTCDATETIME()),
+    value_type              VARCHAR(20) NOT NULL
+        CONSTRAINT DF_SystemConfig_ValueType DEFAULT ('INT'),
+    min_value               DECIMAL(18,4) NULL,
+    max_value               DECIMAL(18,4) NULL,
+    unit                    NVARCHAR(40) NULL,
+    description             NVARCHAR(500) NULL,
+    manager_editable        BIT NOT NULL
+        CONSTRAINT DF_SystemConfig_ManagerEditable DEFAULT (0),
 
     CONSTRAINT UQ_SystemConfiguration_Key UNIQUE (configuration_key),
     CONSTRAINT FK_SystemConfiguration_User
@@ -1009,12 +1072,17 @@ CREATE TABLE dbo.RightDelegation (
     valid_until         DATETIME2(0) NOT NULL,
     delegation_status   VARCHAR(20) NOT NULL
         CONSTRAINT DF_RightDelegation_Status DEFAULT ('PENDING'),
+    revoked_at          DATETIME2(0) NULL,
+    revoked_by_admin_user_id INT NULL,
 
     CONSTRAINT FK_RightDelegation_Admin
         FOREIGN KEY (granted_by_admin_user_id)
         REFERENCES dbo.[User](user_id),
     CONSTRAINT FK_RightDelegation_Manager
         FOREIGN KEY (received_by_manager_user_id)
+        REFERENCES dbo.[User](user_id),
+    CONSTRAINT FK_RightDelegation_RevokedBy
+        FOREIGN KEY (revoked_by_admin_user_id)
         REFERENCES dbo.[User](user_id),
     CONSTRAINT CK_RightDelegation_Dates CHECK (valid_until > valid_from),
     CONSTRAINT CK_RightDelegation_DifferentUsers
@@ -1044,15 +1112,23 @@ CREATE TABLE dbo.AuditLog (
     audit_log_id        BIGINT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_AuditLog PRIMARY KEY,
     actor_user_id       INT NULL,
+    actor_role          VARCHAR(50) NULL,
     action              NVARCHAR(150) NOT NULL,
     target_data_type    NVARCHAR(100) NULL,
+    target_ref_id       VARCHAR(100) NULL,
     access_status       NVARCHAR(50) NULL,
+    old_value           NVARCHAR(500) NULL,
+    new_value           NVARCHAR(500) NULL,
+    delegation_id       INT NULL,
     created_at          DATETIME2(0) NOT NULL
         CONSTRAINT DF_AuditLog_CreatedAt DEFAULT (SYSUTCDATETIME()),
 
     CONSTRAINT FK_AuditLog_User
         FOREIGN KEY (actor_user_id)
-        REFERENCES dbo.[User](user_id)
+        REFERENCES dbo.[User](user_id),
+    CONSTRAINT FK_AuditLog_RightDelegation
+        FOREIGN KEY (delegation_id)
+        REFERENCES dbo.RightDelegation(delegation_id)
 );
 GO
 
@@ -1084,6 +1160,21 @@ GO
 CREATE INDEX IX_IngredientBatch_Ingredient_Expiry
     ON dbo.IngredientBatch(ingredient_id, expiration_date);
 GO
+
+CREATE NONCLUSTERED INDEX IX_User_AccountStatus_LockedAt
+    ON dbo.[User](account_status, locked_at)
+    WHERE locked_at IS NOT NULL;
+GO
+
+CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
+    ON dbo.RightDelegation(delegation_status, valid_from, valid_until);
+GO
+
+CREATE NONCLUSTERED INDEX IX_AuditLog_TargetRefId
+    ON dbo.AuditLog(target_ref_id, created_at DESC)
+    WHERE target_ref_id IS NOT NULL;
+GO
+
 
 
 /* ============================================================================
