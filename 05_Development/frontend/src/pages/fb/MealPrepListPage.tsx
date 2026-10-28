@@ -4,14 +4,20 @@ import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 import { useNavigate } from 'react-router-dom';
-import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw } from 'lucide-react';
+import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, RotateCw } from 'lucide-react';
+import { useKdsPolling } from '../../features/m4-fnb/hooks/useKdsPolling';
+import { useAuth } from '../../hooks/useAuth';
 
 const CANONICAL_RESORT_DATE = '2026-09-24';
 
 export const MealPrepListPage: React.FC = () => {
   const { t } = useTranslation(['operations', 'customer']);
-  const { getDailyPrepList, updateFulfillmentStatus, menuItems } = useDining();
+  const { getDailyPrepList, updateFulfillmentStatus, menuItems, refreshKitchenQueue, cancelOrder } = useDining();
   const navigate = useNavigate();
+  const { hasPermission, role } = useAuth();
+
+  // Screen 39 authorization: S39:U required for updating orders, backend strictly enforces
+  const canUpdate = hasPermission('S39:U') || role === 'fb_staff' || role === 'manager' || role === 'admin';
 
   const formatDietaryNote = (note: string) => {
     const normalized = note.toLowerCase().replace(/[\s-]+/g, '_');
@@ -32,6 +38,16 @@ export const MealPrepListPage: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // KDS short-polling: 10-15s interval (12s default) + manual refresh
+  const { isManualRefreshing, manualRefresh } = useKdsPolling({
+    intervalMs: 12000,
+    onPoll: async () => {
+      if (refreshKitchenQueue) {
+        await refreshKitchenQueue(date);
+      }
+    },
+  });
 
   const rawList = getDailyPrepList(date);
 
@@ -60,11 +76,32 @@ export const MealPrepListPage: React.FC = () => {
 
   const paginatedList = filteredList.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
 
-  const handleStatusChange = (
+  const handleStatusChange = async (
     id: string,
     type: 'retreat_meal' | 'a_la_carte',
-    newStatus: 'pending' | 'preparing' | 'ready' | 'delivered'
+    newStatus: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
   ) => {
+    if (!canUpdate) {
+      alert(t('common.forbidden', 'You do not have permission S39:U to update orders.'));
+      return;
+    }
+
+    if (newStatus === 'cancelled') {
+      const reason = window.prompt(t('fnb.cancellation.reasonPrompt', 'Cancellation reason is mandatory for staff. Please enter reason:'));
+      if (!reason || !reason.trim()) {
+        alert(t('fnb.cancellation.reasonRequired', 'Cancellation reason is required. Order was not cancelled.'));
+        return;
+      }
+      try {
+        if (cancelOrder) {
+          await cancelOrder(id, reason.trim());
+        }
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Failed to cancel order');
+      }
+      return;
+    }
+
     updateFulfillmentStatus(id, type, newStatus);
   };
 
@@ -103,6 +140,20 @@ export const MealPrepListPage: React.FC = () => {
       <OperationalPageHeader
         title={t('fnb.prepList.title', 'Daily Meal Prep Queue')}
         subtitle={t('fnb.prepList.subtitle', 'Manage kitchen fulfillment schedule and dietary adaptations for resort customers.')}
+        actions={
+          <button
+            type="button"
+            className="hsw-btn hsw-btn-secondary"
+            onClick={() => manualRefresh()}
+            disabled={isManualRefreshing}
+            id="btn-refresh-kds-queue"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            title="Refresh KDS Prep Queue (short polling 12s)"
+          >
+            <RotateCw size={14} className={isManualRefreshing ? 'hsw-spin' : ''} />
+            <span>{isManualRefreshing ? t('common.refreshing', 'Refreshing...') : t('common.refresh', 'Refresh')}</span>
+          </button>
+        }
       />
 
       {/* Compact Filter Toolbar (Requirement 27 - eliminates giant empty vertical space) */}
@@ -350,11 +401,13 @@ export const MealPrepListPage: React.FC = () => {
                             : 'var(--success)',
                       }}
                       id={`status-select-${item.id}`}
+                      disabled={!canUpdate || item.status === 'delivered' || item.status === 'cancelled'}
                     >
                       <option value="pending">{t('fnb.status.pending', 'Pending')}</option>
                       <option value="preparing">{t('fnb.status.preparing', 'Preparing')}</option>
                       <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
                       <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
+                      <option value="cancelled">{t('fnb.status.cancelled', 'Cancelled')}</option>
                     </select>
                   </td>
 

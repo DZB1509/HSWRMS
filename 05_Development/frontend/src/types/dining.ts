@@ -107,5 +107,12 @@ export interface DiningContextType {
   updateFulfillmentStatus: (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => void;
   getDailyPrepList: (date: string) => MealPrepEntry[];
   getActiveKitchenQueue: (date?: string) => MealPrepEntry[];
+
+  // Backend Integration & Polling
+  isLoading?: boolean;
+  isRefreshing?: boolean;
+  error?: string | null;
+  refreshKitchenQueue?: (date?: string) => Promise<void>;
+  cancelOrder?: (id: string, reason?: string) => Promise<void>;
 }
 

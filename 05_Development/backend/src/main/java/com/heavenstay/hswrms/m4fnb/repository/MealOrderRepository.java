@@ -66,5 +66,17 @@ public interface MealOrderRepository extends JpaRepository<MealOrderEntity, Long
 
     @Query("SELECT m FROM MealOrderEntity m WHERE m.orderDate = :orderDate AND m.orderStatus NOT IN ('DELIVERED', 'CANCELLED') ORDER BY m.createdAt ASC")
     List<MealOrderEntity> findNonTerminalOrdersByDate(@Param("orderDate") LocalDate orderDate);
+
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.retreatBooking.retreatBookingId = :bookingId AND m.orderDate = :orderDate AND m.mealType = :mealType AND m.orderType = 'DAILY_MEAL'")
+    Optional<MealOrderEntity> findDailyMealSelection(
+            @Param("bookingId") Integer bookingId,
+            @Param("orderDate") LocalDate orderDate,
+            @Param("mealType") String mealType);
+
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.retreatBooking.retreatBookingId = :bookingId ORDER BY m.createdAt DESC")
+    List<MealOrderEntity> findByBookingIdOrderByCreatedAtDesc(@Param("bookingId") Integer bookingId);
+
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.orderDate = :orderDate ORDER BY m.createdAt ASC")
+    List<MealOrderEntity> findOrdersByDate(@Param("orderDate") LocalDate orderDate);
 }
 

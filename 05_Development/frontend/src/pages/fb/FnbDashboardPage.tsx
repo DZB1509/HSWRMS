@@ -1,27 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
-import { ChefHat, UtensilsCrossed, AlertCircle, Clock, ChevronRight, ArrowRight } from 'lucide-react';
+import { ChefHat, UtensilsCrossed, AlertCircle, Clock, ChevronRight, ArrowRight, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useKdsPolling } from '../../features/m4-fnb/hooks/useKdsPolling';
+import { fnbApi, type KdsDashboardKpiBackendDto } from '../../features/m4-fnb/api/fnbApi';
 
 const CANONICAL_RESORT_DATE = '2026-09-24';
 
 export const FnbDashboardPage: React.FC = () => {
   const { t } = useTranslation('operations');
-  const { getActiveKitchenQueue, menuItems } = useDining();
+  const { getActiveKitchenQueue, menuItems, refreshKitchenQueue } = useDining();
   const navigate = useNavigate();
+
+  const [remoteKpis, setRemoteKpis] = useState<KdsDashboardKpiBackendDto | null>(null);
+
+  // Short-polling: 10-15s interval (12s) + manual refresh
+  const { isManualRefreshing, manualRefresh } = useKdsPolling({
+    intervalMs: 12000,
+    onPoll: async () => {
+      try {
+        const [kpis] = await Promise.all([
+          fnbApi.getKdsDashboardKpis(CANONICAL_RESORT_DATE),
+          refreshKitchenQueue ? refreshKitchenQueue(CANONICAL_RESORT_DATE) : Promise.resolve(),
+        ]);
+        if (kpis) {
+          setRemoteKpis(kpis);
+        }
+      } catch (err) {
+        console.warn('Live KPI fetch failed, falling back to local queue counts:', err);
+      }
+    },
+  });
 
   // Canonical demo operational resort date active preparation queue
   const activeQueue = getActiveKitchenQueue(CANONICAL_RESORT_DATE);
 
-
-  const mealsToPrepare = activeQueue.filter((item) => item.type === 'retreat_meal').length;
-  const extraOrders = activeQueue.filter((item) => item.type === 'a_la_carte').length;
-  const dietaryAlerts = activeQueue.filter((item) => item.dietaryNotes.length > 0).length;
-  const pendingCount = activeQueue.filter((item) => item.status === 'pending').length;
-  const preparingCount = activeQueue.filter((item) => item.status === 'preparing').length;
-
+  const mealsToPrepare = remoteKpis ? remoteKpis.retreatMealsToday : activeQueue.filter((item) => item.type === 'retreat_meal').length;
+  const extraOrders = remoteKpis ? remoteKpis.extraOrdersToday : activeQueue.filter((item) => item.type === 'a_la_carte').length;
+  const dietaryAlerts = remoteKpis ? remoteKpis.dietaryAlertsCount : activeQueue.filter((item) => item.dietaryNotes.length > 0).length;
+  const pendingCount = remoteKpis ? remoteKpis.pendingCount : activeQueue.filter((item) => item.status === 'pending').length;
+  const preparingCount = remoteKpis ? remoteKpis.preparingCount : activeQueue.filter((item) => item.status === 'preparing').length;
 
   const formatVilla = (villa?: string) => {
     if (!villa) return '—';
@@ -49,15 +69,29 @@ export const FnbDashboardPage: React.FC = () => {
         title={t('fnb.dashboard.title', 'F&B Kitchen Dashboard')}
         subtitle={t('fnb.dashboard.subtitle', 'Culinary prep queue and fulfillment metrics for current resort date.')}
         actions={
-          <button
-            type="button"
-            className="hsw-btn hsw-btn-primary"
-            onClick={() => navigate('/fb/meal-prep')}
-            id="btn-view-full-prep-list"
-          >
-            <span>{t('fnb.dashboard.viewPrepList', 'View Full Prep List')}</span>
-            <ArrowRight size={15} />
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary"
+              onClick={() => manualRefresh()}
+              disabled={isManualRefreshing}
+              id="btn-refresh-kds-dashboard"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title="Refresh KDS Dashboard (short polling 12s)"
+            >
+              <RotateCw size={14} className={isManualRefreshing ? 'hsw-spin' : ''} />
+              <span>{isManualRefreshing ? t('common.refreshing', 'Refreshing...') : t('common.refresh', 'Refresh')}</span>
+            </button>
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-primary"
+              onClick={() => navigate('/fb/meal-prep')}
+              id="btn-view-full-prep-list"
+            >
+              <span>{t('fnb.dashboard.viewPrepList', 'View Full Prep List')}</span>
+              <ArrowRight size={15} />
+            </button>
+          </div>
         }
       />
 

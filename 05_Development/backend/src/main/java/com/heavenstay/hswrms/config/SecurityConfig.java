@@ -125,6 +125,9 @@ public class SecurityConfig {
                         // Public retreat packages and villa categories catalog from M2: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/retreat-packages", "/api/v1/retreat-packages/**").permitAll()
 
+                        // Public F&B menu catalog from M4: GET only
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fnb/customer/menu-items", "/api/v1/fnb/customer/menu-items/**").permitAll()
+
                         // Public read-only booking calculation from M2: POST only
                         .requestMatchers(HttpMethod.POST, "/api/v1/retreat-packages/calculate").permitAll()
 
@@ -145,6 +148,12 @@ public class SecurityConfig {
 
                         // Customer and receptionist SPA operations from M3
                         .requestMatchers("/api/v1/spa/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
+
+                        // Module 4: F&B Kitchen Display System (KDS) operations: FNB_STAFF, MANAGER, ADMIN
+                        .requestMatchers("/api/v1/fnb/kds/**").hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN")
+
+                        // Module 4: F&B Customer ordering operations: CUSTOMER, RECEPTIONIST, MANAGER, ADMIN
+                        .requestMatchers("/api/v1/fnb/customer/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
 
                         // Module 5: VNPay commerce IPN/webhook is authenticated by HMAC-SHA512 checksum, not by JWT
                         .requestMatchers("/api/v1/commerce/payment/webhook/vnpay").permitAll()

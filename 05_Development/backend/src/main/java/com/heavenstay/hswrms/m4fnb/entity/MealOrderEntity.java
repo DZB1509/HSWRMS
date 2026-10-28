@@ -37,6 +37,9 @@ public class MealOrderEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @OneToMany(mappedBy = "mealOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<MealOrderItemEntity> items = new java.util.ArrayList<>();
+
     public MealOrderEntity() {}
 
     public Long getMealOrderId() {
@@ -93,5 +96,21 @@ public class MealOrderEntity {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public java.util.List<MealOrderItemEntity> getItems() {
+        return items;
+    }
+
+    public void setItems(java.util.List<MealOrderItemEntity> items) {
+        this.items = items;
+    }
+
+    public void addItem(MealOrderItemEntity item) {
+        if (items == null) {
+            items = new java.util.ArrayList<>();
+        }
+        items.add(item);
+        item.setMealOrder(this);
     }
 }

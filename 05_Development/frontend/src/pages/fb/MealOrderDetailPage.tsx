@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
@@ -6,13 +6,21 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, Clock, MapPin, User, ChevronLeft, Shield, Utensils, CheckCircle } from 'lucide-react';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
-import type { LocalizedString } from '../../types/dining';
+import type { LocalizedString, MealPrepEntry, FnbFulfillmentStatus } from '../../types/dining';
+import { useAuth } from '../../hooks/useAuth';
+import { fnbApi } from '../../features/m4-fnb/api/fnbApi';
 
 export const MealOrderDetailPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'customer']);
-  const { getDailyPrepList, updateFulfillmentStatus, menuItems } = useDining();
+  const { getDailyPrepList, updateFulfillmentStatus, menuItems, cancelOrder } = useDining();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { hasPermission, role } = useAuth();
+
+  const canUpdate = hasPermission('S39:U') || role === 'fb_staff' || role === 'manager' || role === 'admin';
+
+  const [remoteItem, setRemoteItem] = useState<MealPrepEntry | null>(null);
+  const [loadingBackend, setLoadingBackend] = useState<boolean>(false);
 
   const formatDietaryNote = (note: string) => {
     const normalized = note.toLowerCase().replace(/[\s-]+/g, '_');
@@ -29,16 +37,63 @@ export const MealOrderDetailPage: React.FC = () => {
     i18n.language?.startsWith('ja') ? 'ja' :
     i18n.language?.startsWith('fr') ? 'fr' : 'en') as keyof LocalizedString;
 
-  // Search canonical dates to find the prep item
+  // Search canonical dates to find the prep item in local context
   const datesToSearch = ['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2024-12-05'];
-  let item = undefined;
+  let localItem: MealPrepEntry | undefined = undefined;
   for (const d of datesToSearch) {
     const list = getDailyPrepList(d);
     const found = list.find((i) => i.id === id);
     if (found) {
-      item = found;
+      localItem = found;
       break;
     }
+  }
+
+  // If not found locally, fetch from backend KDS detail endpoint
+  useEffect(() => {
+    if (!localItem && id) {
+      const digits = id.replace(/\D/g, '');
+      const numId = digits ? parseInt(digits, 10) : null;
+      if (numId) {
+        setLoadingBackend(true);
+        fnbApi.getKdsOrderDetail(numId)
+          .then(res => {
+            if (res) {
+              setRemoteItem({
+                id: res.id,
+                type: res.type,
+                date: res.date,
+                targetTime: res.targetTime,
+                mealPeriod: res.mealPeriod ? (res.mealPeriod.toLowerCase() as any) : undefined,
+                customerName: res.customerName || 'Resort Guest',
+                villaNumber: res.villaNumber || '—',
+                items: (res.items || []).map(i => ({
+                  menuItemId: String(i.menuItemId),
+                  quantity: i.quantity || 1,
+                  notes: i.notes,
+                })),
+                customerNotes: res.customerNotes,
+                dietaryNotes: res.dietaryNotes || [],
+                status: (res.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+              });
+            }
+          })
+          .catch(err => {
+            console.warn('Backend order detail fetch failed:', err);
+          })
+          .finally(() => setLoadingBackend(false));
+      }
+    }
+  }, [localItem, id]);
+
+  const item = localItem || remoteItem;
+
+  if (loadingBackend) {
+    return (
+      <div className="hsw-page-container">
+        <OperationalPageHeader title={t('common.loading', 'Loading Order Details...')} />
+      </div>
+    );
   }
 
   if (!item) {
@@ -52,8 +107,35 @@ export const MealOrderDetailPage: React.FC = () => {
     );
   }
 
-  const handleStatusChange = (newStatus: 'pending' | 'preparing' | 'ready' | 'delivered') => {
-    updateFulfillmentStatus(item!.id, item!.type, newStatus);
+  const handleStatusChange = async (newStatus: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled') => {
+    if (!canUpdate) {
+      alert(t('common.forbidden', 'You do not have permission S39:U to update orders.'));
+      return;
+    }
+
+    if (newStatus === 'cancelled') {
+      const reason = window.prompt(t('fnb.cancellation.reasonPrompt', 'Staff cancellation requires a reason. Please enter cancellation reason:'));
+      if (!reason || !reason.trim()) {
+        alert(t('fnb.cancellation.reasonRequired', 'Cancellation reason is mandatory. Order was not cancelled.'));
+        return;
+      }
+      try {
+        if (cancelOrder) {
+          await cancelOrder(item.id, reason.trim());
+        }
+        if (remoteItem) {
+          setRemoteItem(prev => prev ? { ...prev, status: 'cancelled' } : null);
+        }
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Cancellation failed');
+      }
+      return;
+    }
+
+    updateFulfillmentStatus(item.id, item.type, newStatus);
+    if (remoteItem) {
+      setRemoteItem(prev => prev ? { ...prev, status: newStatus } : null);
+    }
   };
 
   const isAllergy = (note: string) => {
@@ -106,12 +188,14 @@ export const MealOrderDetailPage: React.FC = () => {
             <select
               className={`hsw-status-select hsw-status-${item.status}`}
               value={item.status}
+              disabled={!canUpdate || item.status === 'delivered' || item.status === 'cancelled'}
               onChange={(e) => handleStatusChange(e.target.value as any)}
             >
               <option value="pending">{t('fnb.prepList.statusPending', 'PENDING')}</option>
               <option value="preparing">{t('fnb.prepList.statusPreparing', 'PREPARING')}</option>
               <option value="ready">{t('fnb.prepList.statusReady', 'READY')}</option>
               <option value="delivered">{t('fnb.prepList.statusDelivered', 'DELIVERED')}</option>
+              <option value="cancelled">{t('fnb.prepList.statusCancelled', 'CANCELLED')}</option>
             </select>
           </div>
         }
