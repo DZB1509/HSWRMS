@@ -2,6 +2,7 @@ package com.heavenstay.hswrms.common.exception;
 
 import com.heavenstay.hswrms.common.api.ApiError;
 import com.heavenstay.hswrms.common.api.ValidationErrorDetail;
+import com.heavenstay.hswrms.m1identity.sso.SsoRejectedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +76,42 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
+     * Email-delivery failure (SMTP outage/auth failure, unconfigured provider).
+     * Maps to 503 — a retryable infrastructure error — so the client never shows
+     * "OTP dispatched" when no email actually left the server. Carries no OTP,
+     * credential, or personal data.
+     */
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ApiError> handleEmailDelivery(EmailDeliveryException ex, HttpServletRequest request) {
+        log.warn("Email delivery failed on [{}]: {}", request.getRequestURI(), ex.getMessage());
+        ApiError error = new ApiError(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
+    /**
+     * Controlled SSO rejection with a stable frontend-mappable code (e.g.
+     * SSO_EMPLOYEE_ACCOUNT, SSO_LINK_NOT_ALLOWED). In the OAuth callback flow this
+     * exception never reaches MVC (the success handler converts it to a redirect);
+     * when it surfaces from the ticket/register endpoints it must map to a plain
+     * 400 — not the generic 500 handler.
+     */
+    @ExceptionHandler(SsoRejectedException.class)
+    public ResponseEntity<ApiError> handleSsoRejected(SsoRejectedException ex, HttpServletRequest request) {
+        ApiError error = new ApiError(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(AuthenticationException.class)

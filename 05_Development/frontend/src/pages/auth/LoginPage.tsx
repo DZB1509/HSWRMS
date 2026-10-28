@@ -132,6 +132,12 @@ export const LoginPage: React.FC = () => {
     window.location.href = ssoAuthorizeUrl('google');
   };
 
+  const handleFacebookSso = () => {
+    setIsLoading(true);
+    // Same ticket-based flow as Google, bound to the Facebook identity.
+    window.location.href = ssoAuthorizeUrl('facebook');
+  };
+
   return (
     <div className="hsw-auth-form-wrap">
       <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
@@ -235,13 +241,12 @@ export const LoginPage: React.FC = () => {
 
         <button
           type="button"
-          className="hsw-btn-sso hsw-btn-sso-disabled"
-          disabled
+          className="hsw-btn-sso"
+          onClick={handleFacebookSso}
           aria-label={t('auth.login.facebook')}
-          aria-disabled="true"
         >
           <FacebookIcon size={18} />
-          <span>Facebook (Coming Soon)</span>
+          <span>Facebook</span>
         </button>
       </div>
 

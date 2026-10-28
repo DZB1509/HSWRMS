@@ -1,4 +1,80 @@
-﻿# HSWRMS - M1 Session Handoff (updated 2026-10-18, branch DucHoangM1)
+﻿# HSWRMS - M1 Session Handoff (updated 2026-10-19, branch DucHoangM1)
+
+## 12. M1 status update (verified 2026-10-19) — READ FIRST; supersedes stale status claims in section 11 (esp. 11.5–11.8) and section 10's env-var note
+
+### 12.1 Google SSO — WORKING (do not redo unless a NEW failure occurs)
+- Logged in with a real Google account successfully, both BEFORE and AFTER saving the credentials persistently.
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are saved as Windows **User** environment variables. Both verified available (`True`) in a NEWLY opened PowerShell session.
+- Backend restarted successfully and Google SSO kept working WITHOUT re-entering the variables — the per-launch `$env:` re-entry pain recorded in section 10's env-var note is gone for Google.
+- The `SsoUserInfoDiagnosticsServiceTest.java` compilation issue is fixed: `.\mvnw.cmd -DskipTests test-compile` passes, compiling all 19 test source files (details in 12.3).
+- `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` remain session-scoped only (Facebook is deferred — 12.2).
+- RULE: never write actual credential values into documentation or commit secrets.
+
+### 12.2 Facebook SSO — DEFERRED (no further investigation or code changes requested now)
+- Facebook OAuth consent is reached, but the callback fails with `SSO_EMAIL_NOT_VERIFIED` because the provider response did not supply an email address (11.1; hypotheses H1–H4 in 11.2 remain open).
+- At a future session: reassess Meta permissions/configuration together with the diagnostics log line (11.2). If the issue is too costly or blocked by provider restrictions, consider REMOVING Facebook SSO from scope.
+
+### 12.3 Compile blocker — RESOLVED 2026-10-19 (supersedes the stale claims in 11.5, 11.6, 11.7 and 11.8 steps 1–2)
+- The local Spring jars were NOT corrupted. Root cause: wrong package/method names in the source vs the actual Spring Security 6.3.3 API. Smallest compatible fixes applied (no dependency changes, no JAR deletions):
+  - `SsoUserInfoDiagnosticsService` — `OidcUserService` and `OidcUserRequest` both belong to `org.springframework.security.oauth2.client.oidc.userinfo` (oauth2-CLIENT jar; their absence from oauth2-core is normal — this answers the 11.6 "tension": the "expectations were wrong" branch was the correct one).
+  - `SsoOAuth2FailureHandler` — `OAuth2AuthenticationException.getError()` (NOT `getOAuth2Error()`) and `OAuth2Error.getErrorCode()` (NOT `getCode()`), verified against the official Spring Security `6.3.3` tag sources and local `javap`.
+  - `SsoUserInfoDiagnosticsServiceTest` — reassembled after an interrupted edit: imports fixed, `facebookRegistration()` builder completed, stranded helpers + 4th test moved back inside the class; all 4 tests preserved.
+- Verified: `.\mvnw.cmd -DskipTests compile` (81 main files) and `.\mvnw.cmd -DskipTests test-compile` (19 test files) both BUILD SUCCESS — `spring-boot:run` is unblocked.
+
+### 12.4 Next session
+- Continue from `DucHoangM1` (HEAD `ffdd40a` = origin) and PRESERVE all uncommitted changes — nothing was committed, staged, or pushed; the 11.3 inventory still applies.
+- Do NOT redo Google SSO implementation or troubleshooting unless a new failure occurs (12.1).
+- Resume the next outstanding M1 task after updating this handoff (section 9 lists the pending runtime-verification items); revisit Facebook SSO only if explicitly requested (12.2).
+
+## 11. Facebook SSO login fails `SSO_EMAIL_NOT_VERIFIED` — INVESTIGATION PAUSED 2026-10-18, now DEFERRED (2026-10-19, see 12.2) (uncommitted work; tree was NOT compile-verified then — compile-verified 2026-10-19 per 12.3)
+
+Status: Facebook SSO feature + diagnosis code exists ONLY as uncommitted working-tree changes on `DucHoangM1` (HEAD `ffdd40a` = origin). The diagnosis session was cancelled mid-task; the tree contained at least one file that could not compile (11.5 — RESOLVED 2026-10-19, see 12.3). Nothing was committed/pushed; no credentials were recorded. Sections 1/8's "only modified file is this doc" claims are dated 2026-10-17 and are SUPERSEDED by 11.3.
+
+### 11.1 Exact error + reproduction (observed twice)
+- Meta app "HSWRMS", App ID `1075580311951397`; Facebook Login (App OAuth + Web OAuth) enabled; `email`/`public_profile` "Ready for testing"; consent screen requested name/profile picture + email.
+- Backend :8080 run with `FACEBOOK_CLIENT_ID`/`FACEBOOK_CLIENT_SECRET` set in the PowerShell session (values never written down anywhere).
+- Sequence: SPA "Continue with Facebook" → `GET /api/v1/auth/sso/facebook` → Facebook consent (user accepts) → callback `http://localhost:8080/api/v1/auth/sso/callback/facebook` → SPA shows "Your social account email is not available. Please grant email permission and try again." Backend log: `SSO login rejected (SSO_EMAIL_NOT_VERIFIED): The provider did not supply an email address for this account. Please grant email permission and try again.`
+- The Facebook account's email already exists as an HSWRMS account. Auto-linking on email match must stay FORBIDDEN; Facebook registrations keep the OTP verification path.
+
+### 11.2 Confirmed facts (code-level) vs UNVERIFIED hypotheses
+Confirmed by reading the working tree this session:
+- The exact rejection text matches `SsoService.resolveIdentity` (`SsoService.java` ~line 101), which only runs AFTER `SsoOAuth2SuccessHandler` receives a successful authentication. A token-exchange or `/me` HTTP failure would hit the failure handler instead → different message (`SSO_AUTH_FAILED`). Inference: code exchange and `/me` succeeded and the Graph response carried id/name but no usable `email` attribute. NOT yet proven against a live backend log.
+- `SsoClientConfig` registration: scopes `email,public_profile`; v26.0 endpoints (dialog/oauth, graph token, `/me?fields=id,name,email`); `userNameAttributeName=id`; `CLIENT_SECRET_POST`; redirect `{baseUrl}/api/v1/auth/sso/callback/facebook`. No scope overrides in YAML (`application.yml.example` is comments only). So "backend never requested email" is REFUTED at code level.
+- The Facebook path deliberately sets `emailVerified=false`; `SsoService` rejects provider auto-link for Facebook — safe-linking invariant intact.
+- TEMPORARY diagnostics added: `SsoUserInfoDiagnosticsService` wired via `oauth2Login().userInfoEndpoint().userService(...)` in `SecurityConfig`; it logs grantedScopes + userInfoFieldNames + emailAttributePresent (KEY NAMES ONLY — never values/tokens/secret). `SsoOAuth2FailureHandler` now logs the OAuth2 provider error code + description capped at 500 chars.
+
+Hypotheses (NOT root causes — decide from the diagnostics log line when resumed):
+- H1: `email` missing from GRANTED scopes (earlier decline without `auth_type=rerequest`; Meta app dev-mode/tester-role restriction) → re-consent / app-role fix.
+- H2: `email` granted but Graph omits it for this account (unconfirmed or phone-only Facebook account) → provider-side; no backend change justified.
+- H3: Graph v26.0 version behavior difference. H4: backend response-parsing defect or swallowed provider error (less likely per code reading).
+
+### 11.3 Uncommitted working-tree inventory (verified 2026-10-18; nothing staged; no commits)
+Modified (16 files, +458/−106): backend `GlobalExceptionHandler` (SsoRejectedException → 400), `SecurityConfig` (diagnostics wiring), `SsoClientConfig` (Facebook registration), `AuthService` (Facebook OTP identity binding via in-memory `pendingFacebookBindings`), `SsoAvailabilityFilter`, `SsoOAuth2FailureHandler` (provider-error logging), `SsoOAuth2SuccessHandler` (OIDC vs plain-OAuth2 branch), `SsoService`, `application.yml.example`, tests `SsoAuthEndpointTests` (+49), `SsoServiceTest` (+26); frontend `authApi.ts`, `i18n/locales/en/auth.json`, `LoginPage.tsx`, `RegisterPage.tsx`, `SsoCallbackPage.tsx`.
+Untracked (3): `m1identity/sso/SsoUserInfoDiagnosticsService.java` (complete), `m1identity/service/AuthServiceSsoFacebookTest.java` (complete, ends cleanly), `m1identity/sso/SsoUserInfoDiagnosticsServiceTest.java` (BROKEN — see 11.5).
+
+### 11.4 What the cancelled task completed before interruption
+- Wrote + wired the diagnostics service; enhanced the failure handler; created the diagnostics test file; created `AuthServiceSsoFacebookTest`; began investigating a backend compile failure (jar-integrity hypothesis); confirmed via direct download that repo.maven.apache.org returns bytes IDENTICAL to the local jars (11.6).
+- NOT done: fixing the compile, running ANY Maven/JS build or test after these edits, the live Facebook re-test, and the final report. Last command still in flight when cancelled: `git diff --stat` (inspection only). Two `java.exe` processes observed (PIDs 420, 19332) were left running; they held locks on the `~/.m2` jars. No git state-changing command was executed at any point.
+
+### 11.5 KNOWN BROKEN FILE — `SsoUserInfoDiagnosticsServiceTest.java` does NOT compile as-is (FIXED 2026-10-19 — file repaired, test-compile green with 19 test files; see 12.3)
+- (a) `facebookRegistration()` (lines ~80–88) is unterminated: the builder ends at `.tokenUri(...)`; missing `.userInfoUri(...)`, `.userNameAttributeName("id")`, `.clientName("Facebook");`, `.build()`, and the method's closing `}`.
+- (b) Lines 174–176 AFTER the class's closing brace (line 172) contain those same three orphaned fragment lines.
+- (c) Helpers `accessToken(...)` and `facebookUser(...)` are referenced by every test but defined nowhere in the file.
+- (d) Only 3 @Test methods exist (routing / log-key-names-only / delegate-failure-propagated); the previously noted 4th "pass-through" test is missing — presumably lost in the same interrupted edit.
+- Suspicious (unverified): `AuthService.java` ends at line 359 with `    }}` (two closing braces on one line) — plausible but odd; no compile has confirmed it.
+
+### 11.6 Backend compile blocker — UNRESOLVED at the time; do NOT assume "corrupted local repo" (RESOLVED 2026-10-19: the jars were authentic; the earlier "expectations were wrong" branch was correct — `OidcUserRequest` lives in the oauth2-CLIENT jar and Spring Security 6.3.3 exposes `getError()`/`getErrorCode()`; see 12.3)
+Verified lightweight this session: local `spring-security-oauth2-core-6.3.3.jar` = 105,001 bytes, SHA-256 `C6ED9B51…`, 98 entries, NO `OidcUserRequest.class`; a fresh download from repo.maven.apache.org is byte-identical; its SHA-1 `d592c08316e3b6c0d361c931ae11d3c7f3ebd21d` equals the `.sha1` served by BOTH repo.maven.apache.org AND Google's GCS Central mirror. `spring-security-oauth2-client-6.3.3.jar` = 258 entries (`OidcUserService` under `client/oidc/userinfo/`, `DefaultOAuth2UserService` under `client/userinfo/`). UNRESOLVED TENSION: the content lacks classes expected in Spring Security 6.3.3 while matching the checksums both hosts publish — either this machine's network path consistently alters jars AND `.sha1` files, or earlier size/API expectations were wrong. Next session must check an authoritative Central file listing (real size for this coordinate) before deleting anything; deletion is anyway blocked while PIDs 420/19332 hold locks. Re-verify the diagnostics service's OIDC imports against the resolved jars before compiling.
+
+### 11.7 Test status
+- Previously PASSED (earlier report; predates the 11.4 edits; NOT re-verified): backend `mvnw test` 95/95; frontend `npx tsc -b` exit 0; `npm run build` exit 0.
+- NOT RUN / UNVERIFIED after the latest backend edits: the entire backend suite (tree cannot currently compile), all diagnostics tests, and whether `AuthServiceSsoFacebookTest` was included in the 95. Frontend files were untouched since their green run but are unverified now. (2026-10-19: the "(tree cannot currently compile)" claim in this bullet is STALE — main + test sources both compile now and test-compile is green; the full suite still has NOT been re-run — see 12.3.)
+
+### 11.8 Exact resume procedure (smallest steps; never weaken email verification or the no-auto-link rule) — 2026-10-19: step 1 DONE (test file repaired) and step 2's compile blocker RESOLVED (compile + test-compile green; full `mvnw test` suite still not run) per 12.3; resume at step 3 only if Facebook work is explicitly restarted (12.2)
+1. Repair 11.5's test file (rejoin the builder, restore the two helpers + the pass-through test); eyeball `AuthService.java`'s EOF.
+2. Resolve 11.6 via an independent authoritative source; then get `mvnw test` fully green (expect prior 95 + 3–4 diagnostics tests) — this is the first time the current tree would be compile-verified.
+3. Restart the backend; reproduce the real Facebook login ONCE; read the new line `SSO userinfo diagnostics [facebook]: grantedScopes=…, userInfoFieldNames=…, emailAttributePresent=…` (plus failure-handler providerError lines if any) and act on H1 vs H2 from 11.2. That log line must never contain tokens/secrets/profile values — the tests assert this.
+4. Only after evidence: apply the minimal justified fix, add focused tests, re-verify with a real Facebook login. Then remove the TEMPORARY diagnostics wrapper + its `SecurityConfig` wiring. Never auto-link the pre-existing account by email match. No commit/push without explicit human approval.
 
 ## 10. Google SSO — IMPLEMENTED, TESTED, MANUALLY VERIFIED 2026-10-18 (commit: `feat(m1): implement Google SSO login and registration`)
 
@@ -41,9 +117,9 @@ The final commit for this work is visible in Git history as
 - Google OAuth credentials (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) and
   `SSO_FRONTEND_BASE_URL` remain LOCAL PowerShell-session environment variables
   only — never committed to Git. A new terminal/session may require re-entering
-  them. A pre-commit secret scan of the staged diff and new SSO files found no
+  them. (UPDATED 2026-10-19: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET are NOW saved as Windows User env vars — verified `True` in a fresh PowerShell session and across a backend restart without re-entering; see 12.1. FACEBOOK_* remain session-scoped.) A pre-commit secret scan of the staged diff and new SSO files found no
   secrets.
-- Facebook SSO remains out of scope — not configured or implemented in this task.
+- Facebook SSO remains out of scope — not configured or implemented in this task. (Historical for the Google task; Facebook was later implemented as uncommitted work, tried live, and is now DEFERRED — see 11 and 12.2.)
 - Next session (2026-10-19): inspect the pushed commit on `origin/DucHoangM1` and
   continue remaining M1 work; do NOT repeat Google setup or redo SSO unless a
   regression is found. No database migration was run for SSO; running services
@@ -356,3 +432,61 @@ Session changes (design-only, committed via `700bdd0` unless noted):
 6. This handoff-doc update is left UNCOMMITTED for review — the "clean tree" statement in
    sections 1/8 refers to the 2026-10-17 verification BEFORE this edit. Re-run
    `git status -sb` before any commit decision; do NOT commit, stage, or push from this session.
+## 13. M1 session finalization (2026-10-21) — READ FIRST where it supersedes 12.x
+
+### 13.1 Current repository state
+- Branch: `DucHoangM1`. No `audit-all-modules` branch exists locally or remotely; per the safety rule the session stayed on `DucHoangM1` and did not switch branches. Push target used: `origin/DucHoangM1` (normal, non-force).
+- Pre-finalization HEAD: `ffdd40afa9aa4acf1c4f045c12bd20c1376bcf70` (= origin/DucHoangM1); no remote advancement, so push is a fast-forward.
+- Commits this session:
+  - `bc9100a` — feat(m1): Screen #9 health-data deletion request (customer_profile ownership, contract 5.4)
+  - `4f2db9b` — feat(m1): Facebook SSO flow, SSO ticket/linking, email delivery adapters, frontend auth updates
+  - handoff commit = HEAD after this update (hash recorded in the finalization report)
+- Working tree is clean after these commits except for nothing intentionally left uncommitted. No secrets, `.env`, generated artifacts, or unrelated changes were staged.
+
+### 13.2 Google SSO
+- Status: verified working in a real session (prior). Credentials stored as Windows User env vars. No code changes this session. Do not redo unless a new failure occurs.
+
+### 13.3 Facebook SSO (status updated — no longer deferred)
+- Verified for a Meta app Tester account: Facebook OAuth consent reached and callback succeeds for Tester accounts.
+- When the Facebook email matches an existing HSWRMS account, the app initiates email OTP confirmation/linking (SsoLinkRequest / SsoTicketService).
+- OTP email delivery via Gmail SMTP confirmed in a real mailbox (SmtpEmailDeliveryAdapter).
+- Public login for arbitrary non-Tester accounts remains unverified because the Meta app is not released to Live. Do not reopen this task without new evidence.
+- Facebook credentials remain session-scoped unless saved as persistent env vars (same pattern as Google).
+
+### 13.4 Screen #9 — Health Data Deletion Request
+- Entity `HealthDataDeletionRequest` now owns `customer_profile_id` (FK -> `CustomerProfile.customer_profile_id`, NOT NULL). Legacy `health_profile_id` retained, nullable, with FK -> `HealthProfile`.
+- `request_type` CHECK = `HEALTH_DATA` (API Contract §5.4). `request_status` CHECK = `PENDING`/`DEFERRED`/`COMPLETED`/`CANCELLED`.
+- Ownership enforced in backend: customer profile resolved from the authenticated user; active requests queried by `customer_profile_id` + status IN (`PENDING`, `DEFERRED`).
+- Actual deletion/anonymization is NOT implemented in M1; the service only creates the request. Execution is deferred to retention policy / M2.
+- Migration `_reviewed_m1_deletion_request_customer_profile.sql` remains DRAFT and UNEXECUTED; not database-validated.
+- Migration CHECK constraint name aligned to `CK_HealthDeletion_Status` to match `schema.sql` / design baseline (prevents a duplicate constraint on schema.sql-created DBs).
+- Legacy `health_profile_id` data requires the documented read-only preflight before migration.
+
+### 13.5 Schema initialization path
+- `05_Development/database/schema.sql` is the dev baseline (Hibernate `ddl-auto: none`; ADR-03). No Flyway/Liquibase.
+- `03_Design/Database/HSWRMS_SQLServer_Database.sql` remains the frozen design reference and is NOT the development provisioning source (per repository documentation). Do not modify unless explicitly approved.
+
+### 13.6 Manual migration strategy
+- Scripts under `05_Development/database/migrations/` are manual, idempotent (guarded by `COL_LENGTH`/`OBJECT_ID` existence checks), and header-marked DRAFT; require DBA/team approval + backup.
+- No automated pickup by the application.
+
+### 13.7 Tests / build actually run this session
+- `HealthDataDeletionRequestServiceTest`: 12/12 pass.
+- `SsoUserInfoDiagnosticsServiceTest`: 4/4 pass (test-only fix: non-empty OIDC ID-token claims).
+- `SsoServiceTest` 14/14, `SsoTicketServiceTest` 6/6, `SsoJwtRoundTripTest` 1/1, `SsoAuthEndpointTests` 12/12, `AuthServiceSsoFacebookTest` 9/9, `SmtpEmailDeliveryAdapterTest` 2/2, `EmailDeliveryAdapterProfileTest` 5/5, `DevEmailDeliveryAdapterTest` 2/2, `SsoLinkTicketTtlTests` 1/1.
+- Backend `test-compile`: BUILD SUCCESS.
+- Frontend `npx tsc --noEmit`: exit 0.
+- Exhaustive M1 regression was NOT re-run this session (only focused SSO + Screen #9 tests). Full regression deferred to M2-M6 integration.
+
+### 13.8 Outstanding work
+- Coordinate SRS differences with BA.
+- Complete full regression testing after M2-M6 integration.
+- Validate and approve the deletion-request migration against an appropriate DB after running the preflight checks.
+- Resolve remaining retreat/M2 and retention-policy decisions (DEFERRED->COMPLETED transition, `hasActiveOrUpcomingRetreat`, hard delete vs anonymization, executor).
+- Ensure M6 uses the shared M1 `User`, `Role`, and `UserRole` system.
+- Facebook public/Live access remains blocked/pending Meta requirements; do not reopen without new evidence.
+- Optional performance index on `HealthDataDeletionRequest.customer_profile_id` for the active-requests query (not a contract requirement).
+
+### 13.9 Status caution
+- Do NOT mark all of M1 complete. Runtime verification and the decisions above are still pending.
+

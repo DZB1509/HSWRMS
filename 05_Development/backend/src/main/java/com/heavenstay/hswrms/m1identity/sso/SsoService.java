@@ -8,6 +8,7 @@ import com.heavenstay.hswrms.m1identity.entity.User;
 import com.heavenstay.hswrms.m1identity.entity.UserRole;
 import com.heavenstay.hswrms.m1identity.repository.AuthIdentityRepository;
 import com.heavenstay.hswrms.m1identity.repository.UserRepository;
+import com.heavenstay.hswrms.m1identity.service.AuthService;
 import com.heavenstay.hswrms.security.JwtTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,14 +24,19 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Core Google SSO resolution logic (FR-M1-05, GB-M1-04, GB-M1-05).
+ * Core Google/Facebook SSO resolution logic (FR-M1-05, GB-M1-04, GB-M1-05).
  *
- * <p>Identity is resolved by the trusted provider pair (provider name + OIDC
- * {@code sub}) via {@code dbo.AuthIdentity}. Email is only consulted when no
- * identity link exists yet, and only when the provider asserts it as verified.
- * Employee accounts are rejected for SSO even when they also hold a Customer
- * role, and are never linked. A verified email that matches an existing eligible
- * Customer is linked per the SRS rule instead of creating a duplicate account.
+ * <p>Identity is resolved by the trusted provider pair (provider name + subject:
+ * Google OIDC {@code sub}, Facebook app-scoped {@code id}) via
+ * {@code dbo.AuthIdentity}. Email is only consulted when no identity link
+ * exists yet. Google asserts verification via the OIDC {@code email_verified}
+ * claim; Facebook's Graph {@code /me} endpoint exposes NO verification flag,
+ * so a Facebook address is provider-seen but never provider-verified:
+ * Facebook may register a brand-new Customer (ticket-bound, ToS at form
+ * submit) but may NEVER auto-link to an existing account by email — otherwise
+ * anyone controlling a Facebook account whose email matches someone else's
+ * HSWRMS login could take that account over. Employee accounts are rejected
+ * for SSO even when they also hold a Customer role, and are never linked.
  * A new identity is never persisted here — registration is only completed when
  * the user submits the HSWRMS registration form.</p>
  */
@@ -39,18 +45,22 @@ public class SsoService {
 
     private static final Logger log = LoggerFactory.getLogger(SsoService.class);
     private static final String CUSTOMER_ROLE = "customer";
+    private static final String FACEBOOK_PROVIDER = "FACEBOOK";
 
     private final UserRepository userRepository;
     private final AuthIdentityRepository authIdentityRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final SsoTicketService ssoTicketService;
+    private final AuthService authService;
 
     public SsoService(UserRepository userRepository, AuthIdentityRepository authIdentityRepository,
-                      JwtTokenProvider jwtTokenProvider, SsoTicketService ssoTicketService) {
+                      JwtTokenProvider jwtTokenProvider, SsoTicketService ssoTicketService,
+                      AuthService authService) {
         this.userRepository = userRepository;
         this.authIdentityRepository = authIdentityRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.ssoTicketService = ssoTicketService;
+        this.authService = authService;
     }
 
     /**
@@ -58,12 +68,19 @@ public class SsoService {
      *
      * <ul>
      *   <li>Linked identity + eligible Customer → LOGIN target.</li>
-     *   <li>Unlinked, verified email matches eligible Customer → link AuthIdentity (SRS
-     *       GB-M1-04), then LOGIN.</li>
-     *   <li>Unlinked, verified email matches a staff/ineligible account → rejected,
-     *       nothing is linked or issued.</li>
-     *   <li>Unlinked and no matching account → REGISTRATION prefill ticket; no account,
-     *       role, profile, or consent is created here.</li>
+     *   <li>Google: unlinked, {@code email_verified=true} matching eligible
+     *       Customer → link AuthIdentity (SRS GB-M1-04), then LOGIN.</li>
+     *   <li>Facebook: unlinked address matching an eligible Customer account -> issue a
+     *       single-use LINK ticket plus an OTP to the account's email. The Facebook
+     *       identity is bound only after the holder proves mailbox ownership --
+     *       never auto-linked, never impersonated. Staff/ineligible accounts are
+     *       rejected, nothing is issued.</li>
+     *   <li>Unlinked, verified email matches a staff/ineligible account →
+     *       rejected, nothing is linked or issued.</li>
+     *   <li>Unlinked and no matching account → REGISTRATION prefill ticket; no
+     *       account, role, profile, or consent is created here. Facebook tickets
+     *       carry {@code emailVerified=false}; registration completion enforces
+     *       the per-provider rule below.</li>
      * </ul>
      */
     @Transactional
@@ -84,19 +101,43 @@ public class SsoService {
                     .orElseThrow(() -> new SsoRejectedException("SSO_ACCOUNT_NOT_FOUND",
                             "The account linked to this sign-in provider no longer exists."));
         } else {
-            // Never link or register against an email the provider did not verify (B4).
-            if (!emailVerified || !StringUtils.hasText(email)) {
+            // Missing email is always rejected: no link and no prefill possible.
+            if (!StringUtils.hasText(email)) {
                 throw new SsoRejectedException("SSO_EMAIL_NOT_VERIFIED",
-                        "The provider did not verify the email address for this account.");
+                        "The provider did not supply an email address for this account. "
+                                + "Please grant email permission and try again.");
             }
             String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
             Optional<User> existing = userRepository.findByEmailWithRoles(normalizedEmail);
             if (existing.isEmpty()) {
                 // C: no account is created at the OAuth callback — only a short-lived
-                // prefill ticket bound to this provider subject is issued.
+                // prefill ticket bound to this provider subject is issued. The
+                // ticket preserves the provider's verification flag (Google=true,
+                // Facebook=false); registration completion re-checks it.
                 String registrationTicketToken = ssoTicketService.createRegistrationTicket(
-                        provider, providerSubject, normalizedEmail, true, fullName);
+                        provider, providerSubject, normalizedEmail, emailVerified, fullName);
                 return SsoResolution.registration(registrationTicketToken);
+            }
+            if (isFacebook(provider)) {
+                // Facebook email-matching must NEVER auto-link: Graph /me has no
+                // verification flag, so matching by email could hand an HSWRMS
+                // account to whoever controls a same-address Facebook login.
+                // Instead, issue a single-use LINK ticket and send an OTP to the
+                // account's email; the identity is bound only after the holder
+                // proves mailbox ownership (no impersonation, no silent link).
+                User existingUser = existing.get();
+                assertEligibleCustomer(existingUser);
+                String linkTicketToken = ssoTicketService.createLinkTicket(
+                        existingUser.getUserId(), provider, providerSubject, normalizedEmail);
+                authService.sendFacebookLinkOtp(existingUser.getUserId());
+                log.info("SSO link handshake issued: Facebook identity {} -> user {}",
+                        providerSubject, existingUser.getUserId());
+                return SsoResolution.link(existingUser.getUserId(), linkTicketToken);
+            }
+            // Google path: only a provider-VERIFIED email may auto-link (B4).
+            if (!emailVerified) {
+                throw new SsoRejectedException("SSO_EMAIL_NOT_VERIFIED",
+                        "The provider did not verify the email address for this account.");
             }
             user = existing.get();
             // Employee / ineligible accounts are rejected BEFORE any link is persisted.
@@ -135,6 +176,10 @@ public class SsoService {
     public SsoRegistrationPrefillResponse resolveRegistrationTicket(String ticket) {
         SsoTicket ssoTicket = ssoTicketService.peek(ticket, SsoTicketPurpose.REGISTRATION);
         return new SsoRegistrationPrefillResponse(ssoTicket.provider(), ssoTicket.email(), ssoTicket.fullName());
+    }
+
+    private boolean isFacebook(String provider) {
+        return FACEBOOK_PROVIDER.equalsIgnoreCase(provider != null ? provider.trim() : "");
     }
 
     /**

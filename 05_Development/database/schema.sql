@@ -241,20 +241,30 @@ GO
 CREATE TABLE dbo.HealthDataDeletionRequest (
     deletion_request_id INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_HealthDataDeletionRequest PRIMARY KEY,
-    health_profile_id   INT NOT NULL,
+    customer_profile_id INT NOT NULL,
+    health_profile_id   INT NULL,
     requested_by_user_id INT NOT NULL,
+    request_type        VARCHAR(50) NOT NULL
+        CONSTRAINT DF_HealthDataDeletionRequest_RequestType DEFAULT ('HEALTH_DATA'),
     request_status      VARCHAR(20) NOT NULL
         CONSTRAINT DF_HealthDeletion_Status DEFAULT ('PENDING'),
     requested_at        DATETIME2(0) NOT NULL
         CONSTRAINT DF_HealthDeletion_RequestedAt DEFAULT (SYSUTCDATETIME()),
     processed_at        DATETIME2(0) NULL,
+    updated_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_HealthDataDeletionRequest_UpdatedAt DEFAULT (SYSUTCDATETIME()),
 
+    CONSTRAINT FK_HealthDataDeletionRequest_CustomerProfile
+        FOREIGN KEY (customer_profile_id)
+        REFERENCES dbo.CustomerProfile(customer_profile_id),
     CONSTRAINT FK_HealthDeletion_HealthProfile
         FOREIGN KEY (health_profile_id)
         REFERENCES dbo.HealthProfile(health_profile_id),
     CONSTRAINT FK_HealthDeletion_User
         FOREIGN KEY (requested_by_user_id)
         REFERENCES dbo.[User](user_id),
+    CONSTRAINT CK_HealthDataDeletionRequest_RequestType
+        CHECK (request_type IN ('HEALTH_DATA')),
     CONSTRAINT CK_HealthDeletion_Status
         CHECK (request_status IN ('PENDING','DEFERRED','COMPLETED','CANCELLED'))
 );
