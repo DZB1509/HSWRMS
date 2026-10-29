@@ -30,9 +30,10 @@ export const ImageReveal: React.FC<ImageRevealProps> = ({
     const img = imgRef.current;
     if (!container || !img) return;
 
+    const finePointer = window.matchMedia('(pointer: fine)').matches;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      gsap.set(container, { clipPath: 'inset(0% 0% 0% 0%)', opacity: 1 });
+    if (prefersReducedMotion && !finePointer) {
+      gsap.set(container, { clipPath: 'none', opacity: 1 });
       gsap.set(img, { scale: 1 });
       return;
     }
@@ -59,6 +60,9 @@ export const ImageReveal: React.FC<ImageRevealProps> = ({
           duration: 1.1,
           delay: delayMs / 1000,
           ease: 'power3.inOut',
+          onComplete: () => {
+            gsap.set(container, { clearProps: 'clipPath' });
+          },
         }
       ).fromTo(
         img,
@@ -84,8 +88,7 @@ export const ImageReveal: React.FC<ImageRevealProps> = ({
     if (!container || !img) return;
 
     const finePointer = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!finePointer || prefersReducedMotion) return;
+    if (!finePointer) return;
 
     let isHovered = false;
 

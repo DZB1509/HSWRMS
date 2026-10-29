@@ -26,9 +26,10 @@ export const SmoothScrollProvider: React.FC<SmoothScrollProviderProps> = ({ chil
   const location = useLocation();
 
   useEffect(() => {
-    // Respect prefers-reduced-motion
+    // Respect prefers-reduced-motion on non-desktop devices
+    const finePointer = window.matchMedia('(pointer: fine)').matches;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion && !finePointer) return;
 
     // Operational routes get crisp, fast responsive physics (duration 0.8s); Public gets gentle 1.1s
     const isOperational =

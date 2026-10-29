@@ -26,8 +26,7 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
     if (!el) return;
 
     const finePointer = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!finePointer || reducedMotion) return;
+    if (!finePointer) return;
 
     const xTo = gsap.quickTo(el, 'x', { duration: 0.3, ease: 'power2.out' });
     const yTo = gsap.quickTo(el, 'y', { duration: 0.3, ease: 'power2.out' });
@@ -60,7 +59,7 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
       el.removeEventListener('mouseleave', handleMouseLeave);
       gsap.set(el, { x: 0, y: 0 });
     };
-  }, [strength]);
+  }, [effectiveStrength, maxOffset]);
 
   return (
     <div

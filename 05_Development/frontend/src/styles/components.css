@@ -313,25 +313,6 @@
   opacity: 1;
 }
 
-/* Reduced Motion Safety */
-@media (prefers-reduced-motion: reduce) {
-  .hsw-btn.hsw-btn-hero-secondary,
-  .hsw-btn-hero-secondary {
-    transform: none !important;
-    transition: none !important;
-  }
-  .hsw-btn-hero-secondary::before {
-    animation: none !important;
-    opacity: 0 !important;
-  }
-  .hsw-btn-hero-secondary::after {
-    display: none !important;
-  }
-  .hsw-btn-hero-secondary:hover:not(:disabled) > span:not(.hsw-btn-icon),
-  .hsw-btn-hero-secondary:hover:not(:disabled) .hsw-btn-icon {
-    transform: none !important;
-  }
-}
 
 /* ==========================================================================
    Primary Retreat CTA Family (DESIGN.md §8.1)
@@ -568,24 +549,6 @@
   display: none !important;
 }
 
-/* Reduced Motion Safety */
-@media (prefers-reduced-motion: reduce) {
-  .hsw-btn.hsw-btn-retreat-primary,
-  .hsw-btn-retreat-primary {
-    transform: none !important;
-    transition: none !important;
-  }
-  .hsw-btn-retreat-primary::before {
-    animation: none !important;
-    opacity: 0 !important;
-  }
-  .hsw-btn-retreat-primary::after {
-    display: none !important;
-  }
-  .hsw-btn-retreat-primary:hover:not(:disabled) .hsw-btn-icon {
-    transform: none !important;
-  }
-}
 
 /* ==========================================================================
    Retreat & Business Primary CTA Theme Variants (Light / Dark / Blush)
@@ -1542,13 +1505,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hsw-retreat-rim::before {
-    animation: none;
-    transform: translate(-50%, -50%) rotate(0deg);
-    opacity: 0.96;
-  }
-}
 
 @media (hover: hover) and (pointer: fine) {
   .hsw-retreat-card:hover {
@@ -1805,18 +1761,6 @@
   text-shadow: var(--shadow-text-desc-hover);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hsw-experience-card,
-  .hsw-experience-img {
-    transition: none !important;
-    transform: none !important;
-  }
-
-  .hsw-retreat-card::before {
-    animation: none !important;
-    opacity: 0.45 !important;
-  }
-}
 
 /* Pillar responsive: remove side borders on narrow screens */
 @media (max-width: 640px) {
@@ -1883,28 +1827,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hsw-editorial-media,
-  .hsw-image-reveal-wrap,
-  .hsw-editorial-media:hover,
-  .hsw-image-reveal-wrap:hover {
-    transform: none !important;
-    transition: none !important;
-    box-shadow: none !important;
-  }
-
-  .hsw-editorial-media img,
-  .hsw-editorial-media:hover img {
-    transform: none !important;
-    transition: none !important;
-    filter: none !important;
-  }
-
-  .hsw-editorial-media::after,
-  .hsw-image-reveal-wrap::after {
-    display: none !important;
-  }
-}
 
 /* ==========================================================================
    Auth Form Wrap & Refined Luxury Accents
@@ -2110,7 +2032,7 @@
   left: 0;
   border-radius: 50%;
   pointer-events: none;
-  will-change: transform;
+  will-change: translate, transform;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2210,7 +2132,7 @@
 .hsw-cursor-wrap.state-explore .hsw-cursor-bead.bead-3,
 .hsw-cursor-wrap.state-drag .hsw-cursor-bead.bead-3 {
   opacity: 0 !important;
-  transform: scale(0.3) !important;
+  transform: scale(0.3);
 }
 
 /* State: CTA */
@@ -2223,6 +2145,11 @@
 }
 
 .hsw-cursor-wrap.state-cta .hsw-cursor-bead.bead-2,
+.hsw-cursor-wrap.state-cta .hsw-cursor-bead.bead-3 {
+  opacity: 0 !important;
+  transform: scale(0.3);
+}
+
 /* Operational Cursor Mode: restrained, compact, fast, data-first */
 .hsw-cursor-wrap.is-operational .hsw-cursor-bead.bead-1 {
   width: 8px;
@@ -3049,11 +2976,117 @@
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hsw-story-rim::before {
-    animation: none;
-    transform: translate(-50%, -50%) rotate(0deg);
+
+
+
+/* Fine-pointer desktop luminous border hover recovery under reduced-motion */
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .hsw-btn-retreat-primary:hover:not(:disabled)::before,
+  .hsw-btn.hsw-btn-retreat-primary:hover:not(:disabled)::before,
+  .hsw-btn-hero-secondary:hover:not(:disabled)::before,
+  .hsw-btn.hsw-btn-hero-secondary:hover:not(:disabled)::before {
+    opacity: 1 !important;
   }
 }
 
+/* ==========================================================================
+   Comprehensive Hover Effects, Card Elevation & Rotating Luminous Borders
+   Guaranteed active on desktop fine pointer regardless of Windows visual effects
+   ========================================================================== */
 
+/* 1. CTA Primary Button Hover & Rotating Border */
+@media (hover: hover) and (pointer: fine) {
+  .hsw-btn-retreat-primary:hover:not(:disabled),
+  .hsw-btn.hsw-btn-retreat-primary:hover:not(:disabled) {
+    transform: translateY(-2px) !important;
+    background: rgba(92, 105, 93, 0.98) !important;
+    border-color: rgba(231, 217, 196, 0.85) !important;
+    box-shadow: 
+      0 8px 24px rgba(20, 28, 22, 0.28),
+      0 0 16px rgba(216, 199, 174, 0.24),
+      0 1px 2px rgba(255, 255, 255, 0.20) inset !important;
+  }
+
+  .hsw-btn-retreat-primary:hover:not(:disabled)::before,
+  .hsw-btn.hsw-btn-retreat-primary:hover:not(:disabled)::before {
+    opacity: 1 !important;
+    animation: hsw-luminous-spin 3.2s linear infinite !important;
+  }
+
+  .hsw-btn-hero-secondary:hover:not(:disabled),
+  .hsw-btn.hsw-btn-hero-secondary:hover:not(:disabled) {
+    transform: translateY(-2px) !important;
+    border-color: rgba(231, 217, 196, 0.85) !important;
+    box-shadow: 
+      0 8px 24px rgba(20, 28, 22, 0.22),
+      0 0 16px rgba(216, 199, 174, 0.20) !important;
+  }
+
+  .hsw-btn-hero-secondary:hover:not(:disabled)::before,
+  .hsw-btn.hsw-btn-hero-secondary:hover:not(:disabled)::before {
+    opacity: 1 !important;
+    animation: hsw-luminous-spin 3.2s linear infinite !important;
+  }
+}
+
+/* 2. Retreat Card, Spa Treatment Card, Culinary Dining Card & Interactive Card Elevation & Luminous Rim Rotation */
+@media (hover: hover) and (pointer: fine) {
+  .hsw-retreat-card:hover,
+  .interactive-card:hover,
+  .soft-card:hover,
+  .spa-treatment-card:hover,
+  .hsw-culinary-card:hover,
+  .customer-booking-card:hover {
+    transform: translateY(-3.5px) !important;
+    box-shadow: var(--shadow-card-hover), 0 0 20px rgba(231, 217, 196, 0.25) !important;
+    border-color: rgba(216, 199, 174, 0.6) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .hsw-retreat-card:hover .hsw-retreat-rim,
+  .hsw-retreat-rim {
+    opacity: 1 !important;
+  }
+
+  .hsw-retreat-card:hover .hsw-retreat-rim::before,
+  .hsw-retreat-rim::before {
+    animation: hsw-retreat-rim-rotate 4s linear infinite !important;
+  }
+
+  .interactive-card:hover::before,
+  .soft-option:hover:not(:disabled)::before,
+  .hsw-culinary-card:hover::before,
+  .customer-booking-card:hover::before,
+  .spa-treatment-card:hover::before {
+    opacity: 0.95 !important;
+    animation: hsw-luminous-spin 3.2s linear infinite !important;
+  }
+
+  .spa-treatment-card:hover .spa-card-image img,
+  .hsw-culinary-card:hover .hsw-culinary-img,
+  .hsw-culinary-card:hover img,
+  .hsw-retreat-card:hover img,
+  .interactive-card:hover img {
+    transform: scale(1.035) !important;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+}
+
+/* 3. Storytelling Active Nav Items (Pillars & Experiences Luminous Rim) */
+.hsw-story-nav-item.is-active .hsw-story-rim {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.hsw-story-nav-item.is-active .hsw-story-rim::before {
+  animation: hsw-retreat-rim-rotate 4.5s linear infinite !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hsw-story-nav-item:hover:not(.is-active) {
+    background-color: rgba(242, 237, 229, 0.5) !important;
+    border-color: var(--border-subtle) !important;
+    transform: translateX(4px) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+}
