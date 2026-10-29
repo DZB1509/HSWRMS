@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "RetreatBooking", schema = "dbo")
@@ -47,8 +48,13 @@ public class RetreatBooking {
     @Column(name = "special_request", length = 1000)
     private String specialRequest;
 
+    /** Added by draft migration _draft_m2_retreat_booking_guest_count.sql. */
+    @Column(name = "guest_count", nullable = false)
+    private Integer guestCount = 1;
+
+    /** Stored in UTC, consistent with the schema default SYSUTCDATETIME(). */
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
     @OneToOne(mappedBy = "retreatBooking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ResidenceRecord residenceRecord;
@@ -142,6 +148,14 @@ public class RetreatBooking {
 
     public void setSpecialRequest(String specialRequest) {
         this.specialRequest = specialRequest;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
     }
 
     public LocalDateTime getCreatedAt() {

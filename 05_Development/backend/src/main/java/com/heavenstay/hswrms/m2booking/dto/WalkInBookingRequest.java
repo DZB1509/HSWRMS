@@ -34,6 +34,9 @@ public class WalkInBookingRequest {
 
     private String specialRequest;
 
+    @jakarta.validation.constraints.Min(value = 1, message = "Guest count must be at least 1")
+    private Integer guestCount = 1;
+
     @NotBlank(message = "Identification number (CCCD/Passport) is required")
     private String identificationNumber;
 
@@ -167,5 +170,13 @@ public class WalkInBookingRequest {
 
     public void setInitialPaymentMethod(String initialPaymentMethod) {
         this.initialPaymentMethod = initialPaymentMethod;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
     }
 }

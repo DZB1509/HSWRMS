@@ -37,6 +37,7 @@ import { DailyArrivalsPage } from '../../pages/receptionist/DailyArrivalsPage';
 import { CheckInPage } from '../../pages/receptionist/CheckInPage';
 import { VillaAssignmentPage } from '../../pages/receptionist/VillaAssignmentPage';
 import { VillaStatusPage } from '../../pages/receptionist/VillaStatusPage';
+import { ReceptionistBookingsPage } from '../../pages/receptionist/ReceptionistBookingsPage';
 
 // Phase 2.4 Spa & Therapy Screens (Customer)
 import { SpaTreatmentListPage } from '../../pages/customer/SpaTreatmentListPage';
@@ -135,6 +136,7 @@ export const AppRouter: React.FC = () => {
         {/* Module 2: Booking Journey */}
         <Route path="retreats" element={<RetreatListPage />} />
         <Route path="retreats/:id" element={<RetreatDetailPage />} />
+        <Route path="booking" element={<RetreatBookingPage />} />
         <Route path="booking/new" element={<RetreatBookingPage />} />
         <Route path="booking/summary" element={<BookingSummaryPage />} />
         <Route path="booking/deposit-result" element={<DepositPaymentResultPage />} />
@@ -177,6 +179,7 @@ export const AppRouter: React.FC = () => {
       >
         <Route path="dashboard" element={<ReceptionistDashboardPage />} />
         <Route path="arrivals" element={<DailyArrivalsPage />} />
+        <Route path="bookings" element={<ReceptionistBookingsPage />} />
         <Route path="check-in/:bookingId" element={<CheckInPage />} />
         <Route path="check-in/:bookingId/villa" element={<VillaAssignmentPage />} />
         <Route path="villas" element={<VillaStatusPage />} />

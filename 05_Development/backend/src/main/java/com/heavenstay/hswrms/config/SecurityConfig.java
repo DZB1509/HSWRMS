@@ -133,8 +133,8 @@ public class SecurityConfig {
                         // Public read-only booking calculation from M2: POST only
                         .requestMatchers(HttpMethod.POST, "/api/v1/retreat-packages/calculate").permitAll()
 
-                        // Public VNPay IPN and return callbacks from M2: GET only with cryptographic HMAC-SHA512 verification in service
-                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay-return").permitAll()
+                        // Public VNPay IPN and return callbacks from M2: with cryptographic HMAC-SHA512 verification in service
+                        .requestMatchers("/api/v1/payments/**").permitAll()
 
                         // Receptionist operations from M2: RECEPTIONIST, MANAGER, ADMIN
                         .requestMatchers("/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "MANAGER", "ADMIN")

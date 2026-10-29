@@ -41,7 +41,8 @@
     "admin": "管理员",
     "delegatedAdministration": "委托行政权限",
     "businessParametersDelegated": "业务参数（已委托）",
-    "featureFlagsDelegated": "功能开关（已委托）"
+    "featureFlagsDelegated": "功能开关（已委托）",
+    "bookingHistory": "预订历史"
   },
   "payment": {
     "requiredDeposit": "预订所需定金",

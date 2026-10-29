@@ -41,7 +41,8 @@
     "admin": "Admin",
     "delegatedAdministration": "Administration Déléguée",
     "businessParametersDelegated": "Paramètres Opérationnels (Délégués)",
-    "featureFlagsDelegated": "Drapeaux de Fonctionnalités (Délégués)"
+    "featureFlagsDelegated": "Drapeaux de Fonctionnalités (Délégués)",
+    "bookingHistory": "Historique des réservations"
   },
   "payment": {
     "requiredDeposit": "Acompte Requis",

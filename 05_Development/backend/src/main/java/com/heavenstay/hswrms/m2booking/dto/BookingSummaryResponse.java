@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public class BookingSummaryResponse {
 
     private Integer retreatBookingId;
+    private String bookingReference;
     private Integer customerProfileId;
     private Integer retreatPackageId;
     private String packageName;
@@ -22,6 +23,9 @@ public class BookingSummaryResponse {
     private String specialRequest;
     private LocalDateTime createdAt;
     private Boolean hasResidenceRecord;
+    private Integer guestCount = 1;
+    private String paymentStatus;
+    private String transactionReference;
 
     public BookingSummaryResponse() {
     }
@@ -32,6 +36,14 @@ public class BookingSummaryResponse {
 
     public void setRetreatBookingId(Integer retreatBookingId) {
         this.retreatBookingId = retreatBookingId;
+    }
+
+    public String getBookingReference() {
+        return bookingReference;
+    }
+
+    public void setBookingReference(String bookingReference) {
+        this.bookingReference = bookingReference;
     }
 
     public Integer getCustomerProfileId() {
@@ -152,5 +164,29 @@ public class BookingSummaryResponse {
 
     public void setHasResidenceRecord(Boolean hasResidenceRecord) {
         this.hasResidenceRecord = hasResidenceRecord;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
     }
 }

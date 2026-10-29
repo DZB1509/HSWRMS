@@ -41,7 +41,8 @@
     "admin": "Admin",
     "delegatedAdministration": "Delegated Administration",
     "businessParametersDelegated": "Business Parameters (Delegated)",
-    "featureFlagsDelegated": "Feature Flags (Delegated)"
+    "featureFlagsDelegated": "Feature Flags (Delegated)",
+    "bookingHistory": "Booking History"
   },
   "payment": {
     "requiredDeposit": "Required Deposit",

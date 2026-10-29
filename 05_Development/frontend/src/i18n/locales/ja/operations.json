@@ -41,7 +41,8 @@
     "admin": "管理者",
     "delegatedAdministration": "委譲された管理権限",
     "businessParametersDelegated": "ビジネスパラメータ（委譲済）",
-    "featureFlagsDelegated": "機能フラグ（委譲済）"
+    "featureFlagsDelegated": "機能フラグ（委譲済）",
+    "bookingHistory": "予約履歴"
   },
   "payment": {
     "requiredDeposit": "所要デポジット",

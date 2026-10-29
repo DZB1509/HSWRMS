@@ -286,7 +286,7 @@ public class RetreatBookingServiceAuthorizationTest {
     @DisplayName("9. Unauthenticated user calling service methods throws AccessDeniedException")
     public void testUnauthenticatedUserThrowsAccessDenied() {
         assertThrows(AccessDeniedException.class, () ->
-                bookingService.getBookingDetail(1, null)
+                bookingService.getBookingDetail(1, (CustomUserDetails) null)
         );
         assertThrows(AccessDeniedException.class, () ->
                 bookingService.getCustomerBookings((CustomUserDetails) null)

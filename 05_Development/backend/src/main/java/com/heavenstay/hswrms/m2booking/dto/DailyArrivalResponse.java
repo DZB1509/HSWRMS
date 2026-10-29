@@ -19,6 +19,12 @@ public class DailyArrivalResponse {
     private String bookingStatus;
     private BigDecimal depositPaid;
     private Boolean hasResidenceRecord;
+    private Boolean hasHealthProfile;
+    private Integer guestCount;
+    private BigDecimal totalEstimatedAmount;
+    private String bookingReference;
+    private String paymentStatus;
+    private String transactionReference;
 
     public DailyArrivalResponse() {
     }
@@ -133,5 +139,53 @@ public class DailyArrivalResponse {
 
     public void setHasResidenceRecord(Boolean hasResidenceRecord) {
         this.hasResidenceRecord = hasResidenceRecord;
+    }
+
+    public Boolean getHasHealthProfile() {
+        return hasHealthProfile;
+    }
+
+    public void setHasHealthProfile(Boolean hasHealthProfile) {
+        this.hasHealthProfile = hasHealthProfile;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
+    }
+
+    public BigDecimal getTotalEstimatedAmount() {
+        return totalEstimatedAmount;
+    }
+
+    public void setTotalEstimatedAmount(BigDecimal totalEstimatedAmount) {
+        this.totalEstimatedAmount = totalEstimatedAmount;
+    }
+
+    public String getBookingReference() {
+        return bookingReference;
+    }
+
+    public void setBookingReference(String bookingReference) {
+        this.bookingReference = bookingReference;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
     }
 }

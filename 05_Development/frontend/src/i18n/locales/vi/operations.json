@@ -41,7 +41,8 @@
     "admin": "Quản Trị",
     "delegatedAdministration": "Ủy Quyền Hành Chính",
     "businessParametersDelegated": "Tham Số Vận Hành (Được Ủy Quyền)",
-    "featureFlagsDelegated": "Cờ Tính Năng (Được Ủy Quyền)"
+    "featureFlagsDelegated": "Cờ Tính Năng (Được Ủy Quyền)",
+    "bookingHistory": "Lịch sử đặt phòng"
   },
   "payment": {
     "requiredDeposit": "Tiền Cọc Yêu Cầu",

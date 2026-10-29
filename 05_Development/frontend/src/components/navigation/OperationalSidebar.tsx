@@ -48,6 +48,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.frontDeskDashboard', defaultLabel: 'Front Desk Dashboard', path: '/receptionist/dashboard', icon: LayoutDashboard },
         { labelKey: 'operations.sidebar.dailyArrivals', defaultLabel: 'Daily Arrivals', path: '/receptionist/arrivals', icon: CalendarCheck },
+        { labelKey: 'operations.sidebar.bookingHistory', defaultLabel: 'Booking History', path: '/receptionist/bookings', icon: CalendarCheck },
         { labelKey: 'operations.sidebar.villaManagement', defaultLabel: 'Villa Management', path: '/receptionist/villas', icon: Home }
       ]
     },
