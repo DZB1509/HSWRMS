@@ -1,0 +1,878 @@
+================================================================================
+HSWRMS INTEGRATION HISTORY REPORT: PHASES 5.8.3.117 - 5.8.3.118
+FULL TEAM BRANCH RECONCILIATION, CODE INTEGRITY AUDIT & MERGE HISTORY
+================================================================================
+Target Path : 06_Reports/PHASE_5.8.3.117-5.8.3.118_FULL_TEAM_MERGE_HISTORY.txt
+Repository  : E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch      : feature/hswrms-m1-m6-integration
+Remote      : isp-origin (https://gitlab.com/manhnc2/fal26-isp392-is2005-g1.git)
+Generated   : 2026-10-29T15:45:00+07:00 (Audited & Revised: 2026-10-29T16:15:00+07:00)
+Status      : RECONCILED, SUITE-VERIFIED & SYNCHRONIZED TO REMOTE (RUNTIME ACCEPTANCE PENDING)
+================================================================================
+
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+SECTION 1  -- EXECUTIVE SUMMARY
+SECTION 2  -- INITIAL STATE AND INTEGRATION SCOPE
+SECTION 3  -- PHASE 5.8.3.117 CHRONOLOGICAL HISTORY
+SECTION 4  -- PHASE 5.8.3.118 RECOVERY AND RESUMPTION HISTORY
+SECTION 5  -- TEAM BRANCH INTEGRATION MATRIX
+SECTION 6  -- FILE-LEVEL CODE CHANGES AND FUNCTIONAL RECONCILIATION
+SECTION 7  -- FAILED ATTEMPTS, DIAGNOSTICS, AND CORRECTIONS
+SECTION 8  -- BUILD, TEST, AND VERIFICATION RESULTS
+SECTION 9  -- GIT COMMITS, CHECKPOINTS, AND PUSH HISTORY
+SECTION 10 -- DATABASE SAFETY AND DEFERRED ARTIFACTS
+SECTION 11 -- FUNCTIONAL COMPLETENESS AND REMAINING RISKS
+SECTION 12 -- FINAL OUTCOME AND RECOMMENDED FOLLOW-UP
+--------------------------------------------------------------------------------
+
+
+================================================================================
+SECTION 1 -- EXECUTIVE SUMMARY
+================================================================================
+
+1.1 INITIATION PURPOSE
+Phases 5.8.3.117 and 5.8.3.118 were initiated to complete the integration of all 
+HeavenStay Wellness Resort Management System (HSWRMS) contributor branches into 
+the primary integration branch:
+  `feature/hswrms-m1-m6-integration`.
+Prior to Phase 5.8.3.117, team members had developed separate feature modules in 
+isolated repository branches. Phase 5.8.3.117 was tasked with reconciling these 
+contributor branches into a single cohesive codebase. However, Phase 5.8.3.117 
+was interrupted while merging the `XH` branch due to 44 unmerged merge conflict 
+paths across backend entities, DTOs, controllers, security configurations, 
+and database scripts.
+
+Phase 5.8.3.118 was subsequently launched to safely recover the workspace from 
+the interrupted merge state, resolve all 44 conflicted files, audit branch 
+completeness across the mandatory contributor branches, diagnose and remediate 
+test suite regressions, and push the verified result to GitLab remote `isp-origin`.
+
+1.2 OBJECTIVES ACCOMPLISHED
+- Interrupted Merge Recovery: Resolved all 44 merge conflict paths from the 
+  `isp-origin/XH` merge, harmonizing differing implementations across backend 
+  entities, DTOs, controllers, security configuration, database scripts, and 
+  frontend components without compile errors or test regressions.
+- Domain Model Harmonization: Discovered and removed 6 provisional stub entity 
+  classes introduced in M5 (`CustomerProfileEntity`, `UserEntity`, 
+  `PhysicalVillaEntity`, `RetreatBookingEntity`, `SpaSessionEntity`, `TherapistEntity`), 
+  adapting M5 billing and folio repositories/services directly to the canonical 
+  domain entities to eliminate duplicate JPA mapping collisions.
+- Dual-Chain Security Architecture: Preserved the SSO OAuth2 redirect chain 
+  alongside the stateless JWT security filter chain, and integrated a local 
+  development authentication bypass endpoint (`/api/v1/auth/dev/**`).
+- Mandatory Branch Auditing: Verified integration status across all 7 required 
+  contributor branches: `DucHoangM1`, `dat-nguyen-gia`, `thao-product`, `vinhpt1`, 
+  `vinhpt` (superseded), `NTDatZB`, and `XH`. (Branch `XH4` was explicitly 
+  excluded by the user from required scope and noted only as an incidental check).
+- Test Regression Remediation: Successfully identified and corrected two subtle 
+  test environment defects:
+  1) Test DataSource property override in `HswrmsApplicationTests.java` that 
+     stripped H2 MSSQLServer compatibility mode and broke cross-module stay queries.
+  2) Hardcoded manager user ID in `M6AdminIntegrationTests.java` that caused 
+     delegation date validation tests to fail when run in the full suite.
+- Automated Test Execution: Verified clean execution across the automated suites:
+  * Backend: 536 tests run; 526 passed, 0 failures, 0 errors, 10 skipped 
+    (opt-in live database tests skipped by design); BUILD SUCCESS.
+  * Frontend: 2,728 modules transformed with 0 errors; Oxlint reported 0 errors 
+    and 10 non-blocking informational/unused-variable warnings across 216 files.
+- Remote Synchronization: Pushed integration commits `9668586`, `1f7ebc1`, and 
+  `3042eb4`, plus checkpoint tag `checkpoint/phase-5.8.3.118-step5-xh`, to GitLab 
+  remote `isp-origin`.
+
+1.3 MODULES AND CONTRIBUTOR BRANCHES INVOLVED
+- M1 Identity & Access Governance: `isp-origin/DucHoangM1` (integrated in `602c6f8`)
+- M2 Booking & Reservation Management: `isp-origin/dat-nguyen-gia` (selectively integrated in `0f257ad`)
+- M3 Spa & Wellness Operations: `isp-origin/vinhpt1` (integrated in `39b086f`)
+- M4 Food & Beverage (F&B) Management: `isp-origin/thao-product` (integrated in `6ff5b9a`)
+- M5 Billing, Invoicing & Checkout: `isp-origin/XH` (integrated in `9668586`)
+- M6 Administration & Governance: `isp-origin/vinhpt1` (integrated in `39b086f`)
+- Shared Infrastructure & Core: `isp-origin/NTDatZB` (ancestry verified in HEAD)
+
+1.4 VERIFICATION HIGHLIGHTS & METRICS
+- Backend Test Suite: 536 tests run; 526 passed, 0 failures, 0 errors, 10 skipped.
+- Frontend Build: Vite v8.3.4 + TypeScript ~6.0.2 compiled 2,728 modules in 997ms 
+  with 0 errors.
+- Frontend Linter: Oxlint scanned 216 files across 96 rules with 0 errors and 
+  10 informational warnings (unused variables in mock fallback catches).
+- Database Invariant: Zero mutations were executed against live SQL Server 
+  databases (`HSWRMS` or `HSWRMS_TEST`). All 6 deferred database files remained 
+  unmodified and preserved on disk.
+
+1.5 VERIFIED STATUS VS. RUNTIME COMPLETENESS
+Automated test suites, static type checking, and linter audits confirm that 
+syntactic, structural, and unit/slice behavioral integration is successful in an 
+isolated test environment. However, complete functional verification has NOT yet 
+been demonstrated:
+- Runtime behavior against live third-party services (production Google/Facebook 
+  SSO OAuth2 handshakes, actual VNPay merchant payment callbacks and IPN webhooks) 
+  remains UNVERIFIED.
+- End-to-end multi-module operational flows (e.g. receptionist guest walk-in -> 
+  villa allocation -> spa treatment consumption -> kitchen order prep -> unified 
+  checkout folio generation) have been verified only via unit/slice tests and 
+  mocks, not through end-to-end browser walkthroughs.
+- Live SQL Server 2022 locking behavior, concurrency hints (`WITH (UPDLOCK)`), 
+  and connection pool stress have not been executed on production infrastructure.
+These aspects require a separately authorized staging or test database phase.
+
+
+===============================================================================
+SECTION 2 -- INITIAL STATE AND INTEGRATION SCOPE
+===============================================================================
+
+2.1 REPOSITORY BASELINE
+- Repository Directory:
+    `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`
+- Primary Integration Branch:
+    `feature/hswrms-m1-m6-integration`
+- Phase 5.8.3.117 Starting HEAD:
+    `5832fbbecdb9b266ed6b5b894ff8eaa079a8b9bb`
+    Commit message: "docs(database): record full backlog inventory and residual checkpoint"
+- Remote Name & URL:
+    `isp-origin` -> `https://gitlab.com/manhnc2/fal26-isp392-is2005-g1.git`
+    (Secondary mirror: `origin` -> `https://github.com/DZB1509/HSWRMS.git`)
+
+2.2 MANDATORY CONTRIBUTOR BRANCH INVENTORY
+The user defined the required integration scope across 7 contributor branches:
+1. `isp-origin/DucHoangM1` (HEAD `1d9750e38029c8e9b626be4ec0ec44b20ec9a4fe`)
+   Scope: M1 Identity, Google/Facebook SSO, Account Lockout, Health Data Deletion.
+2. `isp-origin/dat-nguyen-gia` (HEAD `52a6bd95d2c20a8fa4ec43f47e33a6fa99f928e4`)
+   Scope: M2 Receptionist Booking, Customer Identity Adapter, VNPay Gateway.
+3. `isp-origin/thao-product` (HEAD `7caeaa5295d9e5fb2512f716f9fbf4a081ec9d92`)
+   Scope: M4 F&B Menus, Meal Orders, Kitchen Display System (KDS), Inventory.
+4. `isp-origin/vinhpt1` (HEAD `9161888062f4ba6ef5d52fc996d9333ae4c85633`)
+   Scope: M6 Admin & Governance, M2/M3 Villa & Spa master data, layout designs.
+5. `isp-origin/vinhpt` (HEAD `1c359fce83a48e77a29a008103c80ff25700755f`)
+   Scope: Early M6 prototype, superseded by `vinhpt1`.
+6. `isp-origin/NTDatZB` (HEAD `ff9f44b2c1f8a7051d9ec3472bc6dfb92bc5103a`)
+   Scope: Foundation infrastructure, direct ancestor of integration baseline `5832fbb`.
+7. `isp-origin/XH` (HEAD `2dfb34e4f7ff145e69bf48f7ee6fb8feee2ea07b`)
+   Scope: M5 Billing, Folio Aggregation, Checkout Payment, Reviews, PDF Invoicing.
+
+2.2.1 OUT-OF-SCOPE BRANCH NOTE: `isp-origin/XH4`
+Branch `isp-origin/XH4` (HEAD `e1f2ef55e61fb16b08e5be264562c16111a43a08`):
+The user explicitly removed XH4 from the required branch-checking scope.
+Historical execution logs show that the agent inspected `XH4` incidentally during 
+Phase 5.8.3.118, observing that it contained only early October design and 
+business-rule notes in root-level markdown documents and 0 code files in 
+`05_Development/`, having been superseded by `XH`.
+In strict accordance with the user's instructions:
+- `XH4` is NOT a required branch for integration acceptance.
+- `XH4` is NOT included in the mandatory branch coverage denominator (which is 7).
+- No claim of project completeness is based on `XH4` being inspected or classified.
+
+2.3 NATURE OF THE PHASE 5.8.3.117 INTERRUPTION
+Phase 5.8.3.117 progressed through sequential merges of `DucHoangM1`, `dat-nguyen-gia`, 
+`thao-product`, and `vinhpt1`. At step 5119 of the execution, the command:
+  `git merge --no-commit --no-ff isp-origin/XH`
+exited with code 1 due to 44 unmerged conflict paths. The conflicts spanned:
+- Duplicate JPA entity names (M5 created provisional stubs colliding with canonical M1-M4 entities)
+- Dual Spring Security configurations
+- Database schema and migration script discrepancies
+- Maven `pom.xml` dependency duplications
+- Frontend API client and billing UI differences
+The execution turn ended before resolution, leaving the Git repository paused in 
+`MERGING` status with unmerged paths.
+
+
+================================================================================
+SECTION 3 -- PHASE 5.8.3.117 CHRONOLOGICAL HISTORY
+================================================================================
+
+3.1 STEP 1: INITIAL PREFLIGHT & DUCHOANGM1 INTEGRATION
+- Objective: Integrate M1 Identity enhancements from `isp-origin/DucHoangM1`.
+- Source HEAD: `1d9750e38029c8e9b626be4ec0ec44b20ec9a4fe`
+- Merge Base: `ffdd40afa9aa4acf1c4f045c12bd20c1376bcf70`
+- Mechanism: True merge commit (two parents: `5832fbb` and `1d9750e`).
+- Actions Taken:
+  Merged `isp-origin/DucHoangM1` into `5832fbb`. Resolved configuration differences 
+  in `application.yml` and `SecurityConfig.java`. Integrated Facebook SSO callback 
+  processing, ticket linking, email delivery adapters, and GDPR Screen #9 customer 
+  health data deletion flow.
+- Outcome: Completed.
+  Commit SHA: `602c6f8089e211ea9ef80fa6772f58b9c2f8268e`
+  Message: "feat(m1): integrate Facebook SSO, ticket linking, and health data deletion request from DucHoangM1"
+
+3.2 STEP 2: DAT-NGUYEN-GIA (M2 BOOKING) SELECTIVE INTEGRATION
+- Objective: Integrate M2 Receptionist Booking, Customer Persistence, and VNPay.
+- Source HEAD: `52a6bd95d2c20a8fa4ec43f47e33a6fa99f928e4`
+- Merge Base: `582cab31240d038680c267ff022d112360565d48`
+- Mechanism: Selective integration commit (single parent: `602c6f8`). This was NOT 
+  a `git merge` commit.
+- Architectural Rationale for Selective Integration:
+  Git history on `dat-nguyen-gia` revealed earlier commits (e.g., `d2d36de`, `1619ebe`) 
+  that attempted to modify canonical schema files and run scripts directly against 
+  live `HSWRMS`. Executing a direct `git merge` would have clobbered the canonical 
+  database baseline (`05_Development/database/schema.sql`) carefully established 
+  in Phases 47–85.
+- Files Integrated (50 files, +4,963 / -361 lines):
+  * Backend Controllers: `ReceptionistOperationController`, `RetreatBookingController`, 
+    `VNPayCallbackController`.
+  * DTOs: `AssignVillaRequest`, `BookingSummaryResponse`, `CreateBookingRequest`, 
+    `DailyArrivalResponse`, `ReceptionistBookingDetailResponse`, `ReceptionistBookingResponse`, 
+    `ResidenceRecordResponse`, `UpdateBookingRequest`, `WalkInBookingRequest`.
+  * Entity & Repositories: `PaymentTransaction`, `PaymentTransactionRepository`, 
+    `ResidenceRecordRepository`, `RetreatBookingRepository`, `VillaCategoryRepository`, 
+    `PhysicalVillaRepository`.
+  * Services & Ports: `BookingAuditService`, `BookingClock`, `BookingPolicyService`, 
+    `CustomerIdentityPort`, `JdbcCustomerIdentityAdapter`, `ReceptionistOperationService`, 
+    `RetreatBookingService`, `VNPayDepositService`, `VillaAvailabilityService`.
+  * Tests: `ReceptionistOperationServiceTest`, `RetreatBookingServiceTest`, 
+    `VNPayDepositServiceTest`, `VillaAvailabilityServiceTest`.
+  * Database Scripts: `V1_5__seed_demo_users.sql`, `V1_6__seed_package_villa_category_mapping.sql`, 
+    `V1_6__repair_mojibake_and_booking_consistency.sql`, `_draft_m2_retreat_booking_guest_count.sql`.
+  * Frontend: `retreatBookingApi.ts`, `ReceptionistBookingsPage.tsx`, `CustomerContext.tsx`, 
+    navigation items, and localization files.
+- Files Intentionally Omitted:
+  `dat-nguyen-gia`'s raw schema modifications to `schema.sql` were excluded to 
+  preserve the canonical schema definition.
+- Outcome: Completed.
+  Commit SHA: `0f257ad1d940a43bba7e713bf48ce7d1ea267c4c`
+  Message: "feat(m2-booking): integrate receptionist booking management, customer persistence, and security alignment from dat-nguyen-gia"
+  Tag Created: `checkpoint/phase-5.8.3.117-step2-m2`
+
+3.3 STEP 3: THAO-PRODUCT (M4 F&B) INTEGRATION
+- Objective: Integrate M4 Menu, Meal Orders, Inventory Deduction, and KDS.
+- Source HEAD: `7caeaa5295d9e5fb2512f716f9fbf4a081ec9d92`
+- Merge Base: `1d9750e1e31785429d42ad1f8628df9e7a4f52dd`
+- Mechanism: True merge commit (two parents: `0f257ad` and `7caeaa5`).
+- Actions Taken:
+  Merged `isp-origin/thao-product` into `0f257ad`. Reconciled conflicts in 
+  `SecurityConfig.java`, `PaymentTransactionRepository.java`, `MealOrderEntity.java`, 
+  and `MealOrderItem.java`. Preserved M4 kitchen display system (KDS), dietary 
+  profiles, recipe ingredient mapping, and text encoding sanitizers.
+- Outcome: Completed.
+  Commit SHA: `6ff5b9a3d921235974d27565fed522195c69089e`
+  Message: "feat(m4-fnb): integrate inventory, recipes, meal prep and kitchen dashboard from thao-product"
+  Tag Created: `checkpoint/phase-5.8.3.117-step3-m4`
+
+3.4 STEP 4: VINHPT1 (M2 VILLA, M3 SPA & M6 ADMIN) INTEGRATION
+- Objective: Integrate villa specifications, spa master controls, and admin governance.
+- Source HEAD: `9161888062f4ba6ef5d52fc996d9333ae4c85633`
+- Merge Base: `ffdd40afa9aa4acf1c4f045c12bd20c1376bcf70`
+- Mechanism: True merge commit (two parents: `6ff5b9a` and `9161888`).
+- Actions Taken:
+  Merged `isp-origin/vinhpt1` into `6ff5b9a`. Reconciled conflicts in `PhysicalVilla.java`, 
+  `RetreatPackage.java`, `VillaCategory.java`, `SpaTreatment.java`, `TreatmentRoom.java`, 
+  `DashboardController.java`, and `MasterDataService.java`. Preserved layout design 
+  models and manager villa/spa configuration.
+- Outcome: Completed.
+  Commit SHA: `39b086f2498adcff65c4059aa9c08ff974d962ce`
+  Message: "feat(m2-villa,m3-spa): integrate manager villa & spa management, specifications, and layout designs from vinhpt1"
+  Tag Created: `checkpoint/phase-5.8.3.117-step4-vinhpt1`
+
+3.5 STEP 5: ATTEMPTED XH (M5 BILLING) MERGE & INTERRUPTION
+- Operation: `git merge --no-commit --no-ff isp-origin/XH` executed at step 5119.
+- Result: Command exited with code 1 due to 44 unmerged conflict paths across 
+  entities, DTOs, controllers, security configuration, database scripts, and frontend UI.
+- Status at Step 5120: Unresolved. Turn ended and execution was interrupted.
+
+
+================================================================================
+SECTION 4 -- PHASE 5.8.3.118 RECOVERY AND RESUMPTION HISTORY
+================================================================================
+
+4.1 STEP 1: INITIAL RECOVERY & CONFLICT INVESTIGATION
+- Resumption Context: Phase 5.8.3.118 prompt received at step 5122.
+- Inspection: Verified repository was paused in `MERGING` status on branch 
+  `feature/hswrms-m1-m6-integration` at commit `39b086f`.
+- Conflict Breakdown (44 paths):
+  * 6 duplicate provisional stub entities (`CustomerProfileEntity`, `UserEntity`, 
+    `PhysicalVillaEntity`, `RetreatBookingEntity`, `SpaSessionEntity`, `TherapistEntity`)
+  * 1 security config file (`SecurityConfig.java`)
+  * 1 database schema file (`schema.sql`)
+  * 1 migration script (`V1_4__seed_spa_packages_v3.sql`)
+  * 1 build descriptor (`pom.xml`)
+  * 12 M5 billing entity/repository files
+  * 10 M5 billing DTO files
+  * 7 M5 service and controller files
+  * 6 frontend API client and billing UI pages
+
+4.2 STEP 2: SYSTEMATIC CONFLICT RESOLUTION
+- Domain Entities: Removed the 6 provisional stub classes via `git rm -f`:
+    `CustomerProfileEntity.java`, `UserEntity.java`, `PhysicalVillaEntity.java`,
+    `RetreatBookingEntity.java`, `SpaSessionEntity.java`, `TherapistEntity.java`.
+  Mapped all M5 billing repositories and services (`FolioRepository`, 
+  `PaymentTransactionRepository`, `BillingService`, `CheckoutService`) to the 
+  canonical domain entities: `CustomerProfile`, `User`, `PhysicalVilla`, 
+  `RetreatBooking`, `SpaSession`, `Therapist`.
+- Security Configuration:
+  Reconciled `SecurityConfig.java` to keep HEAD's dual-chain architecture:
+  1) `ssoSecurityFilterChain` for OAuth2 login callbacks.
+  2) `apiSecurityFilterChain` for stateless JWT-authenticated endpoints.
+  Integrated XH's local dev auth bypass: `.requestMatchers("/api/v1/auth/dev/**").permitAll()`.
+- Database Schema & Seeds:
+  * `schema.sql`: Resolved table syntax where `RetreatPackageSpaTreatment` was 
+    inadvertently nested inside `SpaTreatment`, restoring both as separate, valid DDL.
+  * `V1_4__seed_spa_packages_v3.sql`: Accepted XH's clean seed version omitting 
+    the invalid `duration_unit` column.
+- Dependencies:
+  Deduplicated duplicate declarations of `poi-ooxml` and `openpdf` in `pom.xml`.
+- Frontend UI & Clients:
+  Reconciled `apiClient.ts`, `billingApi.ts`, `useBilling.ts`, `CheckoutConfirmationPage.tsx`, 
+  `FinalPaymentPage.tsx`, and `FolioInvoicePage.tsx` with SSR/window safety and 
+  dynamic booking reference resolution.
+
+4.3 STEP 3: XH MERGE COMMIT & CHECKPOINT
+- Action: Committed the resolved merge state.
+- Commit SHA: `9668586322aa5e57ef64a3cbfa6cde0f481f7952`
+- Commit Message:
+    "feat(m5-billing): reconcile folio billing, checkout payment, and analytics from XH"
+- Checkpoint Tag Created:
+    `checkpoint/phase-5.8.3.118-step5-xh` pointing to `9668586`.
+
+4.4 STEP 4: MANDATORY BRANCH COVERAGE AUDIT
+Audited unmerged commits across the 7 mandatory contributor branches against HEAD:
+- `DucHoangM1`: 0 unmerged commits (integrated via merge commit `602c6f8`).
+- `thao-product`: 0 unmerged commits (integrated via merge commit `6ff5b9a`).
+- `vinhpt1`: 0 unmerged commits (integrated via merge commit `39b086f`).
+- `NTDatZB`: 0 unmerged commits (HEAD is a direct descendant of `ff9f44b`).
+- `XH`: 0 unmerged commits (integrated via merge commit `9668586`).
+- `vinhpt`: Superseded by `vinhpt1` (early prototype branch).
+- `dat-nguyen-gia`: Selectively integrated in commit `0f257ad` (omitting raw schema modifications).
+(Out-of-scope branch `XH4` was noted as containing only early design documentation with 0 code files).
+
+4.5 STEP 5: BUILD & TEST VERIFICATION CYCLES
+- Frontend Build: `npm run build` completed in 997ms with 0 errors (2,728 modules transformed).
+- Frontend Lint: `npm run lint` completed with 0 errors and 10 informational warnings (unused variables in mock fallback catches).
+- Targeted Unit Test Fixes:
+  1) `M2SchemaCompatibilityTest`: Fixed missing `packageCode` on test `RetreatPackage` 
+     entities to satisfy database non-null constraint.
+  2) `RetreatBookingServiceAuthorizationTest`: Handled access-denied exceptions, 
+     added null-checks in `BookingAuditService` and `BookingPolicyService`, set villa 
+     category inventory count, and matched VNPay error message.
+- Full Suite Test Failure #1 (Task 5597):
+  536 tests run; 525 passed, 1 failed, 10 skipped:
+  `M2SchemaCompatibilityTest.testDefaultCustomerStayAdapterActiveStayIntegration`
+- Root Cause Investigation #1:
+  Discovered `HswrmsApplicationTests.java` had hardcoded:
+    `@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS dbo")`
+  This stripped `;MODE=MSSQLServer;CASE_INSENSITIVE_IDENTIFIERS=TRUE` from the 
+  shared Spring test DataSource, causing H2 to reject `dbo.[User]` syntax in 
+  `DefaultCustomerStayAdapter`.
+- Fix #1: Removed the property override from `HswrmsApplicationTests.java` so 
+  all tests inherit canonical settings from `application.yml`.
+- Full Suite Test Failure #2 (Task 5776):
+  `M2SchemaCompatibilityTest` passed. Exactly 1 new failure occurred (525 passed, 1 failed, 10 skipped):
+  `M6AdminIntegrationTests.delegationValidation` (expected "M6-MSG-07", received "INVALID_DELEGATE").
+- Root Cause Investigation #2:
+  `M6AdminIntegrationTests.java` had hardcoded user ID `2` as the delegation target. 
+  When executed in the full suite, user `2` was an existing user from an earlier 
+  test that lacked the `MANAGER` role, causing `DelegationService` to reject the 
+  delegate before reaching date validation.
+- Fix #2: Updated `M6AdminIntegrationTests.java` to dynamically retrieve or 
+  provision an active `MANAGER` user and use `manager.getUserId()`.
+- Full Suite Test Pass (Task 5870):
+  536 tests run; 526 passed, 0 failures, 0 errors, 10 skipped (BUILD SUCCESS).
+
+4.6 STEP 6: HARMONIZATION COMMIT, REPORT DELIVERABLE & REMOTE PUSH
+- Harmonization Commit:
+  Committed test and service fixes across 8 files as commit `1f7ebc19119fb1cab2f0206d6b70d4865cfdd671`.
+- Phase 5.8.3.118 Report:
+  Authored `05_Development/database/reports/PHASE_5.8.3.118_INTEGRATION_RECOVERY_AND_RESUMPTION_REPORT.md` 
+  and committed as commit `3042eb40495890a959e426bedbc65acffb2e67cf`.
+- Remote Push:
+  Pushed branch `feature/hswrms-m1-m6-integration` (`5832fbb..3042eb4`) and tag 
+  `checkpoint/phase-5.8.3.118-step5-xh` to `isp-origin`.
+
+
+================================================================================
+SECTION 5 -- TEAM BRANCH INTEGRATION MATRIX
+================================================================================
+
++------------------------+-------------------+---------+------------+-----------------------+---------------------------------+
+| Branch Name            | Functional Scope  | HEAD    | Merge Base | Integration Mechanism | Verification Status             |
++------------------------+-------------------+---------+------------+-----------------------+---------------------------------+
+| isp-origin/DucHoangM1  | M1: Identity, SSO | 1d9750e | ffdd40a    | True Merge (602c6f8)  | INTEGRATED_AUTOMATED_TESTS_PASS |
+| isp-origin/dat-nguyen  | M2: Booking/VNPay | 52a6bd9 | 582cab3    | Selective (0f257ad)   | INTEGRATED_NOT_FULLY_VERIFIED   |
+| isp-origin/thao-product| M4: F&B / KDS     | 7caeaa5 | 1d9750e    | True Merge (6ff5b9a)  | INTEGRATED_AUTOMATED_TESTS_PASS |
+| isp-origin/vinhpt1     | M6: Admin / Villa | 9161888 | ffdd40a    | True Merge (39b086f)  | INTEGRATED_AUTOMATED_TESTS_PASS |
+| isp-origin/vinhpt      | Early Prototype   | 1c359fc | N/A        | Superseded by vinhpt1 | SUPERSEDED                      |
+| isp-origin/NTDatZB     | Infrastructure/M1 | ff9f44b | ff9f44b    | Ancestor in HEAD      | ANCESTOR_IN_BASELINE            |
+| isp-origin/XH          | M5: Billing/Folio | 2dfb34e | 582cab3    | True Merge (9668586)  | INTEGRATED_AUTOMATED_TESTS_PASS |
++------------------------+-------------------+---------+------------+-----------------------+---------------------------------+
+| [OUT OF SCOPE BRANCH]  |                   |         |            |                       |                                 |
+| isp-origin/XH4         | Specs/Rules Docs  | e1f2ef5 | N/A        | Incidental Audit Only | OUT_OF_SCOPE                    |
++------------------------+-------------------+---------+------------+-----------------------+---------------------------------+
+
+Detailed Branch Integration Notes:
+1. `DucHoangM1` (1d9750e): Merged via true merge commit `602c6f8` (two parents: `5832fbb`, 
+   `1d9750e`). Contributed Google/Facebook SSO endpoints, ticket lifecycle, and GDPR 
+   Screen #9 deletion. Status: INTEGRATED_AUTOMATED_TESTS_PASS (all M1 automated unit/slice 
+   tests pass; live Google/Facebook network callbacks require external staging).
+2. `dat-nguyen-gia` (52a6bd9): Selectively integrated in commit `0f257ad` (single parent: 
+   `602c6f8`). Intentionally did NOT merge via `git merge` to prevent overwriting 
+   canonical `schema.sql` with raw schema modifications from branch commits `d2d36de` 
+   and `1619ebe`. Contributed 50 files spanning receptionist booking operations, 
+   customer identity adaptation, VNPay service logic, and frontend booking views. 
+   Status: INTEGRATED_NOT_FULLY_VERIFIED (automated tests pass; live VNPay IPN callbacks, 
+   bank redirects, and concurrent room-locking require live execution).
+3. `thao-product` (7caeaa5): Merged via true merge commit `6ff5b9a` (two parents: `0f257ad`, 
+   `7caeaa5`). Contributed menu catalog, meal order placement, kitchen display system 
+   (KDS), and inventory deduction. Status: INTEGRATED_AUTOMATED_TESTS_PASS (automated 
+   unit/service tests pass).
+4. `vinhpt1` (9161888): Merged via true merge commit `39b086f` (two parents: `6ff5b9a`, 
+   `9161888`). Contributed manager villa configuration, spa master controls, system 
+   parameters, and admin dashboards. Harmonized in commit `1f7ebc1`. Status: 
+   INTEGRATED_AUTOMATED_TESTS_PASS (automated unit/service tests pass).
+5. `vinhpt` (1c359fc): Initial prototype branch containing early skeleton code; 
+   fully superseded by `vinhpt1`. Status: SUPERSEDED.
+6. `NTDatZB` (ff9f44b): Verified as an upstream ancestor of integration baseline 
+   `5832fbb` (merge base `ff9f44b`). Contains 0 unmerged commits. Status: ANCESTOR_IN_BASELINE.
+7. `XH` (2dfb34e): Merged via true merge commit `9668586` (two parents: `39b086f`, 
+   `2dfb34e`). Contributed folio billing, multi-channel checkout payments, PDF invoice 
+   generation, and customer reviews. Reconciled 6 provisional stub entities in favor 
+   of canonical entities. Harmonized in commit `1f7ebc1`. Status: INTEGRATED_AUTOMATED_TESTS_PASS 
+   (automated M5 unit/service tests pass; live payment gateway processing unverified).
+8. `XH4` (e1f2ef5) [Out of Scope]: Explicitly removed by the user from required scope. 
+   Inspected incidentally; contains early October documentation and 0 code files in 
+   `05_Development`. Superseded by `XH`. Status: OUT_OF_SCOPE.
+
+
+================================================================================
+SECTION 6 -- FILE-LEVEL CODE CHANGES AND FUNCTIONAL RECONCILIATION
+================================================================================
+
+6.1 DOMAIN MODELS AND ENTITY HARMONIZATION
+- Problem: Branch `XH` was developed in isolation before M1-M4 integration. It created 
+  6 provisional stub entities that mapped to the same underlying database tables as 
+  canonical M1-M4 entities, causing JPA entity name collisions and table mapping errors:
+  1) `CustomerProfileEntity.java` (provisional stub for `CustomerProfile`)
+  2) `UserEntity.java` (provisional stub for `User`)
+  3) `PhysicalVillaEntity.java` (provisional stub for `PhysicalVilla`)
+  4) `RetreatBookingEntity.java` (provisional stub for `RetreatBooking`)
+  5) `SpaSessionEntity.java` (provisional stub for `SpaSession`)
+  6) `TherapistEntity.java` (provisional stub for `Therapist`)
+- Action:
+  * Removed all 6 provisional stub classes via `git rm -f`.
+  * Adapted M5 repositories, entities, initializers, and services to reference the 
+    canonical domain entities:
+      - `com.heavenstay.hswrms.m1identity.entity.CustomerProfile`
+      - `com.heavenstay.hswrms.m1identity.entity.User`
+      - `com.heavenstay.hswrms.m2booking.entity.PhysicalVilla`
+      - `com.heavenstay.hswrms.m2booking.entity.RetreatBooking`
+      - `com.heavenstay.hswrms.m3spa.entity.SpaSession`
+      - `com.heavenstay.hswrms.m3spa.entity.Therapist`
+  * Adapted specific M5 classes: `M5DataInitializer.java`, `InvoicePdfService.java`, 
+    `ReviewService.java`, `FolioBillingService.java`, `CheckoutPaymentService.java`, 
+    `FolioRepository.java`, and `PaymentTransactionRepository.java`.
+- Verification: Clean Hibernate startup in tests with no duplicate mapping errors. 
+  Automated tests in `M5BillingAndCheckoutTests` (48/48 passed).
+- Unresolved Functional Equivalence Questions:
+  Deleting duplicate stub classes and rebinding to canonical entities ensured 
+  syntactic and structural coherence. However, it does not prove by itself that all 
+  edge-case behaviors intended by XH (such as specific cascade options or column 
+  definitions in the stubs) are 100% functionally identical to the canonical entities 
+  under live SQL Server operations.
+
+6.2 SECURITY AND AUTHENTICATION RECONCILIATION
+- Relevant File:
+    `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java`
+- Problem: Conflicts between HEAD's dual-chain architecture (SSO + API filter chains) 
+  and XH's local development endpoint permissions.
+- Action: Preserved the dual-chain architecture:
+  * `ssoSecurityFilterChain`: Dedicated to `/api/v1/auth/sso/**` with OAuth2 callbacks.
+  * `apiSecurityFilterChain`: Stateless JWT chain with granular RBAC matchers.
+  * Added `.requestMatchers("/api/v1/auth/dev/**").permitAll()` to allow local sandbox testing.
+- Verification: `SsoAuthEndpointTests` (14/14 passed) and `AdminControllersSecurityTest` passed.
+
+6.3 DATABASE SCHEMA AND MIGRATION HARMONIZATION
+- Relevant Files:
+    `05_Development/database/schema.sql`
+    `05_Development/database/migrations/V1_4__seed_spa_packages_v3.sql`
+- Problem:
+  * In `schema.sql`, table `dbo.RetreatPackageSpaTreatment` was erroneously embedded 
+    inside the closing bracket of `dbo.SpaTreatment`.
+  * `V1_4__seed_spa_packages_v3.sql` in older branches contained inserts into a 
+    non-existent `duration_unit` column.
+- Action:
+  * Split and properly formatted `dbo.SpaTreatment` and `dbo.RetreatPackageSpaTreatment` 
+    into separate, valid DDL table declarations.
+  * Adopted XH's version of `V1_4__seed_spa_packages_v3.sql` without `duration_unit`.
+- Verification: Schema compatibility tests passed; in-memory H2 schema initialized cleanly.
+
+6.4 BOOKING AUTHORIZATION & POLICY HARMONIZATION
+- Relevant Files:
+    `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/RetreatBookingService.java`
+    `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/BookingAuditService.java`
+    `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/BookingPolicyService.java`
+- Problem:
+  * `getBookingDetail` and `cancelBooking` did not check for null user details before 
+    invoking repository queries, leading to incorrect exception types.
+  * `BookingAuditService` and `BookingPolicyService` threw `NullPointerException` when 
+    `JdbcTemplate` was null in standalone mock unit tests.
+- Action:
+  * Added explicit `AccessDeniedException` guards when `userDetails == null`.
+  * Added null-checks on `jdbc` and `jdbcTemplate` to allow non-Spring unit tests to run.
+- Verification: `RetreatBookingServiceAuthorizationTest` passed 9/9 tests.
+
+6.5 TEST CONFIGURATION AND FIXTURE RECONCILIATION
+- Relevant Files:
+    `05_Development/backend/src/test/java/com/heavenstay/hswrms/HswrmsApplicationTests.java`
+    `05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/M2SchemaCompatibilityTest.java`
+    `05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/M6AdminIntegrationTests.java`
+- Problem:
+  * `HswrmsApplicationTests.java` stripped MSSQLServer mode from H2.
+  * `M2SchemaCompatibilityTest.java` omitted package codes in test setup.
+  * `M6AdminIntegrationTests.java` hardcoded manager user ID 2.
+- Action:
+  * Removed the hardcoded datasource URL override from `HswrmsApplicationTests.java`.
+  * Added `pkg.setPackageCode(...)` across test cases in `M2SchemaCompatibilityTest.java`.
+  * Dynamically provisioned an active manager user in `M6AdminIntegrationTests.java`.
+- Verification: Backend test suite completed with 526 passed, 0 failures, 10 skipped.
+
+
+================================================================================
+SECTION 7 -- FAILED ATTEMPTS, DIAGNOSTICS, AND CORRECTIONS
+================================================================================
+
+7.1 ISSUE 1: XH MERGE CONFLICT INTERRUPTION (TASK 5119)
+- Command: `git merge --no-commit --no-ff isp-origin/XH`
+- Exit Code: 1 (FAILED)
+- Symptom: 44 unmerged conflicted paths.
+- Root Cause: Independent development of M5 billing in branch `XH` with provisional 
+  stubs colliding with M1-M4 entities and configurations.
+- Correction: Removed 6 provisional stubs, bound M5 to canonical entities, 
+  reconciled `SecurityConfig.java`, deduplicated `pom.xml`, and resolved frontend clients.
+- Verification: Committed as `9668586322aa5e57ef64a3cbfa6cde0f481f7952`.
+
+7.2 ISSUE 2: M2 SCHEMA COMPATIBILITY NULL PACKAGE CODE
+- Command: `mvn test -Dtest=M2SchemaCompatibilityTest`
+- Exit Code: 1 (FAILED)
+- Symptom: `NULL not allowed for column "PACKAGE_CODE"`.
+- Root Cause: M2 test cases did not populate `packageCode` on `RetreatPackage` 
+  entities, which is defined as `nullable = false` in the schema.
+- Correction: Added `pkg.setPackageCode("PKG-TEST-00X")` across test methods in 
+  `M2SchemaCompatibilityTest.java`.
+- Verification: Standalone test run passed 6/6 tests.
+
+7.3 ISSUE 3: RETREAT BOOKING AUTHORIZATION EXCEPTIONS & NPE
+- Command: `mvn test -Dtest=RetreatBookingServiceAuthorizationTest`
+- Exit Code: 1 (FAILED)
+- Symptom: Expected `AccessDeniedException` but threw `BusinessRuleException`; 
+  `NullPointerException` on `jdbcTemplate` in mock tests; inventory check failure.
+- Root Cause:
+  * Method threw business rule exception instead of security access denied when user 
+    lacked customer profile.
+  * `BookingAuditService` and `BookingPolicyService` assumed `JdbcTemplate` is always non-null.
+  * Test setup lacked category inventory count and available count.
+- Correction:
+  * Throw `AccessDeniedException` on null/invalid customer profile.
+  * Added `if (jdbc == null) return;` null-guards.
+  * Configured `cat.setInventoryCount(5)` and `calcRes.setAvailableCount(2)`.
+  * Aligned VNPay payment URL exception message string.
+- Verification: Standalone test run passed 9/9 tests.
+
+7.4 ISSUE 4: H2 MSSQLSERVER MODE STRIPPED BY APPLICATION TESTS (TASK 5597 / 5683)
+- Command: `mvn test` (full suite)
+- Exit Code: 1 (FAILED)
+- Symptom: `M2SchemaCompatibilityTest.testDefaultCustomerStayAdapterActiveStayIntegration:298 
+  Expecting Optional to contain a value but it was empty.`
+  (Passed standalone 6/6, failed only when run within full suite).
+- Investigation:
+  * Added debug logging to `DefaultCustomerStayAdapter.java`.
+  * Tested reproduction using class subset: `mvn test -Dtest=HswrmsApplicationTests,M2SchemaCompatibilityTest`.
+    Failure reproduced 100%.
+- Root Cause: `HswrmsApplicationTests.java` had:
+    `@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS dbo")`
+  Because `HswrmsApplicationTests` ran second in the suite, it instantiated the 
+  shared DataSource without `;MODE=MSSQLServer;CASE_INSENSITIVE_IDENTIFIERS=TRUE`. 
+  Without MSSQLServer mode, H2 failed on SQL `INNER JOIN dbo.[User] u`, which 
+  `DefaultCustomerStayAdapter` swallowed and returned `Optional.empty()`.
+- Correction: Removed the hardcoded property override from `HswrmsApplicationTests.java`.
+- Verification: Combined run of `HswrmsApplicationTests,M2SchemaCompatibilityTest` passed 9/9 
+  (comprising 3 tests from `HswrmsApplicationTests` and 6 tests from `M2SchemaCompatibilityTest`).
+
+7.5 ISSUE 5: HARDCODED MANAGER ID IN DELEGATION VALIDATION (TASK 5776)
+- Command: `mvn test` (full suite)
+- Exit Code: 1 (FAILED)
+- Symptom: `M6AdminIntegrationTests.delegationValidation:287 JSON path "$.code" 
+  Expected: is "M6-MSG-07" but: was "INVALID_DELEGATE"`. (525 passed, 1 failed, 10 skipped).
+- Root Cause: The test hardcoded user ID `2` as the delegate. When executed in 
+  the full suite, user `2` was an existing user from an earlier test without the 
+  `MANAGER` role. `DelegationService` checked manager status before dates, throwing 
+  `INVALID_DELEGATE`.
+- Correction: Updated `M6AdminIntegrationTests.java` to dynamically find or create 
+  an active `MANAGER` user and pass `manager.getUserId()`.
+- Verification: Full test suite completed with 536 tests run: 526 passed, 0 failures, 
+  0 errors, 10 skipped (BUILD SUCCESS, Task 5870).
+
+
+================================================================================
+SECTION 8 -- BUILD, TEST, AND VERIFICATION RESULTS
+================================================================================
+
+8.1 BACKEND TEST SUITE EXECUTION
+- Build Tool: Apache Maven 3.x, Java 17 (OpenJDK 17.0.12)
+- Command: `mvn -f HSWRMS-audit-all-modules/05_Development/backend/pom.xml test`
+- Exit Code: 0 (BUILD SUCCESS)
+- Total Time: 2 minutes 16 seconds
+- Summary Statistics:
+  * Total Tests Run: 536
+  * Passed: 526
+  * Failures: 0
+  * Errors: 0
+  * Skipped: 10
+- Skipped Tests Details:
+  1. `com.heavenstay.hswrms.integration.SqlServerJdbcSmokeTest` (1 test skipped)
+  2. `com.heavenstay.hswrms.integration.SqlServerSpringBootContextTest` (9 tests skipped)
+  Note: Both test classes are opt-in live database tests configured with `@EnabledIfEnvironmentVariable` 
+  or `@Disabled` when live SQL Server host parameters are not set. Their skipping 
+  is by design to prevent accidental live database mutations.
+
+8.2 KEY TEST SUITE EXECUTION RESULTS
+- `M1 Identity`:
+  * `AccountLockoutIntegrationTest`: 8/8 passed
+  * `AuthLoginEndpointTests`: 5/5 passed
+  * `CustomerProfileControllerTests`: 8/8 passed
+  * `SsoAuthEndpointTests`: 14/14 passed
+  * `SsoTicketServiceTest`: 6/6 passed
+- `M2 Booking`:
+  * `M2SchemaCompatibilityTest`: 6/6 passed (standalone execution)
+  * `ReceptionistOperationServiceTest`: 5/5 passed
+  * `RetreatBookingSecurityTest`: 6/6 passed
+  * `RetreatBookingServiceAuthorizationTest`: 9/9 passed (standalone execution)
+- `M3 Spa`:
+  * `SpaServiceTests`: 12/12 passed
+- `M4 F&B`:
+  * `FnbControllersSecurityTest`: 10/10 passed
+  * `FnbBillingIntegrationTest`: 2/2 passed
+  * `InventoryServiceTest`: 8/8 passed
+  * `MealOrderServiceTest`: 6/6 passed
+  * `MenuServiceTest`: 4/4 passed
+- `M5 Billing`:
+  * `M5BillingAndCheckoutTests`: 48/48 passed
+- `M6 Admin & Governance`:
+  * `M6AdminIntegrationTests`: 11/11 passed
+  * `DelegationServiceTest`: 10/10 passed
+  * `PermissionMatrixServiceTest`: 6/6 passed
+  * `StaffAccountServiceTest`: 6/6 passed
+  * `BusinessParameterServiceTest`: 6/6 passed
+
+8.3 FRONTEND BUILD & LINTER AUDIT
+- Build Tool: Vite v8.3.4, TypeScript ~6.0.2
+- Command: `npm --prefix HSWRMS-audit-all-modules/05_Development/frontend run build`
+- Exit Code: 0
+- Modules Transformed: 2,728 modules
+- Build Time: 997ms
+- Generated Assets:
+  * `dist/index.html` (1.58 kB)
+  * `dist/assets/index-CqSFbZDT.css` (219.09 kB)
+  * `dist/assets/index-CwaSMhBF.js` (2,822.04 kB)
+- TypeScript Errors: 0
+- Linter Tool: Oxlint v1.81.0
+- Command: `npm --prefix HSWRMS-audit-all-modules/05_Development/frontend run lint`
+- Exit Code: 0
+- Scanned: 216 files across 96 rules
+- Results: 0 errors, 10 informational warnings (unused variables in mock fallback catches).
+
+
+================================================================================
+SECTION 9 -- GIT COMMITS, CHECKPOINTS, AND PUSH HISTORY
+================================================================================
+
+9.1 INTEGRATION COMMIT LOG
+The table below chronicles the commits comprising Phases 5.8.3.117 and 5.8.3.118:
+
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| Commit  | Full 40-Character SHA                    | Author / Timestamp    | Commit Subject & Scope                                |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 602c6f8 | 602c6f8089e211ea9ef80fa6772f58b9c2f8268e | datnthe181883         | feat(m1): integrate Facebook SSO, ticket linking, and |
+|         |                                          | 2026-10-29 12:07:40   | health data deletion request from DucHoangM1          |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 0f257ad | 0f257ad1d940a43bba7e713bf48ce7d1ea267c4c | datnthe181883         | feat(m2-booking): integrate receptionist booking      |
+|         |                                          | 2026-10-29 12:45:42   | management, customer persistence, and security        |
+|         |                                          |                       | alignment from dat-nguyen-gia                         |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 6ff5b9a | 6ff5b9a3d921235974d27565fed522195c69089e | datnthe181883         | feat(m4-fnb): integrate inventory, recipes, meal prep |
+|         |                                          | 2026-10-29 13:22:25   | and kitchen dashboard from thao-product               |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 39b086f | 39b086f2498adcff65c4059aa9c08ff974d962ce | datnthe181883         | feat(m2-villa,m3-spa): integrate manager villa & spa  |
+|         |                                          | 2026-10-29 14:10:36   | management, specifications, and layout designs from   |
+|         |                                          |                       | vinhpt1                                               |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 9668586 | 9668586322aa5e57ef64a3cbfa6cde0f481f7952 | datnthe181883         | feat(m5-billing): reconcile folio billing, checkout   |
+|         |                                          | 2026-10-29 14:33:53   | payment, and analytics from XH                        |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 1f7ebc1 | 1f7ebc19119fb1cab2f0206d6b70d4865cfdd671 | datnthe181883         | fix(integration): harmonize booking security          |
+|         |                                          | 2026-10-29 15:11:33   | exceptions and test suite configurations across M1-M6 |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+| 3042eb4 | 3042eb40495890a959e426bedbc65acffb2e67cf | datnthe181883         | docs(database): record phase 5.8.3.118 integration    |
+|         |                                          | 2026-10-29 15:12:28   | recovery and resumption report                        |
++---------+------------------------------------------+-----------------------+-------------------------------------------------------+
+
+9.2 CHECKPOINT TAGS RECORD
+- `checkpoint/phase-5.8.3.117-step2-m2` -> `0f257ad1d940a43bba7e713bf48ce7d1ea267c4c`
+- `checkpoint/phase-5.8.3.117-step3-m4` -> `6ff5b9a3d921235974d27565fed522195c69089e`
+- `checkpoint/phase-5.8.3.117-step4-vinhpt1` -> `39b086f2498adcff65c4059aa9c08ff974d962ce`
+- `checkpoint/phase-5.8.3.118-step5-xh` -> `9668586322aa5e57ef64a3cbfa6cde0f481f7952` (Pushed to GitLab)
+
+9.3 REMOTE TRACKING STATUS
+- Active Branch: `feature/hswrms-m1-m6-integration`
+- Local HEAD SHA: `3042eb40495890a959e426bedbc65acffb2e67cf`
+- Remote Tracking: `isp-origin/feature/hswrms-m1-m6-integration`
+- Remote HEAD SHA: `3042eb40495890a959e426bedbc65acffb2e67cf`
+- Status: Synchronized with `isp-origin/feature/hswrms-m1-m6-integration`. Tracked working tree clean.
+
+
+================================================================================
+SECTION 10 -- DATABASE SAFETY AND DEFERRED ARTIFACTS
+================================================================================
+
+10.1 ZERO DATABASE MUTATION COMPLIANCE
+Throughout Phases 5.8.3.117 and 5.8.3.118, the database safety policy was strictly 
+enforced:
+- No connection was opened to SQL Server instance `MYLIFE-MYRULE-1` or `localhost:1433`.
+- No DDL or DML statements were executed against `HSWRMS` or `HSWRMS_TEST`.
+- All backend unit and integration tests ran strictly against in-memory H2 
+  databases (`jdbc:h2:mem:testdb;MODE=MSSQLServer`).
+- Live database smoke tests (`SqlServerJdbcSmokeTest`, `SqlServerSpringBootContextTest`) 
+  remained skipped by default.
+
+10.2 UNTRACKED DEFERRED DATABASE ARTIFACTS INVENTORY & CRYPTOGRAPHIC VERIFICATION
+Earlier draft reports erroneously listed an unverified filename `schema_patch.sql` 
+and conflated the directory `05_Development/database/generated/` with an individual 
+file. An independent on-disk audit and SHA-256 cryptographic verification of the 
+working tree confirms the true inventory:
+
+There are exactly SIX individual deferred files located across two directories:
+
+Directory 1: `05_Development/database/generated/` (2 generated deployment scripts):
+1. `05_Development/database/generated/HSWRMS_TEST_schema.sql` (46,206 bytes)
+   - Calculated SHA-256: `DB643DDBC0E5CF5BE848D1CF6EA33DC51B124B89DFAC0CE327CAEEE0C91E6D70`
+   - Historical Baseline: Verified identical to Phase 5.8.3.61, 62, 76, 81 reports.
+   - Status: MATCH / UNMODIFIED. Ephemeral generated deployment payload for `HSWRMS_TEST`.
+2. `05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql` (27,449 bytes)
+   - Calculated SHA-256: `2479ED70438B808538EFEEF3B440924E8128BD9FCABBC0C2473E1598A3433D68`
+   - Historical Baseline: Verified identical to Phase 5.8.3.84, 85 reports.
+   - Status: MATCH / UNMODIFIED. Ephemeral continuation payload for `HSWRMS_TEST`.
+
+Directory 2: `05_Development/database/migrations/` (4 migration scripts):
+3. `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql` (32,677 bytes)
+   - Calculated SHA-256: `8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0`
+   - Historical Baseline: Verified identical to Phase 5.8.3.31–48 reports.
+   - Status: MATCH / UNMODIFIED. M2 schema evolution; 100% duplicated in canonical `schema.sql`.
+4. `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql` (1,089 bytes)
+   - Calculated SHA-256: `3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F`
+   - Historical Baseline: Verified identical to Phase 5.8.3.31–48 reports.
+   - Status: MATCH / UNMODIFIED. Incremental migration; deferred to prevent version sequence gap.
+5. `05_Development/database/migrations/V005__m6_audit_log.sql` (1,228 bytes)
+   - Calculated SHA-256: `5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E`
+   - Historical Baseline: Verified identical to Phase 5.8.3.31–48 reports.
+   - Status: MATCH / UNMODIFIED. Incremental migration; deferred to prevent version sequence gap.
+6. `05_Development/database/migrations/draft_m6_governance_and_delegation.sql` (42,498 bytes)
+   - Calculated SHA-256: `605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B`
+   - Historical Baseline: Verified identical to Phase 5.8.3.31–48 reports.
+   - Status: MATCH / UNMODIFIED. Explicit draft migration awaiting formal migration numbering.
+
+Discrepancy Explanation:
+The phantom reference `schema_patch.sql` was an erroneous entry in earlier draft notes. 
+No file by that name exists in Git history or on disk. The actual 6 files on disk 
+perfectly match the inventory and cryptographic hashes recorded during Phase 5.8.3.115 
+and 5.8.3.116. None of these files were staged, committed, or deleted.
+
+10.3 SCHEMA & MIGRATION SEQUENCING CONCERNS
+Because the 4 migration scripts represent incremental schema modifications that 
+require separately authorized execution phases, their execution order must be 
+strictly controlled before applying to live `HSWRMS_TEST`:
+- `V003` (M2 booking reconciliation) must precede `V004` (M5 review ratings).
+- `V005` (M6 audit log) must precede `draft_m6_governance_and_delegation.sql`.
+- Running Flyway or manual scripts out of sequence will result in foreign key 
+  violations or duplicate table definition errors.
+
+
+================================================================================
+SECTION 11 -- FUNCTIONAL COMPLETENESS AND REMAINING RISKS
+================================================================================
+
+11.1 FUNCTIONAL STATUS ASSESSMENT BY MODULE
+
++--------+---------------------------------------+--------------------------------+-------------------------------------------------+
+| Module | Capability / Feature                  | Verification Status            | Evidence & Verified Scope                       |
++--------+---------------------------------------+--------------------------------+-------------------------------------------------+
+| M1     | JWT Authentication & Rotation         | INTEGRATED_UNIT_TESTED         | AuthLoginEndpointTests (5/5 pass against H2).   |
+| M1     | Google / Facebook SSO Callbacks       | INTEGRATED_NOT_FULLY_VERIFIED  | SsoAuthEndpointTests (14/14 mock pass). Net off.|
+| M1     | Account Lockout & Auto-Unlock Job     | INTEGRATED_UNIT_TESTED         | AccountLockoutIntegrationTest (8/8 pass).       |
+| M1     | GDPR Health Data Deletion Request     | INTEGRATED_UNIT_TESTED         | HealthDataDeletionRequestServiceTest pass.      |
+| M2     | Public Retreat Booking Creation       | INTEGRATED_UNIT_TESTED         | M2SchemaCompatibilityTest (6/6) & controllers.  |
+| M2     | Receptionist Walk-in & Check-in/out   | INTEGRATED_UNIT_TESTED         | ReceptionistOperationServiceTest (5/5 pass).    |
+| M2     | VNPay Deposit URL & Callback IPN      | INTEGRATED_NOT_FULLY_VERIFIED  | Checksum algorithms unit-tested; gateway untried|
+| M3     | Spa Treatment & Room Scheduling       | INTEGRATED_UNIT_TESTED         | SpaServiceTests (12/12 pass against H2).        |
+| M3     | Cross-Module Customer Stay Port       | INTEGRATED_UNIT_TESTED         | DefaultCustomerStayAdapter verified in H2 testdb|
+| M4     | F&B Menu Catalog & Allergen Filters   | INTEGRATED_UNIT_TESTED         | MenuServiceTest (4/4 pass).                     |
+| M4     | Daily Meal Order Placement & KDS      | INTEGRATED_UNIT_TESTED         | MealOrderServiceTest & KDS controller pass.     |
+| M4     | Recipe Ingredient Inventory Deduction | INTEGRATED_UNIT_TESTED         | InventoryServiceTest (8/8 pass).                |
+| M5     | Real-time Folio Billing Aggregation   | INTEGRATED_UNIT_TESTED         | M5BillingAndCheckoutTests (48/48 pass).         |
+| M5     | Multi-Channel Checkout Payment        | INTEGRATED_UNIT_TESTED         | Folio payment transactions verified in tests.   |
+| M5     | Invoice Generation & VAT Calculation  | INTEGRATED_UNIT_TESTED         | InvoicePdfService & DTO layout tests pass.      |
+| M5     | Post-Stay Reviews & Category Ratings  | INTEGRATED_UNIT_TESTED         | CustomerReviewRepository & ReviewService pass.  |
+| M6     | Granular Permission Matrix & RBAC     | INTEGRATED_UNIT_TESTED         | PermissionMatrixServiceTest (6/6 pass).         |
+| M6     | Manager Right Delegation & Expiration | INTEGRATED_UNIT_TESTED         | DelegationServiceTest & M6AdminIntegrationTests.|
+| M6     | Audit Log Recording & CSV Export      | INTEGRATED_UNIT_TESTED         | AuditLogServiceTest & CSV export pass.          |
+| M6     | Admin Widgets & Police Report Export  | INTEGRATED_UNIT_TESTED         | MasterDataService & report export pass.         |
++--------+---------------------------------------+--------------------------------+-------------------------------------------------+
+
+11.2 REMAINING RISKS AND LIMITATIONS
+1. Live SQL Server Dialect & Concurrency Behavior:
+   All automated tests executed against in-memory H2 (`MODE=MSSQLServer`). Live 
+   Microsoft SQL Server 2022 exhibits dialect differences including table lock 
+   hints (`WITH (UPDLOCK, HOLDLOCK)`), transaction isolation levels (`READ COMMITTED 
+   SNAPSHOT`), sequence caching, and datetime precision (`DATETIME2` vs `TIMESTAMP`). 
+   These behaviors cannot be verified without executing against live `HSWRMS_TEST`.
+2. Third-Party Gateway Runtime Integration:
+   VNPay IPN callback validation and Google/Facebook SSO redirects have been verified 
+   only through mocked unit tests. End-to-end integration requires live outbound 
+   network access, valid client secrets, and external redirect URI reachability.
+3. Multi-Module Lifecycle Traversal:
+   While each module's unit and slice tests pass independently, a complete end-to-end 
+   user journey (Guest books retreat -> Receptionist checks in guest -> Guest orders 
+   dinner in KDS -> Guest attends spa session -> Cashier generates single folio and 
+   prints VAT invoice) has not been verified in a running deployment.
+4. Concurrent Inventory & Booking Contention:
+   High-concurrency room booking and ingredient deduction under active connection 
+   pooling require dedicated load/stress testing to confirm lock acquisition timing 
+   and deadlock avoidance.
+
+
+================================================================================
+SECTION 12 -- FINAL OUTCOME AND RECOMMENDED FOLLOW-UP
+================================================================================
+
+12.1 FINAL OUTCOME SUMMARY
+- Integration Branch HEAD:
+    `3042eb40495890a959e426bedbc65acffb2e67cf`
+- Tracking Branch:
+    `isp-origin/feature/hswrms-m1-m6-integration`
+- Contributor Branches Accounting:
+  All 7 mandatory contributor branches (`DucHoangM1`, `dat-nguyen-gia`, `thao-product`, 
+  `vinhpt1`, `vinhpt`, `NTDatZB`, `XH`) have been accounted for, integrated, or 
+  verified as superseded/ancestor. (Branch `XH4` was explicitly removed by the user 
+  from required scope and noted only as an incidental check).
+- Build & Static Verification:
+  * Backend: Zero compile errors. 536 backend tests run: 526 passed, 0 failures, 
+    0 errors, 10 skipped (opt-in live database tests skipped by design); BUILD SUCCESS.
+  * Frontend: Zero compile errors. 2,728 modules transformed. Oxlint reported 0 errors 
+    and 10 non-blocking informational warnings across 216 files.
+- Remote Synchronization:
+  All integration commits (`602c6f8`, `0f257ad`, `6ff5b9a`, `39b086f`, `9668586`, 
+  `1f7ebc1`, `3042eb4`) and checkpoint tag `checkpoint/phase-5.8.3.118-step5-xh` 
+  have been pushed to GitLab remote `isp-origin`.
+- Working Tree State:
+  Tracked working tree is clean and synchronized. All 6 deferred database files 
+  remain untouched and preserved on disk with cryptographic hashes verified.
+
+12.2 RECOMMENDED FOLLOW-UP ACTIONS
+1. Authorized Live Test Database Execution:
+   Run the opt-in integration tests (`SqlServerJdbcSmokeTest`, `SqlServerSpringBootContextTest`) 
+   against `HSWRMS_TEST` (Database ID 45) under explicit operator authorization.
+2. Staging Deployment & Multi-Module Smoke Test:
+   Deploy the integrated artifact (`hswrms-0.0.1-SNAPSHOT.jar` and frontend `dist/`) 
+   to a staging server to verify complete end-to-end user journeys from public 
+   booking through receptionist check-in, KDS meal prep, spa session completion, 
+   and checkout invoicing.
+3. Database Migration Roadmap:
+   Formulate a safe Flyway migration roadmap to transition the 6 deferred database 
+   scripts into tracked, production-ready schema migrations with verified ordering.
+================================================================================
+END OF REPORT: PHASE_5.8.3.117-5.8.3.118_FULL_TEAM_MERGE_HISTORY.txt
+================================================================================
