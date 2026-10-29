@@ -1,14 +1,9 @@
 package com.heavenstay.hswrms.m1identity.entity;
 
 import jakarta.persistence.*;
-import java.util.Objects;
 
-/**
- * System role entity representing permissions and actor profiles.
- * Mapped to dbo.[Role].
- */
 @Entity
-@Table(name = "\"Role\"", schema = "dbo")
+@Table(name = "Role", schema = "dbo")
 public class Role {
 
     public static final String ADMIN = "ADMIN";
@@ -20,13 +15,13 @@ public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id", nullable = false)
+    @Column(name = "role_id")
     private Integer roleId;
 
     @Column(name = "role_name", nullable = false, unique = true, length = 50)
     private String roleName;
 
-    @Column(name = "description", length = 500)
+    @Column(name = "description", length = 250)
     private String description;
 
     public Role() {
@@ -62,7 +57,7 @@ public class Role {
     }
 
     public boolean isAdminRole() {
-        return "ADMIN".equalsIgnoreCase(roleName) || "ROLE_ADMIN".equalsIgnoreCase(roleName);
+        return ADMIN.equalsIgnoreCase(canonicalName()) || "ROLE_ADMIN".equalsIgnoreCase(roleName);
     }
 
     public boolean isStaffRole() {
@@ -70,24 +65,30 @@ public class Role {
     }
 
     public boolean isCustomerRole() {
-        return "CUSTOMER".equalsIgnoreCase(roleName) || "ROLE_CUSTOMER".equalsIgnoreCase(roleName);
+        return CUSTOMER.equalsIgnoreCase(canonicalName()) || "CUSTOMER".equalsIgnoreCase(roleName) || "ROLE_CUSTOMER".equalsIgnoreCase(roleName);
     }
 
     public String canonicalName() {
-        if (roleName == null) return "";
-        return roleName.startsWith("ROLE_") ? roleName.substring(5) : roleName;
+        return canonical(roleName);
+    }
+
+    public static String canonical(String name) {
+        if (name == null) return "";
+        String n = name.trim().toUpperCase(java.util.Locale.ROOT);
+        if (n.startsWith("ROLE_")) {
+            n = n.substring(5);
+        }
+        if (n.replaceAll("[^A-Z]", "").equals("FBSTAFF") || n.replaceAll("[^A-Z]", "").equals("FNBSTAFF")) {
+            return FNB_STAFF;
+        }
+        return n.replace(' ', '_');
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Role role = (Role) o;
-        return Objects.equals(roleId, role.roleId) || Objects.equals(roleName, role.roleName);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(roleName);
+    public String toString() {
+        return "Role{" +
+                "roleId=" + roleId +
+                ", roleName='" + roleName + '\'' +
+                '}';
     }
 }

@@ -69,7 +69,14 @@ class SsoJwtRoundTripTest {
         LoginResponse response = ssoService.exchangeLoginTicket(ticket);
         assertNotNull(response.getToken());
 
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(tokenProvider);
+        com.heavenstay.hswrms.m1identity.repository.UserAccountRepository accountRepository =
+                mock(com.heavenstay.hswrms.m1identity.repository.UserAccountRepository.class);
+        com.heavenstay.hswrms.m1identity.entity.UserAccount account =
+                new com.heavenstay.hswrms.m1identity.entity.UserAccount();
+        account.setAccountStatus(com.heavenstay.hswrms.m1identity.entity.UserAccount.ACTIVE);
+        when(accountRepository.findById(205)).thenReturn(Optional.of(account));
+
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(tokenProvider, accountRepository);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + response.getToken());
         MockHttpServletResponse httpResponse = new MockHttpServletResponse();

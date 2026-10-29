@@ -995,7 +995,7 @@
     "reactivateAccount": "重新激活账户",
     "clearanceSectionTitle": "RBAC权限范围与数据最小化控制",
     "scopeAdminTitle": "系统全面管理权限",
-    "scopeAdminDesc": "有权配置业务参数、模块化功能开关、RBAC矩阵、权限委派及敏感安全审计日志。",
+    "scopeAdminDesc": "有权管理基础主数据（Master Data）、业务与运营参数、RBAC权限矩阵、管理委派及敏感安全审计日志。",
     "scopeAdminMin": "不接触客户原始医疗诊断或支付凭证秘钥。",
     "scopeManagerTitle": "运营管理与分析报表权限",
     "scopeManagerDesc": "有权查看高管收入报表、别墅入住率统计、理疗师利用率及系统综合运行健康度。",
@@ -1011,7 +1011,8 @@
     "scopeFbMin": "后厨人员仅能查看食品过敏原标签；通用医疗病史完全不可见（BR-03）。",
     "suspendSuccess": "员工账户已成功暂停。",
     "reactivateSuccess": "员工账户已成功重新激活。",
-    "notFound": "未找到员工账户记录。"
+    "notFound": "未找到员工账户记录。",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "主数据目录管理",

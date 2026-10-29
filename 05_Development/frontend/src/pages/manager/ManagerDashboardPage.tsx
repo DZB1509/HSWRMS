@@ -34,7 +34,7 @@ export const ManagerDashboardPage: React.FC = () => {
       <div className="hsw-gov-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
           <h1 className="hsw-gov-title">
-            {t('operations.managerDashboard.title', 'Executive Management Oversight Cockpit')}
+            {t('operations.managerDashboard.title', 'Bảng Điều Khiển Giám Sát Quản Lý Vận Hành')}
           </h1>
           <span style={{
             fontSize: '11px',
@@ -46,11 +46,11 @@ export const ManagerDashboardPage: React.FC = () => {
             backgroundColor: 'var(--actor-manager)',
             color: 'var(--actor-manager-text)'
           }}>
-            {t('topbar.managerScope', 'Manager Limited Scope')}
+            {t('topbar.managerScope', 'Phạm Vi Giới Hạn Của Quản Lý')}
           </span>
         </div>
         <p className="hsw-gov-subtitle">
-          {t('operations.managerDashboard.subtitle', 'High-level operational overview summarizing revenue realization, sanctuary villa occupancy, and therapy practitioner workload.')}
+          {t('operations.managerDashboard.subtitle', 'Tổng quan vận hành cấp cao tổng hợp doanh thu thực tế, tỷ lệ lấp đầy biệt thự và khối lượng công việc của kỹ thuật viên trị liệu.')}
         </p>
       </div>
 
@@ -61,14 +61,14 @@ export const ManagerDashboardPage: React.FC = () => {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
               <strong style={{ color: '#1a6b68', fontSize: 'var(--text-sm)' }}>
-                {t('operations.managerDashboard.delegationActiveTitle', 'Temporary Delegated Authority Active')}
+                {t('operations.managerDashboard.delegationActiveTitle', 'Quyền Hạn Ủy Quyền Tạm Thời Đang Hiệu Lực')}
               </strong>
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                {t('operations.managerDashboard.expires', 'Expires')}: <strong>{activeManagerDelegation.expiresAt}</strong>
+                {t('operations.managerDashboard.expires', 'Hết hạn lúc')}: <strong>{activeManagerDelegation.expiresAt}</strong>
               </span>
             </div>
             <p style={{ margin: '4px 0 var(--space-2) 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-              {t('operations.managerDashboard.delegationDesc', 'Administrator Alexander Wright has temporarily authorized you with the following scoped operational capabilities:')}
+              {t('operations.managerDashboard.delegationDesc', 'Quản trị viên Alexander Wright đã tạm thời ủy quyền cho bạn các năng lực vận hành sau:')}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
               {activeManagerDelegation.capabilities.map((c) => {
@@ -110,43 +110,43 @@ export const ManagerDashboardPage: React.FC = () => {
       <div className="hsw-gov-grid">
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('manager.revenue.totalRevenue', 'Total Revenue')}
+            {t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}
           </span>
           <span className="hsw-gov-kpi-val" style={{ fontSize: 'var(--text-2xl)', color: 'var(--accent-forest)' }}>
             {formatVND(revenue.totalRevenue, i18n.language)}
           </span>
           <span className="hsw-gov-kpi-sub">
-            {t('operations.managerDashboard.revenueSub', 'Consolidated across Package, Spa & Dining')}
+            {t('operations.managerDashboard.revenueSub', 'Tổng hợp từ Gói nghỉ dưỡng, Spa & Ẩm thực')}
           </span>
         </div>
 
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('manager.occupancy.rate', 'Occupancy Rate')}
+            {t('manager.occupancy.rate', 'Tỷ Lệ Lấp Đầy')}
           </span>
           <span className="hsw-gov-kpi-val">{occupancy.occupancyRate}%</span>
           <span className="hsw-gov-kpi-sub">
-            {occupancy.occupiedCount} / {occupancy.totalVillas} {t('operations.managerDashboard.villasOccupied', 'villas occupied')}
+            {occupancy.occupiedCount} / {occupancy.totalVillas} {t('operations.managerDashboard.villasOccupied', 'biệt thự đang có khách')}
           </span>
         </div>
 
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('manager.therapists.totalPractitioners', 'Active Practitioners')}
+            {t('manager.therapists.totalPractitioners', 'Kỹ Thuật Viên Đang Làm Việc')}
           </span>
           <span className="hsw-gov-kpi-val">{therapists.totalTherapists}</span>
           <span className="hsw-gov-kpi-sub">
-            {therapists.totalBookedMinutes} {t('manager.therapists.axisMinutes', 'minutes booked')} ({therapists.totalScheduledSessions} sessions)
+            {therapists.totalBookedMinutes} {t('manager.therapists.axisMinutes', 'phút đã đặt')} ({therapists.totalScheduledSessions} buổi)
           </span>
         </div>
 
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.managerDashboard.activeStays', 'In-House Stays')}
+            {t('operations.managerDashboard.activeStays', 'Lượt Lưu Trú Hiện Tại')}
           </span>
           <span className="hsw-gov-kpi-val">{occupancy.occupiedCount}</span>
           <span className="hsw-gov-kpi-sub">
-            {occupancy.reservedCount} {t('manager.occupancy.reserved', 'reserved for arrival')}
+            {occupancy.reservedCount} {t('manager.occupancy.reserved', 'lượt đặt trước sắp đến')}
           </span>
         </div>
       </div>
@@ -156,51 +156,51 @@ export const ManagerDashboardPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <LayoutDashboard size={18} style={{ color: 'var(--accent-forest)' }} />
-            {t('operations.managerDashboard.authorizedReports', 'Authorized Management Reporting & Analytics')}
+            {t('operations.managerDashboard.authorizedReports', 'Báo Cáo Phân Tích & Giám Sát Được Ủy Quyền')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {t('operations.managerDashboard.readOnlyOversight', 'Executive Oversight · Read-Only Access')}
+            {t('operations.managerDashboard.readOnlyOversight', 'Giám Sát Điều Hành · Quyền Chỉ Đọc')}
           </span>
         </div>
 
         <div className="hsw-quicknav-grid">
           <Link to="/manager/revenue" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-revenue">
               <BarChart3 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.revenueAnalytics', 'Revenue Analytics')}</h4>
-              <p>{t('operations.managerDashboard.descRevenue', 'Inspect revenue distribution between Retreat Packages, Spa Therapies, and Dietary F&B with settlement pagination.')}</p>
+              <h4>{t('operations.sidebar.revenueAnalytics', 'Phân Tích Doanh Thu')}</h4>
+              <p>{t('operations.managerDashboard.descRevenue', 'Xem phân bổ doanh thu giữa Gói nghỉ dưỡng, Trị liệu Spa và Ẩm thực F&B kèm phân trang đối soát.')}</p>
             </div>
           </Link>
 
           <Link to="/manager/occupancy" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-occupancy">
               <TrendingUp size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.occupancyReports', 'Occupancy Reports')}</h4>
-              <p>{t('operations.managerDashboard.descOccupancy', 'Review sanctuary villa inventory status, occupancy percentages, and maintenance ratios across villa categories.')}</p>
+              <h4>{t('operations.sidebar.occupancyReports', 'Báo Cáo Công Suất Phòng')}</h4>
+              <p>{t('operations.managerDashboard.descOccupancy', 'Đánh giá tình trạng phòng biệt thự, tỷ lệ lấp đầy và tỷ lệ bảo trì theo từng hạng biệt thự.')}</p>
             </div>
           </Link>
 
           <Link to="/manager/therapist-utilization" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-therapists">
               <Users2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.therapistUtilization', 'Therapist Utilization')}</h4>
-              <p>{t('operations.managerDashboard.descTherapists', 'Monitor therapist and yoga practitioner workload indicators, scheduled treatment minutes, and session completion.')}</p>
+              <h4>{t('operations.sidebar.therapistUtilization', 'Hiệu Suất Kỹ Thuật Viên')}</h4>
+              <p>{t('operations.managerDashboard.descTherapists', 'Giám sát chỉ số tải công việc của kỹ thuật viên và huấn luyện viên yoga, số phút trị liệu và tỷ lệ hoàn thành.')}</p>
             </div>
           </Link>
 
           <Link to="/manager/system-overview" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-overview">
               <Activity size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.systemOverviewPoliceExport', 'System Overview & Police Export')}</h4>
-              <p>{t('operations.managerDashboard.descSystem', 'Cross-module resort health rollup and daily temporary residence declaration batch export (Law on Residence 2020).')}</p>
+              <h4>{t('operations.sidebar.systemOverviewPoliceExport', 'Tổng Quan Vận Hành & Khai Báo Tạm Trú')}</h4>
+              <p>{t('operations.managerDashboard.descSystem', 'Tổng hợp sức khỏe vận hành liên mô-đun và xuất lô khai báo tạm trú hàng ngày (Luật Cư trú 2020).')}</p>
             </div>
           </Link>
         </div>
@@ -212,10 +212,10 @@ export const ManagerDashboardPage: React.FC = () => {
           <Lock size={18} style={{ color: 'var(--accent-terracotta)', flexShrink: 0, marginTop: '2px' }} />
           <div>
             <h3 style={{ margin: '0 0 var(--space-1) 0', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {t('operations.managerDashboard.privacyBoundaryTitle', 'Manager Role Boundaries & Sensitive Data Minimization')}
+              {t('operations.managerDashboard.privacyBoundaryTitle', 'Ranh Giới Vai Trò Quản Lý & Tối Thiểu Hóa Dữ Liệu Nhạy Cảm')}
             </h3>
             <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {t('operations.managerDashboard.privacyBoundaryDesc', 'As Resort Operations Manager, your access clearance is focused exclusively on aggregated analytics and operational monitoring. Individual customer clinical notes, personal medical histories, identity document contents, and payment secrets are strictly excluded from all manager dashboards modeled around Decree 13 requirements and BR-03.')}
+              {t('operations.managerDashboard.privacyBoundaryDesc', 'Với vai trò Quản Lý Vận Hành Khu Nghỉ Dưỡng, quyền truy cập của bạn chỉ tập trung vào phân tích tổng hợp và giám sát vận hành. Ghi chú lâm sàng cá nhân của khách hàng, tiền sử bệnh án y tế, chi tiết giấy tờ tùy thân và bảo mật thanh toán TUYỆT ĐỐI BỊ LOẠI TRỪ khỏi các bảng điều khiển của quản lý theo Nghị định 13 và BR-03.')}
             </p>
           </div>
         </div>

@@ -34,7 +34,7 @@ export const FeatureFlagsPage: React.FC = () => {
     const flag = featureFlags.find((f) => f.key === key);
     const willBeEnabled = !flag?.enabled;
     showToast(
-      `${t(flag?.nameKey || '', flag?.defaultName || '')}: ${willBeEnabled ? t('common.status.enabled', 'Enabled') : t('common.status.disabled', 'Disabled')}`,
+      `${t(flag?.nameKey || '', flag?.defaultName || '')}: ${willBeEnabled ? t('common.status.enabled', 'Đã kích hoạt') : t('common.status.disabled', 'Đã vô hiệu')}`,
       'info'
     );
     setConfirmFlagKey(null);
@@ -46,7 +46,7 @@ export const FeatureFlagsPage: React.FC = () => {
       <div className="hsw-gov-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
           <h1 className="hsw-gov-title">
-            {t('operations.flags.pageTitle', 'Modular Feature Flags & Operational Toggles')}
+            {t('operations.flags.pageTitle', 'Cờ Tính Năng Phân Hệ & Bật Tắt Vận Hành')}
           </h1>
           <span style={{
             fontSize: '11px',
@@ -58,11 +58,11 @@ export const FeatureFlagsPage: React.FC = () => {
             backgroundColor: 'var(--accent-sand)',
             color: 'var(--text-primary)'
           }}>
-            {t('operations.flags.systemScope', 'System Modules')}
+            {t('operations.flags.systemScope', 'Phân Hệ Hệ Thống')}
           </span>
         </div>
         <p className="hsw-gov-subtitle">
-          {t('operations.flags.pageSubtitle', 'Safely activate or deactivate supported customer self-service modules and automated regulatory compliance export routines.')}
+          {t('operations.flags.pageSubtitle', 'Kích hoạt hoặc tạm dừng an toàn các phân hệ tự phục vụ của khách hàng và các tác vụ xuất dữ liệu tuân thủ pháp lý.')}
         </p>
       </div>
 
@@ -71,10 +71,10 @@ export const FeatureFlagsPage: React.FC = () => {
         <ShieldCheck size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.flags.safetyTitle', 'Safety & Privacy Boundaries are Non-Toggleable')}
+            {t('operations.flags.safetyTitle', 'Ranh Giới An Toàn & Bảo Mật Là Bất Biến (Không Thể Bật/Tắt)')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.flags.safetyDesc', 'Core security invariants (such as RBAC data minimization, 2D therapist+room booking validations, and folio settlement checks) are essential architecture controls and are deliberately excluded from feature flag toggles.')}
+            {t('operations.flags.safetyDesc', 'Các ràng buộc bảo mật cốt lõi (như giảm thiểu dữ liệu RBAC, kiểm tra 2 chiều trị liệu viên + phòng spa, và kiểm tra thanh toán folio) là các kiểm soát kiến trúc thiết yếu và không thể bị tắt bỏ.')}
           </span>
         </div>
       </div>
@@ -84,10 +84,10 @@ export const FeatureFlagsPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <ToggleLeft size={18} style={{ color: 'var(--accent-forest)' }} />
-            {t('operations.flags.modularTitle', 'Configurable Functional Modules')}
+            {t('operations.flags.modularTitle', 'Các Phân Hệ Chức Năng Có Thể Cấu Hình')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {featureFlags.filter((f) => f.enabled).length} / {featureFlags.length} {t('operations.flags.activeCount', 'Active')}
+            {featureFlags.filter((f) => f.enabled).length} / {featureFlags.length} {t('operations.flags.activeCount', 'Đang Hoạt Động')}
           </span>
         </div>
 
@@ -129,7 +129,7 @@ export const FeatureFlagsPage: React.FC = () => {
                         borderRadius: 'var(--radius-pill)',
                         textTransform: 'uppercase'
                       }}>
-                        {t('operations.flags.highImpact', 'High Impact')}
+                        {t('operations.flags.highImpact', 'Ảnh Hưởng Cao')}
                       </span>
                     )}
                   </div>
@@ -139,7 +139,7 @@ export const FeatureFlagsPage: React.FC = () => {
                   </p>
 
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {t('operations.flags.scope', 'Scope')}: <strong style={{ textTransform: 'capitalize' }}>{flag.scope}</strong> · {t('operations.flags.lastModified', 'Modified')}: {flag.lastChangedAt} by {flag.lastChangedBy}
+                    {t('operations.flags.scope', 'Phạm Vi')}: <strong style={{ textTransform: 'capitalize' }}>{flag.scope}</strong> · {t('operations.flags.lastModified', 'Chỉnh sửa lần cuối')}: {flag.lastChangedAt} bởi {flag.lastChangedBy}
                   </div>
                 </div>
 
@@ -149,7 +149,7 @@ export const FeatureFlagsPage: React.FC = () => {
                     type="button"
                     role="switch"
                     aria-checked={flag.enabled}
-                    aria-label={`${t(flag.nameKey, flag.defaultName)}: ${flag.enabled ? t('common.status.enabled', 'Enabled') : t('common.status.disabled', 'Disabled')}`}
+                    aria-label={`${t(flag.nameKey, flag.defaultName)}: ${flag.enabled ? t('common.status.enabled', 'Đã bật') : t('common.status.disabled', 'Đã tắt')}`}
                     onClick={() => handleToggleClick(flag.key, flag.impactLevel)}
                     className="hsw-switch-container"
                     style={{ background: 'none', border: 'none', padding: 0 }}
@@ -158,7 +158,7 @@ export const FeatureFlagsPage: React.FC = () => {
                       <div className="hsw-switch-thumb" />
                     </div>
                     <span className={`hsw-switch-label ${flag.enabled ? 'is-on' : ''}`}>
-                      {flag.enabled ? t('common.status.enabled', 'ENABLED') : t('common.status.disabled', 'DISABLED')}
+                      {flag.enabled ? t('common.status.enabled', 'ĐÃ BẬT') : t('common.status.disabled', 'ĐÃ TẮT')}
                     </span>
                   </button>
                 </div>
@@ -173,10 +173,10 @@ export const FeatureFlagsPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <Lock size={18} style={{ color: 'var(--accent-terracotta)' }} />
-            {t('operations.flags.immutableTitle', 'Immutable Core Controls (Protected Architecture)')}
+            {t('operations.flags.immutableTitle', 'Các Kiểm Soát Cốt Lõi Bất Biến (Kiến Trúc Được Bảo Vệ)')}
           </h2>
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-forest)' }}>
-            {t('operations.flags.alwaysEnforced', 'ALWAYS ENFORCED')}
+            {t('operations.flags.alwaysEnforced', 'LUÔN ĐƯỢC THI HÀNH')}
           </span>
         </div>
 
@@ -184,40 +184,40 @@ export const FeatureFlagsPage: React.FC = () => {
           <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
               <Lock size={13} style={{ color: 'var(--accent-terracotta)' }} />
-              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-01: Two-Dimensional Spa Allocation</strong>
+              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-01: Phân Bổ Spa Hai Chiều</strong>
             </div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
-              Prevents double-booking by requiring concurrent availability of both Therapist and Treatment Room.
+              Ngăn ngừa trùng lịch bằng việc yêu cầu cả Kỹ thuật viên và Phòng trị liệu phải đồng thời sẵn sàng.
             </p>
           </div>
 
           <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
               <Lock size={13} style={{ color: 'var(--accent-terracotta)' }} />
-              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-02: Consolidated Folio Settlement Guard</strong>
+              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-02: Kiểm Soát Quyết Toán Hóa Đơn</strong>
             </div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
-              Blocks checkout finalization while any unpaid extra spa or dining charges remain outstanding.
+              Chặn hoàn tất trả phòng khi còn bất kỳ chi phí spa hoặc ăn uống nào chưa thanh toán.
             </p>
           </div>
 
           <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
               <Lock size={13} style={{ color: 'var(--accent-terracotta)' }} />
-              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-03: Sensitive Data Minimization & RBAC</strong>
+              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-03: Giảm Thiểu Dữ Liệu Nhạy Cảm & RBAC</strong>
             </div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
-              Enforces role-based clinical note and dietary tag filtering across all operational personas.
+              Thực thi lọc thông tin bệnh án và dị ứng theo đúng vai trò nghiệp vụ.
             </p>
           </div>
 
           <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
               <Lock size={13} style={{ color: 'var(--accent-terracotta)' }} />
-              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-06: Manager Least Privilege Separation</strong>
+              <strong style={{ fontSize: 'var(--text-xs)' }}>BR-06: Tách Biệt Đặc Quyền Quản Lý</strong>
             </div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
-              Restricts Manager to executive oversight; administrative actions require explicit scoped delegation.
+              Giới hạn Quản lý ở mức giám sát điều hành; các thao tác quản trị yêu cầu ủy quyền rõ ràng.
             </p>
           </div>
         </div>
@@ -231,21 +231,21 @@ export const FeatureFlagsPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <AlertTriangle size={20} style={{ color: 'var(--warning)' }} />
                 <h3 className="hsw-modal-title">
-                  {t('operations.flags.confirmTitle', 'Confirm High-Impact Feature Change')}
+                  {t('operations.flags.confirmTitle', 'Xác Nhận Thay Đổi Tính Năng Có Tác Động Lớn')}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setConfirmFlagKey(null)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                aria-label={t('common.actions.close', 'Close')}
+                aria-label={t('common.actions.close', 'Đóng')}
               >
                 <X size={18} />
               </button>
             </div>
 
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {t('operations.flags.confirmPrompt', 'You are about to change the operational state of:')}
+              {t('operations.flags.confirmPrompt', 'Bạn sắp thay đổi trạng thái vận hành của:')}
             </p>
 
             <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', margin: 'var(--space-3) 0' }}>
@@ -253,20 +253,20 @@ export const FeatureFlagsPage: React.FC = () => {
                 {t(flagToConfirm.nameKey, flagToConfirm.defaultName)}
               </strong>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                {flagToConfirm.key} · Current: <strong>{flagToConfirm.enabled ? 'ENABLED' : 'DISABLED'}</strong> → Target: <strong>{flagToConfirm.enabled ? 'DISABLED' : 'ENABLED'}</strong>
+                {flagToConfirm.key} · Hiện tại: <strong>{flagToConfirm.enabled ? 'ĐÃ BẬT' : 'ĐÃ TẮT'}</strong> → Đích: <strong>{flagToConfirm.enabled ? 'ĐÃ TẮT' : 'ĐÃ BẬT'}</strong>
               </span>
             </div>
 
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-              {t('operations.flags.confirmAuditNote', 'This state transition will take effect immediately in the prototype and append a timestamped event to the Sensitive Governance Audit Log.')}
+              {t('operations.flags.confirmAuditNote', 'Thay đổi trạng thái này sẽ có hiệu lực ngay lập tức và ghi một bản ghi thời gian vào Nhật Ký Kiểm Toán Quản Trị.')}
             </p>
 
             <div className="hsw-modal-actions">
               <Button variant="secondary" size="sm" onClick={() => setConfirmFlagKey(null)}>
-                {t('common.actions.cancel', 'Cancel')}
+                {t('common.actions.cancel', 'Hủy')}
               </Button>
               <Button variant="primary" size="sm" onClick={() => executeToggle(confirmFlagKey)}>
-                {t('operations.flags.applyToggle', 'Apply State Transition')}
+                {t('operations.flags.applyToggle', 'Áp Dụng Thay Đổi')}
               </Button>
             </div>
           </div>

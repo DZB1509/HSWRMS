@@ -7,6 +7,7 @@
     "frontDeskDashboard": "Front Desk Dashboard",
     "dailyArrivals": "Daily Arrivals",
     "villaManagement": "Villa Management",
+    "spaManagement": "Spa & Retreat Management",
     "customerServicesFolio": "Customer Services & Folio",
     "manualExtraSpa": "Manual Extra Spa",
     "customerFolioInvoice": "Customer Folio & Invoice",
@@ -995,7 +996,7 @@
     "reactivateAccount": "Reactivate Account",
     "clearanceSectionTitle": "RBAC Clearance Scope & Privacy Minimization",
     "scopeAdminTitle": "Full System Administration Authority",
-    "scopeAdminDesc": "Authorized to manage business parameters, modular feature flags, RBAC matrix, delegation, and security audit log.",
+    "scopeAdminDesc": "Authorized to manage master data, business & operational parameters, RBAC matrix, admin delegation, and security audit logs.",
     "scopeAdminMin": "Does not expose raw Customer medical diagnoses or payment cardholder secrets.",
     "scopeManagerTitle": "Executive Management & Operational Analytics Authority",
     "scopeManagerDesc": "Authorized for high-level executive revenue reporting, villa occupancy statistics, therapist utilization, and system operational health.",
@@ -1011,7 +1012,8 @@
     "scopeFbMin": "Kitchen staff sees strictly food allergy tags; general medical notes are completely withheld (BR-03).",
     "suspendSuccess": "Staff account successfully suspended.",
     "reactivateSuccess": "Staff account successfully reactivated.",
-    "notFound": "Staff account record not found."
+    "notFound": "Staff account record not found.",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "Master Data Management",

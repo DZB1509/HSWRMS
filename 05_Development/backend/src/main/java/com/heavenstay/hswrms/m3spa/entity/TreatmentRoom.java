@@ -7,6 +7,11 @@ import jakarta.persistence.*;
 @Table(name = "TreatmentRoom", schema = "dbo")
 public class TreatmentRoom {
 
+    public static final String AVAILABLE = "AVAILABLE";
+    public static final String OCCUPIED = "OCCUPIED";
+    public static final String MAINTENANCE = "MAINTENANCE";
+    public static final String INACTIVE = "INACTIVE";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "room_id")
@@ -27,13 +32,27 @@ public class TreatmentRoom {
 
     public TreatmentRoom(String roomName, TreatmentRoomStatus roomStatus) {
         this.roomName = roomName;
-        this.roomStatus = roomStatus;
+        this.roomStatus = roomStatus != null ? roomStatus : TreatmentRoomStatus.AVAILABLE;
     }
 
     public TreatmentRoom(String roomName, TreatmentRoomStatus roomStatus, String roomType) {
         this.roomName = roomName;
-        this.roomStatus = roomStatus;
+        this.roomStatus = roomStatus != null ? roomStatus : TreatmentRoomStatus.AVAILABLE;
         this.roomType = roomType;
+    }
+
+    public TreatmentRoom(String roomName, String roomType, String roomStatus) {
+        this.roomName = roomName;
+        this.roomType = roomType;
+        if (roomStatus != null) {
+            try {
+                this.roomStatus = TreatmentRoomStatus.valueOf(roomStatus.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                this.roomStatus = TreatmentRoomStatus.AVAILABLE;
+            }
+        } else {
+            this.roomStatus = TreatmentRoomStatus.AVAILABLE;
+        }
     }
 
     public String getRoomType() {
@@ -66,5 +85,15 @@ public class TreatmentRoom {
 
     public void setRoomStatus(TreatmentRoomStatus roomStatus) {
         this.roomStatus = roomStatus;
+    }
+
+    public void setRoomStatus(String roomStatus) {
+        if (roomStatus != null) {
+            try {
+                this.roomStatus = TreatmentRoomStatus.valueOf(roomStatus.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                this.roomStatus = TreatmentRoomStatus.AVAILABLE;
+            }
+        }
     }
 }

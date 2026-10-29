@@ -78,13 +78,6 @@ public class SystemConfiguration {
         this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
-    @PrePersist
-    void onCreate() {
-        if (updatedAt == null) {
-            updatedAt = LocalDateTime.now(ZoneOffset.UTC);
-        }
-    }
-
     public void update(String newValue, Integer userId) {
         this.configurationValue = newValue;
         this.updatedByUserId = userId;

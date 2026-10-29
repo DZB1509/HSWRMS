@@ -1,4 +1,5 @@
 import type { RetreatPackageMaster, SpaServiceMaster, VillaCategoryMaster } from '../types/masterData';
+import { SPA_TREATMENTS_INVENTORY } from './mockSpaInventory';
 
 export const INITIAL_PACKAGES_MASTER: RetreatPackageMaster[] = [
   {
@@ -39,59 +40,30 @@ export const INITIAL_PACKAGES_MASTER: RetreatPackageMaster[] = [
   }
 ];
 
-export const INITIAL_SPA_SERVICES_MASTER: SpaServiceMaster[] = [
-  {
-    id: 'SPA-01',
-    code: 'TRT-BAMBOO-60',
-    name: 'Warm Bamboo & Herbal Compress Massage',
-    category: 'Therapeutic Massage',
-    durationMinutes: 60,
-    practitionerType: 'Senior Spa Therapist',
-    basePrice: 1500000,
-    status: 'active',
-    description: 'Heated organic bamboo stalks combined with steamed ginger-lemongrass herbal compresses.'
-  },
-  {
-    id: 'SPA-02',
-    code: 'TRT-SOUND-45',
-    name: 'Tibetan Singing Bowl Sound Meditation',
-    category: 'Sound Healing & Vibrational Therapy',
-    durationMinutes: 45,
-    practitionerType: 'Yoga & Meditation Master',
-    basePrice: 1200000,
-    status: 'active',
-    description: 'Harmonic acoustic frequencies tuned to resonate with physiological energy centers.'
-  },
-  {
-    id: 'SPA-03',
-    code: 'TRT-HYDRO-75',
-    name: 'Lymphatic Detox Hydrotherapy Soak',
-    category: 'Hydrotherapy & Balneotherapy',
-    durationMinutes: 75,
-    practitionerType: 'Senior Spa Therapist',
-    basePrice: 1800000,
-    status: 'active',
-    description: 'Mineral-infused thermal jet bath with sea salts and stimulating essential oils.'
-  },
-  {
-    id: 'SPA-04',
-    code: 'TRT-HOTSTONE-90',
-    name: 'Deep Tissue Basalt Hot Stone Therapy',
-    category: 'Therapeutic Massage',
-    durationMinutes: 90,
-    practitionerType: 'Senior Spa Therapist',
-    basePrice: 2200000,
-    status: 'active',
-    description: 'Volcanic basalt stones heated to soothe deep muscular tension and improve circulation.'
-  }
-];
+export const INITIAL_SPA_SERVICES_MASTER: SpaServiceMaster[] = SPA_TREATMENTS_INVENTORY.map((t) => ({
+  id: t.id as string,
+  code: t.treatmentCode,
+  name: t.treatmentName,
+  category: t.category,
+  durationMinutes: t.durationMinutes,
+  practitionerType: t.therapistQualification,
+  compatibleRoomType: t.roomCompatibility,
+  basePrice: t.basePrice,
+  status: t.status === 'ACTIVE' ? 'active' : 'archived',
+  description: `${t.description}. Chống chỉ định: ${t.contraindications || 'Không có'}`
+}));
 
 export const INITIAL_VILLAS_MASTER: VillaCategoryMaster[] = [
   {
     id: 'VIL-01',
     code: 'CAT-GARDEN',
     name: 'Garden Sanctuary Pool Villa',
-    maxOccupancy: 2,
+    bedroomCount: 1,
+    bedType: '1 King Bed (1.8m x 2.0m)',
+    maxAdults: 2,
+    maxChildren: 1,
+    maxOccupancy: 3,
+    areaRange: '95 - 110 m²',
     hasPrivatePool: true,
     hasTreatmentPavilion: false,
     totalVillasCount: 8,
@@ -103,7 +75,12 @@ export const INITIAL_VILLAS_MASTER: VillaCategoryMaster[] = [
     id: 'VIL-02',
     code: 'CAT-OCEAN',
     name: 'Oceanfront Sunset Wellness Villa',
-    maxOccupancy: 2,
+    bedroomCount: 1,
+    bedType: '1 Super King Bed (2.0m x 2.2m)',
+    maxAdults: 2,
+    maxChildren: 1,
+    maxOccupancy: 3,
+    areaRange: '130 - 160 m²',
     hasPrivatePool: true,
     hasTreatmentPavilion: true,
     totalVillasCount: 6,
@@ -115,7 +92,12 @@ export const INITIAL_VILLAS_MASTER: VillaCategoryMaster[] = [
     id: 'VIL-03',
     code: 'CAT-HILLSIDE',
     name: 'Hillside Panoramic Yoga Pavilion',
-    maxOccupancy: 4,
+    bedroomCount: 2,
+    bedType: '1 King Bed + 2 Twin Beds',
+    maxAdults: 4,
+    maxChildren: 2,
+    maxOccupancy: 6,
+    areaRange: '200 - 240 m²',
     hasPrivatePool: true,
     hasTreatmentPavilion: true,
     totalVillasCount: 4,

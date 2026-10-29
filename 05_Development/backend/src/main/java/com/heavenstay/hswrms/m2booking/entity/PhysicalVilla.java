@@ -7,6 +7,12 @@ import java.math.BigDecimal;
 @Table(name = "PhysicalVilla", schema = "dbo")
 public class PhysicalVilla {
 
+    public static final String AVAILABLE = "AVAILABLE";
+    public static final String OCCUPIED = "OCCUPIED";
+    public static final String MAINTENANCE = "MAINTENANCE";
+    public static final String NEEDS_CLEANING = "NEEDS_CLEANING";
+    public static final String INACTIVE = "INACTIVE";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "villa_id")
@@ -16,14 +22,14 @@ public class PhysicalVilla {
     @JoinColumn(name = "villa_category_id", nullable = false)
     private VillaCategory villaCategory;
 
-    @Column(name = "villa_number", nullable = false, unique = true, length = 30)
+    @Column(name = "villa_number", nullable = false, length = 30)
     private String villaNumber;
 
     @Column(name = "floor", length = 30)
     private String floor;
 
     @Column(name = "villa_status", nullable = false, length = 30)
-    private String villaStatus = "AVAILABLE";
+    private String villaStatus = AVAILABLE;
 
     @Column(name = "zone_name", length = 100)
     private String zoneName;
@@ -46,7 +52,42 @@ public class PhysicalVilla {
     @Column(name = "view_and_operational_notes", length = 500)
     private String viewAndOperationalNotes;
 
+    // Transient attributes for UI presentation / DTOs without direct SQL Server table backing
+    @Transient
+    private BigDecimal nightlyRate;
+
+    @Transient
+    private String bedType;
+
+    @Transient
+    private Integer maxAdults = 2;
+
+    @Transient
+    private Integer maxChildren = 1;
+
+    @Transient
+    private String image;
+
+    @Transient
+    private String amenities;
+
     public PhysicalVilla() {
+    }
+
+    public PhysicalVilla(VillaCategory villaCategory, String villaNumber, String floor, String villaStatus,
+                         String zoneName, String bedroomInfo, int maxOccupancy, BigDecimal areaSqm,
+                         boolean hasPrivatePool, String poolInfo, String viewAndOperationalNotes) {
+        this.villaCategory = villaCategory;
+        this.villaNumber = villaNumber;
+        this.floor = floor;
+        this.villaStatus = villaStatus != null ? villaStatus : AVAILABLE;
+        this.zoneName = zoneName;
+        this.bedroomInfo = bedroomInfo;
+        this.maxOccupancy = maxOccupancy;
+        this.areaSqm = areaSqm;
+        this.hasPrivatePool = hasPrivatePool;
+        this.poolInfo = poolInfo;
+        this.viewAndOperationalNotes = viewAndOperationalNotes;
     }
 
     public Integer getVillaId() {
@@ -125,6 +166,10 @@ public class PhysicalVilla {
         return hasPrivatePool;
     }
 
+    public boolean isHasPrivatePool() {
+        return hasPrivatePool != null && hasPrivatePool;
+    }
+
     public void setHasPrivatePool(Boolean hasPrivatePool) {
         this.hasPrivatePool = hasPrivatePool;
     }
@@ -143,5 +188,53 @@ public class PhysicalVilla {
 
     public void setViewAndOperationalNotes(String viewAndOperationalNotes) {
         this.viewAndOperationalNotes = viewAndOperationalNotes;
+    }
+
+    public BigDecimal getNightlyRate() {
+        return nightlyRate;
+    }
+
+    public void setNightlyRate(BigDecimal nightlyRate) {
+        this.nightlyRate = nightlyRate;
+    }
+
+    public String getBedType() {
+        return bedType;
+    }
+
+    public void setBedType(String bedType) {
+        this.bedType = bedType;
+    }
+
+    public Integer getMaxAdults() {
+        return maxAdults;
+    }
+
+    public void setMaxAdults(Integer maxAdults) {
+        this.maxAdults = maxAdults;
+    }
+
+    public Integer getMaxChildren() {
+        return maxChildren;
+    }
+
+    public void setMaxChildren(Integer maxChildren) {
+        this.maxChildren = maxChildren;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public String getAmenities() {
+        return amenities;
+    }
+
+    public void setAmenities(String amenities) {
+        this.amenities = amenities;
     }
 }

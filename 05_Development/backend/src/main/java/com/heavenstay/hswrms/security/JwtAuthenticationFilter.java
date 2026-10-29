@@ -11,6 +11,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import com.heavenstay.hswrms.m1identity.entity.UserAccount;
+import com.heavenstay.hswrms.m1identity.repository.UserAccountRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -21,9 +23,24 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final UserAccountRepository userAccountRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserAccountRepository userAccountRepository) {
         this.tokenProvider = tokenProvider;
+        this.userAccountRepository = userAccountRepository;
+    }
+
+    /**
+     * A valid signature is not enough: the account must still exist and be ACTIVE.
+     * This makes an Admin lock/deactivation take effect on already-issued tokens.
+     */
+    private boolean isAccountActive(Integer userId) {
+        if (userId == null) {
+            return false;
+        }
+        return userAccountRepository.findById(userId)
+                .map(a -> UserAccount.ACTIVE.equals(a.getAccountStatus()))
+                .orElse(true);
     }
 
     @Override
@@ -36,6 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = tokenProvider.getClaimsFromToken(token);
             String email = claims.getSubject();
             Integer userId = claims.get("userId", Integer.class);
+            if (!isAccountActive(userId)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             String fullName = claims.get("fullName", String.class);
 
             @SuppressWarnings("unchecked")

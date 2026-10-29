@@ -17,6 +17,8 @@ public interface TreatmentRoomRepository extends JpaRepository<TreatmentRoom, In
 
     List<TreatmentRoom> findByRoomStatus(TreatmentRoomStatus status);
 
+    Optional<TreatmentRoom> findByRoomName(String roomName);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM TreatmentRoom r WHERE r.roomId = :id")
     Optional<TreatmentRoom> findByIdWithLock(@Param("id") Integer id);

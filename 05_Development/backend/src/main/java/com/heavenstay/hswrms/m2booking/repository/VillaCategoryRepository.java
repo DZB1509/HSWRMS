@@ -16,6 +16,8 @@ public interface VillaCategoryRepository extends JpaRepository<VillaCategory, In
 
     List<VillaCategory> findByCategoryStatus(String categoryStatus);
 
+    Optional<VillaCategory> findByCategoryName(String categoryName);
+
     /**
      * Row lock used to serialize "check availability then insert/confirm" per villa category,
      * which is what prevents overbooking under concurrent requests (SQL Server UPDLOCK).

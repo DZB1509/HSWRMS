@@ -8,11 +8,26 @@ import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
 import com.heavenstay.hswrms.m1identity.dto.SsoRegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailResponse;
+import com.heavenstay.hswrms.m1identity.entity.Role;
+import com.heavenstay.hswrms.m1identity.entity.UserAccount;
 import com.heavenstay.hswrms.m1identity.service.AuthService;
+import com.heavenstay.hswrms.m1identity.service.IdentityAccountService;
+import com.heavenstay.hswrms.m6admin.dto.AdminDtos.MeView;
+import com.heavenstay.hswrms.m6admin.security.CurrentActor;
+import com.heavenstay.hswrms.m6admin.service.PermissionService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m1identity.entity.User;
@@ -49,12 +64,6 @@ public class AuthController {
                 .body(ApiResponse.ok("Guest registered successfully.", response));
     }
 
-    /**
-     * Completes a Google SSO registration (FR-M1-05 case 3): the account is created
-     * only here — at form submission — with the validated provider email, explicit
-     * ToS consent, and an optional password. On success the user is signed in with
-     * the standard login response (Google's verified email replaces the OTP step).
-     */
     @PostMapping("/register/sso")
     public ResponseEntity<ApiResponse<LoginResponse>> registerWithSso(
             @Valid @RequestBody SsoRegisterRequest request) {

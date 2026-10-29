@@ -21,6 +21,8 @@ public interface PhysicalVillaRepository extends JpaRepository<PhysicalVilla, In
 
     List<PhysicalVilla> findByVillaStatus(String villaStatus);
 
+    List<PhysicalVilla> findByZoneName(String zoneName);
+
     List<PhysicalVilla> findByVillaCategory_VillaCategoryIdAndVillaStatus(Integer villaCategoryId, String villaStatus);
 
     long countByVillaCategory_VillaCategoryIdAndVillaStatusNot(Integer categoryId, String status);

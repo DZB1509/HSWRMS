@@ -122,9 +122,11 @@ public class SecurityConfig {
 
                         // Public SPA treatment catalog from M3: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/spa/treatments", "/api/v1/spa/treatments/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/spa-treatments/**", "/api/v1/treatment-rooms/**", "/api/v1/spa/treatment-rooms/**", "/api/v1/room-types/**", "/api/v1/qualifications/**").permitAll()
 
                         // Public retreat packages and villa categories catalog from M2: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/retreat-packages", "/api/v1/retreat-packages/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/villas/**", "/api/v1/villa-categories/**", "/api/v1/resort-zones/**", "/api/v1/villa-functional-areas/**").permitAll()
 
                         // Public F&B menu catalog from M4: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/fnb/customer/menu-items", "/api/v1/fnb/customer/menu-items/**").permitAll()
@@ -170,7 +172,6 @@ public class SecurityConfig {
 
                         // Module 6: Administration, Staff Management, Governance, Delegation & Sensitive Audit Logs
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "MANAGER")
-
 
                         // Public F&B package plans from M4: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/fnb/packages", "/api/v1/fnb/packages/*").permitAll()

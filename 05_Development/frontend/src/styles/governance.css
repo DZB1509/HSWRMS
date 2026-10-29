@@ -213,6 +213,48 @@
   background-color: var(--surface-interactive);
 }
 
+/* Operational & Master Data Tables */
+.hsw-gov-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  background-color: #ffffff;
+}
+
+.hsw-gov-table th {
+  padding: 16px 20px;
+  background-color: #f7f6f2;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-align: left;
+  border-bottom: 1px solid var(--border-medium, #e5e2dc);
+  white-space: nowrap;
+}
+
+.hsw-gov-table td {
+  padding: 18px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle, #f0ede8);
+  vertical-align: middle;
+  line-height: 1.5;
+  transition: background-color 0.15s ease;
+}
+
+.hsw-gov-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.hsw-gov-table tbody tr:hover td {
+  background-color: #faf9f6;
+}
+
+.hsw-gov-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* Permission State Badges */
 .hsw-perm-badge {
   display: inline-flex;
@@ -225,13 +267,13 @@
 }
 
 .hsw-perm-badge.granted {
-  background-color: var(--surface-success);
-  color: var(--text-success);
+  background-color: #00FF99;
+  color: #052e16;
 }
 
 .hsw-perm-badge.denied {
-  background-color: var(--bg-soft);
-  color: var(--text-secondary);
+  background-color: #fc6e5e;
+  color: #4a0e0e;
 }
 
 .hsw-perm-badge.delegable {
@@ -249,49 +291,78 @@
 .hsw-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: rgba(17, 24, 39, 0.65);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1050;
   padding: var(--space-4);
+  animation: hswModalFadeIn 0.2s ease-out;
 }
 
 .hsw-modal-box {
-  background-color: var(--bg-card);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle, #e5e2dc);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06);
   width: 100%;
   max-width: 580px;
   max-height: 90vh;
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: 24px 28px;
+  position: relative;
+  z-index: 1051;
+  animation: hswModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes hswModalFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hswModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .hsw-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle, #e5e2dc);
 }
 
 .hsw-modal-title {
-  font-size: var(--text-lg);
+  font-size: 17px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-primary, #2b2b2b);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .hsw-modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, #e5e2dc);
 }
 
 /* Audit Log Table Pill */
@@ -305,8 +376,8 @@
 }
 
 .hsw-audit-pill.success {
-  background-color: var(--surface-success);
-  color: var(--text-success);
+  background-color: #00FF99;
+  color: #052e16;
 }
 
 .hsw-audit-pill.denied {
@@ -377,8 +448,8 @@
 }
 
 .hsw-quicknav-tile-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-sm);
   background-color: #f2f0ea;
   color: var(--accent-forest);
@@ -386,6 +457,62 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.hsw-quicknav-tile:hover .hsw-quicknav-tile-icon {
+  transform: scale(1.06);
+}
+
+/* Domain-specific icon color themes */
+.hsw-quicknav-tile-icon.icon-staff {
+  background-color: #E0F2FE;
+  color: #0284C7;
+}
+
+.hsw-quicknav-tile-icon.icon-master-data {
+  background-color: #EDE9FE;
+  color: #7C3AED;
+}
+
+.hsw-quicknav-tile-icon.icon-params {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.hsw-quicknav-tile-icon.icon-matrix {
+  background-color: #DCFCE7;
+  color: #16A34A;
+}
+
+.hsw-quicknav-tile-icon.icon-delegation {
+  background-color: #FCE7F3;
+  color: #DB2777;
+}
+
+.hsw-quicknav-tile-icon.icon-audit {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}
+
+.hsw-quicknav-tile-icon.icon-overview {
+  background-color: #CCFBF1;
+  color: #0D9488;
+}
+
+.hsw-quicknav-tile-icon.icon-revenue {
+  background-color: #E0E7FF;
+  color: #4F46E5;
+}
+
+.hsw-quicknav-tile-icon.icon-occupancy {
+  background-color: #FEF9C3;
+  color: #CA8A04;
+}
+
+.hsw-quicknav-tile-icon.icon-therapists {
+  background-color: #F3E8FF;
+  color: #9333EA;
 }
 
 .hsw-quicknav-tile-content h4 {
@@ -443,4 +570,288 @@
     max-width: 95vw;
     margin: var(--space-4);
   }
+}
+
+
+/* ==========================================================================
+   Enhanced Soft Pastel Dashboard Metric Themes (Gam mau nhe, sang trong, de nhin)
+   ========================================================================== */
+
+.hsw-gov-card {
+  background-color: #ffffff;
+  border: 1px solid #e8e5df;
+  border-radius: 12px;
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 6px 16px -6px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.hsw-gov-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(135deg, #f2f7f4 0%, #eaf4ed 100%);
+  border: 1px solid #d2e5d7;
+  border-left: 4px solid #3d684c;
+  border-radius: 10px;
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+  color: #3b5844;
+  box-shadow: 0 1px 3px rgba(45, 106, 79, 0.03);
+}
+
+.hsw-gov-kpi {
+  border-radius: 10px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.hsw-gov-kpi:hover,
+.hsw-overview-subcard:hover {
+  transform: translateY(-2px);
+}
+
+/* 1. Dang luu tru (Soft Emerald Sage) */
+.hsw-kpi-occupied {
+  background: linear-gradient(145deg, #f2f8f4 0%, #e5f3ea 100%) !important;
+  border: 1px solid #cce5d4 !important;
+  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.04);
+}
+
+.hsw-kpi-occupied:hover {
+  border-color: #b3d9be !important;
+  box-shadow: 0 6px 14px rgba(46, 125, 50, 0.08);
+}
+
+.hsw-kpi-occupied .hsw-gov-kpi-label {
+  color: #2e6240 !important;
+}
+
+.hsw-kpi-occupied .hsw-gov-kpi-val {
+  color: #1b4d2e !important;
+}
+
+.hsw-kpi-occupied .hsw-gov-kpi-sub {
+  color: #437355 !important;
+}
+
+/* 2. San sang don khach (Soft Mint Aqua) */
+.hsw-kpi-ready {
+  background: linear-gradient(145deg, #f0f9fa 0%, #e3f5f6 100%) !important;
+  border: 1px solid #c4e7ea !important;
+  box-shadow: 0 2px 6px rgba(0, 137, 123, 0.04);
+}
+
+.hsw-kpi-ready:hover {
+  border-color: #aadae0 !important;
+  box-shadow: 0 6px 14px rgba(0, 137, 123, 0.08);
+}
+
+.hsw-kpi-ready .hsw-gov-kpi-label {
+  color: #166865 !important;
+}
+
+.hsw-kpi-ready .hsw-gov-kpi-val {
+  color: #0c504d !important;
+}
+
+.hsw-kpi-ready .hsw-gov-kpi-sub {
+  color: #317b78 !important;
+}
+
+/* 3. Dang don dep (Warm Honey Cream) */
+.hsw-kpi-cleaning {
+  background: linear-gradient(145deg, #fffcf4 0%, #fef5e2 100%) !important;
+  border: 1px solid #f8e3ba !important;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.04);
+}
+
+.hsw-kpi-cleaning:hover {
+  border-color: #f3d49b !important;
+  box-shadow: 0 6px 14px rgba(217, 119, 6, 0.08);
+}
+
+.hsw-kpi-cleaning .hsw-gov-kpi-label {
+  color: #945f18 !important;
+}
+
+.hsw-kpi-cleaning .hsw-gov-kpi-val {
+  color: #824d08 !important;
+}
+
+.hsw-kpi-cleaning .hsw-gov-kpi-sub {
+  color: #9e6f30 !important;
+}
+
+/* 4. Bao tri dinh ky (Soft Slate Gray) */
+.hsw-kpi-maintenance {
+  background: linear-gradient(145deg, #f7f8fa 0%, #edf1f6 100%) !important;
+  border: 1px solid #d9dfe8 !important;
+  box-shadow: 0 2px 6px rgba(100, 116, 139, 0.04);
+}
+
+.hsw-kpi-maintenance:hover {
+  border-color: #c7cfdc !important;
+  box-shadow: 0 6px 14px rgba(100, 116, 139, 0.08);
+}
+
+.hsw-kpi-maintenance .hsw-gov-kpi-label {
+  color: #4b586d !important;
+}
+
+.hsw-kpi-maintenance .hsw-gov-kpi-val {
+  color: #334155 !important;
+}
+
+.hsw-kpi-maintenance .hsw-gov-kpi-sub {
+  color: #64748b !important;
+}
+
+/* Subcard base & typography */
+.hsw-overview-subcard {
+  padding: var(--space-4);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.hsw-overview-subcard .subcard-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.hsw-overview-subcard .subcard-val {
+  font-size: var(--text-xl);
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 4px 0 2px 0;
+}
+
+.hsw-overview-subcard .subcard-sub {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Spa Sessions (Soft Lavender Lilac) */
+.hsw-card-spa-sessions {
+  background: linear-gradient(145deg, #fcf8ff 0%, #f4ebfd 100%) !important;
+  border: 1px solid #e4d4f6 !important;
+  box-shadow: 0 2px 6px rgba(138, 75, 175, 0.04);
+}
+
+.hsw-card-spa-sessions:hover {
+  border-color: #d6beee !important;
+  box-shadow: 0 6px 14px rgba(138, 75, 175, 0.08);
+}
+
+.hsw-card-spa-sessions .subcard-label {
+  color: #6b498f !important;
+}
+
+.hsw-card-spa-sessions .subcard-val {
+  color: #4c2573 !important;
+}
+
+.hsw-card-spa-sessions .subcard-sub {
+  color: #7d59a2 !important;
+}
+
+/* Spa Duration (Soft Rose Petal) */
+.hsw-card-spa-time {
+  background: linear-gradient(145deg, #fff8f9 0%, #fcecf1 100%) !important;
+  border: 1px solid #f3d2dd !important;
+  box-shadow: 0 2px 6px rgba(190, 60, 95, 0.04);
+}
+
+.hsw-card-spa-time:hover {
+  border-color: #ebbecd !important;
+  box-shadow: 0 6px 14px rgba(190, 60, 95, 0.08);
+}
+
+.hsw-card-spa-time .subcard-label {
+  color: #8f4663 !important;
+}
+
+.hsw-card-spa-time .subcard-val {
+  color: #712440 !important;
+}
+
+.hsw-card-spa-time .subcard-sub {
+  color: #9f5b77 !important;
+}
+
+/* Revenue (Soft Sage Emerald) */
+.hsw-card-revenue {
+  background: linear-gradient(145deg, #f2f8f4 0%, #e5f3e7 100%) !important;
+  border: 1px solid #c9e4cf !important;
+  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.04);
+}
+
+.hsw-card-revenue:hover {
+  border-color: #b0d8b8 !important;
+  box-shadow: 0 6px 14px rgba(46, 125, 50, 0.08);
+}
+
+.hsw-card-revenue .subcard-label {
+  color: #2a5c37 !important;
+}
+
+.hsw-card-revenue .subcard-val {
+  color: #174b24 !important;
+}
+
+.hsw-card-revenue .subcard-sub {
+  color: #467652 !important;
+}
+
+/* Check-out Guard (Soft Ice Blue Steel) */
+.hsw-card-guard {
+  background: linear-gradient(145deg, #f1f7fc 0%, #e3effa 100%) !important;
+  border: 1px solid #c6def5 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.04);
+}
+
+.hsw-card-guard:hover {
+  border-color: #abd0f0 !important;
+  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.08);
+}
+
+.hsw-card-guard .subcard-label {
+  color: #205b91 !important;
+}
+
+.hsw-card-guard .subcard-val {
+  color: #124370 !important;
+}
+
+.hsw-card-guard .subcard-sub {
+  color: #4477a4 !important;
+}
+
+/* Police Compliance Container */
+.hsw-compliance-box {
+  background: linear-gradient(145deg, #faf8f5 0%, #f4efe7 100%);
+  border: 1px solid #e7ded2;
+  border-left: 3px solid #8c8270;
+  border-radius: 8px;
+  padding: var(--space-4) var(--space-5);
+}
+
+.hsw-audit-pill.ready {
+  background-color: #e5f6ed;
+  color: #1c683c;
+  border: 1px solid #bce4cd;
 }

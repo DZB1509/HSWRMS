@@ -22,11 +22,11 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
 
     // Top-level role / module namespaces
     if (s === 'fb') return 'F&B';
-    if (s === 'customer') return t('common:roles.customer', 'Customer');
-    if (s === 'receptionist') return t('common:roles.receptionist', 'Receptionist');
-    if (s === 'therapist') return t('common:roles.therapist', 'Therapist');
-    if (s === 'manager') return t('operations:sidebar.manager', 'Manager');
-    if (s === 'admin') return t('operations:sidebar.admin', 'Admin');
+    if (s === 'customer') return t('common:roles.customer', 'Khách Hàng');
+    if (s === 'receptionist') return t('common:roles.receptionist', 'Lễ Tân');
+    if (s === 'therapist') return t('common:roles.therapist', 'Kỹ Thuật Viên');
+    if (s === 'manager') return t('operations:sidebar.manager', 'Quản Lý');
+    if (s === 'admin') return t('operations:sidebar.admin', 'Quản Trị Viên');
 
     // Route-aware dashboard labels
     if (s === 'dashboard') {
@@ -36,53 +36,53 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
       if (root === 'therapist') return t('operations:sidebar.therapistDashboard', 'Bảng Điều Hành Trị Liệu');
       if (root === 'manager') return t('operations:sidebar.managerDashboard', 'Bảng Điều Hành Quản Lý');
       if (root === 'admin') return t('operations:sidebar.adminDashboard', 'Bảng Quản Trị Hệ Thống');
-      return t('navigation:nav.dashboard', 'Dashboard');
+      return t('navigation:nav.dashboard', 'Bảng Điều Khiển');
     }
 
     // Customer sub-routes
-    if (s === 'dining') return t('customer:nav.dining', 'Dining');
-    if (s === 'spa') return t('customer:nav.spa', 'Spa & Wellness');
-    if (s === 'bookings') return t('customer:nav.bookings', 'My Bookings');
-    if (s === 'health') return t('customer:nav.healthProfile', 'Health Profile');
-    if (s === 'folio') return t('customer:nav.folio', 'Stay Folio');
-    if (s === 'account') return t('customer:nav.account', 'Account Settings');
+    if (s === 'dining') return t('customer:nav.dining', 'Ẩm Thực');
+    if (s === 'spa') return t('customer:nav.spa', 'Spa & Trị Liệu');
+    if (s === 'bookings') return t('customer:nav.bookings', 'Lịch Đặt Của Tôi');
+    if (s === 'health') return t('customer:nav.healthProfile', 'Hồ Sơ Sức Khỏe');
+    if (s === 'folio') return t('customer:nav.folio', 'Hóa Đơn Tạm Tính');
+    if (s === 'account') return t('customer:nav.account', 'Cài Đặt Tài Khoản');
 
     // Dining sub-routes
-    if (s === 'menu') return t('dining:menu.title', 'Menu');
-    if (s === 'meal-prep') return t('operations:sidebar.dailyMealPrepQueue', 'Daily Meal Prep Queue');
-    if (s === 'daily-selection') return t('dining:selection.title', 'Daily Meal Selection');
-    if (s === 'a-la-carte') return t('dining:alacarte.title', 'A-la-carte Order');
-    if (s === 'meal-plan') return t('dining:plan.title', 'My Meal Plan');
-    if (s === 'orders') return t('dining:plan.extraOrders', 'Orders');
-    if (s === 'allergies') return t('operations:sidebar.mealOrderAllergies', 'Meal Order & Allergies');
+    if (s === 'menu') return t('dining:menu.title', 'Thực Đơn');
+    if (s === 'meal-prep') return t('operations:sidebar.dailyMealPrepQueue', 'Hàng Đợi Chuẩn Bị Món Ăn');
+    if (s === 'daily-selection') return t('dining:selection.title', 'Chọn Thực Đơn Hàng Ngày');
+    if (s === 'a-la-carte') return t('dining:alacarte.title', 'Gọi Món A-la-carte');
+    if (s === 'meal-plan') return t('dining:plan.title', 'Kế Hoạch Dinh Dưỡng');
+    if (s === 'orders') return t('dining:plan.extraOrders', 'Đơn Món Ăn');
+    if (s === 'allergies') return t('operations:sidebar.mealOrderAllergies', 'Món Ăn & Dị Ứng');
 
     // Front Desk / Operational sub-routes
-    if (s === 'arrivals') return t('operations:sidebar.dailyArrivals', 'Daily Arrivals');
-    if (s === 'villas') return t('operations:sidebar.villaManagement', 'Villa Management');
-    if (s === 'services') return t('operations:sidebar.customerServicesFolio', 'Customer Services & Folio');
-    if (s === 'extra-spa') return t('operations:sidebar.manualExtraSpa', 'Manual Extra Spa');
-    if (s === 'checkout') return t('operations:sidebar.finalPaymentCheckout', 'Final Payment & Checkout');
+    if (s === 'arrivals') return t('operations:sidebar.dailyArrivals', 'Khách Đến Hàng Ngày');
+    if (s === 'villas') return t('operations:sidebar.villaManagement', 'Quản Lý Biệt Thự');
+    if (s === 'services') return t('operations:sidebar.customerServicesFolio', 'Dịch Vụ Khách & Hóa Đơn');
+    if (s === 'extra-spa') return t('operations:sidebar.manualExtraSpa', 'Đặt Thêm Spa Thủ Công');
+    if (s === 'checkout') return t('operations:sidebar.finalPaymentCheckout', 'Thanh Toán Cuối & Check-out');
 
     // Therapist sub-routes
-    if (s === 'schedule') return t('operations:sidebar.dailyWorkSchedule', 'Daily Work Schedule');
-    if (s === 'sessions' || s === 'notes') return t('operations:sidebar.sessionDetailsNotes', 'Session Details & Notes');
+    if (s === 'schedule') return t('operations:sidebar.dailyWorkSchedule', 'Lịch Làm Việc Hàng Ngày');
+    if (s === 'sessions' || s === 'notes') return t('operations:sidebar.sessionDetailsNotes', 'Chi Tiết Buổi Trị Liệu & Ghi Chú');
 
     // Manager / Admin sub-routes
-    if (s === 'revenue') return t('operations:sidebar.revenueAnalytics', 'Revenue Analytics');
-    if (s === 'occupancy') return t('operations:sidebar.occupancyReports', 'Occupancy Reports');
-    if (s === 'therapist-utilization' || s === 'utilization') return t('operations:sidebar.therapistUtilization', 'Therapist Utilization');
-    if (s === 'compliance') return t('operations:sidebar.governanceCompliance', 'Governance & Compliance');
-    if (s === 'police-export') return t('operations:sidebar.systemOverviewPoliceExport', 'System Overview & Police Export');
-    if (s === 'staff' || s === 'accounts') return t('operations:sidebar.staffAccounts', 'Staff Accounts');
-    if (s === 'master-data') return t('operations:sidebar.masterDataManagement', 'Master Data Management');
-    if (s === 'security') return t('operations:sidebar.securityGovernance', 'Security & Governance');
-    if (s === 'parameters' || s === 'business-params') return t('operations:sidebar.businessParameters', 'Business Parameters');
-    if (s === 'flags' || s === 'feature-flags') return t('operations:sidebar.featureFlags', 'Feature Flags');
-    if (s === 'permissions') return t('operations:sidebar.permissionMatrix', 'Permission Matrix');
-    if (s === 'delegation') return t('operations:sidebar.managerDelegation', 'Manager Delegation');
-    if (s === 'audit-log') return t('operations:sidebar.sensitiveDataAuditLog', 'Sensitive Data Audit Log');
+    if (s === 'revenue') return t('operations:sidebar.revenueAnalytics', 'Phân Tích Doanh Thu');
+    if (s === 'occupancy') return t('operations:sidebar.occupancyReports', 'Báo Cáo Công Suất Phòng');
+    if (s === 'therapist-utilization' || s === 'utilization') return t('operations:sidebar.therapistUtilization', 'Hiệu Suất Kỹ Thuật Viên');
+    if (s === 'compliance') return t('operations:sidebar.governanceCompliance', 'Quản Trị & Tuân Thủ');
+    if (s === 'police-export') return t('operations:sidebar.systemOverviewPoliceExport', 'Tổng Quan Hệ Thống & Khai Báo Công An');
+    if (s === 'staff' || s === 'accounts') return t('operations:sidebar.staffAccounts', 'Tài Khoản Nhân Viên');
+    if (s === 'master-data') return t('operations:sidebar.masterDataManagement', 'Quản Lý Dữ Liệu Gốc');
+    if (s === 'security') return t('operations:sidebar.securityGovernance', 'Bảo Mật & Quản Trị Quy Định');
+    if (s === 'parameters' || s === 'business-params') return t('operations:sidebar.businessParameters', 'Tham Số Nghiệp Vụ');
+    if (s === 'flags' || s === 'feature-flags') return t('operations:sidebar.featureFlags', 'Cờ Tính Năng');
+    if (s === 'permissions') return t('operations:sidebar.permissionMatrix', 'Ma Trận Phân Quyền (RBAC)');
+    if (s === 'delegation') return t('operations:sidebar.managerDelegation', 'Ủy Quyền Cho Quản Lý');
+    if (s === 'audit-log') return t('operations:sidebar.sensitiveDataAuditLog', 'Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm');
     if (s === 'system' || s === 'system-overview') {
-      return t('operations:sidebar.systemOverviewDashboard', 'System Overview Dashboard');
+      return t('operations:sidebar.systemOverviewDashboard', 'Tổng Quan Hệ Thống & Khai Báo Công An');
     }
 
     return segment

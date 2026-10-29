@@ -20,6 +20,7 @@ export interface SpaServiceMaster {
   category: string;
   durationMinutes: number;
   practitionerType: string;
+  compatibleRoomType?: string;
   basePrice: number;
   status: 'active' | 'archived';
   description: string;
@@ -29,7 +30,12 @@ export interface VillaCategoryMaster {
   id: string;
   code: string;
   name: string;
+  bedroomCount?: number;
+  bedType?: string;
+  maxAdults?: number;
+  maxChildren?: number;
   maxOccupancy: number;
+  areaRange?: string;
   hasPrivatePool: boolean;
   hasTreatmentPavilion: boolean;
   totalVillasCount: number;

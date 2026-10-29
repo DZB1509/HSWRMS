@@ -343,8 +343,6 @@ CREATE TABLE dbo.VillaCategory (
     eligible_packages   NVARCHAR(250) NULL,
     category_status     VARCHAR(20) NOT NULL
         CONSTRAINT DF_VillaCategory_Status DEFAULT ('ACTIVE'),
-    inventory_count         INT NOT NULL
-        CONSTRAINT DF_VillaCategory_InventoryCount DEFAULT (0),
     bedroom_count           INT NOT NULL
         CONSTRAINT DF_VillaCategory_BedroomCount DEFAULT (1),
     bedroom_description     NVARCHAR(100) NULL,
@@ -530,38 +528,6 @@ CREATE TABLE dbo.SpaTreatment (
     category            NVARCHAR(100) NULL,
     duration_minutes    INT NOT NULL,
     base_price          DECIMAL(18,2) NOT NULL,
-    category            VARCHAR(50) NULL,
-    pricing_rule        NVARCHAR(500) NULL,
-    room_compatibility  NVARCHAR(250) NULL,
-    required_qualification_code VARCHAR(100) NULL,
-    therapist_qualification NVARCHAR(250) NULL,
-    contraindications   NVARCHAR(500) NULL,
-    precautions         NVARCHAR(500) NULL,
-    description         NVARCHAR(1000) NULL,
-    treatment_status    VARCHAR(20) NOT NULL
-        CONSTRAINT DF_SpaTreatment_Status DEFAULT ('ACTIVE'),
-
-    CONSTRAINT UQ_SpaTreatment_Name UNIQUE (treatment_name),
-    CONSTRAINT CK_SpaTreatment_Duration CHECK (duration_minutes > 0),
-    CONSTRAINT CK_SpaTreatment_Price CHECK (base_price >= 0),
-    CONSTRAINT CK_SpaTreatment_Status
-        CHECK (treatment_status IN ('ACTIVE','INACTIVE'))
-);
-GO
-
-CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode
-    ON dbo.SpaTreatment (treatment_code)
-    WHERE treatment_code IS NOT NULL;
-GO
-
-/* Conceptual relation: Retreat Package includes Spa Treatments. */
-CREATE TABLE dbo.RetreatPackageSpaTreatment (
-    retreat_package_id  INT NOT NULL,
-    treatment_id        INT NOT NULL,
-    included_sessions   INT NOT NULL
-        CONSTRAINT DF_RPST_included_sessions DEFAULT (1),
-    entitlement_status  VARCHAR(50) NOT NULL
-        CONSTRAINT DF_RPST_entitlement_status DEFAULT ('INCLUDED'),
     notes               NVARCHAR(500) NULL,
 
     CONSTRAINT PK_RetreatPackageSpaTreatment

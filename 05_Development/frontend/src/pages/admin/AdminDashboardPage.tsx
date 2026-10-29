@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ShieldAlert,
   Settings2,
-  ToggleLeft,
   Shield,
   Users2,
   UserPlus,
@@ -15,7 +14,8 @@ import {
   ArrowRight,
   Info,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  ToggleLeft
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -278,8 +278,9 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         <div className="hsw-quicknav-grid">
+          {/* Tile 1: Staff */}
           <Link to="/admin/staff" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-staff">
               <UserPlus size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -288,8 +289,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </Link>
 
+          {/* Tile 2: Master Data */}
           <Link to="/admin/master-data" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-master-data">
               <Database size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -298,8 +300,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </Link>
 
+          {/* Tile 3: Business Params */}
           <Link to="/admin/business-params" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-params">
               <Settings2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -318,8 +321,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </Link>
 
+          {/* Tile 4: Permission Matrix */}
           <Link to="/admin/permissions" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-matrix">
               <Shield size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -328,8 +332,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </Link>
 
+          {/* Tile 5: Manager Delegation */}
           <Link to="/admin/delegation" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-delegation">
               <Users2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -338,8 +343,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </Link>
 
+          {/* Tile 6: Audit Log */}
           <Link to="/admin/audit-log" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-audit">
               <History size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -348,8 +354,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </Link>
 
+          {/* Tile 7: System Overview */}
           <Link to="/admin/system-overview" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
+            <div className="hsw-quicknav-tile-icon icon-overview">
               <Activity size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
@@ -360,7 +367,7 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Two Column Layout: Recent Audit Activity + Immutable Safety Guarantees */}
+      {/* Two Column Layout: Recent Synchronized Audit Activity + Immutable Safety Guarantees */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--space-6)' }}>
         {/* Recent Audit Log Preview (Live Data) */}
         <div className="hsw-gov-card" style={{ marginBottom: 0 }}>

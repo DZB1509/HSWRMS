@@ -49,6 +49,36 @@ export interface GovernanceContextType {
   hasCapability: (role: Role | null, capability: CapabilityKey) => boolean;
   activeDelegations: AdminDelegation[];
   managerDelegatedCapabilities: CapabilityKey[];
+  refreshGovernanceData: () => void;
+}
+
+const STORAGE_KEYS = {
+  PARAMETERS: 'hswrms_business_parameters',
+  FEATURE_FLAGS: 'hswrms_feature_flags',
+  PERMISSION_RULES: 'hswrms_permission_rules',
+  DELEGATIONS: 'hswrms_admin_delegations',
+  AUDIT_EVENTS: 'hswrms_audit_events',
+};
+
+function getStoredJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function persistJson<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`Failed to persist ${key}:`, err);
+  }
 }
 
 const GovernanceContext = createContext<GovernanceContextType | undefined>(undefined);
@@ -56,14 +86,109 @@ const GovernanceContext = createContext<GovernanceContextType | undefined>(undef
 export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, role } = useAuth();
 
-  const [parameters, setParameters] = useState<BusinessParameter[]>(INITIAL_BUSINESS_PARAMETERS);
-  const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>(INITIAL_FEATURE_FLAGS);
-  const [permissionRules, setPermissionRules] = useState<PermissionRule[]>(PERMISSION_RULES);
-  const [delegations, setDelegations] = useState<AdminDelegation[]>(INITIAL_DELEGATIONS);
-  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(INITIAL_AUDIT_EVENTS);
+  const [parameters, setParametersState] = useState<BusinessParameter[]>(() =>
+    getStoredJson(STORAGE_KEYS.PARAMETERS, INITIAL_BUSINESS_PARAMETERS)
+  );
+  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlag[]>(() =>
+    getStoredJson(STORAGE_KEYS.FEATURE_FLAGS, INITIAL_FEATURE_FLAGS)
+  );
+  const [permissionRules, setPermissionRulesState] = useState<PermissionRule[]>(() =>
+    getStoredJson(STORAGE_KEYS.PERMISSION_RULES, PERMISSION_RULES)
+  );
+  const [delegations, setDelegationsState] = useState<AdminDelegation[]>(() =>
+    getStoredJson(STORAGE_KEYS.DELEGATIONS, INITIAL_DELEGATIONS)
+  );
+  const [auditEvents, setAuditEventsState] = useState<AuditEvent[]>(() =>
+    getStoredJson(STORAGE_KEYS.AUDIT_EVENTS, INITIAL_AUDIT_EVENTS)
+  );
   const [policeExportSummary, setPoliceExportSummary] = useState<PoliceResidenceExportSummary>(
     INITIAL_POLICE_EXPORT_SUMMARY
   );
+
+  const setParameters = (updater: React.SetStateAction<BusinessParameter[]>) => {
+    setParametersState((prev) => {
+      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
+      persistJson(STORAGE_KEYS.PARAMETERS, next);
+      window.dispatchEvent(new CustomEvent('hswrms_governance_updated', { detail: { type: 'parameters' } }));
+      return next;
+    });
+  };
+
+  const setFeatureFlags = (updater: React.SetStateAction<FeatureFlag[]>) => {
+    setFeatureFlagsState((prev) => {
+      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
+      persistJson(STORAGE_KEYS.FEATURE_FLAGS, next);
+      window.dispatchEvent(new CustomEvent('hswrms_governance_updated', { detail: { type: 'flags' } }));
+      return next;
+    });
+  };
+
+  const setPermissionRules = (updater: React.SetStateAction<PermissionRule[]>) => {
+    setPermissionRulesState((prev) => {
+      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
+      persistJson(STORAGE_KEYS.PERMISSION_RULES, next);
+      window.dispatchEvent(new CustomEvent('hswrms_governance_updated', { detail: { type: 'permissions' } }));
+      return next;
+    });
+  };
+
+  const setDelegations = (updater: React.SetStateAction<AdminDelegation[]>) => {
+    setDelegationsState((prev) => {
+      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
+      persistJson(STORAGE_KEYS.DELEGATIONS, next);
+      window.dispatchEvent(new CustomEvent('hswrms_governance_updated', { detail: { type: 'delegations' } }));
+      return next;
+    });
+  };
+
+  const setAuditEvents = (updater: React.SetStateAction<AuditEvent[]>) => {
+    setAuditEventsState((prev) => {
+      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
+      persistJson(STORAGE_KEYS.AUDIT_EVENTS, next);
+      window.dispatchEvent(new CustomEvent('hswrms_audit_events_updated'));
+      window.dispatchEvent(new CustomEvent('hswrms_governance_updated', { detail: { type: 'audit' } }));
+      return next;
+    });
+  };
+
+  const refreshGovernanceData = () => {
+    setParametersState(getStoredJson(STORAGE_KEYS.PARAMETERS, INITIAL_BUSINESS_PARAMETERS));
+    setFeatureFlagsState(getStoredJson(STORAGE_KEYS.FEATURE_FLAGS, INITIAL_FEATURE_FLAGS));
+    setPermissionRulesState(getStoredJson(STORAGE_KEYS.PERMISSION_RULES, PERMISSION_RULES));
+    setDelegationsState(getStoredJson(STORAGE_KEYS.DELEGATIONS, INITIAL_DELEGATIONS));
+    setAuditEventsState(getStoredJson(STORAGE_KEYS.AUDIT_EVENTS, INITIAL_AUDIT_EVENTS));
+  };
+
+  // Cross-tab and external sync listener
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.newValue) return;
+      try {
+        if (e.key === STORAGE_KEYS.PARAMETERS) {
+          setParametersState(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.DELEGATIONS) {
+          setDelegationsState(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.AUDIT_EVENTS) {
+          setAuditEventsState(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.FEATURE_FLAGS) {
+          setFeatureFlagsState(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.PERMISSION_RULES) {
+          setPermissionRulesState(JSON.parse(e.newValue));
+        }
+      } catch {}
+    };
+
+    const handleExternalGovernance = () => {
+      refreshGovernanceData();
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('hswrms_sync_request', handleExternalGovernance);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('hswrms_sync_request', handleExternalGovernance);
+    };
+  }, []);
 
   // Active delegations calculation
   const now = new Date();
@@ -418,7 +543,8 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         triggerPoliceExport,
         hasCapability,
         activeDelegations,
-        managerDelegatedCapabilities
+        managerDelegatedCapabilities,
+        refreshGovernanceData
       }}
     >
       {children}

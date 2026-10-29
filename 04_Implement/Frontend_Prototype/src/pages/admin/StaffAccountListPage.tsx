@@ -288,8 +288,8 @@ export const StaffAccountListPage: React.FC = () => {
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '11px',
                       fontWeight: 600,
-                      backgroundColor: staff.status === 'active' ? '#eaf3ed' : '#fbeeed',
-                      color: staff.status === 'active' ? 'var(--accent-forest)' : 'var(--danger)'
+                      backgroundColor: staff.status === 'active' ? '#7FFFD4' : '#fbeeed',
+                      color: staff.status === 'active' ? '#004d40' : 'var(--danger)'
                     }}>
                       {staff.status === 'active' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
                       {staff.status.toUpperCase()}

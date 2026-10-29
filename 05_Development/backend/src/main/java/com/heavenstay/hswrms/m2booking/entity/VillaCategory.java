@@ -7,12 +7,15 @@ import java.math.BigDecimal;
 @Table(name = "VillaCategory", schema = "dbo")
 public class VillaCategory {
 
+    public static final String ACTIVE = "ACTIVE";
+    public static final String INACTIVE = "INACTIVE";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "villa_category_id")
     private Integer villaCategoryId;
 
-    @Column(name = "category_name", nullable = false, unique = true, length = 120)
+    @Column(name = "category_name", nullable = false, length = 100)
     private String categoryName;
 
     @Column(name = "max_occupancy", nullable = false)
@@ -22,7 +25,7 @@ public class VillaCategory {
     private BigDecimal priceModifier = BigDecimal.ZERO;
 
     @Column(name = "category_status", nullable = false, length = 20)
-    private String categoryStatus = "ACTIVE";
+    private String categoryStatus = ACTIVE;
 
     @Column(name = "inventory_count", nullable = false)
     private Integer inventoryCount = 0;
@@ -48,7 +51,43 @@ public class VillaCategory {
     @Column(name = "eligible_packages", length = 250)
     private String eligiblePackages;
 
+    // Transient attributes for UI presentation without SQL Server physical column
+    @Transient
+    private BigDecimal basePrice = BigDecimal.valueOf(3500000);
+
+    @Transient
+    private String bedType = "1 Giường King";
+
+    @Transient
+    private Integer maxAdults = 2;
+
+    @Transient
+    private Integer maxChildren = 1;
+
+    @Transient
+    private String image;
+
+    @Transient
+    private String highlights;
+
     public VillaCategory() {
+    }
+
+    public VillaCategory(String categoryName, int maxOccupancy, BigDecimal priceModifier, String categoryStatus,
+                         int inventoryCount, int bedroomCount, String bedroomDescription, String areaDescription,
+                         boolean hasPrivatePool, String poolDescription, String featuresAndAmenities, String eligiblePackages) {
+        this.categoryName = categoryName;
+        this.maxOccupancy = maxOccupancy;
+        this.priceModifier = priceModifier != null ? priceModifier : BigDecimal.ZERO;
+        this.categoryStatus = categoryStatus != null ? categoryStatus : ACTIVE;
+        this.inventoryCount = inventoryCount;
+        this.bedroomCount = bedroomCount;
+        this.bedroomDescription = bedroomDescription;
+        this.areaDescription = areaDescription;
+        this.hasPrivatePool = hasPrivatePool;
+        this.poolDescription = poolDescription;
+        this.featuresAndAmenities = featuresAndAmenities;
+        this.eligiblePackages = eligiblePackages;
     }
 
     public Integer getVillaCategoryId() {
@@ -127,6 +166,10 @@ public class VillaCategory {
         return hasPrivatePool;
     }
 
+    public boolean isHasPrivatePool() {
+        return hasPrivatePool != null && hasPrivatePool;
+    }
+
     public void setHasPrivatePool(Boolean hasPrivatePool) {
         this.hasPrivatePool = hasPrivatePool;
     }
@@ -153,5 +196,53 @@ public class VillaCategory {
 
     public void setEligiblePackages(String eligiblePackages) {
         this.eligiblePackages = eligiblePackages;
+    }
+
+    public BigDecimal getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(BigDecimal basePrice) {
+        this.basePrice = basePrice;
+    }
+
+    public String getBedType() {
+        return bedType;
+    }
+
+    public void setBedType(String bedType) {
+        this.bedType = bedType;
+    }
+
+    public Integer getMaxAdults() {
+        return maxAdults;
+    }
+
+    public void setMaxAdults(Integer maxAdults) {
+        this.maxAdults = maxAdults;
+    }
+
+    public Integer getMaxChildren() {
+        return maxChildren;
+    }
+
+    public void setMaxChildren(Integer maxChildren) {
+        this.maxChildren = maxChildren;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public String getHighlights() {
+        return highlights;
+    }
+
+    public void setHighlights(String highlights) {
+        this.highlights = highlights;
     }
 }

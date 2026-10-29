@@ -1,5 +1,6 @@
 package com.heavenstay.hswrms.security;
 
+import com.heavenstay.hswrms.m1identity.entity.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
