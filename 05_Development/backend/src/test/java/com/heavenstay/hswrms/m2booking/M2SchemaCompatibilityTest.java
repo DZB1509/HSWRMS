@@ -184,6 +184,7 @@ public class M2SchemaCompatibilityTest {
         CustomerProfile savedProfile = customerProfileRepository.saveAndFlush(profile);
 
         RetreatPackage pkg = new RetreatPackage();
+        pkg.setPackageCode("PKG-TEST-002");
         pkg.setPackageName("Quick Detox 2D1N");
         pkg.setDurationNights(1);
         pkg.setBasePrice(new BigDecimal("5000000.00"));
@@ -225,6 +226,7 @@ public class M2SchemaCompatibilityTest {
     void testSpaTreatmentPackageBridgeRelation() {
         // Setup package
         RetreatPackage pkg = new RetreatPackage();
+        pkg.setPackageCode("PKG-TEST-003");
         pkg.setPackageName("Spa Intensive Retreat");
         pkg.setDurationNights(3);
         pkg.setBasePrice(new BigDecimal("12000000.00"));
@@ -263,6 +265,7 @@ public class M2SchemaCompatibilityTest {
         CustomerProfile savedProfile = customerProfileRepository.saveAndFlush(profile);
 
         RetreatPackage pkg = new RetreatPackage();
+        pkg.setPackageCode("PKG-TEST-004");
         pkg.setPackageName("Ultimate Ayurvedic Renewal");
         pkg.setDurationNights(7);
         pkg.setBasePrice(new BigDecimal("28000000.00"));

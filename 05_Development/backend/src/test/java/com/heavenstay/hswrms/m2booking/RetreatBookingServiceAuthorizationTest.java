@@ -51,6 +51,9 @@ public class RetreatBookingServiceAuthorizationTest {
         residenceRecordRepository = mock(ResidenceRecordRepository.class);
         customerProfileRepository = mock(CustomerProfileRepository.class);
 
+        when(bookingRepository.findByIdForUpdate(anyInt())).thenAnswer(inv -> bookingRepository.findById((Integer) inv.getArgument(0)));
+        when(villaCategoryRepository.findByIdForUpdate(anyInt())).thenAnswer(inv -> villaCategoryRepository.findById((Integer) inv.getArgument(0)));
+
         bookingService = new RetreatBookingService(
                 bookingRepository,
                 packageRepository,
@@ -256,10 +259,12 @@ public class RetreatBookingServiceAuthorizationTest {
         VillaCategory cat = new VillaCategory();
         cat.setVillaCategoryId(1);
         cat.setCategoryName("Ocean Villa");
+        cat.setInventoryCount(5);
         when(villaCategoryRepository.findById(1)).thenReturn(Optional.of(cat));
 
         BookingCalculationResponse calcRes = new BookingCalculationResponse();
         calcRes.setAvailable(true);
+        calcRes.setAvailableCount(2);
         calcRes.setTotalEstimatedAmount(new BigDecimal("12000000.00"));
         calcRes.setRequiredDepositAmount(new BigDecimal("3600000.00"));
         when(availabilityService.calculateBooking(any())).thenReturn(calcRes);

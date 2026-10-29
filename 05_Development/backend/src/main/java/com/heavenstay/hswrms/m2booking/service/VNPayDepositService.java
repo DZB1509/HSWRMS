@@ -324,7 +324,7 @@ public class VNPayDepositService {
         }
         RetreatBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking #" + bookingId + " not found"));
-        bookingService.validateBookingAccess(booking, userDetails, "generate payment for");
+        bookingService.validateBookingAccess(booking, userDetails, "generate payment URL for");
         return generateDepositUrl(bookingId, customReturnUrl, request);
     }
 

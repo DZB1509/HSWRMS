@@ -274,11 +274,23 @@ class M6AdminIntegrationTests {
     @Test
     @DisplayName("FR-M6-05: Delegation rejects invalid dates (M6-MSG-07) and non-delegable permissions (M6-MSG-06)")
     void delegationValidation() throws Exception {
+        Role managerRole = roleRepository.findByRoleNameIgnoreCase("Manager")
+                .orElseGet(() -> roleRepository.save(new Role("Manager", "Operations Manager")));
+        User manager = userRepository.findByEmail("manager.delegation.test@heavenstay.com")
+                .orElseGet(() -> {
+                    User u = new User("Delegation Manager", "manager.delegation.test@heavenstay.com", passwordEncoder.encode("Manager@123456"));
+                    u.setAccountStatus("ACTIVE");
+                    u.setEmailVerified(true);
+                    u = userRepository.save(u);
+                    userRoleRepository.save(new UserRole(u, managerRole));
+                    return u;
+                });
+
         Instant now = Instant.now();
         Instant past = now.minus(2, ChronoUnit.HOURS);
 
         // Date valid_until <= valid_from
-        DelegationCreateRequest badDates = new DelegationCreateRequest(2, List.of(1), now, past);
+        DelegationCreateRequest badDates = new DelegationCreateRequest(manager.getUserId(), List.of(1), now, past);
         mockMvc.perform(post("/api/v1/admin/delegations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)

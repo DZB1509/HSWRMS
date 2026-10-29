@@ -18,6 +18,9 @@ public class BookingAuditService {
     }
 
     public void record(Integer actorUserId, String action, String targetDataType, String accessStatus) {
+        if (jdbc == null) {
+            return;
+        }
         jdbc.update("INSERT INTO dbo.AuditLog (actor_user_id, action, target_data_type, access_status) VALUES (?, ?, ?, ?)",
                 actorUserId, truncate(action, 150), truncate(targetDataType, 100), truncate(accessStatus, 50));
     }

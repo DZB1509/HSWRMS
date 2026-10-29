@@ -98,6 +98,9 @@ public class BookingPolicyService {
     }
 
     private String readFromSystemConfiguration(String key) {
+        if (jdbcTemplate == null) {
+            return null;
+        }
         try {
             List<String> rows = jdbcTemplate.queryForList(
                     "SELECT param_value FROM dbo.SystemConfiguration WHERE param_key = ?", String.class, key);

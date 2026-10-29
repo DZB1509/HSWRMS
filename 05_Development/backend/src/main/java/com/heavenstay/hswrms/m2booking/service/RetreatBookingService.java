@@ -434,6 +434,9 @@ public class RetreatBookingService {
     }
 
     public BookingSummaryResponse getBookingDetail(Integer bookingId, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Authentication required to view booking.");
+        }
         RetreatBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
         validateBookingAccess(booking, userDetails, "view");
@@ -441,6 +444,9 @@ public class RetreatBookingService {
     }
 
     public BookingSummaryResponse cancelBooking(Integer bookingId, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Authentication required to cancel booking.");
+        }
         RetreatBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
         validateBookingAccess(booking, userDetails, "cancel");
@@ -453,7 +459,8 @@ public class RetreatBookingService {
         if (userDetails == null || userDetails.getUserId() == null) {
             throw new AccessDeniedException("Authentication required.");
         }
-        return resolveCustomerProfileId(userDetails.getUserId());
+        return customerIdentityPort.findProfileIdByUserId(userDetails.getUserId())
+                .orElseThrow(() -> new AccessDeniedException("Access denied: Customer profile not found for user #" + userDetails.getUserId()));
     }
 
     private boolean isStaffOrAdmin(CustomUserDetails userDetails) {
