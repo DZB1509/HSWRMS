@@ -116,6 +116,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register/sso").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/verify-email").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/auth/dev/**").permitAll()
 
                         // Public package catalog from M1: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/packages", "/api/v1/packages/**").permitAll()

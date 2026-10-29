@@ -92,7 +92,6 @@ BEGIN
     SET treatment_name = N'Massage Đá Nóng Núi Lửa Himalaya (Himalayan Hot Stone)',
         category = N'Body Massage',
         duration_minutes = 90,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1650000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_STANDARD, MASSAGE_VIP (Cần HEATED_STONE_TRAY)',
@@ -110,7 +109,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-MASS-01', N'Massage Đá Nóng Núi Lửa Himalaya (Himalayan Hot Stone)', N'Body Massage', 90, N'Phút (Minutes)',
+        'SPA-MASS-01', N'Massage Đá Nóng Núi Lửa Himalaya (Himalayan Hot Stone)', N'Body Massage', 90,
         1650000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_STANDARD, MASSAGE_VIP (Cần HEATED_STONE_TRAY)', N'QUAL_HOT_STONE_MASSAGE',
         N'QUAL_HOT_STONE_MASSAGE', N'Sốt cao, vết thương hở, bệnh ngoài da lây nhiễm, viêm tắc tĩnh mạch', N'Huyết áp cao (cần chỉnh nhiệt độ đá dưới 45°C), da mỏng nhạy cảm', 'ACTIVE'
     );
@@ -124,7 +123,6 @@ BEGIN
     SET treatment_name = N'Massage Cơ Sâu Bấm Huyệt (Deep Tissue Massage)',
         category = N'Body Massage',
         duration_minutes = 75,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1450000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_STANDARD, MASSAGE_VIP (Cần ADJUSTABLE_TREATMENT_BED)',
@@ -142,7 +140,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-MASS-02', N'Massage Cơ Sâu Bấm Huyệt (Deep Tissue Massage)', N'Body Massage', 75, N'Phút (Minutes)',
+        'SPA-MASS-02', N'Massage Cơ Sâu Bấm Huyệt (Deep Tissue Massage)', N'Body Massage', 75,
         1450000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_STANDARD, MASSAGE_VIP (Cần ADJUSTABLE_TREATMENT_BED)', N'QUAL_DEEP_TISSUE_TRIGGER_POINT',
         N'QUAL_DEEP_TISSUE_TRIGGER_POINT', N'Phụ nữ mang thai, loãng xương nặng giai đoạn 3, chấn thương mới dưới 48h', N'Thoát vị đĩa đệm (tránh tác động lực ép vuông góc trực tiếp lên đốt sống L4-L5)', 'ACTIVE'
     );
@@ -156,7 +154,6 @@ BEGIN
     SET treatment_name = N'Trị Liệu Dẫn Lưu Bạch Huyết (Lymphatic Drainage)',
         category = N'Detox Therapy',
         duration_minutes = 75,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1550000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_STANDARD, MASSAGE_VIP',
@@ -174,7 +171,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-MASS-03', N'Trị Liệu Dẫn Lưu Bạch Huyết (Lymphatic Drainage)', N'Detox Therapy', 75, N'Phút (Minutes)',
+        'SPA-MASS-03', N'Trị Liệu Dẫn Lưu Bạch Huyết (Lymphatic Drainage)', N'Detox Therapy', 75,
         1550000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_STANDARD, MASSAGE_VIP', N'QUAL_MANUAL_LYMPHATIC_DRAINAGE',
         N'QUAL_MANUAL_LYMPHATIC_DRAINAGE', N'Suy tim sung huyết cấp, huyết khối tĩnh mạch sâu (DVT), ung thư đang hóa trị', N'Hạ huyết áp tư thế, viêm hạch lành tính (cần dùng lực siêu nhẹ < 4kPa)', 'ACTIVE'
     );
@@ -188,7 +185,6 @@ BEGIN
     SET treatment_name = N'Bấm Huyệt Y Học Cổ Truyền (Vietnamese Acupressure)',
         category = N'Traditional Therapy',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1150000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_STANDARD, MASSAGE_VIP',
@@ -206,7 +202,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-MASS-04', N'Bấm Huyệt Y Học Cổ Truyền (Vietnamese Acupressure)', N'Traditional Therapy', 60, N'Phút (Minutes)',
+        'SPA-MASS-04', N'Bấm Huyệt Y Học Cổ Truyền (Vietnamese Acupressure)', N'Traditional Therapy', 60,
         1150000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_STANDARD, MASSAGE_VIP', N'QUAL_TRADITIONAL_ACUPRESSURE',
         N'QUAL_TRADITIONAL_ACUPRESSURE', N'Gãy xương chưa liền sẹo, vùng da viêm loét hoại tử, xuất huyết dưới da', N'Phụ nữ có thai (tuyệt đối không bấm huyệt Hợp Cốc, Tam Âm Giao, Kiên Tỉnh)', 'ACTIVE'
     );
@@ -220,7 +216,6 @@ BEGIN
     SET treatment_name = N'Trị Liệu Thảo Dược Cổ Truyền (Herbal Compress Therapy)',
         category = N'Herbal Therapy',
         duration_minutes = 75,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1350000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_STANDARD, MASSAGE_VIP (Cần HERBAL_COMPRESS_STEAMER)',
@@ -238,7 +233,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-MASS-05', N'Trị Liệu Thảo Dược Cổ Truyền (Herbal Compress Therapy)', N'Herbal Therapy', 75, N'Phút (Minutes)',
+        'SPA-MASS-05', N'Trị Liệu Thảo Dược Cổ Truyền (Herbal Compress Therapy)', N'Herbal Therapy', 75,
         1350000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_STANDARD, MASSAGE_VIP (Cần HERBAL_COMPRESS_STEAMER)', N'QUAL_HERBAL_COMPRESS_THERAPY',
         N'QUAL_HERBAL_COMPRESS_THERAPY', N'Dị ứng cấp tính với tinh dầu gừng, quế, ngải cứu; mất cảm giác nhiệt độ ngoài da', N'Da mỏng sau điều trị laser, người tiểu đường mất cảm giác ngoại biên', 'ACTIVE'
     );
@@ -252,7 +247,6 @@ BEGIN
     SET treatment_name = N'Massage Mẹ Bầu An Yên (Nurturing Prenatal Massage)',
         category = N'Maternal Care',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1250000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_VIP (Cần PRENATAL_U_PILLOW)',
@@ -270,7 +264,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-MASS-06', N'Massage Mẹ Bầu An Yên (Nurturing Prenatal Massage)', N'Maternal Care', 60, N'Phút (Minutes)',
+        'SPA-MASS-06', N'Massage Mẹ Bầu An Yên (Nurturing Prenatal Massage)', N'Maternal Care', 60,
         1250000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_VIP (Cần PRENATAL_U_PILLOW)', N'QUAL_PRENATAL_MASSAGE',
         N'QUAL_PRENATAL_MASSAGE', N'Mang thai tam cá nguyệt đầu (dưới 12 tuần), dọa sảy thai, tiền sản giật', N'[PENDING_MEDICAL_REVIEW]: Phù chân nhiều (chỉ xoa vuốt nhẹ hướng tâm, không ấn huyệt mắt cá chân). Cần BS Sản khoa/Chuyên môn y tế xác minh phạm vi thao tác.', 'ACTIVE'
     );
@@ -284,7 +278,6 @@ BEGIN
     SET treatment_name = N'Liệu Pháp Chuông Xoay Tây Tạng (Tibetan Sound Bath)',
         category = N'Energy Healing',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1200000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'SOUND_SANCTUARY (Cần ACOUSTICALLY_ISOLATED)',
@@ -302,7 +295,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-HEAL-01', N'Liệu Pháp Chuông Xoay Tây Tạng (Tibetan Sound Bath)', N'Energy Healing', 60, N'Phút (Minutes)',
+        'SPA-HEAL-01', N'Liệu Pháp Chuông Xoay Tây Tạng (Tibetan Sound Bath)', N'Energy Healing', 60,
         1200000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'SOUND_SANCTUARY (Cần ACOUSTICALLY_ISOLATED)', N'QUAL_TIBETAN_SOUND_HEALING',
         N'QUAL_TIBETAN_SOUND_HEALING', N'Người gắn máy tạo nhịp tim (Pacemaker), người có tiền sử động kinh do rung động', N'Có cấy ghép kim loại lớn trong cơ thể (không đặt chuông gõ trực tiếp lên vị trí đó)', 'ACTIVE'
     );
@@ -316,7 +309,6 @@ BEGIN
     SET treatment_name = N'Nhỏ Dầu Ấm Luân Xa Trán (Ayurvedic Shirodhara)',
         category = N'Ayurveda Therapy',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1750000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'AYURVEDA_ROOM (Cần DRONI_TABLE, HANGING_BOWL)',
@@ -334,7 +326,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-HEAL-02', N'Nhỏ Dầu Ấm Luân Xa Trán (Ayurvedic Shirodhara)', N'Ayurveda Therapy', 60, N'Phút (Minutes)',
+        'SPA-HEAL-02', N'Nhỏ Dầu Ấm Luân Xa Trán (Ayurvedic Shirodhara)', N'Ayurveda Therapy', 60,
         1750000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'AYURVEDA_ROOM (Cần DRONI_TABLE, HANGING_BOWL)', N'QUAL_AYURVEDA_SHIRODHARA',
         N'QUAL_AYURVEDA_SHIRODHARA', N'Chấn thương sọ não chưa phục hồi, viêm tai giữa chảy mủ, cảm lạnh sốt cao', N'Huyết áp quá thấp, chứng sợ không gian kín khi nhắm mắt (Claustrophobia)', 'ACTIVE'
     );
@@ -348,7 +340,6 @@ BEGIN
     SET treatment_name = N'Bấm Huyệt Thải Độc Bụng (Chi Nei Tsang Abdominal)',
         category = N'Holistic Detox',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1300000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MASSAGE_STANDARD, MASSAGE_VIP',
@@ -366,7 +357,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-HEAL-03', N'Bấm Huyệt Thải Độc Bụng (Chi Nei Tsang Abdominal)', N'Holistic Detox', 60, N'Phút (Minutes)',
+        'SPA-HEAL-03', N'Bấm Huyệt Thải Độc Bụng (Chi Nei Tsang Abdominal)', N'Holistic Detox', 60,
         1300000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MASSAGE_STANDARD, MASSAGE_VIP', N'QUAL_CHI_NEI_TSANG',
         N'QUAL_CHI_NEI_TSANG', N'Vừa phẫu thuật ổ bụng dưới 6 tháng, phình động mạch chủ bụng, đang mang thai', N'Vừa ăn no dưới 2 tiếng (phải đợi tiêu hóa hết), đang đặt vòng tránh thai mới', 'ACTIVE'
     );
@@ -380,7 +371,6 @@ BEGIN
     SET treatment_name = N'Nâng Cơ Mặt Guasha Ngọc Thạch (Jade Guasha Facelift)',
         category = N'Facial Care',
         duration_minutes = 75,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1400000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'FACIAL_SPECIALIZED',
@@ -398,7 +388,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-FACE-01', N'Nâng Cơ Mặt Guasha Ngọc Thạch (Jade Guasha Facelift)', N'Facial Care', 75, N'Phút (Minutes)',
+        'SPA-FACE-01', N'Nâng Cơ Mặt Guasha Ngọc Thạch (Jade Guasha Facelift)', N'Facial Care', 75,
         1400000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'FACIAL_SPECIALIZED', N'QUAL_FACIAL_GUASHA',
         N'QUAL_FACIAL_GUASHA', N'Mụn bọc viêm mủ diện rộng, da trầy xước lở loét, vừa phẫu thuật thẩm mỹ mặt', N'Vừa tiêm Botox/Filler dưới 14 ngày (tránh tác động lực gây dịch chuyển thuốc)', 'ACTIVE'
     );
@@ -412,7 +402,6 @@ BEGIN
     SET treatment_name = N'Cấp Ẩm Phục Hồi Tế Bào Da (Deep Hydration & Cellular Repair)',
         category = N'Facial Care',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1250000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'FACIAL_SPECIALIZED (Cần ELECTROPHORESIS_DEVICE)',
@@ -430,7 +419,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-FACE-02', N'Cấp Ẩm Phục Hồi Tế Bào Da (Deep Hydration & Cellular Repair)', N'Facial Care', 60, N'Phút (Minutes)',
+        'SPA-FACE-02', N'Cấp Ẩm Phục Hồi Tế Bào Da (Deep Hydration & Cellular Repair)', N'Facial Care', 60,
         1250000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'FACIAL_SPECIALIZED (Cần ELECTROPHORESIS_DEVICE)', N'QUAL_ADVANCED_SKINCARE',
         N'QUAL_ADVANCED_SKINCARE', N'Nhiễm trùng Herpes môi đang bùng phát, dị ứng với mọi loại mỹ phẩm', N'Tiền sử dị ứng với chiết xuất thực vật (cần kiểm tra trước tại vùng da cổ tay)', 'ACTIVE'
     );
@@ -444,7 +433,6 @@ BEGIN
     SET treatment_name = N'Trẻ Hóa Tế Bào Tảo Biển Hữu Cơ (Organic Marine Collagen)',
         category = N'Anti-Aging Facial',
         duration_minutes = 75,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1600000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'FACIAL_SPECIALIZED (Cần OXYGEN_SPRAY_MACHINE)',
@@ -462,7 +450,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-FACE-03', N'Trẻ Hóa Tế Bào Tảo Biển Hữu Cơ (Organic Marine Collagen)', N'Anti-Aging Facial', 75, N'Phút (Minutes)',
+        'SPA-FACE-03', N'Trẻ Hóa Tế Bào Tảo Biển Hữu Cơ (Organic Marine Collagen)', N'Anti-Aging Facial', 75,
         1600000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'FACIAL_SPECIALIZED (Cần OXYGEN_SPRAY_MACHINE)', N'QUAL_ADVANCED_FACIAL_AESTHETICS',
         N'QUAL_ADVANCED_FACIAL_AESTHETICS', N'Dị ứng nặng với hải sản, i-ốt hoặc tảo biển đỏ/nâu', N'Làn da nhạy cảm mỏng manh (giảm nồng độ AHA/Enzyme tẩy tế bào chết ban đầu)', 'ACTIVE'
     );
@@ -476,7 +464,6 @@ BEGIN
     SET treatment_name = N'Tẩy Tế Bào Chết Cà Phê & Dừa (Dak Lak Coffee & Coconut Polish)',
         category = N'Body Scrub',
         duration_minutes = 45,
-        duration_unit = N'Phút (Minutes)',
         base_price = 850000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'WET_ROOM (Cần STANDING_SHOWER)',
@@ -494,7 +481,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-BODY-01', N'Tẩy Tế Bào Chết Cà Phê & Dừa (Dak Lak Coffee & Coconut Polish)', N'Body Scrub', 45, N'Phút (Minutes)',
+        'SPA-BODY-01', N'Tẩy Tế Bào Chết Cà Phê & Dừa (Dak Lak Coffee & Coconut Polish)', N'Body Scrub', 45,
         850000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'WET_ROOM (Cần STANDING_SHOWER)', N'QUAL_BODY_SCRUB_POLISH',
         N'QUAL_BODY_SCRUB_POLISH', N'Da đang cháy nắng rát đỏ, vết thương chưa cắt chỉ, chàm vảy nến bùng phát', N'Vừa waxing lông toàn thân dưới 24h (tránh kích ứng rát da)', 'ACTIVE'
     );
@@ -508,7 +495,6 @@ BEGIN
     SET treatment_name = N'Ủ Khoáng Nóng Thảo Dược Núi Cao (Warm Mineral Body Wrap)',
         category = N'Body Wrap',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 1100000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'BODY_WRAP_ROOM (Cần HEATED_WRAP_BED)',
@@ -526,7 +512,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-BODY-02', N'Ủ Khoáng Nóng Thảo Dược Núi Cao (Warm Mineral Body Wrap)', N'Body Wrap', 60, N'Phút (Minutes)',
+        'SPA-BODY-02', N'Ủ Khoáng Nóng Thảo Dược Núi Cao (Warm Mineral Body Wrap)', N'Body Wrap', 60,
         1100000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'BODY_WRAP_ROOM (Cần HEATED_WRAP_BED)', N'QUAL_BODY_WRAP_THERMAL',
         N'QUAL_BODY_WRAP_THERMAL', N'Suy giãn tĩnh mạch chi dưới mức độ 3, bệnh tim nặng, sốt cao', N'Chứng sợ bị quấn chặt kín (Claustrophobia) - cần nới lỏng vùng ngực', 'ACTIVE'
     );
@@ -540,7 +526,6 @@ BEGIN
     SET treatment_name = N'Thủy Trị Liệu Vòi Phun Vichy Shower (Vichy Rain Therapy)',
         category = N'Hydrotherapy',
         duration_minutes = 45,
-        duration_unit = N'Phút (Minutes)',
         base_price = 950000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'VICHY_SHOWER_ROOM (Cần VICHY_7_NOZZLE_SYSTEM)',
@@ -558,7 +543,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-HYDRO-01', N'Thủy Trị Liệu Vòi Phun Vichy Shower (Vichy Rain Therapy)', N'Hydrotherapy', 45, N'Phút (Minutes)',
+        'SPA-HYDRO-01', N'Thủy Trị Liệu Vòi Phun Vichy Shower (Vichy Rain Therapy)', N'Hydrotherapy', 45,
         950000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'VICHY_SHOWER_ROOM (Cần VICHY_7_NOZZLE_SYSTEM)', N'QUAL_HYDROTHERAPY',
         N'QUAL_HYDROTHERAPY', N'Viêm tai giữa chưa lành màng nhĩ, bệnh ngoài da truyền nhiễm, say rượu', N'Huyết áp dao động thất thường (cần duy trì nhiệt độ nước ấm ổn định 37°C)', 'ACTIVE'
     );
@@ -572,7 +557,6 @@ BEGIN
     SET treatment_name = N'Ngâm Bồn Khoáng Thảo Dược Dao Đỏ (Red Dao Herbal Bath)',
         category = N'Hydrotherapy',
         duration_minutes = 45,
-        duration_unit = N'Phút (Minutes)',
         base_price = 800000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'JACUZZI_ROOM (Cần PRIVATE_JACUZZI)',
@@ -590,7 +574,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-HYDRO-02', N'Ngâm Bồn Khoáng Thảo Dược Dao Đỏ (Red Dao Herbal Bath)', N'Hydrotherapy', 45, N'Phút (Minutes)',
+        'SPA-HYDRO-02', N'Ngâm Bồn Khoáng Thảo Dược Dao Đỏ (Red Dao Herbal Bath)', N'Hydrotherapy', 45,
         800000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'JACUZZI_ROOM (Cần PRIVATE_JACUZZI)', N'QUAL_HYDROTHERAPY',
         N'QUAL_HYDROTHERAPY', N'Phụ nữ đang trong chu kỳ kinh nguyệt, vết thương nhiễm trùng hở', N'Huyết áp thấp (giới hạn thời gian ngâm bồn không quá 20 phút liên tục)', 'ACTIVE'
     );
@@ -604,7 +588,6 @@ BEGIN
     SET treatment_name = N'Yoga Trị Liệu Chỉnh Trục Cột Sống 1-1 (Therapeutic Spine Yoga)',
         category = N'Yoga & Movement',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 900000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'YOGA_STUDIO',
@@ -622,7 +605,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-YOGA-01', N'Yoga Trị Liệu Chỉnh Trục Cột Sống 1-1 (Therapeutic Spine Yoga)', N'Yoga & Movement', 60, N'Phút (Minutes)',
+        'SPA-YOGA-01', N'Yoga Trị Liệu Chỉnh Trục Cột Sống 1-1 (Therapeutic Spine Yoga)', N'Yoga & Movement', 60,
         900000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'YOGA_STUDIO', N'QUAL_YOGA_THERAPY_RYT200_500',
         N'QUAL_YOGA_THERAPY_RYT200_500', N'Thoát vị đĩa đệm thể cấp tính đang chèn ép tủy đau liệt, gãy xương chưa liền', N'Huyết áp cao không kiểm soát (tránh tư thế dốc ngược đầu Downward Dog quá lâu)', 'ACTIVE'
     );
@@ -636,7 +619,6 @@ BEGIN
     SET treatment_name = N'Hít Thở Năng Lượng & Thiền Định (Pranayama & Meditation)',
         category = N'Mindfulness',
         duration_minutes = 60,
-        duration_unit = N'Phút (Minutes)',
         base_price = 850000,
         pricing_rule = N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).',
         room_compatibility = N'MEDITATION_ROOM (Cần QUIET_MEDITATION_SPACE)',
@@ -654,7 +636,7 @@ BEGIN
         base_price, pricing_rule, room_compatibility, required_qualification_code,
         therapist_qualification, contraindications, precautions, treatment_status
     ) VALUES (
-        'SPA-YOGA-02', N'Hít Thở Năng Lượng & Thiền Định (Pranayama & Meditation)', N'Mindfulness', 60, N'Phút (Minutes)',
+        'SPA-YOGA-02', N'Hít Thở Năng Lượng & Thiền Định (Pranayama & Meditation)', N'Mindfulness', 60,
         850000, N'Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).', N'MEDITATION_ROOM (Cần QUIET_MEDITATION_SPACE)', N'QUAL_MINDFULNESS_COACH',
         N'QUAL_MINDFULNESS_COACH', N'Không có chống chỉ định tuyệt đối', N'Khách có tiền sử hen suyễn cấp (tránh kỹ thuật thở mạnh Kapalabhati kéo dài)', 'ACTIVE'
     );

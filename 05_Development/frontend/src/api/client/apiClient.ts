@@ -5,6 +5,11 @@ export const API_BASE_URL: string =
 
 const AUTH_TOKEN_KEY = 'hswrms_jwt_token';
 
+// Embedded dev token for presentation preview (Eleanor Vance - User 7, all roles: CUSTOMER, RECEPTIONIST, MANAGER, ADMIN)
+const DEFAULT_DEV_TOKEN =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlbGVhbm9yLnZhbmNlQGhlYXZlbnN0YXkucmVzb3J0IiwidXNlcklkIjo3LCJmdWxsTmFtZSI6IkVsZWFub3IgVmFuY2UiLCJyb2xlcyI6WyJST0xFX0NVU1RPTUVSIiwiUk9MRV9SRUNFUFRJT05JU1QiLCJST0xFX01BTkFHRVIiLCJST0xFX0FETUlOIl0sImlhdCI6MTc5MjMzNjY0OCwiZXhwIjoxODIzODcyNjQ4fQ.ncjSTel6e_GSSm8F3u8V1E8hR67C0fywvmal83gi-tk';
+
+
 export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null>;
 }
@@ -13,7 +18,7 @@ export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
     return null;
   }
-  return sessionStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_TOKEN_KEY);
+  return sessionStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_TOKEN_KEY) || DEFAULT_DEV_TOKEN;
 };
 
 export const setAuthToken = (token: string, persist: boolean = false): void => {

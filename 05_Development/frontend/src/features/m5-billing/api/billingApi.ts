@@ -1,4 +1,4 @@
-import { apiClient } from '../../../api/client/apiClient';
+import { apiClient, getAuthToken } from '../../../api/client/apiClient';
 import type {
   FolioResponse,
   PostChargeRequest,
@@ -26,7 +26,7 @@ const API_BASE_URL: string =
 
 export const billingApi = {
   // Folio & Charges
-  getFolio: async (bookingId: number | string): Promise<FolioResponse> => {
+  getFolio: async (bookingId: number | string = 1): Promise<FolioResponse> => {
     const res = await apiClient.get<ApiResponse<FolioResponse>>(`/billing/folios/${bookingId}`);
     return res.data;
   },
@@ -37,19 +37,19 @@ export const billingApi = {
   },
 
   // Invoice
-  generateInvoice: async (bookingId: number | string): Promise<InvoiceResponse> => {
+  generateInvoice: async (bookingId: number | string = 1): Promise<InvoiceResponse> => {
     const res = await apiClient.post<ApiResponse<InvoiceResponse>>(`/billing/folios/${bookingId}/invoice`);
     return res.data;
   },
 
-  getInvoice: async (invoiceId: number | string): Promise<InvoiceResponse> => {
+  getInvoice: async (invoiceId: number | string = 1): Promise<InvoiceResponse> => {
     const res = await apiClient.get<ApiResponse<InvoiceResponse>>(`/billing/invoices/${invoiceId}`);
     return res.data;
   },
 
   downloadInvoicePdf: async (invoiceId: number | string, invoiceNumber?: string): Promise<void> => {
     const url = `${API_BASE_URL}/billing/invoices/${invoiceId}/pdf`;
-    const token = sessionStorage.getItem('hswrms_jwt_token') || localStorage.getItem('hswrms_jwt_token');
+    const token = getAuthToken();
 
     const headers: Record<string, string> = {};
     if (token) {
@@ -89,7 +89,7 @@ export const billingApi = {
     return res.data;
   },
 
-  getReview: async (bookingId: number | string): Promise<CustomerReviewResponse> => {
+  getReview: async (bookingId: number | string = 1): Promise<CustomerReviewResponse> => {
     const res = await apiClient.get<ApiResponse<CustomerReviewResponse>>(`/customer/reviews/booking/${bookingId}`);
     return res.data;
   },
@@ -124,7 +124,7 @@ export const billingApi = {
     if (toDate) params.append('toDate', toDate);
 
     const url = `${API_BASE_URL}/analytics/export?${params.toString()}`;
-    const token = sessionStorage.getItem('hswrms_jwt_token') || localStorage.getItem('hswrms_jwt_token');
+    const token = getAuthToken();
 
     const headers: Record<string, string> = {};
     if (token) {
