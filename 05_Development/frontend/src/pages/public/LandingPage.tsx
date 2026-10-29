@@ -47,8 +47,7 @@ export const LandingPage: React.FC = () => {
   // Desktop Hero Scroll Choreography (Section 7)
   useEffect(() => {
     const finePointer = window.matchMedia('(pointer: fine)').matches;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!finePointer || reducedMotion || !heroRef.current) return;
+    if (!finePointer || !heroRef.current) return;
 
     const ctx = gsap.context(() => {
       if (heroBgRef.current) {
