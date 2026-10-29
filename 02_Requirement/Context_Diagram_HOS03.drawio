@@ -1,0 +1,219 @@
+<mxfile host="65bd71144e">
+    <diagram id="ctx-dfd0-hos03" name="Context Diagram - DFD Level 0 - Xoai Aura Retreat">
+        <mxGraphModel dx="505" dy="568" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1400" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a1a2e;strokeColor=#16213e;arcSize=8;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="20" width="880" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="title_text" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;b style=&quot;font-size:18px&quot;&gt;CONTEXT DIAGRAM (DFD Level 0)&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:13px&quot;&gt;Xoai Aura Retreat — Wellness Resort &amp;amp; Spa Management System&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;color:#a0a0c0&quot;&gt;Project: SWP391-HOS-03 | Domain: Hospitality · Wellness Tourism · Healthcare · E-Commerce&lt;/span&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="28" width="800" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="P0" value="&lt;b style=&quot;font-size:16px;color:#1a237e&quot;&gt;0&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:14px&quot;&gt;Xoai Aura Retreat&lt;br&gt;Management System&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;span style=&quot;font-size:10px;color:#555&quot;&gt;Villa Booking · Spa Scheduling&lt;br&gt;Dietary Management · Billing&lt;/span&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3949ab;strokeWidth=3;fontSize=12;verticalAlign=middle;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="730" y="520" width="340" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="E1" value="&lt;b style=&quot;font-size:13px&quot;&gt;Guest&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:10px;color:#555&quot;&gt;(Customer)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;strokeWidth=2;fontSize=12;shadow=1;arcSize=20;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="200" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="E2" value="&lt;b style=&quot;font-size:13px&quot;&gt;Receptionist&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:10px;color:#555&quot;&gt;(Front Desk)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;strokeWidth=2;fontSize=12;shadow=1;arcSize=20;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="200" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="E3" value="&lt;b style=&quot;font-size:13px&quot;&gt;Spa Therapist /&lt;br&gt;Yoga Instructor&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;strokeWidth=2;fontSize=12;shadow=1;arcSize=20;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="610" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="E4" value="&lt;b style=&quot;font-size:13px&quot;&gt;F&amp;amp;B Staff / Chef&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;strokeWidth=2;fontSize=12;shadow=1;arcSize=20;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="980" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="E5" value="&lt;b style=&quot;font-size:13px&quot;&gt;System Manager&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:10px;color:#555&quot;&gt;(Admin)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;strokeWidth=2;fontSize=12;shadow=1;arcSize=20;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="980" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="S1" value="&lt;b style=&quot;font-size:12px&quot;&gt;Payment Gateway&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:9px;color:#666&quot;&gt;Stripe / VNPay / PayPal&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f9a825;strokeWidth=2;fontSize=11;shadow=1;double=1;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="170" width="200" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="S2" value="&lt;b style=&quot;font-size:12px&quot;&gt;Calendar &amp;amp;&lt;br&gt;Notification Service&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:9px;color:#666&quot;&gt;Google Calendar / SendGrid&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f9a825;strokeWidth=2;fontSize=11;shadow=1;double=1;" parent="1" vertex="1">
+                    <mxGeometry x="1490" y="580" width="210" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3" value="&lt;b style=&quot;font-size:12px&quot;&gt;Authentication Service&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:9px;color:#666&quot;&gt;Google Identity / Facebook SSO&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f9a825;strokeWidth=2;fontSize=11;shadow=1;double=1;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="910" width="220" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E1_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565c0;strokeWidth=2;entryX=0.05;entryY=0.3;entryDx=0;entryDy=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;" parent="1" source="E1" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E1_in_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Registration &amp;amp; Login Request&lt;br&gt;&#10;▸ Dietary &amp;amp; Health Profile (explicit consent)&lt;br&gt;&#10;▸ Package Booking &amp;amp; Deposit Payment&lt;br&gt;&#10;▸ Spa/Therapy Session Scheduling&lt;br&gt;&#10;▸ Daily Meal Selection &amp;amp; A-la-carte Orders&lt;br&gt;&#10;▸ Review &amp;amp; Rating Submission&lt;br&gt;&#10;▸ Data Deletion Request (Right to Erasure)&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=bottom;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#1565c0;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E1_in" vertex="1" connectable="0">
+                    <mxGeometry x="-0.15" y="-75" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E1_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2e7d32;strokeWidth=2;dashed=1;dashPattern=8 4;entryX=1;entryY=0.7;entryDx=0;entryDy=0;exitX=0.05;exitY=0.55;exitDx=0;exitDy=0;" parent="1" source="P0" target="E1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E1_out_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Booking Confirmation &amp;amp; Itinerary&lt;br&gt;&#10;▸ Available Packages (filtered)&lt;br&gt;&#10;▸ Filtered Menu (allergy-safe)&lt;br&gt;&#10;▸ Payment Receipts / Invoice&lt;br&gt;&#10;▸ Session Reminders&lt;br&gt;&#10;▸ Deletion Confirmation&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=top;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#2e7d32;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E1_out" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1" y="60" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E2_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565c0;strokeWidth=2;entryX=0.95;entryY=0.3;entryDx=0;entryDy=0;exitX=0;exitY=0.3;exitDx=0;exitDy=0;" parent="1" source="E2" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E2_in_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Check-In Request (Villa assignment + Guest ID) ◂&lt;br&gt;&#10;Villa Status Update (Available/Occupied/Maint.) ◂&lt;br&gt;&#10;Extra Spa Booking for Guest ◂&lt;br&gt;&#10;Check-Out &amp;amp; Final Payment Processing ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=bottom;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#1565c0;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E2_in" vertex="1" connectable="0">
+                    <mxGeometry x="0.1" y="-55" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E2_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2e7d32;strokeWidth=2;dashed=1;dashPattern=8 4;entryX=0;entryY=0.7;entryDx=0;entryDy=0;exitX=0.95;exitY=0.55;exitDx=0;exitDy=0;" parent="1" source="P0" target="E2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E2_out_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Expected Arrivals Dashboard ◂&lt;br&gt;&#10;Villa Status Board ◂&lt;br&gt;&#10;Consolidated Invoice ◂&lt;br&gt;&#10;Guest ID Data (encrypted) ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=top;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#2e7d32;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E2_out" vertex="1" connectable="0">
+                    <mxGeometry x="0.1" y="50" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E3_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565c0;strokeWidth=2;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;" parent="1" source="E3" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E3_in_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Session Status Update&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;(Completed / No-Show)&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=bottom;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#1565c0;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E3_in" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="-30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E3_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2e7d32;strokeWidth=2;dashed=1;dashPattern=8 4;entryX=1;entryY=0.7;entryDx=0;entryDy=0;exitX=0;exitY=0.65;exitDx=0;exitDy=0;" parent="1" source="P0" target="E3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E3_out_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Daily Working Schedule&lt;br&gt;&#10;▸ Guest Health Notes&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;(Physical treatment data ONLY — RBAC)&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=top;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#2e7d32;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E3_out" vertex="1" connectable="0">
+                    <mxGeometry x="0.1" y="30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E4_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565c0;strokeWidth=2;entryX=0.1;entryY=0.85;entryDx=0;entryDy=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;" parent="1" source="E4" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E4_in_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Meal Order Status Update&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;(Preparing → Ready for Delivery)&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=bottom;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#1565c0;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E4_in" vertex="1" connectable="0">
+                    <mxGeometry x="-0.3" y="-30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E4_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2e7d32;strokeWidth=2;dashed=1;dashPattern=8 4;entryX=1;entryY=0.7;entryDx=0;entryDy=0;exitX=0.15;exitY=1;exitDx=0;exitDy=0;" parent="1" source="P0" target="E4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E4_out_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Daily Meal Prep Dashboard&lt;br&gt;&#10;▸ Aggregated Meal Orders&lt;br&gt;&#10;▸ Food Allergy Warnings ONLY&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;(Data Minimization — masked medical history)&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=top;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#2e7d32;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E4_out" vertex="1" connectable="0">
+                    <mxGeometry x="0.2" y="30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E5_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565c0;strokeWidth=2;entryX=0.95;entryY=0.85;entryDx=0;entryDy=0;exitX=0;exitY=0.3;exitDx=0;exitDy=0;" parent="1" source="E5" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E5_in_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Staff Account &amp;amp; Role Management (RBAC) ◂&lt;br&gt;&#10;Master Data CRUD (Villas, Packages, Spa) ◂&lt;br&gt;&#10;Report Generation / Export Request ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=bottom;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#1565c0;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E5_in" vertex="1" connectable="0">
+                    <mxGeometry x="0.2" y="-30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_E5_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2e7d32;strokeWidth=2;dashed=1;dashPattern=8 4;entryX=0;entryY=0.7;entryDx=0;entryDy=0;exitX=0.9;exitY=1;exitDx=0;exitDy=0;" parent="1" source="P0" target="E5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_E5_out_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Revenue Dashboard (Pie/Bar charts) ◂&lt;br&gt;&#10;Occupancy &amp;amp; Therapist Utilization Report ◂&lt;br&gt;&#10;Excel Export Files ◂&lt;br&gt;&#10;Daily Residence Declaration Report ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=top;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#2e7d32;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_E5_out" vertex="1" connectable="0">
+                    <mxGeometry x="0.1" y="30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_S1_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#e65100;strokeWidth=2;exitX=0.45;exitY=0;exitDx=0;exitDy=0;entryX=0.4;entryY=1;entryDx=0;entryDy=0;" parent="1" source="P0" target="S1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_S1_out_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Payment Request ◂&lt;br&gt;&#10;(Deposit / Final Checkout) ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#e65100;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_S1_out" vertex="1" connectable="0">
+                    <mxGeometry x="0.2" y="-10" relative="1" as="geometry">
+                        <mxPoint x="-80" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_S1_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#e65100;strokeWidth=2;dashed=1;dashPattern=8 4;exitX=0.6;exitY=1;exitDx=0;exitDy=0;entryX=0.55;entryY=0;entryDx=0;entryDy=0;" parent="1" source="S1" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_S1_in_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ Payment Confirmation&lt;br&gt;&#10;▸ Transaction Status&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#e65100;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_S1_in" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint x="80" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_S2_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#e65100;strokeWidth=2;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;" parent="1" source="P0" target="S2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_S2_out_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Spa/Yoga Schedule Sync ◂&lt;br&gt;&#10;Email Reminder Trigger ◂&lt;br&gt;&#10;(1hr before therapy session) ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=bottom;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#e65100;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_S2_out" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1" y="-35" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_S2_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#e65100;strokeWidth=2;dashed=1;dashPattern=8 4;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=1;entryY=0.55;entryDx=0;entryDy=0;" parent="1" source="S2" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_S2_in_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;Sync Confirmation ◂&lt;br&gt;&#10;Email Delivery Status ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=top;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#e65100;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_S2_in" vertex="1" connectable="0">
+                    <mxGeometry x="0.1" y="30" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_S3_out" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#e65100;strokeWidth=2;exitX=0.45;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P0" target="S3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_S3_out_label" value="&lt;div style=&quot;text-align:right;font-size:9px;line-height:1.4&quot;&gt;&#10;SSO Auth Request ◂&lt;br&gt;&#10;Token Verification ◂&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#e65100;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_S3_out" vertex="1" connectable="0">
+                    <mxGeometry x="0.2" y="-10" relative="1" as="geometry">
+                        <mxPoint x="-80" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="F_S3_in" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#e65100;strokeWidth=2;dashed=1;dashPattern=8 4;exitX=0.6;exitY=0;exitDx=0;exitDy=0;entryX=0.55;entryY=1;entryDx=0;entryDy=0;" parent="1" source="S3" target="P0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="F_S3_in_label" value="&lt;div style=&quot;text-align:left;font-size:9px;line-height:1.4&quot;&gt;&#10;▸ OAuth Token&lt;br&gt;&#10;▸ User Identity Data&#10;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#FFFFFF;labelBorderColor=#e65100;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;rounded=1;" parent="F_S3_in" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint x="80" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="legend_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;strokeWidth=1;dashed=1;arcSize=8;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="1120" width="600" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend_title" value="&lt;b style=&quot;font-size:14px&quot;&gt;LEGEND&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="1130" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg_proc" value="System Process (Process 0)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3949ab;strokeWidth=2;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="1168" width="170" height="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg_actor" value="External Entity (Human Actor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;strokeWidth=2;fontSize=10;arcSize=20;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="1218" width="190" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg_3rd" value="External System (3rd Party API)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f9a825;strokeWidth=2;fontSize=10;double=1;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="1265" width="195" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg_arrow_in" value="" style="endArrow=classic;html=1;strokeColor=#1565c0;strokeWidth=2;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="330" y="1187" as="sourcePoint"/>
+                        <mxPoint x="460" y="1187" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="leg_arrow_in_lbl" value="Input Data Flow (to System)" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="1172" width="155" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg_arrow_out" value="" style="endArrow=classic;html=1;strokeColor=#2e7d32;strokeWidth=2;dashed=1;dashPattern=8 4;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="330" y="1237" as="sourcePoint"/>
+                        <mxPoint x="460" y="1237" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="leg_arrow_out_lbl" value="Output Data Flow (from System)" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="1222" width="170" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg_arrow_3rd" value="" style="endArrow=classic;html=1;strokeColor=#e65100;strokeWidth=2;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="330" y="1282" as="sourcePoint"/>
+                        <mxPoint x="460" y="1282" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="leg_arrow_3rd_lbl" value="3rd Party API Integration Flow" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="1267" width="165" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="br_note" value="&lt;div style=&quot;text-align:left;font-size:10px;line-height:1.5&quot;&gt;&#10;&lt;b style=&quot;font-size:12px&quot;&gt;Business Rules &amp;amp; Compliance&lt;/b&gt;&lt;br&gt;&lt;br&gt;&#10;&lt;b&gt;BR1&lt;/b&gt; — 2D Double-Booking Prevention: Therapist + Treatment Room must both be available&lt;br&gt;&#10;&lt;b&gt;BR2&lt;/b&gt; — Consolidated Billing: No checkout with pending unpaid Spa/F&amp;amp;B orders&lt;br&gt;&#10;&lt;b&gt;BR3&lt;/b&gt; — Data Minimization (RBAC):&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;&amp;nbsp;• Therapist → physical treatment health data only&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;&amp;nbsp;• Chef → food allergy data only&lt;br&gt;&#10;&amp;nbsp;&amp;nbsp;&amp;nbsp;• Receptionist → neither health nor allergy data&lt;br&gt;&lt;br&gt;&#10;&lt;b&gt;Legal:&lt;/b&gt; Vietnam Decree 356/2025 (Explicit consent, Encrypted health data, Right to Deletion)&lt;br&gt;&#10;&lt;b&gt;Legal:&lt;/b&gt; Law on Residence 2020 (Guest ID encrypted at rest, Daily police report)&#10;&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=18;fillColor=#fce4ec;strokeColor=#c62828;strokeWidth=1;shadow=1;spacingLeft=12;spacingTop=8;spacingRight=8;spacingBottom=8;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="1100" y="1120" width="480" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="footer" value="&lt;span style=&quot;font-size:9px;color:#888&quot;&gt;Document: Context Diagram (DFD Level 0) | Project: SWP391-HOS-03 | Created: 2026-09-16 | Author: Senior BA Analysis&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="1380" width="700" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

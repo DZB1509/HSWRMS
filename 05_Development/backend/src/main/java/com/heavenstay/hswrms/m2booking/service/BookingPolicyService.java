@@ -42,7 +42,8 @@ public class BookingPolicyService {
         this(null, "30", "15", "48", "100");
     }
 
-    public BookingPolicyService(JdbcTemplate jdbcTemplate,
+    @org.springframework.beans.factory.annotation.Autowired
+    public BookingPolicyService(@org.springframework.beans.factory.annotation.Autowired(required = false) JdbcTemplate jdbcTemplate,
                                 @Value("${app.booking.deposit-percentage:}") String depositPercentageFallback,
                                 @Value("${app.booking.hold-minutes:}") String holdMinutesFallback,
                                 @Value("${app.booking.cancellation-window-hours:}") String cancellationWindowFallback,

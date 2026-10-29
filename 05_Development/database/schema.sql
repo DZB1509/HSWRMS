@@ -306,12 +306,29 @@ CREATE TABLE dbo.RetreatPackage (
 );
 GO
 
+CREATE TABLE dbo.ResortZone (
+    zone_id                 INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_ResortZone PRIMARY KEY,
+    zone_name               NVARCHAR(100) NOT NULL,
+    landscape_description   NVARCHAR(500) NULL,
+    villa_count             INT NOT NULL
+        CONSTRAINT DF_ResortZone_VillaCount DEFAULT (0),
+    villa_category_name     NVARCHAR(120) NULL,
+    relative_price_tier     NVARCHAR(50) NULL,
+    operational_advantages  NVARCHAR(500) NULL,
+    created_at              DATETIME2(0) NOT NULL
+        CONSTRAINT DF_ResortZone_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_ResortZone_Name UNIQUE (zone_name)
+);
+GO
+
 CREATE TABLE dbo.VillaCategory (
-    villa_category_id   INT IDENTITY(1,1) NOT NULL
+    villa_category_id       INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_VillaCategory PRIMARY KEY,
-    category_name       NVARCHAR(120) NOT NULL,
-    max_occupancy       INT NOT NULL,
-    price_modifier      DECIMAL(18,2) NOT NULL
+    category_name           NVARCHAR(120) NOT NULL,
+    max_occupancy           INT NOT NULL,
+    price_modifier          DECIMAL(18,2) NOT NULL
         CONSTRAINT DF_VillaCategory_PriceModifier DEFAULT (0),
     inventory_count     INT NOT NULL
         CONSTRAINT DF_VillaCategory_InventoryCount DEFAULT (0),
@@ -326,6 +343,17 @@ CREATE TABLE dbo.VillaCategory (
     eligible_packages   NVARCHAR(250) NULL,
     category_status     VARCHAR(20) NOT NULL
         CONSTRAINT DF_VillaCategory_Status DEFAULT ('ACTIVE'),
+    inventory_count         INT NOT NULL
+        CONSTRAINT DF_VillaCategory_InventoryCount DEFAULT (0),
+    bedroom_count           INT NOT NULL
+        CONSTRAINT DF_VillaCategory_BedroomCount DEFAULT (1),
+    bedroom_description     NVARCHAR(100) NULL,
+    area_description        NVARCHAR(50) NULL,
+    has_private_pool        BIT NOT NULL
+        CONSTRAINT DF_VillaCategory_HasPrivatePool DEFAULT (0),
+    pool_description        NVARCHAR(100) NULL,
+    features_and_amenities  NVARCHAR(500) NULL,
+    eligible_packages       NVARCHAR(250) NULL,
 
     CONSTRAINT UQ_VillaCategory_Name UNIQUE (category_name),
     CONSTRAINT CK_VillaCategory_Occupancy CHECK (max_occupancy > 0),
@@ -351,7 +379,7 @@ CREATE TABLE dbo.RetreatPackageVillaCategory (
 GO
 
 CREATE TABLE dbo.PhysicalVilla (
-    villa_id            INT IDENTITY(1,1) NOT NULL
+    villa_id                    INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_PhysicalVilla PRIMARY KEY,
     villa_category_id   INT NOT NULL,
     villa_number        NVARCHAR(30) NOT NULL,
@@ -367,6 +395,15 @@ CREATE TABLE dbo.PhysicalVilla (
     view_and_operational_notes NVARCHAR(500) NULL,
     villa_status        VARCHAR(30) NOT NULL
         CONSTRAINT DF_PhysicalVilla_Status DEFAULT ('AVAILABLE'),
+    zone_name                   NVARCHAR(100) NULL,
+    bedroom_info                NVARCHAR(100) NULL,
+    max_occupancy               INT NOT NULL
+        CONSTRAINT DF_PhysicalVilla_MaxOccupancy DEFAULT (3),
+    area_sqm                    DECIMAL(10,2) NULL,
+    has_private_pool            BIT NOT NULL
+        CONSTRAINT DF_PhysicalVilla_HasPrivatePool DEFAULT (0),
+    pool_info                   NVARCHAR(100) NULL,
+    view_and_operational_notes  NVARCHAR(500) NULL,
 
     CONSTRAINT UQ_PhysicalVilla_Number UNIQUE (villa_number),
     CONSTRAINT FK_PhysicalVilla_Category
@@ -378,8 +415,32 @@ CREATE TABLE dbo.PhysicalVilla (
 );
 GO
 
+CREATE TABLE dbo.VillaFunctionalArea (
+    functional_area_id          INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_VillaFunctionalArea PRIMARY KEY,
+    space_group                 NVARCHAR(100) NOT NULL,
+    room_name                   NVARCHAR(150) NOT NULL,
+    area_range_sqm              NVARCHAR(50) NULL,
+    quantity_in_1br             NVARCHAR(50) NULL,
+    quantity_in_2_3br           NVARCHAR(50) NULL,
+    quantity_in_estate_4_6br    NVARCHAR(50) NULL,
+    key_furnishing              NVARCHAR(500) NULL,
+    operational_purpose         NVARCHAR(500) NULL,
+    created_at                  DATETIME2(0) NOT NULL
+        CONSTRAINT DF_VillaFunctionalArea_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_VillaFunctionalArea_Room UNIQUE (room_name)
+);
+GO
+
 CREATE NONCLUSTERED INDEX IX_PhysicalVilla_Status_Category
-    ON dbo.PhysicalVilla(villa_status, villa_category_id);
+    ON dbo.PhysicalVilla(villa_status, villa_category_id)
+    INCLUDE (villa_number, zone_name, floor, max_occupancy, has_private_pool);
+GO
+
+CREATE NONCLUSTERED INDEX IX_PhysicalVilla_Zone
+    ON dbo.PhysicalVilla(zone_name)
+    INCLUDE (villa_number, villa_status);
 GO
 
 CREATE TABLE dbo.RetreatBooking (
@@ -466,9 +527,16 @@ CREATE TABLE dbo.SpaTreatment (
         CONSTRAINT PK_SpaTreatment PRIMARY KEY,
     treatment_code      VARCHAR(50) NULL,
     treatment_name      NVARCHAR(150) NOT NULL,
+    category            NVARCHAR(100) NULL,
     duration_minutes    INT NOT NULL,
     base_price          DECIMAL(18,2) NOT NULL,
     category            VARCHAR(50) NULL,
+    pricing_rule        NVARCHAR(500) NULL,
+    room_compatibility  NVARCHAR(250) NULL,
+    required_qualification_code VARCHAR(100) NULL,
+    therapist_qualification NVARCHAR(250) NULL,
+    contraindications   NVARCHAR(500) NULL,
+    precautions         NVARCHAR(500) NULL,
     description         NVARCHAR(1000) NULL,
     treatment_status    VARCHAR(20) NOT NULL
         CONSTRAINT DF_SpaTreatment_Status DEFAULT ('ACTIVE'),
@@ -500,10 +568,85 @@ CREATE TABLE dbo.RetreatPackageSpaTreatment (
         PRIMARY KEY (retreat_package_id, treatment_id),
     CONSTRAINT FK_RPST_RetreatPackage
         FOREIGN KEY (retreat_package_id)
-        REFERENCES dbo.RetreatPackage(retreat_package_id),
+        REFERENCES dbo.RetreatPackage(retreat_package_id)
+        ON DELETE CASCADE,
     CONSTRAINT FK_RPST_SpaTreatment
         FOREIGN KEY (treatment_id)
         REFERENCES dbo.SpaTreatment(treatment_id)
+        ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE dbo.PackageFnBEntitlement (
+    entitlement_id      INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_PackageFnBEntitlement PRIMARY KEY,
+    retreat_package_id  INT NOT NULL,
+    breakfast_count     INT NOT NULL
+        CONSTRAINT DF_PFnB_Breakfast DEFAULT (0),
+    lunch_count         INT NOT NULL
+        CONSTRAINT DF_PFnB_Lunch DEFAULT (0),
+    dinner_count        INT NOT NULL
+        CONSTRAINT DF_PFnB_Dinner DEFAULT (0),
+    total_meals         INT NOT NULL
+        CONSTRAINT DF_PFnB_TotalMeals DEFAULT (0),
+    menu_plan           NVARCHAR(250) NULL,
+    dietary_notes       NVARCHAR(500) NULL,
+    entitlement_status  VARCHAR(50) NOT NULL
+        CONSTRAINT DF_PFnB_Status DEFAULT ('APPROVED'),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_PFnB_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT FK_PFnB_RetreatPackage
+        FOREIGN KEY (retreat_package_id)
+        REFERENCES dbo.RetreatPackage(retreat_package_id)
+        ON DELETE CASCADE,
+    CONSTRAINT UQ_PFnB_Package UNIQUE (retreat_package_id)
+);
+GO
+
+CREATE TABLE dbo.RoomTypeMaster (
+    room_type_id        INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_RoomTypeMaster PRIMARY KEY,
+    room_type           VARCHAR(50) NOT NULL,
+    type_name           NVARCHAR(150) NOT NULL,
+    technical_specs     NVARCHAR(500) NULL,
+    design_status       VARCHAR(50) NOT NULL
+        CONSTRAINT DF_RTM_Status DEFAULT ('DESIGN_APPROVED'),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_RTM_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_RoomTypeMaster_Code UNIQUE (room_type)
+);
+GO
+
+CREATE TABLE dbo.TreatmentTypeRoomCompatibility (
+    compatibility_id    INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_TreatmentTypeRoomCompat PRIMARY KEY,
+    treatment_id        INT NOT NULL,
+    room_type           VARCHAR(50) NOT NULL,
+    required_features   NVARCHAR(250) NULL,
+    design_status       VARCHAR(50) NOT NULL
+        CONSTRAINT DF_TTRC_Status DEFAULT ('DESIGN_APPROVED'),
+
+    CONSTRAINT FK_TTRC_Treatment
+        FOREIGN KEY (treatment_id)
+        REFERENCES dbo.SpaTreatment(treatment_id)
+        ON DELETE CASCADE,
+    CONSTRAINT UQ_TTRC_Treatment_RoomType UNIQUE (treatment_id, room_type)
+);
+GO
+
+CREATE TABLE dbo.QualificationMaster (
+    qualification_id    INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_QualificationMaster PRIMARY KEY,
+    qualification_code  VARCHAR(100) NOT NULL,
+    qualification_name  NVARCHAR(200) NOT NULL,
+    baseline_status     VARCHAR(50) NOT NULL
+        CONSTRAINT DF_QM_Status DEFAULT ('DESIGN_APPROVED'),
+    created_at          DATETIME2(0) NOT NULL
+        CONSTRAINT DF_QM_CreatedAt DEFAULT (SYSUTCDATETIME()),
+
+    CONSTRAINT UQ_QualificationMaster_Code UNIQUE (qualification_code)
 );
 GO
 
@@ -511,7 +654,7 @@ CREATE TABLE dbo.TreatmentRoom (
     room_id             INT IDENTITY(1,1) NOT NULL
         CONSTRAINT PK_TreatmentRoom PRIMARY KEY,
     room_name           NVARCHAR(100) NOT NULL,
-    room_type           VARCHAR(50) NULL,
+    room_type           NVARCHAR(100) NULL,
     room_status         VARCHAR(20) NOT NULL
         CONSTRAINT DF_TreatmentRoom_Status DEFAULT ('AVAILABLE'),
 

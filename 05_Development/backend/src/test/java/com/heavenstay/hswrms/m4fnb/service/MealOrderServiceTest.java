@@ -1,761 +1,574 @@
 package com.heavenstay.hswrms.m4fnb.service;
 
-import com.heavenstay.hswrms.common.exception.BusinessRuleException;
-import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyInt;
+
+import com.heavenstay.hswrms.common.exception.ConflictException;
+import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
+import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
+import com.heavenstay.hswrms.m4fnb.entity.FnbOrderStatus;
+import com.heavenstay.hswrms.m4fnb.entity.FnbOrderType;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderItem;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderItemPreparationStatus;
+import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
 import com.heavenstay.hswrms.m4fnb.integration.BookingContextPort;
 import com.heavenstay.hswrms.m4fnb.integration.DietaryProfilePort;
-import com.heavenstay.hswrms.m1identity.entity.CustomerProfile;
-import com.heavenstay.hswrms.m1identity.entity.HealthProfile;
-import com.heavenstay.hswrms.m1identity.entity.User;
-import com.heavenstay.hswrms.m1identity.repository.CustomerProfileRepository;
-import com.heavenstay.hswrms.m1identity.repository.HealthProfileRepository;
-import com.heavenstay.hswrms.m1identity.repository.UserRepository;
-import com.heavenstay.hswrms.m2booking.entity.PhysicalVilla;
-import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
-import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
-import com.heavenstay.hswrms.m2booking.entity.VillaCategory;
-import com.heavenstay.hswrms.m2booking.repository.PhysicalVillaRepository;
-import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
-import com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository;
-import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
-import com.heavenstay.hswrms.m4fnb.dto.*;
-import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
-import com.heavenstay.hswrms.m4fnb.entity.MenuItemEntity;
+import com.heavenstay.hswrms.m4fnb.mapper.MealOrderMapper;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderItemRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
+import com.heavenstay.hswrms.m4fnb.repository.MenuItemIngredientRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MenuItemRepository;
-import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
-import com.heavenstay.hswrms.m5billing.repository.FolioItemRepository;
-import com.heavenstay.hswrms.m5billing.repository.FolioRepository;
-import com.heavenstay.hswrms.m5billing.service.FolioBillingService;
-import com.heavenstay.hswrms.m6admin.entity.AuditLog;
-import com.heavenstay.hswrms.m6admin.service.AuditLogService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.context.ApplicationEventPublisher;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
+class MealOrderServiceTest {
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-
-@SpringBootTest
-@Transactional
-public class MealOrderServiceTest {
-
-    @Autowired
+    private MealOrderRepository orderRepository;
+    private MealOrderItemRepository orderItemRepository;
+    private MenuItemRepository menuItemRepository;
+    private MenuItemIngredientRepository recipeRepository;
+    private MenuService menuService;
+    private InventoryService inventoryService;
+    private MealOrderMapper mealOrderMapper;
+    private ApplicationEventPublisher eventPublisher;
+    private BookingContextPort bookingPort;
+    private DietaryProfilePort dietaryProfilePort;
     private MealOrderService mealOrderService;
 
-    @Autowired
-    private MenuItemRepository menuItemRepository;
-
-    @Autowired
-    private MealOrderRepository mealOrderRepository;
-
-    @Autowired
-    private RetreatBookingRepository bookingRepository;
-
-    @Autowired
-    private VillaCategoryRepository villaCategoryRepository;
-
-    @Autowired
-    private PhysicalVillaRepository physicalVillaRepository;
-
-    @Autowired
-    private RetreatPackageRepository retreatPackageRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private CustomerProfileRepository customerProfileRepository;
-
-    @Autowired
-    private HealthProfileRepository healthProfileRepository;
-
-    @Autowired
-    private FolioRepository folioRepository;
-
-    @Autowired
-    private FolioItemRepository folioItemRepository;
-
-    @Autowired
-    private com.heavenstay.hswrms.m6admin.repository.AuditLogRepository auditLogRepository;
-
-    @Autowired
-    private MealOrderItemRepository mealOrderItemRepository;
-
-    @Autowired
-    private FolioBillingService folioBillingService;
-
-    @Autowired
-    private BookingContextPort bookingContextPort;
-
-    @Autowired
-    private DietaryProfilePort dietaryProfilePort;
-
-    @Autowired
-    private PlatformTransactionManager transactionManager;
-
-    private User testUser;
-    private User staffUser;
-    private CustomerProfile testCustomerProfile;
-    private RetreatBooking testBooking;
-    private MenuItemEntity saladItem;
-    private MenuItemEntity soupItem;
-    private MenuItemEntity steakItem;
-    private final LocalDate targetDate = LocalDate.now();
-
     @BeforeEach
+    @SuppressWarnings("null")
     void setUp() {
-        // Create test user
-        testUser = new User();
-        testUser.setEmail("fnb_guest_" + System.currentTimeMillis() + "@heavenstay.com");
-        testUser.setPasswordHash("hashed_pw");
-        testUser.setFullName("Eleanor Vance");
-        testUser.setAccountStatus("ACTIVE");
-        testUser = userRepository.save(testUser);
-
-        // Create customer profile
-        testCustomerProfile = new CustomerProfile();
-        testCustomerProfile.setUser(testUser);
-        testCustomerProfile = customerProfileRepository.save(testCustomerProfile);
-
-        // Create staff user
-        staffUser = new User();
-        staffUser.setEmail("fnb_chef_" + System.currentTimeMillis() + "@heavenstay.com");
-        staffUser.setPasswordHash("hashed_pw");
-        staffUser.setFullName("Chef Gordon");
-        staffUser.setAccountStatus("ACTIVE");
-        staffUser = userRepository.save(staffUser);
-
-        // Create villa category & physical villa
-        VillaCategory cat = new VillaCategory();
-        cat.setCategoryName("Wellness Sanctuary Villa");
-        cat.setMaxOccupancy(2);
-        cat.setPriceModifier(BigDecimal.ZERO);
-        cat.setCategoryStatus("ACTIVE");
-        cat.setInventoryCount(5);
-        cat.setBedroomCount(1);
-        cat = villaCategoryRepository.save(cat);
-
-        PhysicalVilla villa = new PhysicalVilla();
-        villa.setVillaNumber("Villa 102");
-        villa.setVillaCategory(cat);
-        villa.setVillaStatus("AVAILABLE");
-        villa = physicalVillaRepository.save(villa);
-
-        // Create package
-        RetreatPackage pkg = new RetreatPackage();
-        pkg.setPackageCode("PKG-FNB-TEST");
-        pkg.setPackageName("Wellness Gourmet Retreat");
-        pkg.setDurationNights(3);
-        pkg.setBasePrice(BigDecimal.valueOf(1500));
-        pkg.setPackageStatus("ACTIVE");
-        pkg = retreatPackageRepository.save(pkg);
-
-        // Create booking
-        testBooking = new RetreatBooking();
-        testBooking.setCustomerProfileId(testCustomerProfile.getCustomerProfileId());
-        testBooking.setRetreatPackage(pkg);
-        testBooking.setRequestedVillaCategory(cat);
-        testBooking.setAssignedVilla(villa);
-        testBooking.setCheckInDate(targetDate);
-        testBooking.setCheckOutDate(targetDate.plusDays(3));
-        testBooking.setBookingStatus("CONFIRMED");
-        testBooking.setDepositAmount(BigDecimal.valueOf(500));
-        testBooking.setTotalEstimatedAmount(BigDecimal.valueOf(1500));
-        testBooking = bookingRepository.save(testBooking);
-
-        // Create Folio for billing settlement
-        FolioEntity folio = new FolioEntity();
-        folio.setRetreatBooking(testBooking);
-        folio.setFolioStatus("OPEN");
-        folio.setTotalCharges(BigDecimal.ZERO);
-        folio.setTotalPaid(BigDecimal.valueOf(500));
-        folioRepository.save(folio);
-
-        // Create Menu Items
-        saladItem = new MenuItemEntity("Organic Garden Salad", "STARTER", "ALL_DAY",
-                BigDecimal.valueOf(120), "vegan,gluten_free", "peanuts", "AVAILABLE");
-        saladItem = menuItemRepository.save(saladItem);
-
-        soupItem = new MenuItemEntity("Lemongrass Ginger Broth", "SOUP", "LUNCH,DINNER",
-                BigDecimal.valueOf(90), "vegetarian", null, "AVAILABLE");
-        soupItem = menuItemRepository.save(soupItem);
-
-        steakItem = new MenuItemEntity("Miso Glazed Tofu Steak", "MAIN", "DINNER",
-                BigDecimal.valueOf(250), "vegan", "soy", "AVAILABLE");
-        steakItem = menuItemRepository.save(steakItem);
-    }
-
-    @Test
-    @DisplayName("Create Daily Meal Order successfully with status PENDING and DAILY_MEAL type")
-    void testCreateDailyMealOrder_Success() {
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "LUNCH",
-                List.of(saladItem.getMenuItemId(), soupItem.getMenuItemId()),
-                "Low sodium please"
-        );
-
-        MealOrderDto order = mealOrderService.createDailyMealOrder(req, testUser.getUserId());
-
-        assertNotNull(order.getMealOrderId());
-        assertEquals("DAILY_MEAL", order.getOrderType());
-        assertEquals("PENDING", order.getOrderStatus());
-        assertEquals(2, order.getItems().size());
-        assertEquals(testBooking.getRetreatBookingId(), order.getRetreatBookingId());
-    }
-
-    @Test
-    @DisplayName("Update Daily Meal Order upserts when order is still PENDING")
-    void testUpdateDailyMealOrder_UpsertSuccess() {
-        CreateDailyMealRequest req1 = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "DINNER",
-                List.of(saladItem.getMenuItemId()),
-                "Initial selection"
-        );
-        MealOrderDto initial = mealOrderService.createDailyMealOrder(req1, testUser.getUserId());
-
-        CreateDailyMealRequest req2 = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "DINNER",
-                List.of(steakItem.getMenuItemId()),
-                "Changed my mind to steak"
-        );
-        MealOrderDto updated = mealOrderService.createDailyMealOrder(req2, testUser.getUserId());
-
-        assertEquals(initial.getMealOrderId(), updated.getMealOrderId());
-        assertEquals(1, updated.getItems().size());
-        assertEquals(steakItem.getMenuItemId(), updated.getItems().get(0).getMenuItemId());
-    }
-
-    @Test
-    @DisplayName("Update Daily Meal Order rejected when order is already in PREPARING status")
-    void testUpdateDailyMealOrder_RejectWhenPreparing() {
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "BREAKFAST",
-                List.of(saladItem.getMenuItemId()),
-                "Breakfast salad"
-        );
-        MealOrderDto order = mealOrderService.createDailyMealOrder(req, testUser.getUserId());
-
-        // Kitchen transitions order to PREPARING
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), 999, true);
-
-        // Customer tries to update meal selection
-        CreateDailyMealRequest updateReq = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "BREAKFAST",
-                List.of(soupItem.getMenuItemId()),
-                "Try to change"
-        );
-        assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.createDailyMealOrder(updateReq, testUser.getUserId()));
-    }
-
-    @Test
-    @DisplayName("Create A-la-carte Order calculates server-side price correctly")
-    void testCreateAlaCarteOrder_Success() {
-        AlaCarteItemRequest item1 = new AlaCarteItemRequest(saladItem.getMenuItemId(), 2, "Extra dressing");
-        AlaCarteItemRequest item2 = new AlaCarteItemRequest(steakItem.getMenuItemId(), 1, "Well done");
-
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "19:30",
-                "Villa 102",
-                List.of(item1, item2)
-        );
-
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        assertNotNull(order.getMealOrderId());
-        assertEquals("A_LA_CARTE", order.getOrderType());
-        assertEquals("PENDING", order.getOrderStatus());
-        // Price: 2 * 120 + 1 * 250 = 490
-        assertEquals(0, new BigDecimal("490").compareTo(order.getTotalAmount()));
-    }
-
-    @Test
-    @DisplayName("Create Order with UNAVAILABLE menu item is rejected")
-    void testCreateOrder_UnavailableItem_Rejected() {
-        MenuItemEntity unavailableItem = new MenuItemEntity("Rare Truffle Dish", "SPECIAL", "DINNER",
-                BigDecimal.valueOf(500), null, null, "UNAVAILABLE");
-        unavailableItem = menuItemRepository.save(unavailableItem);
-
-        AlaCarteItemRequest item = new AlaCarteItemRequest(unavailableItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(),
-                targetDate,
-                "20:00",
-                "Villa 102",
-                List.of(item)
-        );
-
-        assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.createAlaCarteOrder(req, testUser.getUserId()));
-    }
-
-    @Test
-    @DisplayName("Kitchen transitions order PENDING -> PREPARING -> READY -> DELIVERED")
-    void testOrderLifecycle_FullProgression() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "12:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        // PENDING -> PREPARING
-        MealOrderDto prep = mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), 999, true);
-        assertEquals("PREPARING", prep.getOrderStatus());
-
-        // PREPARING -> READY
-        MealOrderDto ready = mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("READY", null), 999, true);
-        assertEquals("READY", ready.getOrderStatus());
-
-        // READY -> DELIVERED
-        MealOrderDto delivered = mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("DELIVERED", null), 999, true);
-        assertEquals("DELIVERED", delivered.getOrderStatus());
-
-        // Verify M5 Folio charge was posted automatically for A_LA_CARTE
-        assertTrue(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()));
-    }
-
-    @Test
-    @DisplayName("Delivered Daily Meal Order does NOT post extra Folio charge")
-    void testDailyMeal_DeliveredDoesNotPostFolioCharge() {
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), targetDate, "LUNCH", List.of(saladItem.getMenuItemId()), null);
-        MealOrderDto order = mealOrderService.createDailyMealOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), 999, true);
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("READY", null), 999, true);
-        MealOrderDto delivered = mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("DELIVERED", null), 999, true);
-
-        assertEquals("DELIVERED", delivered.getOrderStatus());
-        assertFalse(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()));
-    }
-
-    @Test
-    @DisplayName("Retrying transition to DELIVERED is idempotent and does not double charge")
-    void testDelivered_IdempotentRetryDoesNotDoubleCharge() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(soupItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "13:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), 999, true);
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("DELIVERED", null), 999, true);
-
-        // Retry same transition
-        MealOrderDto retried = mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("DELIVERED", null), 999, true);
-        assertEquals("DELIVERED", retried.getOrderStatus());
-
-        // Ensure exactly 1 folio charge was created
-        assertTrue(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()));
-    }
-
-    @Test
-    @DisplayName("Modifying an already DELIVERED order is rejected")
-    void testDelivered_CannotTransitionBack() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(soupItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "13:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), 999, true);
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("READY", null), 999, true);
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("DELIVERED", null), 999, true);
-
-        assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                        new UpdateOrderStatusRequest("PREPARING", null), 999, true));
-    }
-
-    @Test
-    @DisplayName("Customer can cancel PENDING order successfully")
-    void testCancel_PendingByCustomer_Success() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        MealOrderDto cancelled = mealOrderService.cancelOrder(order.getMealOrderId(),
-                "Changed mind", testUser.getUserId(), false);
-        assertEquals("CANCELLED", cancelled.getOrderStatus());
-    }
-
-    @Test
-    @DisplayName("Customer CANNOT cancel PREPARING order")
-    void testCancel_PreparingByCustomer_Rejected() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), 999, true);
-
-        assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), "Too late cancel", testUser.getUserId(), false));
-    }
-
-    @Test
-    @DisplayName("Staff cancelling PREPARING order MUST provide a cancellation reason and persists audit log")
-    void testCancel_PreparingByStaff_RequiresReason() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
-
-        // Null reason
-        BusinessRuleException exNull = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), null, staffUser.getUserId(), true));
-        assertEquals("CANCELLATION_REASON_REQUIRED", exNull.getErrorCode());
-
-        // Blank reason
-        BusinessRuleException exBlank = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), "   ", staffUser.getUserId(), true));
-        assertEquals("CANCELLATION_REASON_REQUIRED", exBlank.getErrorCode());
-
-        // Verify no audit log recorded during failed attempts
-        boolean hasFailedAudit = auditLogRepository.findAll().stream()
-                .anyMatch(l -> "CANCEL_MEAL_ORDER".equals(l.getAction()) &&
-                        String.valueOf(order.getMealOrderId()).equals(l.getTargetRefId()));
-        assertFalse(hasFailedAudit, "Failed cancellations must not record audit log");
-
-        // Valid reason succeeds and persists audit trail
-        String cancellationReason = "Out of fresh lettuce";
-        MealOrderDto cancelled = mealOrderService.cancelOrder(order.getMealOrderId(),
-                cancellationReason, staffUser.getUserId(), true);
-        assertEquals("CANCELLED", cancelled.getOrderStatus());
-
-        AuditLog audit = auditLogRepository.findAll().stream()
-                .filter(l -> "CANCEL_MEAL_ORDER".equals(l.getAction()) &&
-                        String.valueOf(order.getMealOrderId()).equals(l.getTargetRefId()))
-                .findFirst()
-                .orElse(null);
-
-        assertNotNull(audit, "Staff cancellation must persist durable audit record");
-        assertEquals("MealOrder", audit.getTargetDataType());
-        assertEquals(String.valueOf(order.getMealOrderId()), audit.getTargetRefId());
-        assertEquals("SUCCESS", audit.getAccessStatus());
-        assertEquals("PREPARING", audit.getOldValue());
-        assertEquals("CANCELLED; Reason: " + cancellationReason, audit.getNewValue());
-        assertEquals(staffUser.getUserId(), audit.getActorUserId());
-        assertEquals("FNB_STAFF", audit.getActorRole());
-    }
-
-    @Test
-    @DisplayName("Customer cancelling PENDING order persists audit log with CUSTOMER role and reason")
-    void testCancel_PendingByCustomer_PersistsAuditTrail() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        MealOrderDto cancelled = mealOrderService.cancelOrder(order.getMealOrderId(),
-                "Changed mind", testUser.getUserId(), false);
-        assertEquals("CANCELLED", cancelled.getOrderStatus());
-
-        AuditLog audit = auditLogRepository.findAll().stream()
-                .filter(l -> "CANCEL_MEAL_ORDER".equals(l.getAction()) &&
-                        String.valueOf(order.getMealOrderId()).equals(l.getTargetRefId()))
-                .findFirst()
-                .orElse(null);
-
-        assertNotNull(audit, "Customer cancellation must persist durable audit record");
-        assertEquals("MealOrder", audit.getTargetDataType());
-        assertEquals(String.valueOf(order.getMealOrderId()), audit.getTargetRefId());
-        assertEquals("SUCCESS", audit.getAccessStatus());
-        assertEquals("PENDING", audit.getOldValue());
-        assertEquals("CANCELLED; Reason: Changed mind", audit.getNewValue());
-        assertEquals(testUser.getUserId(), audit.getActorUserId());
-        assertEquals("CUSTOMER", audit.getActorRole());
-    }
-
-    @Test
-    @DisplayName("Unauthorized cancellation attempts are rejected without audit persistence")
-    void testCancel_Unauthorized_RejectedAndNoAudit() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        // Other customer tries to cancel someone else's booking/order
-        assertThrows(AccessDeniedException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), "Unauthorized cancel", 88888, false));
-
-        // Advance to PREPARING
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
-
-        // Customer attempts to cancel PREPARING order
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), "Too late cancel", testUser.getUserId(), false));
-        assertEquals("CUSTOMER_CANNOT_CANCEL_PREPARING_ORDER", ex.getErrorCode());
-
-        // Verify no audit log recorded for unauthorized attempts
-        boolean hasAudit = auditLogRepository.findAll().stream()
-                .anyMatch(l -> "CANCEL_MEAL_ORDER".equals(l.getAction()) &&
-                        String.valueOf(order.getMealOrderId()).equals(l.getTargetRefId()));
-        assertFalse(hasAudit, "Unauthorized cancellation must not record audit log");
-    }
-
-    @Test
-    @DisplayName("DELIVERED is a terminal state and cannot transition to CANCELLED")
-    void testCancel_DeliveredOrder_RejectedAndNoAudit() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("READY", null), staffUser.getUserId(), true);
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("DELIVERED", null), staffUser.getUserId(), true);
-
-        // Staff attempt to cancel DELIVERED order
-        BusinessRuleException exStaff = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), "Late staff cancellation", staffUser.getUserId(), true));
-        assertEquals("ORDER_ALREADY_DELIVERED", exStaff.getErrorCode());
-
-        // Customer attempt to cancel DELIVERED order
-        BusinessRuleException exCustomer = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.cancelOrder(order.getMealOrderId(), "Late customer cancellation", testUser.getUserId(), false));
-        assertEquals("ORDER_ALREADY_DELIVERED", exCustomer.getErrorCode());
-
-        // Verify no cancellation audit entry exists
-        boolean hasCancelAudit = auditLogRepository.findAll().stream()
-                .anyMatch(l -> "CANCEL_MEAL_ORDER".equals(l.getAction()) &&
-                        String.valueOf(order.getMealOrderId()).equals(l.getTargetRefId()));
-        assertFalse(hasCancelAudit, "DELIVERED order cancellation rejection must not record CANCEL_MEAL_ORDER audit");
-    }
-
-    @Test
-    @DisplayName("Cancellation does not trigger Folio charge; Folio billing remains restricted to DELIVERED")
-    void testCancel_FolioBillingRemainsUnchanged() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        // Cancel order while in PENDING
-        mealOrderService.cancelOrder(order.getMealOrderId(), "Cancelled by guest", testUser.getUserId(), false);
-
-        // Verify NO folio charge was created
-        assertFalse(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()),
-                "Cancelled order must never post a Folio charge");
-    }
-
-    @Test
-    @DisplayName("Audit failures are not swallowed; exception propagates and aborts cancellation")
-    void testCancel_AuditFailure_ConsistentWithTransactionContract() {
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
-        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
-
-        mealOrderService.updateOrderStatus(order.getMealOrderId(),
-                new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
-
-        AuditLogService failingAuditService = mock(AuditLogService.class);
-        doThrow(new RuntimeException("Simulated audit disk/storage failure"))
-                .when(failingAuditService).record(any(), any(), any(), any(), any(), any(), any(), any());
-
-        MealOrderServiceImpl serviceWithFailingAudit = new MealOrderServiceImpl(
-                mealOrderRepository,
+        orderRepository = mock(MealOrderRepository.class);
+        orderItemRepository = mock(MealOrderItemRepository.class);
+        menuItemRepository = mock(MenuItemRepository.class);
+        recipeRepository = mock(MenuItemIngredientRepository.class);
+        menuService = mock(MenuService.class);
+        inventoryService = mock(InventoryService.class);
+        mealOrderMapper = new MealOrderMapper();
+        eventPublisher = mock(ApplicationEventPublisher.class);
+        bookingPort = mock(BookingContextPort.class);
+        dietaryProfilePort = mock(DietaryProfilePort.class);
+
+        @SuppressWarnings("unchecked")
+        org.springframework.beans.factory.ObjectProvider<BookingContextPort> bookingProvider = mock(org.springframework.beans.factory.ObjectProvider.class);
+        when(bookingProvider.getIfAvailable()).thenReturn(bookingPort);
+
+        @SuppressWarnings("unchecked")
+        org.springframework.beans.factory.ObjectProvider<DietaryProfilePort> dietaryProvider = mock(org.springframework.beans.factory.ObjectProvider.class);
+        when(dietaryProvider.getIfAvailable()).thenReturn(dietaryProfilePort);
+
+        mealOrderService = new MealOrderService(
+                orderRepository,
+                orderItemRepository,
                 menuItemRepository,
-                mealOrderItemRepository,
-                bookingRepository,
-                bookingContextPort,
-                dietaryProfilePort,
-                folioBillingService,
-                folioItemRepository,
-                failingAuditService
+                recipeRepository,
+                mealOrderMapper,
+                menuService,
+                inventoryService,
+                bookingProvider,
+                dietaryProvider,
+                eventPublisher,
+                null
         );
-
-        // When audit persistence fails, cancelOrder MUST NOT swallow the failure
-        RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                serviceWithFailingAudit.cancelOrder(order.getMealOrderId(), "Staff cancellation reason",
-                        staffUser.getUserId(), true));
-        assertEquals("Simulated audit disk/storage failure", ex.getMessage());
-
-        // Verify the original order status was NOT changed to CANCELLED in database
-        MealOrderEntity persisted = mealOrderRepository.findById(order.getMealOrderId()).orElseThrow();
-        assertEquals("PREPARING", persisted.getOrderStatus(),
-                "Order status must remain PREPARING when audit recording fails");
     }
 
     @Test
-    @DisplayName("Data Minimization: KDS queue projects only culinary/allergy notes, excluding medical records")
-    void testDataMinimization_ExcludesHealthAndBillingDetails() {
-        // Add sensitive health profile
-        HealthProfile hp = new HealthProfile();
-        hp.setCustomerProfile(testCustomerProfile);
-        hp.setAllergies("Peanut Allergy, Shellfish");
-        hp.setDietaryRequirements("Strict Vegan");
-        hp.setFoodIntoleranceNotes("Lactose intolerant");
-        hp.setCurrentHealthCondition("Severe Asthma and Hypertension");
-        hp.setCurrentMedications("Albuterol Inhaler, Lisinopril");
-        hp.setInjurySurgeryHistory("Knee replacement in 2024");
-        hp.setTreatmentSafetyNotes("Do not apply deep pressure to lower back");
-        healthProfileRepository.save(hp);
+    @DisplayName("listKitchenOrders orders results by createdAt DESC")
+    @SuppressWarnings("null")
+    void listKitchenOrdersReturnsOrdersOrderedByCreatedAtDesc() {
+        LocalDate targetDate = LocalDate.of(2026, 9, 24);
 
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), targetDate, "LUNCH", List.of(saladItem.getMenuItemId()), null);
-        mealOrderService.createDailyMealOrder(req, testUser.getUserId());
+        MealOrderEntity order1 = mock(MealOrderEntity.class);
+        when(order1.getId()).thenReturn(1001);
+        when(order1.getRetreatBookingId()).thenReturn(1);
+        when(order1.getOrderDate()).thenReturn(targetDate);
+        when(order1.getMealType()).thenReturn("BREAKFAST");
+        when(order1.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order1.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order1.getOrderStatus()).thenReturn(FnbOrderStatus.READY.name());
+        when(order1.getOrderStatusValue()).thenReturn(FnbOrderStatus.READY);
+        when(order1.getSpecialNotes()).thenReturn("Warm water and light honey on the side, please");
+        when(order1.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 9, 24, 7, 0));
 
-        List<MealPrepEntryDto> queue = mealOrderService.getKitchenPrepQueue(targetDate, "all", "active", false, null);
+        MealOrderEntity order2 = mock(MealOrderEntity.class);
+        when(order2.getId()).thenReturn(1002);
+        when(order2.getRetreatBookingId()).thenReturn(1);
+        when(order2.getOrderDate()).thenReturn(targetDate);
+        when(order2.getMealType()).thenReturn("BREAKFAST");
+        when(order2.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order2.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order2.getOrderStatus()).thenReturn(FnbOrderStatus.PENDING.name());
+        when(order2.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(order2.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 9, 24, 7, 30));
 
-        assertFalse(queue.isEmpty());
-        MealPrepEntryDto entry = queue.get(0);
+        // Latest order (order2) at the top of the returned list
+        when(orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(targetDate, "CANCELLED"))
+                .thenReturn(List.of(order2, order1));
 
-        // Dietary notes should contain only food allergies and dietary requirements
-        assertTrue(entry.getDietaryNotes().contains("Peanut Allergy"));
-        assertTrue(entry.getDietaryNotes().contains("Strict Vegan"));
-        assertTrue(entry.getDietaryNotes().contains("Lactose intolerant"));
+        MealOrderItem item1 = mock(MealOrderItem.class);
+        when(item1.getId()).thenReturn(1);
+        when(item1.getMealOrderId()).thenReturn(1001);
+        when(item1.getMenuItemId()).thenReturn(1);
+        when(item1.getQuantity()).thenReturn(1);
+        when(item1.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item1.getPreparationStatus()).thenReturn(MealOrderItemPreparationStatus.READY.name());
+        when(item1.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.READY);
 
-        // Critical check: Ensure NO medical fields leaked
-        assertFalse(entry.getDietaryNotes().stream().anyMatch(n -> n.contains("Asthma")));
-        assertFalse(entry.getDietaryNotes().stream().anyMatch(n -> n.contains("Lisinopril")));
-        assertFalse(entry.getDietaryNotes().stream().anyMatch(n -> n.contains("Knee replacement")));
+        MealOrderItem item2 = mock(MealOrderItem.class);
+        when(item2.getId()).thenReturn(2);
+        when(item2.getMealOrderId()).thenReturn(1002);
+        when(item2.getMenuItemId()).thenReturn(1);
+        when(item2.getQuantity()).thenReturn(2);
+        when(item2.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item2.getPreparationStatus()).thenReturn(MealOrderItemPreparationStatus.PENDING.name());
+        when(item2.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(anyList()))
+                .thenReturn(List.of(item1, item2));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Cháo Yến Mạch Quả Mọng Hữu Cơ");
+        when(menuItem.getPrice()).thenReturn(BigDecimal.ZERO);
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1,
+                1,
+                "CHECKED_IN",
+                targetDate.minusDays(1),
+                targetDate.plusDays(3),
+                "Eleanor Vance",
+                "Villa #102 (Tranquil Garden)",
+                "RET-DETOX-03",
+                "3D2N Thải Độc & Thanh Lọc Tinh Khiết"
+        ));
+
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of("Crustaceans & Shellfish", "Peanuts"),
+                List.of("Pescatarian", "Gluten-Conscious")
+        ));
+
+        List<KitchenOrderResponse> result = mealOrderService.listKitchenOrders(targetDate);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(1002, result.get(0).id(), "Latest order must appear at the top");
+        assertEquals(1001, result.get(1).id());
+        assertEquals("Eleanor Vance", result.get(0).guestFirstName());
+        assertEquals("Villa #102 (Tranquil Garden)", result.get(0).villaNumber());
+        assertEquals(List.of("Crustaceans & Shellfish", "Peanuts"), result.get(0).allergies());
+        assertEquals(List.of("Pescatarian", "Gluten-Conscious"), result.get(0).dietaryPreferences());
     }
 
     @Test
-    @DisplayName("Stay Date Validation: Daily meal order rejects date outside retreat stay")
-    void testCreateDailyMealOrder_DateOutsideStay_ThrowsBusinessRuleException() {
-        LocalDate dateOutside = targetDate.plusDays(10);
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), dateOutside, "LUNCH", List.of(saladItem.getMenuItemId()), null);
+    @DisplayName("getKitchenOrder returns complete order details matching specification")
+    @SuppressWarnings("null")
+    void getKitchenOrderReturnsCompleteOrderDetails() {
+        LocalDate orderDate = LocalDate.of(2026, 9, 24);
 
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.createDailyMealOrder(req, testUser.getUserId()));
-        assertEquals("DATE_OUTSIDE_STAY", ex.getErrorCode());
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(1001);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(orderDate);
+        when(order.getMealType()).thenReturn("BREAKFAST");
+        when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order.getOrderStatus()).thenReturn(FnbOrderStatus.READY.name());
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.READY);
+        when(order.getSpecialNotes()).thenReturn("Warm water and light honey on the side, please");
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 9, 24, 7, 0));
+
+        when(orderRepository.findById(1001)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(1);
+        when(item.getMealOrderId()).thenReturn(1001);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(1);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatus()).thenReturn(MealOrderItemPreparationStatus.READY.name());
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.READY);
+
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(1001)))
+                .thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Cháo Yến Mạch Quả Mọng Hữu Cơ");
+        when(menuItem.getPrice()).thenReturn(BigDecimal.ZERO);
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1,
+                1,
+                "CHECKED_IN",
+                orderDate.minusDays(1),
+                orderDate.plusDays(3),
+                "Eleanor Vance",
+                "Villa #102 (Tranquil Garden)",
+                "RET-DETOX-03",
+                "3D2N Thải Độc & Thanh Lọc Tinh Khiết"
+        ));
+
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of("Crustaceans & Shellfish", "Peanuts"),
+                List.of("Pescatarian", "Gluten-Conscious")
+        ));
+
+        KitchenOrderResponse response = mealOrderService.getKitchenOrder(1001);
+
+        assertNotNull(response);
+        assertEquals(1001, response.id());
+        assertEquals("Eleanor Vance", response.guestFirstName());
+        assertEquals("Villa #102 (Tranquil Garden)", response.villaNumber());
+        assertEquals("READY", response.status());
+        assertEquals("Warm water and light honey on the side, please", response.specialNotes());
+        assertEquals(1, response.items().size());
+        assertEquals("Cháo Yến Mạch Quả Mọng Hữu Cơ", response.items().get(0).itemName());
+        assertEquals(1, response.items().get(0).quantity());
     }
 
     @Test
-    @DisplayName("Stay Date Validation: Exact check-in and check-out boundary dates are accepted")
-    void testCreateDailyMealOrder_ExactBoundaries_Accepted() {
-        // Boundary 1: Check-in date
-        CreateDailyMealRequest reqCheckIn = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), testBooking.getCheckInDate(), "LUNCH", List.of(saladItem.getMenuItemId()), null);
-        MealOrderDto orderCheckIn = mealOrderService.createDailyMealOrder(reqCheckIn, testUser.getUserId());
-        assertNotNull(orderCheckIn);
-        assertEquals(testBooking.getCheckInDate(), orderCheckIn.getOrderDate());
+    @DisplayName("updateStatus from PENDING to PREPARING automatically consumes inventory and updates item status")
+    void updateStatusToPreparingTriggersInventoryDeduction() {
+        Integer orderId = 2001;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("LUNCH");
+        when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
 
-        // Boundary 2: Check-out date
-        CreateDailyMealRequest reqCheckOut = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), testBooking.getCheckOutDate(), "DINNER", List.of(soupItem.getMenuItemId()), null);
-        MealOrderDto orderCheckOut = mealOrderService.createDailyMealOrder(reqCheckOut, testUser.getUserId());
-        assertNotNull(orderCheckOut);
-        assertEquals(testBooking.getCheckOutDate(), orderCheckOut.getOrderDate());
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(99);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Cháo Yến Mạch");
+        when(menuItem.getPrice()).thenReturn(BigDecimal.ZERO);
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        mealOrderService.updateStatus(orderId, "PREPARING");
+
+        // Verify inventory service was called to process stock consumption for order line 99
+        verify(inventoryService).processConsumptionForOrderItem(eq(99), any(LocalDate.class));
+        // Verify line preparation status set to PREPARING and saved
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+        verify(orderItemRepository).save(item);
+        // Verify order status set to PREPARING and saved
+        verify(order).setOrderStatus(FnbOrderStatus.PREPARING);
+        verify(orderRepository).save(order);
     }
 
     @Test
-    @DisplayName("Stay Date Validation: Ala carte order enforces identical stay-date boundary validation")
-    void testCreateAlaCarteOrder_StayDateValidation_EnforcedIdentically() {
-        LocalDate dateOutside = targetDate.plusDays(10);
-        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
-        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
-                testBooking.getRetreatBookingId(), dateOutside, "18:00", "Villa 102", List.of(item));
+    @DisplayName("updateStatus rejects invalid transition from DELIVERED to PENDING")
+    void updateStatusRejectsDisallowedTransitions() {
+        Integer orderId = 2002;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.DELIVERED);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
 
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.createAlaCarteOrder(req, testUser.getUserId()));
-        assertEquals("DATE_OUTSIDE_STAY", ex.getErrorCode());
+        ConflictException exception = assertThrows(ConflictException.class, () ->
+                mealOrderService.updateStatus(orderId, "PENDING"));
+
+        assertEquals("INVALID_ORDER_TRANSITION", exception.getConflictCode());
     }
 
     @Test
-    @DisplayName("Booking Boundary: Non-existent booking is rejected with ResourceNotFoundException")
-    void testCreateMealOrder_BookingNotFound_ThrowsResourceNotFoundException() {
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                999999, targetDate, "LUNCH", List.of(saladItem.getMenuItemId()), null);
+    @DisplayName("updateStatus from PREPARING to READY advances lines to READY and does not consume inventory")
+    void updateStatusToReadyAdvancesLinesWithoutDeduction() {
+        Integer orderId = 2003;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PREPARING);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("LUNCH");
+        when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
+        when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                mealOrderService.createDailyMealOrder(req, testUser.getUserId()));
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(99);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PREPARING);
+
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Cháo Yến Mạch");
+        when(menuItem.getPrice()).thenReturn(BigDecimal.ZERO);
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        mealOrderService.updateStatus(orderId, "READY");
+
+        // Verify inventory service was NEVER called on transitioning to READY
+        verify(inventoryService, never()).processConsumptionForOrderItem(anyInt(), any(LocalDate.class));
+        // Verify line preparation status set to READY and saved
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.READY);
+        verify(orderItemRepository).save(item);
+        // Verify order status set to READY and saved
+        verify(order).setOrderStatus(FnbOrderStatus.READY);
+        verify(orderRepository).save(order);
     }
 
     @Test
-    @DisplayName("Booking Boundary: Unauthorized customer cannot place orders on another customer's booking")
-    void testCreateMealOrder_UnauthorizedCustomer_ThrowsAccessDeniedException() {
-        User unauthorizedUser = new User();
-        unauthorizedUser.setEmail("unauth_guest_" + System.currentTimeMillis() + "@heavenstay.com");
-        unauthorizedUser.setPasswordHash("hashed_pw");
-        unauthorizedUser.setFullName("Unauthorized Person");
-        unauthorizedUser.setAccountStatus("ACTIVE");
-        unauthorizedUser = userRepository.save(unauthorizedUser);
+    @DisplayName("updateStatus rejects jumping directly from PENDING to READY or DELIVERED")
+    void updateStatusRejectsSkippingOrderStages() {
+        Integer orderId = 2004;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
 
-        final Integer unauthorizedUserId = unauthorizedUser.getUserId();
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), targetDate, "LUNCH", List.of(saladItem.getMenuItemId()), null);
+        ConflictException exReady = assertThrows(ConflictException.class, () ->
+                mealOrderService.updateStatus(orderId, "READY"));
+        assertEquals("INVALID_ORDER_TRANSITION", exReady.getConflictCode());
 
-        assertThrows(AccessDeniedException.class, () ->
-                mealOrderService.createDailyMealOrder(req, unauthorizedUserId));
+        ConflictException exDelivered = assertThrows(ConflictException.class, () ->
+                mealOrderService.updateStatus(orderId, "DELIVERED"));
+        assertEquals("INVALID_ORDER_TRANSITION", exDelivered.getConflictCode());
     }
 
     @Test
-    @DisplayName("Booking Boundary: Cancelled booking rejects order placement with BOOKING_NOT_ACTIVE")
-    void testCreateMealOrder_CancelledBooking_ThrowsBusinessRuleException() {
-        testBooking.setBookingStatus("CANCELLED");
-        bookingRepository.save(testBooking);
+    @DisplayName("Kitchen projection reflects UNVERIFIED dietary status and UNVERIFIED location when applicable")
+    void kitchenOrderReflectsUnverifiedDietaryAndLocationStatus() {
+        Integer orderId = 3001;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(10);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("DINNER");
+        when(order.getOrderType()).thenReturn("DAILY_MEAL");
+        when(order.getOrderStatus()).thenReturn("PREPARING");
+        when(order.getSpecialNotes()).thenReturn("[VENUE:IN_VILLA] Note");
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), targetDate, "LUNCH", List.of(saladItem.getMenuItemId()), null);
+        when(orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(eq(LocalDate.now()), any()))
+                .thenReturn(List.of(order));
 
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.createDailyMealOrder(req, testUser.getUserId()));
-        assertEquals("BOOKING_NOT_ACTIVE", ex.getErrorCode());
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of());
+
+        // Location is unverified (guest entered fallback)
+        when(bookingPort.getKitchenBookingContext(10)).thenReturn(new BookingContextPort.FnbBookingContext(
+                10, 5, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Guest", "Room 404 (Unverified)",
+                "RET-DETOX-03", "Pure Detox", BookingContextPort.LocationVerificationStatus.UNVERIFIED_LOCATION
+        ));
+
+        // Dietary profile is UNVERIFIED
+        when(dietaryProfilePort.getFoodProfileForUser(5)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                DietaryProfilePort.DietaryVerificationStatus.UNVERIFIED, List.of(), List.of()
+        ));
+
+        List<KitchenOrderResponse> kitchenOrders = mealOrderService.listKitchenOrders(LocalDate.now());
+        assertEquals(1, kitchenOrders.size());
+        KitchenOrderResponse ko = kitchenOrders.get(0);
+
+        assertEquals("UNVERIFIED", ko.dietaryVerificationStatus());
+        assertFalse(ko.dietaryProfileAvailable());
+        assertEquals("UNVERIFIED_LOCATION", ko.locationVerificationStatus());
+        assertEquals("NOT_APPLICABLE", ko.folioPostingStatus());
+        assertTrue(ko.isVillaDelivery());
     }
 
     @Test
-    @DisplayName("Booking Boundary: Inconsistent booking dates (checkIn > checkOut) throw INVALID_BOOKING_DATES")
-    void testCreateMealOrder_InconsistentStayDates_ThrowsBusinessRuleException() {
-        testBooking.setCheckInDate(targetDate.plusDays(5));
-        testBooking.setCheckOutDate(targetDate.plusDays(2)); // checkIn > checkOut
-        bookingRepository.save(testBooking);
+    @DisplayName("listUnpostedAlaCarteOrders correctly filters unposted A-la-carte orders for folio reconciliation")
+    void listUnpostedAlaCarteOrdersFiltersCorrectly() {
+        Integer orderId = 4001;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getMealType()).thenReturn("DINNER");
+        when(order.getOrderType()).thenReturn("A_LA_CARTE");
+        when(order.getOrderStatus()).thenReturn("DELIVERED");
+        when(order.getSpecialNotes()).thenReturn("Extra order");
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        CreateDailyMealRequest req = new CreateDailyMealRequest(
-                testBooking.getRetreatBookingId(), targetDate.plusDays(3), "LUNCH", List.of(saladItem.getMenuItemId()), null);
+        when(orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(1))
+                .thenReturn(List.of(order));
 
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
-                mealOrderService.createDailyMealOrder(req, testUser.getUserId()));
-        assertEquals("INVALID_BOOKING_DATES", ex.getErrorCode());
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(50);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(new BigDecimal("150000.00"));
+        when(item.getPreparationStatus()).thenReturn("READY");
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(1);
+        when(menuItem.getItemName()).thenReturn("Bào Ngư");
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        List<MealOrderResponse> unposted = mealOrderService.listUnpostedAlaCarteOrders(1);
+        assertEquals(1, unposted.size());
+        assertEquals("PENDING_RECONCILIATION", unposted.get(0).folioPostingStatus());
+        assertEquals(new BigDecimal("300000.00"), unposted.get(0).subtotal());
     }
+
+    @Test
+    @DisplayName("Meal preparation status PREPARING is preserved when inventory returns NOT_CONFIGURED")
+    void updateStatusToPreparingPersistsWhenRecipeNotConfigured() {
+        Integer orderId = 5001;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(150);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(20);
+        when(item.getQuantity()).thenReturn(1);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(20);
+        when(menuItem.getItemName()).thenReturn("Món Mới Chưa Công Thức");
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        when(inventoryService.processConsumptionForOrderItem(eq(150), any(LocalDate.class)))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.NOT_CONFIGURED,
+                        "Recipe not configured", LocalDateTime.now()));
+        when(inventoryService.getConsumptionRecord(150))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.NOT_CONFIGURED,
+                        "Recipe not configured", LocalDateTime.now()));
+
+        KitchenOrderResponse response = mealOrderService.updateStatus(orderId, "PREPARING");
+
+        // Verify line and order preparation status were persisted as PREPARING
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+        verify(orderItemRepository).save(item);
+        verify(order).setOrderStatus(FnbOrderStatus.PREPARING);
+        verify(orderRepository).save(order);
+
+        // Verify inventory status reflects NOT_CONFIGURED
+        assertEquals("NOT_CONFIGURED", response.inventoryStatus());
+        assertEquals("NOT_CONFIGURED", response.items().get(0).inventoryStatus());
+    }
+
+    @Test
+    @DisplayName("Meal preparation status PREPARING is preserved when inventory returns INSUFFICIENT_STOCK")
+    void updateStatusToPreparingPersistsWhenInventoryInsufficient() {
+        Integer orderId = 5002;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getRetreatBookingId()).thenReturn(1);
+        when(order.getOrderDate()).thenReturn(LocalDate.now());
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        MealOrderItem item = mock(MealOrderItem.class);
+        when(item.getId()).thenReturn(151);
+        when(item.getMealOrderId()).thenReturn(orderId);
+        when(item.getMenuItemId()).thenReturn(21);
+        when(item.getQuantity()).thenReturn(2);
+        when(item.getUnitPrice()).thenReturn(BigDecimal.ZERO);
+        when(item.getPreparationStatusValue()).thenReturn(MealOrderItemPreparationStatus.PENDING);
+        when(orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId)).thenReturn(List.of(item));
+        when(orderItemRepository.findByMealOrderIdInOrderByMealOrderIdAscIdAsc(List.of(orderId))).thenReturn(List.of(item));
+
+        MenuItem menuItem = mock(MenuItem.class);
+        when(menuItem.getId()).thenReturn(21);
+        when(menuItem.getItemName()).thenReturn("Cá Hồi Hấp");
+        when(menuItemRepository.findAllById(anyList())).thenReturn(List.of(menuItem));
+
+        when(bookingPort.getKitchenBookingContext(1)).thenReturn(new BookingContextPort.FnbBookingContext(
+                1, 1, "CHECKED_IN", LocalDate.now(), LocalDate.now().plusDays(2), "Sarah", "Villa #101"
+        ));
+        when(dietaryProfilePort.getFoodProfileForUser(1)).thenReturn(new DietaryProfilePort.FoodProfileProjection(
+                List.of(), List.of()
+        ));
+
+        when(inventoryService.processConsumptionForOrderItem(eq(151), any(LocalDate.class)))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.INSUFFICIENT_STOCK,
+                        "Insufficient stock", LocalDateTime.now()));
+        when(inventoryService.getConsumptionRecord(151))
+                .thenReturn(new com.heavenstay.hswrms.m4fnb.dto.response.InventoryConsumptionRecord(
+                        com.heavenstay.hswrms.m4fnb.entity.InventoryConsumptionStatus.INSUFFICIENT_STOCK,
+                        "Insufficient stock", LocalDateTime.now()));
+
+        KitchenOrderResponse response = mealOrderService.updateStatus(orderId, "PREPARING");
+
+        // Verify line and order preparation status were persisted as PREPARING
+        verify(item).setPreparationStatus(MealOrderItemPreparationStatus.PREPARING);
+        verify(orderItemRepository).save(item);
+        verify(order).setOrderStatus(FnbOrderStatus.PREPARING);
+        verify(orderRepository).save(order);
+
+        // Verify inventory status reflects INSUFFICIENT_STOCK
+        assertEquals("INSUFFICIENT_STOCK", response.inventoryStatus());
+        assertEquals("INSUFFICIENT_STOCK", response.items().get(0).inventoryStatus());
+
+}
 }

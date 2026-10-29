@@ -104,6 +104,7 @@ public class RetreatBookingService {
         );
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public RetreatBookingService(RetreatBookingRepository bookingRepository,
                                  RetreatPackageRepository packageRepository,
                                  VillaCategoryRepository villaCategoryRepository,

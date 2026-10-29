@@ -671,5 +671,65 @@
     "writtenPlaceholder": "Describe your healing journey, favorite therapy moments, or culinary experiences...",
     "btnSubmit": "Submit Reflections",
     "btnSkip": "Skip for Now"
+  },
+  "dining": {
+    "select": {
+      "title": "Daily Wellness Meal Selection",
+      "subtitle": "Select nourishing culinary creations tailored to your personal dietary and wellness profile.",
+      "retreatPackage": "Retreat Package",
+      "selectDate": "Retreat Days",
+      "selectPeriod": "Meal Period",
+      "viewPlan": "View My Plan",
+      "noItems": "No culinary items available for this meal period.",
+      "portions": "Portion Quantity",
+      "portionUnit": "portion(s)",
+      "includedInPackage": "Included in wellness package",
+      "notesPlaceholder": "Preparation notes (e.g., dressing on side, extra ginger tea, warm water only...)",
+      "notesTitle": "Culinary Preparation Notes (Optional)",
+      "saveSelection": "Save Meal Selection",
+      "saving": "Saving Selection...",
+      "saveSuccess": "Wellness meal selection saved successfully!",
+      "pastDateNotice": "Past date — meal selection cannot be modified",
+      "unavailableNotice": "Item temporarily out of fresh ingredients today. Please select another wellness dish.",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "stayRange": "Stay from {{checkIn}} to {{checkOut}}"
+    },
+    "periods": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "all_day": "All Day"
+    },
+    "allergies": {
+      "crustaceans_shellfish": "Crustaceans & Shellfish",
+      "peanuts": "Peanuts",
+      "nuts": "Nuts & Peanuts",
+      "shellfish": "Shellfish",
+      "eggs": "Eggs",
+      "fish": "Fish",
+      "dairy": "Dairy & Milk",
+      "soy": "Soy"
+    },
+    "dietary": {
+      "pescatarian": "Pescatarian",
+      "gluten_conscious": "Gluten-Conscious",
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "lacto_ovo_vegetarian": "Lacto-Ovo Vegetarian",
+      "gluten_free": "Gluten-Free",
+      "dairy_free": "Dairy-Free",
+      "keto": "Keto"
+    },
+    "dietaryTags": {
+      "vegetarian": "Vegetarian",
+      "lacto_ovo_vegetarian": "Lacto-Ovo Vegetarian",
+      "vegan": "Vegan",
+      "gluten_free": "Gluten-Free",
+      "gluten_conscious": "Gluten-Conscious",
+      "dairy_free": "Dairy-Free",
+      "keto": "Keto",
+      "pescatarian": "Pescatarian"
+    }
   }
 }

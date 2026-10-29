@@ -2,16 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
+import { isItemDietaryCompatible } from '../../utils/dietaryFilter';
 import type { MealPeriod, LocalizedString } from '../../types/dining';
-import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
+import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
+import {
+  parseDiningNotes,
+  buildAmanoiDiningNotes,
+  type DiningServiceLocation,
+} from '../../utils/diningServiceHelper';
 
 export const DailyMealSelectionPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const { menuItems, getDietaryProjection, saveMealSelection, getMealSelection } = useDining();
-  const { activeBooking } = useCustomer();
+  const { activeBooking, wellnessProfile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -24,67 +31,141 @@ export const DailyMealSelectionPage: React.FC = () => {
   const customerId = 'usr-cust-01';
   const dietaryInfo = getDietaryProjection(customerId);
 
+  const dietaryRestrictions = wellnessProfile?.dietaryProfile?.dietaryRestrictions?.length
+    ? wellnessProfile.dietaryProfile.dietaryRestrictions
+    : dietaryInfo.dietaryRestrictions;
+  const allergies = wellnessProfile?.dietaryProfile?.allergies?.length
+    ? wellnessProfile.dietaryProfile.allergies
+    : dietaryInfo.allergies;
+
   const [activeDate, setActiveDate] = useState<string>('');
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [notes, setNotes] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
+  const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('DINING_PAVILION');
+  const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
+  const [customNotes, setCustomNotes] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Calculate dates based on booking
+
+  const todayStr = React.useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  // Calculate dates based on the guest's booked retreat package, strictly excluding past dates
   const dates = React.useMemo(() => {
     if (!activeBooking) return [];
     const start = new Date(activeBooking.startDate);
     const end = new Date(activeBooking.endDate);
     const result: string[] = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      result.push(d.toISOString().split('T')[0]);
+      const dateStr = d.toISOString().split('T')[0];
+      // Exclude past dates (only current date or future dates are displayed)
+      if (dateStr >= todayStr) {
+        result.push(dateStr);
+      }
+    }
+    // Fallback: If all retreat booking dates were in the past, provide active dates starting from today
+    if (result.length === 0) {
+      const base = new Date();
+      for (let i = 0; i < 4; i++) {
+        const next = new Date(base);
+        next.setDate(base.getDate() + i);
+        result.push(next.toISOString().split('T')[0]);
+      }
     }
     return result;
-  }, [activeBooking]);
+  }, [activeBooking, todayStr]);
 
+  // Automatically default to the first available date (current date or nearest future date)
   useEffect(() => {
-    if (dates.length > 0 && !activeDate) {
+    if (dates.length > 0 && (!activeDate || !dates.includes(activeDate) || activeDate < todayStr)) {
       setActiveDate(dates[0]);
     }
-  }, [dates, activeDate]);
+  }, [dates, activeDate, todayStr]);
 
   useEffect(() => {
     if (activeDate && activeBooking) {
       const existing = getMealSelection(activeBooking.id, activeDate, activePeriod);
       if (existing) {
-        setSelectedItemId(existing.menuItemIds[0] || null);
-        setNotes(existing.notes || '');
+        const itemMap: Record<string, number> = {};
+        if (existing.items && existing.items.length > 0) {
+          existing.items.forEach(it => {
+            if (it.menuItemId) itemMap[it.menuItemId] = it.quantity || 1;
+          });
+        } else if (existing.menuItemIds && existing.menuItemIds.length > 0) {
+          existing.menuItemIds.forEach(id => {
+            itemMap[id] = existing.quantity || 1;
+          });
+        }
+        setSelectedItems(itemMap);
+        const parsed = parseDiningNotes(existing.notes);
+        setDiningLocation(parsed.location);
+        setSelectedWellnessTags(parsed.wellnessTags);
+        setCustomNotes(parsed.cleanNotes);
       } else {
-        setSelectedItemId(null);
-        setNotes('');
+        setSelectedItems({});
+        setDiningLocation('DINING_PAVILION');
+        setSelectedWellnessTags([]);
+        setCustomNotes('');
       }
       setSaveSuccess(false);
     }
   }, [activeDate, activePeriod, activeBooking, getMealSelection]);
 
   const availableItems = menuItems.filter(
-    (item) => !item.isExtra && (item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day'))
+    (item) =>
+      !item.isExtra &&
+      (item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day')) &&
+      isItemDietaryCompatible(item, dietaryRestrictions, allergies)
   );
 
   const hasAllergyWarning = (item: any) => {
-    return item.allergenTags.some((tag: string) => dietaryInfo.allergies.includes(tag.toLowerCase()));
+    return item.allergenTags.some((tag: string) => allergies.includes(tag.toLowerCase()));
   };
 
+  const handleToggleTag = (tag: string) => {
+    setSelectedWellnessTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const selectedEntries = Object.entries(selectedItems).filter(([_, qty]) => qty > 0);
+
   const handleSave = () => {
-    if (!activeBooking || !selectedItemId) return;
+    if (!activeBooking || selectedEntries.length === 0) return;
+    const finalNotes = buildAmanoiDiningNotes(
+      diningLocation,
+      selectedWellnessTags,
+      customNotes,
+      activeBooking.villaNumber
+    );
+
+    const items = selectedEntries.map(([mId, qty]) => ({
+      menuItemId: mId,
+      quantity: qty,
+      notes: finalNotes,
+    }));
+    const menuItemIds = selectedEntries.map(([mId]) => mId);
+    const totalPortions = selectedEntries.reduce((sum, [_, qty]) => sum + qty, 0);
+
     saveMealSelection({
       bookingId: activeBooking.id,
       customerId,
       date: activeDate,
       mealPeriod: activePeriod,
-      menuItemIds: [selectedItemId],
-      notes,
+      menuItemIds,
+      quantity: totalPortions,
+      items,
+      notes: finalNotes,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3500);
   };
 
-  const selectedItem = menuItems.find((m) => m.id === selectedItemId);
 
   if (!activeBooking) {
     return (
@@ -139,16 +220,50 @@ export const DailyMealSelectionPage: React.FC = () => {
       <div className="hsw-meal-select-layout">
         {/* Left Sticky Planning Rail */}
         <aside className="hsw-planning-rail" aria-label="Meal planning controls">
+          {/* Booked Retreat Package Sync Banner */}
+          {activeBooking && (
+            <div
+              style={{
+                padding: '10px 12px',
+                backgroundColor: 'var(--bg-soft)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: 'var(--space-3)',
+                borderLeft: '3px solid var(--accent-forest)',
+              }}
+              id="synced-retreat-package-card"
+            >
+              <div
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--accent-olive)',
+                  marginBottom: '2px',
+                }}
+              >
+                {t('dining.select.retreatPackage', 'Retreat Package')}
+              </div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                {localize(activeBooking.retreatName)}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                {activeBooking.villaNumber} · {dates[0] || activeBooking.startDate} → {dates[dates.length - 1] || activeBooking.endDate}
+              </div>
+            </div>
+          )}
+
           {/* Date Selector */}
           <div style={{ marginBottom: 'var(--space-4)' }}>
             <h3 className="hsw-rail-section-title">
               <Calendar size={13} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
               {t('dining.select.selectDate', 'Retreat Days')}
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {dates.map((d, index) => {
                 const dateObj = new Date(d);
                 const isSelected = activeDate === d;
+                const isToday = d === todayStr;
                 const formattedDate = dateObj.toLocaleDateString(i18n.language || 'en', {
                   weekday: 'short',
                   month: 'short',
@@ -160,10 +275,34 @@ export const DailyMealSelectionPage: React.FC = () => {
                     type="button"
                     className={`hsw-date-pill-btn ${isSelected ? 'active' : ''}`}
                     onClick={() => setActiveDate(d)}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      position: 'relative',
+                    }}
                     id={`btn-date-${d}`}
+                    title={formattedDate}
                   >
-                    <span>Day {index + 1}</span>
-                    <span style={{ fontSize: '12px', opacity: 0.85 }}>{formattedDate}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600 }}>Day {index + 1}</span>
+                      {isToday && (
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            padding: '1px 5px',
+                            borderRadius: 'var(--radius-pill)',
+                            backgroundColor: 'rgba(46, 90, 54, 0.12)',
+                            color: 'var(--accent-forest, #2e5a36)',
+                          }}
+                        >
+                          {t('labels.today', 'Hôm nay')}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '11px', opacity: 0.85 }}>{formattedDate}</span>
                   </button>
                 );
               })}
@@ -240,6 +379,38 @@ export const DailyMealSelectionPage: React.FC = () => {
             </button>
           </div>
 
+          {/* Dietary Safeguard Notice */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              backgroundColor: 'rgba(46, 125, 50, 0.08)',
+              border: '1px solid rgba(46, 125, 50, 0.25)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 14px',
+              marginBottom: 'var(--space-4)',
+              fontSize: '12px',
+              color: 'var(--text-primary)',
+            }}
+          >
+            <ShieldCheck size={18} style={{ color: '#2e7d32', flexShrink: 0 }} />
+            <div>
+              <span style={{ fontWeight: 600 }}>
+                {t('dining.select.safeguardTitle', 'Tự động lọc theo hồ sơ dưỡng sinh')}:
+              </span>{' '}
+              <span style={{ color: 'var(--accent-forest, #2e7d32)' }}>
+                {dietaryRestrictions.join(', ') || 'Ăn chay'}
+              </span>
+              {allergies.length > 0 && (
+                <span style={{ color: 'var(--text-danger, #d32f2f)', marginLeft: '6px' }}>
+                  (Dị ứng: {allergies.join(', ')})
+                </span>
+              )}
+              . {t('dining.select.safeguardDesc', 'Chỉ những món phù hợp với chế độ ăn chay và không gây dị ứng mới được hiển thị.')}
+            </div>
+          </div>
+
           {availableItems.length === 0 ? (
             <div
               style={{
@@ -273,25 +444,46 @@ export const DailyMealSelectionPage: React.FC = () => {
                 }}
               >
                 {availableItems.map((item) => {
-                  const isSelected = selectedItemId === item.id;
+                  const isSelected = Boolean(selectedItems[item.id]);
+                  const itemPortion = selectedItems[item.id] || 1;
                   const warning = hasAllergyWarning(item);
                   const localizedName = localize(item.name);
                   const localizedDesc = localize(item.description);
+                  const isAvailable = item.available !== false && (item.availableServings === undefined || item.availableServings > 0);
+
+                  const toggleSelection = () => {
+                    if (!isAvailable) return;
+                    setSelectedItems((prev) => {
+                      const next = { ...prev };
+                      if (next[item.id]) {
+                        delete next[item.id];
+                      } else {
+                        next[item.id] = 1;
+                      }
+                      return next;
+                    });
+                  };
 
                   return (
                     <div
                       key={item.id}
-                      className={`hsw-culinary-card hsw-selectable-meal-card ${isSelected ? 'is-selected' : ''}`}
-                      onClick={() => setSelectedItemId(item.id)}
+                      className={`hsw-culinary-card hsw-selectable-meal-card ${isSelected ? 'is-selected' : ''} ${!isAvailable ? 'is-unavailable' : ''}`}
+                      style={{
+                        opacity: isAvailable ? 1 : 0.62,
+                        cursor: isAvailable ? 'pointer' : 'not-allowed',
+                        position: 'relative',
+                      }}
+                      onClick={toggleSelection}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          setSelectedItemId(item.id);
+                          toggleSelection();
                         }
                       }}
-                      tabIndex={0}
-                      role="radio"
+                      tabIndex={isAvailable ? 0 : -1}
+                      role="checkbox"
                       aria-checked={isSelected}
+                      aria-disabled={!isAvailable}
                       id={`select-card-${item.id}`}
                     >
                       <div style={{ position: 'relative' }}>
@@ -304,18 +496,136 @@ export const DailyMealSelectionPage: React.FC = () => {
                       </div>
 
                       <div className="hsw-culinary-card-body">
-                        <h3 className="hsw-culinary-dish-name" style={{ marginBottom: '6px' }}>
-                          {localizedName}
-                        </h3>
+                        {/* Header: Name & Availability Indicator Pill */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                          <h3 className="hsw-culinary-dish-name" style={{ margin: 0, flex: 1, fontSize: '15px' }}>
+                            {localizedName}
+                          </h3>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-pill)',
+                              backgroundColor: isAvailable ? 'rgba(46, 125, 50, 0.1)' : 'rgba(211, 47, 47, 0.1)',
+                              color: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
+                              border: `1px solid ${isAvailable ? 'rgba(46, 125, 50, 0.25)' : 'rgba(211, 47, 47, 0.25)'}`,
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                            }}
+                            id={`availability-badge-${item.id}`}
+                          >
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
+                              }}
+                            />
+                            {isAvailable ? t('dining.select.available', 'Sẵn sàng') : t('dining.select.unavailable', 'Tạm hết')}
+                          </span>
+                        </div>
+
+                        {/* Dish Description */}
                         <p className="hsw-culinary-desc">{localizedDesc}</p>
 
-                        {/* Dietary Badges (Prioritized, ingredient-aware, beverage-reduced) */}
+                        {/* Price Display directly below dish description */}
+                        <div
+                          className="hsw-culinary-dish-price"
+                          style={{
+                            margin: '8px 0',
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '6px',
+                          }}
+                          id={`price-tag-${item.id}`}
+                        >
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-forest)' }}>
+                            {item.price && item.price > 0
+                              ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)
+                              : '85.000 ₫'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                            ({t('dining.select.includedInPackage', 'Đã bao gồm trong gói')})
+                          </span>
+                        </div>
+
+                        {/* Dietary Badges */}
                         <DietaryBadgeList item={item} />
 
                         {warning && (
-                          <div className="hsw-allergy-alert-box" role="alert">
+                          <div className="hsw-allergy-alert-box" role="alert" style={{ marginTop: '8px' }}>
                             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
                             <span>{t('dining.menu.allergyWarning', 'Contains an allergen listed in your dietary profile.')}</span>
+                          </div>
+                        )}
+
+                        {/* Quantity / Portion Selector on card when selected */}
+                        {isSelected && isAvailable && (
+                          <div
+                            className="hsw-portion-selector-box"
+                            style={{
+                              marginTop: 'var(--space-3)',
+                              padding: '8px 12px',
+                              backgroundColor: 'var(--bg-soft)',
+                              borderRadius: 'var(--radius-sm)',
+                              border: '1px solid var(--border-subtle)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            id={`portion-selector-${item.id}`}
+                          >
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {t('dining.select.portionCount', 'Khẩu phần / Số lượng')}:
+                            </span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+                                style={{ padding: '0 8px', height: '26px', minWidth: '26px', fontWeight: 700 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItems((prev) => {
+                                    const current = prev[item.id] || 1;
+                                    if (current <= 1) {
+                                      const next = { ...prev };
+                                      delete next[item.id];
+                                      return next;
+                                    }
+                                    return { ...prev, [item.id]: current - 1 };
+                                  });
+                                }}
+                                id={`btn-portion-dec-${item.id}`}
+                                title="Giảm số lượng (hoặc bỏ chọn nếu về 0)"
+                              >
+                                -
+                              </button>
+                              <span style={{ fontWeight: 700, fontSize: '13px', minWidth: '60px', textAlign: 'center', color: 'var(--text-primary)' }}>
+                                {itemPortion} {t('dining.select.portion', 'suất')}
+                              </span>
+                              <button
+                                type="button"
+                                className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+                                style={{ padding: '0 8px', height: '26px', minWidth: '26px', fontWeight: 700 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItems((prev) => ({
+                                    ...prev,
+                                    [item.id]: Math.min(10, (prev[item.id] || 1) + 1),
+                                  }));
+                                }}
+                                id={`btn-portion-inc-${item.id}`}
+                                title="Tăng số lượng"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -324,48 +634,57 @@ export const DailyMealSelectionPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Notes & Save Section (Requirement 15) */}
-              <div className="hsw-meal-save-card">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 'var(--space-3)',
-                    flexWrap: 'wrap',
-                    gap: 'var(--space-2)',
-                  }}
-                >
-                  <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, margin: 0 }}>
-                    {t('dining.select.specialRequests', 'Culinary Preparation Notes (Optional)')}
-                  </h3>
-                  {selectedItem && (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-forest)', fontWeight: 600 }}>
-                      {t('dining.select.selectedBadge', 'Selected')}: {localize(selectedItem.name)}
-                    </span>
-                  )}
-                </div>
+              {/* Amanoi Luxury Wellness Dining Venue & Requests Section */}
+              <AmanoiDiningLocationPicker
+                location={diningLocation}
+                onLocationChange={setDiningLocation}
+                selectedTags={selectedWellnessTags}
+                onToggleTag={handleToggleTag}
+                customNotes={customNotes}
+                onCustomNotesChange={setCustomNotes}
+                villaNumber={activeBooking.villaNumber}
+                lang={currentLang === 'vi' ? 'vi' : 'en'}
+              />
 
-                <textarea
-                  className="hsw-input"
-                  style={{ width: '100%', minHeight: '80px', marginBottom: 'var(--space-4)', resize: 'vertical' }}
-                  placeholder={t('dining.select.requestsPlaceholder', 'e.g., dressing on the side, hot water with lemon')}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  id="meal-selection-notes"
-                />
+              <div className="hsw-meal-save-card">
+                {selectedEntries.length > 0 && (
+                  <div style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--accent-forest)', fontWeight: 700 }}>
+                      {t('dining.select.selectedBadge', 'Selected')} ({selectedEntries.length} món):{' '}
+                      {selectedEntries.map(([mId, qty]) => {
+                        const m = menuItems.find((it) => it.id === mId);
+                        return `${qty}x ${m ? localize(m.name) : mId}`;
+                      }).join(', ')}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                      {diningLocation === 'IN_VILLA'
+                        ? '🏡 Phục vụ riêng tại Biệt thự'
+                        : '🍽️ Phục vụ tại Nhà hàng Trung tâm'}
+                    </span>
+                  </div>
+                )}
+
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="hsw-btn hsw-btn-primary"
-                    disabled={!selectedItemId}
+                    disabled={selectedEntries.length === 0 || activeDate < todayStr}
                     onClick={handleSave}
                     id="btn-save-meal-selection"
                   >
                     <CheckCircle2 size={16} />
-                    <span>{t('dining.select.saveSelection', 'Save Meal Selection')}</span>
+                    <span>
+                      {t('dining.select.saveSelection', 'Save Meal Selection')}
+                      {selectedEntries.length > 0 ? ` (${selectedEntries.length} món)` : ''}
+                    </span>
                   </button>
+
+                  {activeDate < todayStr && (
+                    <span style={{ color: '#d32f2f', fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+                      {t('dining.select.pastDateNotice', 'Past date — meal selection cannot be modified')}
+                    </span>
+                  )}
 
                   {saveSuccess && (
                     <span

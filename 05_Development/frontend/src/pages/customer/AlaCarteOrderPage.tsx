@@ -7,6 +7,8 @@ import { AlertCircle, Minus, Plus, ShoppingBag, Info, CheckCircle2 } from 'lucid
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
+import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
+import { buildAmanoiDiningNotes, type DiningServiceLocation } from '../../utils/diningServiceHelper';
 
 interface CartItem {
   menuItem: DietaryMenuItem;
@@ -32,6 +34,10 @@ export const AlaCarteOrderPage: React.FC = () => {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('IN_VILLA');
+  const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
+  const [customNotes, setCustomNotes] = useState('');
+
 
   const extraItems = menuItems.filter((item) => item.isExtra);
 
@@ -65,18 +71,36 @@ export const AlaCarteOrderPage: React.FC = () => {
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.menuItem.price || 0) * item.quantity, 0);
 
+  const handleToggleTag = (tag: string) => {
+    setSelectedWellnessTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   const handleSubmit = () => {
     if (!activeBooking || cart.length === 0) return;
+
+    const locationLabel = diningLocation === 'IN_VILLA'
+      ? `In-Villa (${activeBooking.villaNumber || 'Villa'})`
+      : 'Dining Pavilion';
+
+    const orderNotes = buildAmanoiDiningNotes(
+      diningLocation,
+      selectedWellnessTags,
+      customNotes,
+      activeBooking.villaNumber
+    );
 
     createAlaCarteOrder({
       bookingId: activeBooking.id,
       customerId,
+      location: locationLabel,
       lines: cart.map((c) => ({
         id: `L-${Date.now()}-${c.menuItem.id}`,
         menuItemId: c.menuItem.id,
         quantity: c.quantity,
         unitPrice: c.menuItem.price || 0,
-        notes: c.notes,
+        notes: c.notes ? `${orderNotes} | ${c.notes}` : orderNotes,
       })),
       totalAmount,
     });
@@ -84,6 +108,7 @@ export const AlaCarteOrderPage: React.FC = () => {
     setOrderSuccess(true);
     setCart([]);
   };
+
 
   if (!activeBooking) {
     return (
@@ -331,11 +356,26 @@ export const AlaCarteOrderPage: React.FC = () => {
                 </div>
               ))}
 
+              {/* Amanoi Luxury Wellness Dining Venue & Requests */}
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                <AmanoiDiningLocationPicker
+                  location={diningLocation}
+                  onLocationChange={setDiningLocation}
+                  selectedTags={selectedWellnessTags}
+                  onToggleTag={handleToggleTag}
+                  customNotes={customNotes}
+                  onCustomNotesChange={setCustomNotes}
+                  villaNumber={activeBooking.villaNumber}
+                  lang={currentLang === 'vi' ? 'vi' : 'en'}
+                />
+              </div>
+
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'baseline',
+
                   marginTop: 'var(--space-2)',
                   paddingTop: 'var(--space-2)',
                   borderTop: '1px solid var(--border-subtle)',

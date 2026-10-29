@@ -50,6 +50,7 @@ public class VNPayDepositService {
         this(bookingRepository, bookingService, null, new BookingClock());
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public VNPayDepositService(RetreatBookingRepository bookingRepository,
                                RetreatBookingService bookingService,
                                @org.springframework.beans.factory.annotation.Qualifier("bookingPaymentTransactionRepository") PaymentTransactionRepository paymentTransactionRepository,

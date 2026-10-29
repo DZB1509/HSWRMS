@@ -42,7 +42,7 @@
 * **Source Baseline:** `03_Design/Database/HSWRMS_SQLServer_Database.sql` is the frozen design baseline.
 * **Development Baseline:** `05_Development/database/schema.sql` is the active development version.
 * **Hibernate Strategy:** `spring.jpa.hibernate.ddl-auto=none` (or `validate`). Hibernate must never execute `create`, `update`, or `create-drop` against the production/development SQL Server instance.
-* **Naming Reconciliation (M4):** The approved business domain terminology for recipe quantity in `dbo.MenuItemIngredient` is `quantity_per_serving`. The baseline SQL schema defines `required_quantity`. During module development, this will be formally mapped via JPA `@Column(name = "required_quantity")` or reconciled in migration scripts.
+* **Naming Reconciliation (M4):** The canonical recipe field is `dbo.MenuItemIngredient.required_quantity`. The entity, API, validation, calculations, and documentation use `required_quantity` consistently. Preserve the existing SQL Server type, precision, and constraints; do not rename the field or add a migration just to change its name.
 
 ---
 

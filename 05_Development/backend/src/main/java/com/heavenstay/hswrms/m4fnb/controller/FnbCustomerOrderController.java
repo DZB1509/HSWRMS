@@ -2,7 +2,7 @@ package com.heavenstay.hswrms.m4fnb.controller;
 
 import com.heavenstay.hswrms.common.api.ApiResponse;
 import com.heavenstay.hswrms.m4fnb.dto.*;
-import com.heavenstay.hswrms.m4fnb.service.MealOrderService;
+import com.heavenstay.hswrms.m4fnb.service.FnbKdsOrderService;
 import com.heavenstay.hswrms.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,9 +21,9 @@ import java.util.List;
 @RequestMapping("/api/v1/fnb/customer")
 public class FnbCustomerOrderController {
 
-    private final MealOrderService mealOrderService;
+    private final FnbKdsOrderService mealOrderService;
 
-    public FnbCustomerOrderController(MealOrderService mealOrderService) {
+    public FnbCustomerOrderController(FnbKdsOrderService mealOrderService) {
         this.mealOrderService = mealOrderService;
     }
 

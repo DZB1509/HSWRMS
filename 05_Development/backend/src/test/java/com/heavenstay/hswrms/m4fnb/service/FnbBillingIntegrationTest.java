@@ -17,7 +17,7 @@ import com.heavenstay.hswrms.m4fnb.dto.AlaCarteItemRequest;
 import com.heavenstay.hswrms.m4fnb.dto.CreateAlaCarteRequest;
 import com.heavenstay.hswrms.m4fnb.dto.MealOrderDto;
 import com.heavenstay.hswrms.m4fnb.dto.UpdateOrderStatusRequest;
-import com.heavenstay.hswrms.m4fnb.entity.MenuItemEntity;
+import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
 import com.heavenstay.hswrms.m4fnb.repository.MenuItemRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
 import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class FnbBillingIntegrationTest {
 
     @Autowired
-    private MealOrderService mealOrderService;
+    private FnbKdsOrderService mealOrderService;
 
     @Autowired
     private FolioBillingService folioBillingService;
@@ -82,8 +82,8 @@ public class FnbBillingIntegrationTest {
     private User testUser;
     private RetreatBooking testBooking;
     private FolioEntity testFolio;
-    private MenuItemEntity saladItem;
-    private MenuItemEntity smoothieItem;
+    private MenuItem saladItem;
+    private MenuItem smoothieItem;
     private final LocalDate targetDate = LocalDate.now().plusDays(1);
 
     @BeforeEach
@@ -141,11 +141,11 @@ public class FnbBillingIntegrationTest {
         testFolio.setTotalPaid(BigDecimal.valueOf(500));
         testFolio = folioRepository.save(testFolio);
 
-        saladItem = new MenuItemEntity("Billing Organic Salad", "STARTER", "ALL_DAY",
+        saladItem = new MenuItem("Billing Organic Salad", "STARTER", "ALL_DAY",
                 new BigDecimal("150"), "vegan", "peanuts", "AVAILABLE");
         saladItem = menuItemRepository.save(saladItem);
 
-        smoothieItem = new MenuItemEntity("Billing Detox Smoothie", "BEVERAGE", "ALL_DAY",
+        smoothieItem = new MenuItem("Billing Detox Smoothie", "BEVERAGE", "ALL_DAY",
                 new BigDecimal("90"), "vegan", null, "AVAILABLE");
         smoothieItem = menuItemRepository.save(smoothieItem);
     }

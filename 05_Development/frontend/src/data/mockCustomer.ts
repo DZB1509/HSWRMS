@@ -52,7 +52,7 @@ export const INITIAL_WELLNESS_PROFILE: WellnessProfile = {
   },
   dietaryProfile: {
     allergies: ['Crustaceans & Shellfish', 'Peanuts'],
-    dietaryRestrictions: ['Pescatarian', 'Gluten-Conscious'],
+    dietaryRestrictions: ['Vegetarian', 'Gluten-Conscious'],
     intolerances: ['Lactose (mild — prefers oat/almond milk)'],
     dislikedIngredients: ['Coriander leaves', 'Excessive chili heat'],
     specialInstructions: 'Dedicated clean preparation station free of shellfish contact. Prefers warm ginger-lemongrass tea with all meals.',
@@ -61,33 +61,42 @@ export const INITIAL_WELLNESS_PROFILE: WellnessProfile = {
 
 export const INITIAL_DELETION_REQUEST: HealthDataDeletionRequest | null = null;
 
+const getRelativeDateStr = (offsetDays: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export const INITIAL_BOOKINGS: RetreatBooking[] = [
   {
     id: 'HSW-BK-2026-0881',
     bookingReference: 'HSW-88192',
-    retreatSlug: 'mindful-essence',
+    retreatSlug: 'mindful-renewal',
     retreatName: {
-      vi: 'Tinh Hoa Tỉnh Thức & Thiền Định',
-      en: 'Mindful Essence & Meditation Journey',
-      'zh-CN': '正念精粹与冥想静修之旅',
-      ja: 'マインドフル・エッセンス＆瞑想リトリート',
-      fr: 'Essence de Pleine Conscience & Méditation',
+      vi: 'Tái Tạo Tĩnh Thức',
+      en: 'Mindful Renewal',
+      'zh-CN': '正念觉醒·焕新之旅',
+      ja: 'マインドフル・リニューアル',
+      fr: 'Renouveau en Pleine Conscience',
     },
-    heroImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
-    startDate: '2026-10-15',
-    endDate: '2026-10-18',
+    heroImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=80',
+    startDate: getRelativeDateStr(0),
+    endDate: getRelativeDateStr(3),
     days: 3,
     nights: 2,
     villaType: {
-      vi: 'Biệt Thự Vườn Tĩnh Lặng Có Bể Bơi',
-      en: 'Tranquil Garden Villa with Private Pool',
-      'zh-CN': '静谧花园带私人泳池别墅',
-      ja: 'プライベートプール付き静寂のガーデンヴィラ',
-      fr: 'Villa Jardin Paisible avec Piscine Privée',
+      vi: 'Biệt Thự Khoáng Nóng Bên Vách Đá',
+      en: 'Ocean Cliff Mineral Pool Villa',
+      'zh-CN': '悬崖海景矿泉泳池别墅',
+      ja: 'オーシャンクリフ・ミネラルプールヴィラ',
+      fr: 'Villa Falaises Marines avec Piscine Minérale',
     },
     villaNumber: 'Villa #102',
     status: 'upcoming',
-    totalPrice: 24500000,
+    totalPrice: 18500000,
     depositAmount: 7350000,
     remainingBalance: 17150000,
     depositStatus: 'paid',

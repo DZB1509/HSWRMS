@@ -1,47 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
-import { ChefHat, UtensilsCrossed, AlertCircle, Clock, ChevronRight, ArrowRight, RotateCw } from 'lucide-react';
+import {
+  ChefHat,
+  UtensilsCrossed,
+  AlertCircle,
+  Clock,
+  ChevronRight,
+  ArrowRight,
+  AlertTriangle,
+  Boxes,
+  CheckCircle2,
+  Calendar,
+  RefreshCw,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useKdsPolling } from '../../features/m4-fnb/hooks/useKdsPolling';
-import { fnbApi, type KdsDashboardKpiBackendDto } from '../../features/m4-fnb/api/fnbApi';
+import { fnbApi } from '../../features/m4-fnb/api/fnbApi';
+import type {
+  IngredientDemandResponse,
+  FnbDashboardResponse,
+} from '../../features/m4-fnb/types/fnbDto';
 
-const CANONICAL_RESORT_DATE = '2026-09-24';
+import { cleanMojibake } from '../../utils/textEncodingHelper';
+import { getLocalDateString } from '../../utils/diningServiceHelper';
 
 export const FnbDashboardPage: React.FC = () => {
-  const { t } = useTranslation('operations');
-  const { getActiveKitchenQueue, menuItems, refreshKitchenQueue } = useDining();
+  const { t, i18n } = useTranslation('operations');
+  const { getDailyPrepList, menuItems, fetchKitchenOrders } = useDining();
   const navigate = useNavigate();
 
-  const [remoteKpis, setRemoteKpis] = useState<KdsDashboardKpiBackendDto | null>(null);
+  const currentLang = (i18n.language?.startsWith('vi') ? 'vi' : 'en') as 'vi' | 'en';
 
-  // Short-polling: 10-15s interval (12s) + manual refresh
-  const { isManualRefreshing, manualRefresh } = useKdsPolling({
-    intervalMs: 12000,
-    onPoll: async () => {
-      try {
-        const [kpis] = await Promise.all([
-          fnbApi.getKdsDashboardKpis(CANONICAL_RESORT_DATE),
-          refreshKitchenQueue ? refreshKitchenQueue(CANONICAL_RESORT_DATE) : Promise.resolve(),
-        ]);
-        if (kpis) {
-          setRemoteKpis(kpis);
-        }
-      } catch (err) {
-        console.warn('Live KPI fetch failed, falling back to local queue counts:', err);
+  const [resortDate, setResortDate] = useState(() => getLocalDateString());
+  const [demandFilter, setDemandFilter] = useState<'all' | 'shortage' | 'covered'>('all');
+  const [ingredientDemand, setIngredientDemand] = useState<IngredientDemandResponse[]>([]);
+  const [dashboardMetrics, setDashboardMetrics] = useState<FnbDashboardResponse | null>(null);
+  const [apiOnline, setApiOnline] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Load real backend dashboard if connected, do not simulate fake inventory
+  const loadDashboardData = useCallback(async (date: string) => {
+    setIsRefreshing(true);
+    try {
+      const response = await fnbApi.getDashboard(date);
+      if (response) {
+        setDashboardMetrics(response);
+        setApiOnline(true);
+        setIngredientDemand(response.ingredientDemand || []);
       }
-    },
+      if (fetchKitchenOrders) {
+        await fetchKitchenOrders(date);
+      }
+    } catch {
+      // Backend not running or in offline prototype mode
+      setApiOnline(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchKitchenOrders]);
+
+  useEffect(() => {
+    loadDashboardData(resortDate);
+  }, [resortDate, loadDashboardData]);
+
+  // Prep queue from dining context for the selected date
+  const todaysList = getDailyPrepList(resortDate);
+
+  const mealsToPrepare = dashboardMetrics?.retreatMealOrders ?? todaysList.filter((item) => item.type === 'retreat_meal').length;
+  const extraOrders = dashboardMetrics?.alaCarteOrders ?? todaysList.filter((item) => item.type === 'a_la_carte').length;
+  const dietaryAlerts = todaysList.filter((item) => item.dietaryNotes.length > 0).length;
+  const pendingCount = dashboardMetrics?.pendingOrders ?? todaysList.filter((item) => item.status === 'pending').length;
+  const preparingCount = dashboardMetrics?.preparingOrders ?? todaysList.filter((item) => item.status === 'preparing').length;
+
+  // Shortage calculations
+  const shortages = ingredientDemand.filter((item) => item.status === 'SHORTAGE' || item.shortfall > 0);
+  const shortageCount = shortages.length;
+
+  const filteredDemand = ingredientDemand.filter((item) => {
+    if (demandFilter === 'shortage') return item.status === 'SHORTAGE' || item.shortfall > 0;
+    if (demandFilter === 'covered') return item.status === 'COVERED' && item.shortfall === 0;
+    return true;
   });
-
-  // Canonical demo operational resort date active preparation queue
-  const activeQueue = getActiveKitchenQueue(CANONICAL_RESORT_DATE);
-
-  const mealsToPrepare = remoteKpis ? remoteKpis.retreatMealsToday : activeQueue.filter((item) => item.type === 'retreat_meal').length;
-  const extraOrders = remoteKpis ? remoteKpis.extraOrdersToday : activeQueue.filter((item) => item.type === 'a_la_carte').length;
-  const dietaryAlerts = remoteKpis ? remoteKpis.dietaryAlertsCount : activeQueue.filter((item) => item.dietaryNotes.length > 0).length;
-  const pendingCount = remoteKpis ? remoteKpis.pendingCount : activeQueue.filter((item) => item.status === 'pending').length;
-  const preparingCount = remoteKpis ? remoteKpis.preparingCount : activeQueue.filter((item) => item.status === 'preparing').length;
 
   const formatVilla = (villa?: string) => {
     if (!villa) return '—';
@@ -67,20 +107,59 @@ export const FnbDashboardPage: React.FC = () => {
     <div className="hsw-page-container" id="screen-38-fnb-dashboard">
       <OperationalPageHeader
         title={t('fnb.dashboard.title', 'F&B Kitchen Dashboard')}
-        subtitle={t('fnb.dashboard.subtitle', 'Culinary prep queue and fulfillment metrics for current resort date.')}
+        subtitle={t('fnb.dashboard.subtitle', 'Culinary prep queue, inventory demand, and raw material shortage monitoring.')}
         actions={
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--surface)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <Calendar size={15} style={{ color: 'var(--text-tertiary)' }} />
+              <input
+                type="date"
+                value={resortDate}
+                onChange={(e) => setResortDate(e.target.value)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '13px',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+                id="fnb-dashboard-date-picker"
+              />
+            </div>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '3px 9px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: apiOnline ? 'rgba(46, 125, 50, 0.1)' : 'var(--bg-soft)',
+                color: apiOnline ? 'var(--accent-forest)' : 'var(--text-tertiary)',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: apiOnline ? 'var(--accent-forest)' : '#9ca3af',
+                }}
+              />
+              {apiOnline ? 'Live API Connected' : 'Prototype Standalone'}
+            </span>
             <button
               type="button"
-              className="hsw-btn hsw-btn-secondary"
-              onClick={() => manualRefresh()}
-              disabled={isManualRefreshing}
-              id="btn-refresh-kds-dashboard"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              title="Refresh KDS Dashboard (short polling 12s)"
+              className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+              onClick={() => loadDashboardData(resortDate)}
+              disabled={isRefreshing}
+              title="Refresh F&B metrics"
             >
-              <RotateCw size={14} className={isManualRefreshing ? 'hsw-spin' : ''} />
-              <span>{isManualRefreshing ? t('common.refreshing', 'Refreshing...') : t('common.refresh', 'Refresh')}</span>
+              <RefreshCw size={14} className={isRefreshing ? 'hsw-spin' : ''} />
+              <span>{isRefreshing ? 'Refreshing...' : 'Sync'}</span>
             </button>
             <button
               type="button"
@@ -95,9 +174,124 @@ export const FnbDashboardPage: React.FC = () => {
         }
       />
 
-      {/* 4-KPI Compact Grid (Requirement 24 - responsive 4 across / 2x2 / 1) */}
+      {/* 1. CRITICAL RAW MATERIAL SHORTAGE WARNING BANNER */}
+      {shortageCount > 0 ? (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
+            border: '1px solid #ef4444',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-4)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--space-3)',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)',
+          }}
+          id="fnb-raw-material-shortage-alert-banner"
+        >
+          <div
+            style={{
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
+              padding: '8px',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <AlertTriangle size={24} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#991b1b' }}>
+                {t('fnb.dashboard.shortageBannerTitle', 'RAW MATERIAL SHORTAGE DETECTED')}
+              </h3>
+              <span
+                style={{
+                  backgroundColor: '#b91c1c',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {shortageCount} {shortageCount === 1 ? 'Ingredient Deficit' : 'Ingredients Deficit'}
+              </span>
+            </div>
+            <p style={{ margin: '4px 0 8px 0', fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5 }}>
+              {t(
+                'fnb.dashboard.shortageBannerDesc',
+                'Current usable kitchen stock is insufficient to fulfill active meal orders for today. Certain menu dishes may become unavailable unless replenishment batches are received.'
+              )}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {shortages.map((s) => (
+                <span
+                  key={s.ingredientId}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '3px 9px',
+                    borderRadius: 'var(--radius-xs)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <AlertTriangle size={13} />
+                  <span>{s.ingredientName}:</span>
+                  <strong>
+                    -{s.shortfall} {s.unitOfMeasure}
+                  </strong>
+                </span>
+              ))}
+            </div>
+          </div>
+          <a
+            href="#section-fnb-ingredient-demand"
+            className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+            style={{
+              borderColor: '#ef4444',
+              color: '#b91c1c',
+              fontWeight: 600,
+              flexShrink: 0,
+              alignSelf: 'center',
+            }}
+          >
+            View Demand Table
+          </a>
+        </div>
+      ) : (
+        <div
+          style={{
+            background: 'var(--surface-success, #edf7ee)',
+            border: '1px solid var(--border-success, #bbf7d0)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3) var(--space-4)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+          id="fnb-raw-material-optimal-banner"
+        >
+          <CheckCircle2 size={20} style={{ color: 'var(--accent-forest)' }} />
+          <div style={{ fontSize: '13px', color: 'var(--accent-forest)', fontWeight: 500 }}>
+            <strong>All Raw Materials Covered:</strong> Usable stock in the kitchen meets all active meal order requirements for {resortDate}.
+          </div>
+        </div>
+      )}
+
+      {/* 2. 4-KPI Compact Grid */}
       <div className="hsw-fb-kpi-grid">
-        {/* KPI 1: Retreat Meals */}
         <div className="hsw-fb-kpi-card">
           <div className="hsw-fb-kpi-icon" style={{ backgroundColor: '#edf3ee', color: 'var(--accent-forest)' }}>
             <UtensilsCrossed size={22} />
@@ -108,7 +302,6 @@ export const FnbDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 2: Extra A-la-carte */}
         <div className="hsw-fb-kpi-card">
           <div className="hsw-fb-kpi-icon" style={{ backgroundColor: '#f2ede5', color: '#8c6b3e' }}>
             <ChefHat size={22} />
@@ -119,7 +312,6 @@ export const FnbDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 3: Dietary/Allergy Alerts */}
         <div className="hsw-fb-kpi-card">
           <div className="hsw-fb-kpi-icon" style={{ backgroundColor: '#fdf2f1', color: 'var(--danger)' }}>
             <AlertCircle size={22} />
@@ -130,7 +322,6 @@ export const FnbDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 4: Pending / Preparing */}
         <div className="hsw-fb-kpi-card">
           <div className="hsw-fb-kpi-icon" style={{ backgroundColor: '#eef4f8', color: 'var(--info)' }}>
             <Clock size={22} />
@@ -144,12 +335,205 @@ export const FnbDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Urgent Prep Queue Preview Section (Requirement 25) */}
+      {/* 3. RAW MATERIAL DEMAND & SHORTAGE MONITORING TABLE (SCREEN 38 REQUIREMENT) */}
+      <div
+        id="section-fnb-ingredient-demand"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-md)',
+          overflow: 'hidden',
+          marginBottom: 'var(--space-6)',
+        }}
+      >
+        <div
+          style={{
+            padding: 'var(--space-4)',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Boxes size={18} style={{ color: 'var(--accent-forest)' }} />
+              <h2 style={{ fontSize: 'var(--text-md)', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
+                {t('fnb.dashboard.rawMaterialTitle', 'Raw Material Demand & Stock Shortage Monitoring')}
+              </h2>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+              Calculated real-time demand against usable batches for date {resortDate} (FEFO Usable Conditions: FRESH, GOOD, NEAR_EXPIRY)
+            </div>
+          </div>
+
+          {/* Filter Pills */}
+          <div style={{ display: 'flex', gap: '6px', background: 'var(--bg-soft)', padding: '3px', borderRadius: 'var(--radius-pill)' }}>
+            <button
+              type="button"
+              className={`hsw-segmented-tab ${demandFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setDemandFilter('all')}
+              style={{ padding: '4px 12px', fontSize: '12px' }}
+            >
+              All ({ingredientDemand.length})
+            </button>
+            <button
+              type="button"
+              className={`hsw-segmented-tab ${demandFilter === 'shortage' ? 'active' : ''}`}
+              onClick={() => setDemandFilter('shortage')}
+              style={{
+                padding: '4px 12px',
+                fontSize: '12px',
+                color: shortageCount > 0 ? '#b91c1c' : undefined,
+                fontWeight: shortageCount > 0 ? 600 : undefined,
+              }}
+            >
+              Shortage ({shortageCount})
+            </button>
+            <button
+              type="button"
+              className={`hsw-segmented-tab ${demandFilter === 'covered' ? 'active' : ''}`}
+              onClick={() => setDemandFilter('covered')}
+              style={{ padding: '4px 12px', fontSize: '12px' }}
+            >
+              Covered ({ingredientDemand.length - shortageCount})
+            </button>
+          </div>
+        </div>
+
+        {ingredientDemand.length === 0 ? (
+          <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <Boxes size={32} style={{ margin: '0 auto 8px auto', opacity: 0.5, display: 'block' }} />
+            <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              {apiOnline
+                ? 'Chưa ghi nhận nhu cầu nguyên liệu cho ngày này'
+                : 'Chưa có dữ liệu kho nguyên liệu'}
+            </div>
+            <div style={{ fontSize: '12px', maxWidth: '500px', margin: '0 auto' }}>
+              {apiOnline
+                ? 'Hệ thống tính toán nhu cầu nguyên liệu tự động dựa trên thực đơn các đơn ăn cần chuẩn bị và danh mục kho khả dụng (FEFO).'
+                : 'Vui lòng kiểm tra kết nối Backend hoặc cấu hình định mức nguyên liệu trong cơ sở dữ liệu.'}
+            </div>
+          </div>
+        ) : (
+          <div className="ops-table-wrap">
+            <table className="ops-table">
+              <thead>
+                <tr>
+                  <th>Raw Material / Ingredient</th>
+                  <th>Unit</th>
+                  <th style={{ textAlign: 'right' }}>Required for Today</th>
+                  <th style={{ textAlign: 'right' }}>Usable Stock</th>
+                  <th style={{ textAlign: 'right' }}>Deficit / Shortfall</th>
+                  <th style={{ textAlign: 'center' }}>Stock Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDemand.map((item) => {
+                  const isShortage = item.status === 'SHORTAGE' || item.shortfall > 0;
+                  return (
+                    <tr
+                      key={item.ingredientId}
+                      style={{
+                        backgroundColor: isShortage ? 'rgba(239, 68, 68, 0.03)' : undefined,
+                      }}
+                    >
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.ingredientName)}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>ID: #{item.ingredientId}</div>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)',
+                            backgroundColor: 'var(--bg-soft)',
+                            padding: '2px 6px',
+                            borderRadius: 'var(--radius-xs)',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          {item.unitOfMeasure}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        {item.requiredQuantity.toLocaleString()} {item.unitOfMeasure}
+                      </td>
+                      <td style={{ textAlign: 'right', color: isShortage ? '#b91c1c' : 'var(--accent-forest)' }}>
+                        {item.usableQuantity.toLocaleString()} {item.unitOfMeasure}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                        {isShortage ? (
+                          <span style={{ color: '#b91c1c' }}>
+                            -{item.shortfall.toLocaleString()} {item.unitOfMeasure}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-tertiary)' }}>0 {item.unitOfMeasure}</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {isShortage ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '3px 9px',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              backgroundColor: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fca5a5',
+                            }}
+                          >
+                            <AlertTriangle size={12} />
+                            SHORTAGE
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '3px 9px',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              backgroundColor: '#edf3ee',
+                              color: 'var(--accent-forest)',
+                              border: '1px solid #cce0d0',
+                            }}
+                          >
+                            <CheckCircle2 size={12} />
+                            COVERED
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredDemand.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-tertiary)' }}>
+                      No raw materials match the selected filter.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 4. Urgent Prep Queue Preview Section */}
       <div
         style={{
           background: 'var(--surface)',
           border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-sm)',
+          borderRadius: 'var(--radius-md)',
           overflow: 'hidden',
         }}
       >
@@ -193,20 +577,13 @@ export const FnbDashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {activeQueue.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
-                    {t('fnb.dashboard.noActiveOrders', 'No active kitchen prep orders pending. All orders fulfilled or delivered.')}
-                  </td>
-                </tr>
-              ) : (
-                activeQueue.slice(0, 5).map((item) => {
-
+              {todaysList.slice(0, 5).map((item) => {
                 const statusBadge = getStatusBadge(item.status);
                 const itemsSummary = item.items
                   .map((i) => {
                     const menuItem = menuItems.find((m) => m.id === i.menuItemId);
-                    return `${i.quantity}x ${menuItem ? menuItem.name.en : 'Item'}`;
+                    const nameStr = menuItem ? (menuItem.name[currentLang] || menuItem.name.en) : 'Item';
+                    return `${i.quantity}x ${cleanMojibake(nameStr)}`;
                   })
                   .join(', ');
 
@@ -223,14 +600,14 @@ export const FnbDashboardPage: React.FC = () => {
                     <td style={{ fontWeight: 600, color: 'var(--accent-forest)' }}>
                       {item.targetTime ||
                         t(
-                          `dining.periods.${item.mealPeriod}`,
+                           `dining.periods.${item.mealPeriod}`,
                           item.mealPeriod ? item.mealPeriod.toUpperCase() : 'ALL DAY'
                         )}
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.customerName}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.customerName)}</div>
                       <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {formatVilla(item.villaNumber)}
+                        {cleanMojibake(formatVilla(item.villaNumber))}
                       </div>
                     </td>
                     <td>
@@ -282,7 +659,14 @@ export const FnbDashboardPage: React.FC = () => {
                     </td>
                   </tr>
                 );
-              }))}
+              })}
+              {todaysList.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-tertiary)' }}>
+                    {t('fnb.dashboard.noQueue', 'No items in the prep queue for today.')}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

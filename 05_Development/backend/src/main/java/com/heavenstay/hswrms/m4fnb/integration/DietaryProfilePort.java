@@ -11,7 +11,7 @@ import java.util.List;
 public interface DietaryProfilePort {
 
     enum DietaryVerificationStatus {
-        VERIFIED,            // Health & dietary profile confirmed by M1
+        VERIFIED,            // Health & dietary profile confirmed by M1/medical staff
         UNVERIFIED,          // Profile unconfirmed or survey pending
         NO_PROFILE_ATTACHED  // Guest has no health profile record
     }
@@ -30,6 +30,9 @@ public interface DietaryProfilePort {
             dietaryPreferences = dietaryPreferences == null ? List.of() : List.copyOf(dietaryPreferences);
         }
 
+        /**
+         * Backward-compatible 2-argument constructor for legacy callers and unit test fixtures.
+         */
         public FoodProfileProjection(List<String> foodAllergies, List<String> dietaryPreferences) {
             this(DietaryVerificationStatus.VERIFIED, foodAllergies, dietaryPreferences);
         }

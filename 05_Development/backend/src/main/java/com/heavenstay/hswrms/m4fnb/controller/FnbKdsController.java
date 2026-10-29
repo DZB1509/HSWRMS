@@ -6,7 +6,7 @@ import com.heavenstay.hswrms.m4fnb.dto.KdsDashboardKpiDto;
 import com.heavenstay.hswrms.m4fnb.dto.MealOrderDto;
 import com.heavenstay.hswrms.m4fnb.dto.MealPrepEntryDto;
 import com.heavenstay.hswrms.m4fnb.dto.UpdateOrderStatusRequest;
-import com.heavenstay.hswrms.m4fnb.service.MealOrderService;
+import com.heavenstay.hswrms.m4fnb.service.FnbKdsOrderService;
 import com.heavenstay.hswrms.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,9 +26,9 @@ import java.util.List;
 @RequestMapping("/api/v1/fnb/kds")
 public class FnbKdsController {
 
-    private final MealOrderService mealOrderService;
+    private final FnbKdsOrderService mealOrderService;
 
-    public FnbKdsController(MealOrderService mealOrderService) {
+    public FnbKdsController(FnbKdsOrderService mealOrderService) {
         this.mealOrderService = mealOrderService;
     }
 

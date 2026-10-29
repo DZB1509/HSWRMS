@@ -108,8 +108,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler)
-                )
+                        .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/health").permitAll()
                                                 // Public authentication endpoints from M1
@@ -172,6 +171,9 @@ public class SecurityConfig {
                         // Module 6: Administration, Staff Management, Governance, Delegation & Sensitive Audit Logs
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "MANAGER")
 
+
+                        // Public F&B package plans from M4: GET only
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fnb/packages", "/api/v1/fnb/packages/*").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

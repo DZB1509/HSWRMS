@@ -1,4 +1,5 @@
 # PHASE 2 — PROPOSED IMPLEMENTATION PLAN
+
 > **Status: REVISED 2026-10-13 — see "REVISED M1 PLAN — HEALTH & DIETARY PROFILE" below — updated 2026-10-13 with the team-lead design decisions (R9); `03_Design/Diagrams/03_Data_Model/M1_ERD.drawio` and `05_Development/docs/API_CONTRACT.md` §5 were updated to match.** The original Phase 2 draft is retained for historical reference; where the revision conflicts with the draft, the revision wins. Auth, login and customer-profile portions of this plan have since been implemented and committed (`ff49668`); health, consent and deletion work remains unimplemented. No code or migration was created or executed as part of this revision.
 
 ---
@@ -32,22 +33,22 @@ Legend — Status: ✅ implemented | ⚠ partially | ❌ missing | ⚠️CONFLIC
 
 > Audit snapshot taken before the 2026-10-13 team-lead decisions. D-references in Follow-up columns are superseded — see **R9**.
 
-| # | Frontend label / field | Frontend state property (persistence) | Target ERD entity.attribute | Existing Java entity property | Existing SQL column (file-based) | Existing API/DTO | Status | Follow-up |
-|---|---|---|---|---|---|---|---|---|
-| 1 | Consent checkbox "I Agree & Grant Consent (v1.2)" | `consent.hasConsented` (localStorage) | `ConsentRecord.granted` + `consent_type` + `policy_version` | `ConsentRecord.consentStatus`/`consentType`/`policyVersion` (entity only) | `ConsentRecord.granted` vs `consent_status` — see C4 | ❌ none | ⚠️CONFLICT + ❌ | R4-D3, R4-D4; persist + enforce before health writes |
-| 2 | Consent timestamp | `consent.consentedAt` (localStorage) | `ConsentRecord.granted_at` | `ConsentRecord.grantedAt` | `granted_at DATETIME2` | ❌ | ⚠ | Populated by consent API |
-| 3 | Policy version "v1.2 — Wellness Treatment & Dietary Data Privacy Agreement" | `consent.policyVersion` (localStorage) | `ConsentRecord.policy_version` | `ConsentRecord.policyVersion` | `policy_version NVARCHAR(50)` | ❌ | ⚠ | Server-authoritative version constant |
-| 4 | Purpose limitation text | `consent.purposeSummary` (localStorage) | (no ERD attribute — UI copy only) | — | — | ❌ | ✅ demo-only | Keep as UI text; do not persist |
-| 5 | Current Health Conditions / Tension Areas | `healthNotes.medicalConditions: string[]` (localStorage) | `HealthProfile.current_health_condition` (NVARCHAR(MAX)) | ❌ none — Java `HealthProfile` has only `allergies`/`dietaryRequirements`/`treatmentSafetyNotes` | ❌ (same 3 text cols in both schema files) | ❌ | ⚠️CONFLICT | Redesign entity/schema per ERD (R7) |
-| 6 | Past Injuries or Surgeries | `healthNotes.injuriesOrSurgeries: string` | `HealthProfile.surgery_injury_history` | ❌ | ❌ | ❌ | ⚠️CONFLICT | as #5 |
-| 7 | Mobility / Movement Considerations | `healthNotes.mobilityConsiderations: string` | `HealthProfile.mobility_joint_notes` | ❌ | ❌ | ❌ | ⚠️CONFLICT | as #5 |
-| 8 | Current Regular Supplements / Medications | `healthNotes.currentMedications: string` | `HealthProfile.supplement_notes` | ❌ | ❌ | ❌ | ⚠️CONFLICT | as #5 |
-| 9 | Current Stress & Fatigue Level (select: mild/moderate/high) | `healthNotes.stressLevel: 'mild'\|'moderate'\|'high'` | `HealthProfile.stress_fatigue_level` | ❌ | ❌ | ❌ | ⚠️CONFLICT | Keep UI values `mild\|moderate\|high`; CHECK constraint in migration |
-| 10 | Therapy & Essential Oil Preferences | `healthNotes.treatmentPreferences: string[]` | `HealthProfile.preferred_therapy_method` (NVARCHAR(500)) | ❌ | ❌ | ❌ | ⚠️CONFLICT | Serialize comma list ↔ text or revisit D1 |
+| #   | Frontend label / field                                                      | Frontend state property (persistence)                    | Target ERD entity.attribute                                 | Existing Java entity property                                                                    | Existing SQL column (file-based)                     | Existing API/DTO | Status          | Follow-up                                                            |
+| --- | --------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------- | ---------------- | --------------- | -------------------------------------------------------------------- |
+| 1   | Consent checkbox "I Agree & Grant Consent (v1.2)"                           | `consent.hasConsented` (localStorage)                    | `ConsentRecord.granted` + `consent_type` + `policy_version` | `ConsentRecord.consentStatus`/`consentType`/`policyVersion` (entity only)                        | `ConsentRecord.granted` vs `consent_status` — see C4 | ❌ none          | ⚠️CONFLICT + ❌ | R4-D3, R4-D4; persist + enforce before health writes                 |
+| 2   | Consent timestamp                                                           | `consent.consentedAt` (localStorage)                     | `ConsentRecord.granted_at`                                  | `ConsentRecord.grantedAt`                                                                        | `granted_at DATETIME2`                               | ❌               | ⚠               | Populated by consent API                                             |
+| 3   | Policy version "v1.2 — Wellness Treatment & Dietary Data Privacy Agreement" | `consent.policyVersion` (localStorage)                   | `ConsentRecord.policy_version`                              | `ConsentRecord.policyVersion`                                                                    | `policy_version NVARCHAR(50)`                        | ❌               | ⚠               | Server-authoritative version constant                                |
+| 4   | Purpose limitation text                                                     | `consent.purposeSummary` (localStorage)                  | (no ERD attribute — UI copy only)                           | —                                                                                                | —                                                    | ❌               | ✅ demo-only    | Keep as UI text; do not persist                                      |
+| 5   | Current Health Conditions / Tension Areas                                   | `healthNotes.medicalConditions: string[]` (localStorage) | `HealthProfile.current_health_condition` (NVARCHAR(MAX))    | ❌ none — Java `HealthProfile` has only `allergies`/`dietaryRequirements`/`treatmentSafetyNotes` | ❌ (same 3 text cols in both schema files)           | ❌               | ⚠️CONFLICT      | Redesign entity/schema per ERD (R7)                                  |
+| 6   | Past Injuries or Surgeries                                                  | `healthNotes.injuriesOrSurgeries: string`                | `HealthProfile.surgery_injury_history`                      | ❌                                                                                               | ❌                                                   | ❌               | ⚠️CONFLICT      | as #5                                                                |
+| 7   | Mobility / Movement Considerations                                          | `healthNotes.mobilityConsiderations: string`             | `HealthProfile.mobility_joint_notes`                        | ❌                                                                                               | ❌                                                   | ❌               | ⚠️CONFLICT      | as #5                                                                |
+| 8   | Current Regular Supplements / Medications                                   | `healthNotes.currentMedications: string`                 | `HealthProfile.supplement_notes`                            | ❌                                                                                               | ❌                                                   | ❌               | ⚠️CONFLICT      | as #5                                                                |
+| 9   | Current Stress & Fatigue Level (select: mild/moderate/high)                 | `healthNotes.stressLevel: 'mild'\|'moderate'\|'high'`    | `HealthProfile.stress_fatigue_level`                        | ❌                                                                                               | ❌                                                   | ❌               | ⚠️CONFLICT      | Keep UI values `mild\|moderate\|high`; CHECK constraint in migration |
+| 10  | Therapy & Essential Oil Preferences                                         | `healthNotes.treatmentPreferences: string[]`             | `HealthProfile.preferred_therapy_method` (NVARCHAR(500))    | ❌                                                                                               | ❌                                                   | ❌               | ⚠️CONFLICT      | Serialize comma list ↔ text or revisit D1                            |
 
-| 11 | Prior therapist notes | `healthNotes.therapistNotes: string` | `TreatmentHealthNote.note_content` (1..* child) | ❌ | ❌ (no table) | ❌ | ⚠️CONFLICT + ❌ | Author/reader unresolved — R4-D5 |
-| 12 | Known Food Allergies (Strict Safety Alert) | `dietaryProfile.allergies: string[]` | `FoodAllergy.allergy_name` + `notes` (1..* child) | ❌ (`allergies` text col is NOT the ERD model) | ❌ (no table) | ❌ | ⚠️CONFLICT | Child-table persistence per ERD |
-| 13 | Dietary Principles | `dietaryProfile.dietaryRestrictions: string[]` | `DietaryRequirement.requirement_name` + `notes` (1..* child) | ❌ (`dietaryRequirements` text col not ERD) | ❌ (no table) | ❌ | ⚠️CONFLICT | Child-table persistence per ERD |
+| 11 | Prior therapist notes | `healthNotes.therapistNotes: string` | `TreatmentHealthNote.note_content` (1.._ child) | ❌ | ❌ (no table) | ❌ | ⚠️CONFLICT + ❌ | Author/reader unresolved — R4-D5 |
+| 12 | Known Food Allergies (Strict Safety Alert) | `dietaryProfile.allergies: string[]` | `FoodAllergy.allergy_name` + `notes` (1.._ child) | ❌ (`allergies` text col is NOT the ERD model) | ❌ (no table) | ❌ | ⚠️CONFLICT | Child-table persistence per ERD |
+| 13 | Dietary Principles | `dietaryProfile.dietaryRestrictions: string[]` | `DietaryRequirement.requirement_name` + `notes` (1..\* child) | ❌ (`dietaryRequirements` text col not ERD) | ❌ (no table) | ❌ | ⚠️CONFLICT | Child-table persistence per ERD |
 | 14 | Food Intolerances | `dietaryProfile.intolerances: string[]` | `HealthProfile.food_intolerance_notes` (text) | ❌ | ❌ | ❌ | ⚠️CONFLICT | Text column per ERD |
 | 15 | Disliked Ingredients | `dietaryProfile.dislikedIngredients: string[]` | `HealthProfile.disliked_ingredients` (text) | ❌ | ❌ | ❌ | ⚠️CONFLICT | Text column per ERD |
 | 16 | Kitchen Preparation Special Notes | `dietaryProfile.specialInstructions: string` | `HealthProfile.kitchen_special_notes` (text) | ❌ | ❌ | ❌ | ⚠️CONFLICT | Text column per ERD |
@@ -57,14 +58,14 @@ Legend — Status: ✅ implemented | ⚠ partially | ❌ missing | ⚠️CONFLIC
 
 Structural relationships:
 
-| Relationship | ERD (new baseline) | Current Java/SQL | Status |
-|---|---|---|---|
-| User 1 — 0..1 CustomerProfile | ✅ | ✅ (UNIQUE user_id) | ✅ |
-| CustomerProfile 1 — 0..1 HealthProfile | ✅ FK `customer_profile_id` | ✅ same in Java + SQL | ✅ |
-| HealthProfile 1..* FoodAllergy / DietaryRequirement / TreatmentHealthNote | ✅ child tables | ❌ absent everywhere | ❌ missing |
-| CustomerProfile 1..* ConsentRecord | ✅ FK `customer_profile_id` | ⚠️ FK `user_id` in Java+SQL | ⚠️CONFLICT (C4) |
-| CustomerProfile 1..* HealthDataDeletionRequest | ✅ FK `customer_profile_id`, has `request_type` | ⚠️ FK `health_profile_id` + `requested_by_user_id`, no `request_type` | ⚠️CONFLICT (C5) |
-| HealthProfile extra columns | ERD has 9 health attributes, **no** `anonymization_status` | Java+SQL add `anonymization_status` + 3 generic text columns | ⚠️CONFLICT (C1/C2) |
+| Relationship                                                               | ERD (new baseline)                                         | Current Java/SQL                                                      | Status             |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- | ------------------ |
+| User 1 — 0..1 CustomerProfile                                              | ✅                                                         | ✅ (UNIQUE user_id)                                                   | ✅                 |
+| CustomerProfile 1 — 0..1 HealthProfile                                     | ✅ FK `customer_profile_id`                                | ✅ same in Java + SQL                                                 | ✅                 |
+| HealthProfile 1..\* FoodAllergy / DietaryRequirement / TreatmentHealthNote | ✅ child tables                                            | ❌ absent everywhere                                                  | ❌ missing         |
+| CustomerProfile 1..\* ConsentRecord                                        | ✅ FK `customer_profile_id`                                | ⚠️ FK `user_id` in Java+SQL                                           | ⚠️CONFLICT (C4)    |
+| CustomerProfile 1..\* HealthDataDeletionRequest                            | ✅ FK `customer_profile_id`, has `request_type`            | ⚠️ FK `health_profile_id` + `requested_by_user_id`, no `request_type` | ⚠️CONFLICT (C5)    |
+| HealthProfile extra columns                                                | ERD has 9 health attributes, **no** `anonymization_status` | Java+SQL add `anonymization_status` + 3 generic text columns          | ⚠️CONFLICT (C1/C2) |
 
 Privacy/authz boundaries (AGENTS.md + SRS BR-06): Customer owns own profile only (JWT-principal pattern already proven in `CustomerProfileService`); Therapist sees only treatment-relevant notes (M3); F&B/Chef sees only allergy/dietary warnings (M4); Receptionist must not see sensitive health data. No backend health endpoint exists yet, so no boundary is currently enforced or violated server-side.
 
@@ -145,10 +146,6 @@ Ordering constraint: checkpoint B (ERD/API-contract design review) → C < D < F
 - Manual (dev, after G is explicitly approved and run by a human): register → grant consent → save profile → restart backend → data persists; therapist/F&B views remain untouched in M1.
 - Explicit ban: no agent-run migrations, no DB state changes, no unit-test results presented as SQL Server E2E proof.
 
-
-
-
-
 ---
 
 ### R9. Team-lead design decisions (approved 2026-10-13) — supersede conflicting items above
@@ -157,13 +154,14 @@ Ordering constraint: checkpoint B (ERD/API-contract design review) → C < D < F
 
 - **A. ConsentRecord:** relationship to `User` via `user_id` (NOT `customer_profile_id`). History-preserving lifecycle: grant = INSERT a new record; revoke = close the active record via `revoked_at` (`granted=false`); re-grant = INSERT a new record — history is never overwritten. At most one active record (`granted=true AND revoked_at IS NULL`) per `(user_id, consent_type)`. `consent_type ∈ {TO_SERVICE, HEALTH_DATA_PROCESSING}` — no invented categories. Fields retained: consent_type, granted, granted_at, revoked_at, policy_version.
 - **B. Registration & consent policy:** successful registration persists a `TO_SERVICE` consent record (provisional policy version `v1.0`, later a backend constant/config). `HEALTH_DATA_PROCESSING` is never auto-granted at registration; its policy version is `v1.2` (matches the current UI) until formally changed. Backend rejects health-profile writes without an active `HEALTH_DATA_PROCESSING` consent; a frontend checkbox is never sufficient authorization.
-- **C. HealthProfile & multi-value preferences:** aligned to the detailed ERD and the actual frontend. `FoodAllergy` and `DietaryRequirement` remain 1..* children. The UI's single combined multi-value control "Therapy & Essential Oil Preferences" → new child `HealthProfileTherapyPreference` (multiple records, NOT a comma-separated string); nullable `therapy_code` reserved for future M3 catalog mapping — M1 creates no therapy catalog. Allergies / food intolerance / disliked ingredients / kitchen notes stay distinct fields (never merged into one allergy field). `stress_fatigue_level` is confirmed a UI enum: `mild | moderate | high`. `anonymization_status` retained as system-managed, excluded from customer DTOs and the frontend.
+- **C. HealthProfile & multi-value preferences:** aligned to the detailed ERD and the actual frontend. `FoodAllergy` and `DietaryRequirement` remain 1..\* children. The UI's single combined multi-value control "Therapy & Essential Oil Preferences" → new child `HealthProfileTherapyPreference` (multiple records, NOT a comma-separated string); nullable `therapy_code` reserved for future M3 catalog mapping — M1 creates no therapy catalog. Allergies / food intolerance / disliked ingredients / kitchen notes stay distinct fields (never merged into one allergy field). `stress_fatigue_level` is confirmed a UI enum: `mild | moderate | high`. `anonymization_status` retained as system-managed, excluded from customer DTOs and the frontend.
 - **D. TreatmentHealthNote:** belongs to M3's therapist-session workflow; notes are created by Therapists — no customer write API in M1. M1 may later provide a limited treatment-safe projection to authorized Therapists, never the full HealthProfile by default. The ERD now carries an ownership note to avoid implying M1 owns the workflow.
 - **E. HealthDataDeletionRequest:** FK `customer_profile_id` (scope), plus retained `requested_by_user_id` → `User` (added to the ERD), plus `request_type` (scope, e.g. `HEALTH_DATA`; it does NOT imply hard-delete vs anonymize). Basic workflow only: create `PENDING`, read status, cancel while `PENDING`/`DEFERRED`. Actual deletion/anonymization execution is UNRESOLVED (retention policy + M2 integration contract). M1↔M2 contract: `hasActiveOrUpcomingRetreat(customerProfileId)` — interface only, real M2 implementation deferred, test stub allowed later; M1 must not query M2 repositories/tables.
 
 **Resolved by R9:** D1, D2, D3, D4, D5, D6 (see R5 annotations). **Still open (human input needed):** retention policy & deletion/anonymization execution semantics; M2 contract details/implementation; M3/M4 projection field lists + delivery mechanism; storage normalization for multi-value text fields (`food_intolerance_notes`, `disliked_ingredients`, `current_health_condition`); validation length limits; effect of consent revocation on already-stored health data; whether concurrent deletion requests are allowed.
 
 **SRS conflicts flagged for human review (not silently resolved):**
+
 1. SRS UC08 flow has the Customer updating `TreatmentHealthNote` records — conflicts with decision D (M3/therapist-authored). ERD annotated; SRS text needs formal correction.
 2. SRS conceptual `Health_Profile` entity describes 3 attributes (allergies / dietary requirements / treatment-safety notes) + anonymization — superseded for design by the detailed approved ERD; reconcile at next SRS revision.
 3. SRS says "A pending request may be cancelled" — the approved decision also allows cancelling while `DEFERRED` (consistent with the M1 business-flow diagram).
@@ -178,25 +176,28 @@ Ordering constraint: checkpoint B (ERD/API-contract design review) → C < D < F
 > **HISTORICAL DRAFT — Sections 1–9 below predate the 2026-10-13 team-lead decisions (R9).** Where they conflict with R0–R9 — consent FK/semantics (e.g. Section 4 `consent_records.customer_profile_id`), HealthProfile shape, deletion-request shape, session-based auth, step order — the R-sections and the updated ERD/API contract win. Section 4's SQL mappings are stale and will be reconciled by the schema-migration task after design approval.
 
 ### In Scope (confirmed from all four M1 diagrams + SRS)
-| Feature | UC | Sources |
-|---|---|---|
-| Guest registration (email/password) | UC01 | ERD + UseCase + BusinessFlow + ScreenFlow + SRS |
-| Email OTP verification | UC02 | ERD (`email_verified`) + all diagrams |
-| Email/password login | UC04 | UseCase + BusinessFlow + ScreenFlow |
-| Forgot/reset password via email | UC03 | UseCase + BusinessFlow + ScreenFlow |
-| Role-based post-login routing | — | BusinessFlow + ScreenFlow |
-| Customer Account Settings management | UC07 | CustomerProfile ERD + UseCase + ScreenFlow S07 |
-| Health & Dietary Profile management | UC08 | HealthProfile ERD + UseCase + BusinessFlow + ScreenFlow S08 |
-| Consent management | UC09 | ConsentRecord ERD + UseCase + BusinessFlow |
-| Health Data Deletion Request lifecycle | UC10 | HealthDataDeletionRequest ERD + UseCase + BusinessFlow + ScreenFlow S09 |
-| OAuth SSO structure (AuthIdentity entity + schema) | UC05/UC06 | ERD + UseCase |
+
+| Feature                                            | UC        | Sources                                                                 |
+| -------------------------------------------------- | --------- | ----------------------------------------------------------------------- |
+| Guest registration (email/password)                | UC01      | ERD + UseCase + BusinessFlow + ScreenFlow + SRS                         |
+| Email OTP verification                             | UC02      | ERD (`email_verified`) + all diagrams                                   |
+| Email/password login                               | UC04      | UseCase + BusinessFlow + ScreenFlow                                     |
+| Forgot/reset password via email                    | UC03      | UseCase + BusinessFlow + ScreenFlow                                     |
+| Role-based post-login routing                      | —         | BusinessFlow + ScreenFlow                                               |
+| Customer Account Settings management               | UC07      | CustomerProfile ERD + UseCase + ScreenFlow S07                          |
+| Health & Dietary Profile management                | UC08      | HealthProfile ERD + UseCase + BusinessFlow + ScreenFlow S08             |
+| Consent management                                 | UC09      | ConsentRecord ERD + UseCase + BusinessFlow                              |
+| Health Data Deletion Request lifecycle             | UC10      | HealthDataDeletionRequest ERD + UseCase + BusinessFlow + ScreenFlow S09 |
+| OAuth SSO structure (AuthIdentity entity + schema) | UC05/UC06 | ERD + UseCase                                                           |
 
 ### Conditionally In Scope (pending user answers)
+
 - Full OAuth2 SSO integration with live Google/Facebook (Q2)
 - `TreatmentHealthNote` — depends on author determination (Q5)
 - Admin staff account management — likely M6, needs confirmation (Q11)
 
 ### Out of Scope (confirmed)
+
 - Booking, Check-in, Villa (M2)
 - Spa scheduling, Therapy sessions (M3)
 - Food ordering, F&B (M4)
@@ -229,6 +230,7 @@ DELETE /customer/me/health-data-deletion/{id}
 ```
 
 **Why this order?**
+
 - Auth is a hard prerequisite for everything else (Spring Security guards all `customer/me/**` endpoints).
 - CustomerProfile must exist before HealthProfile (FK constraint).
 - Consent must gate HealthProfile creation (BR4 — consent required before storing health data).
@@ -245,33 +247,34 @@ The ScreenFlow path `S01 → S03 → S04 → S05 → Router → S02 → S07 | S0
 
 ### Option 1 — Session-Based (HTTP Session + Cookie)
 
-| Criterion | Assessment |
-|---|---|
-| Spring Security fit | Native default. `HttpSession`, `SecurityContextHolder`. Zero extra libraries. |
-| React + Spring MVC | Works with `credentials: 'include'` (fetch) and CORS `allowCredentials = true`. |
-| Academic simplicity | Very low boilerplate. Spring Security manages sessions automatically. |
-| Implementation complexity | Low. |
-| Local development | Straightforward on localhost. |
-| Security | Requires CSRF protection (Spring Security provides by default). Session fixation protection is automatic. |
-| Frontend/backend separation | Requires CORS config for cross-origin cookies (`SameSite=None; Secure` in production). |
-| Future maintainability | Stateful — harder to scale horizontally, but irrelevant for a local academic project. |
+| Criterion                   | Assessment                                                                                                |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Spring Security fit         | Native default. `HttpSession`, `SecurityContextHolder`. Zero extra libraries.                             |
+| React + Spring MVC          | Works with `credentials: 'include'` (fetch) and CORS `allowCredentials = true`.                           |
+| Academic simplicity         | Very low boilerplate. Spring Security manages sessions automatically.                                     |
+| Implementation complexity   | Low.                                                                                                      |
+| Local development           | Straightforward on localhost.                                                                             |
+| Security                    | Requires CSRF protection (Spring Security provides by default). Session fixation protection is automatic. |
+| Frontend/backend separation | Requires CORS config for cross-origin cookies (`SameSite=None; Secure` in production).                    |
+| Future maintainability      | Stateful — harder to scale horizontally, but irrelevant for a local academic project.                     |
 
 ### Option 2 — JWT (Stateless Bearer Token)
 
-| Criterion | Assessment |
-|---|---|
-| Spring Security fit | Supported via custom `OncePerRequestFilter`. Requires JJWT or Spring Security OAuth2 Resource Server. |
-| React + Spring MVC | Standard `Authorization: Bearer <token>` header. No cookie concerns. |
-| Academic simplicity | More boilerplate: token generation, signing key management, refresh token lifecycle, logout blacklisting. |
-| Implementation complexity | Higher. Must implement `JwtFilter`, token store, and refresh flow manually. |
-| Local development | Stateless. No server-side storage. |
-| Security | Token revocation requires a blacklist or short expiry. Signing key must be securely managed. |
-| Frontend/backend separation | Cleaner. No cookie domain issues. |
-| Future maintainability | Stateless. Easier to scale, easier to add mobile/API consumers later. |
+| Criterion                   | Assessment                                                                                                |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Spring Security fit         | Supported via custom `OncePerRequestFilter`. Requires JJWT or Spring Security OAuth2 Resource Server.     |
+| React + Spring MVC          | Standard `Authorization: Bearer <token>` header. No cookie concerns.                                      |
+| Academic simplicity         | More boilerplate: token generation, signing key management, refresh token lifecycle, logout blacklisting. |
+| Implementation complexity   | Higher. Must implement `JwtFilter`, token store, and refresh flow manually.                               |
+| Local development           | Stateless. No server-side storage.                                                                        |
+| Security                    | Token revocation requires a blacklist or short expiry. Signing key must be securely managed.              |
+| Frontend/backend separation | Cleaner. No cookie domain issues.                                                                         |
+| Future maintainability      | Stateless. Easier to scale, easier to add mobile/API consumers later.                                     |
 
 ### Recommendation: **Session-Based Authentication**
 
 **Rationale:**
+
 1. This is an academic project running locally on a single server.
 2. Session-based auth is Spring Security's default — minimum boilerplate, maximum correctness guarantee.
 3. JWT adds unnecessary complexity (refresh token lifecycle, signing key management, logout blacklisting) for no practical benefit at this scale.
@@ -288,6 +291,7 @@ The ScreenFlow path `S01 → S03 → S04 → S05 → Router → S02 → S07 | S0
 Based on `M1_ERD.drawio` (authoritative). All column names use `snake_case` matching the ERD exactly.
 
 ### `users`
+
 ```sql
 user_id          BIGINT PK IDENTITY
 email            NVARCHAR(255) NOT NULL UNIQUE       -- BR1
@@ -300,6 +304,7 @@ updated_at       DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `auth_identities`
+
 ```sql
 auth_identity_id  BIGINT PK IDENTITY
 user_id           BIGINT NOT NULL FK -> users(user_id)
@@ -309,6 +314,7 @@ UNIQUE (provider, provider_subject)                   -- BR2
 ```
 
 ### `roles`
+
 ```sql
 role_id      INT PK IDENTITY
 role_name    VARCHAR(50) NOT NULL UNIQUE             -- CUSTOMER | RECEPTIONIST | THERAPIST | FB_STAFF | MANAGER | ADMIN
@@ -316,6 +322,7 @@ description  NVARCHAR(255)
 ```
 
 ### `user_roles`
+
 ```sql
 user_id      BIGINT NOT NULL FK -> users(user_id)    PK
 role_id      INT NOT NULL FK -> roles(role_id)       PK
@@ -323,6 +330,7 @@ assigned_at  DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `customer_profiles`
+
 ```sql
 customer_profile_id             BIGINT PK IDENTITY
 user_id                         BIGINT NOT NULL UNIQUE FK -> users(user_id)   -- BR3 (1:1)
@@ -341,6 +349,7 @@ updated_at                      DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `health_profiles`
+
 ```sql
 health_profile_id         BIGINT PK IDENTITY
 customer_profile_id       BIGINT NOT NULL UNIQUE FK -> customer_profiles(customer_profile_id)  -- 1:1
@@ -358,6 +367,7 @@ updated_at                DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `food_allergies` [PENDING Q4]
+
 ```sql
 food_allergy_id    BIGINT PK IDENTITY
 health_profile_id  BIGINT NOT NULL FK -> health_profiles(health_profile_id)
@@ -367,6 +377,7 @@ created_at         DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `dietary_requirements` [PENDING Q4]
+
 ```sql
 dietary_requirement_id  BIGINT PK IDENTITY
 health_profile_id       BIGINT NOT NULL FK -> health_profiles(health_profile_id)
@@ -376,6 +387,7 @@ created_at              DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `treatment_health_notes` [PENDING Q5 — author/module unclear]
+
 ```sql
 treatment_health_note_id  BIGINT PK IDENTITY
 health_profile_id         BIGINT NOT NULL FK -> health_profiles(health_profile_id)
@@ -384,6 +396,7 @@ created_at                DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### `consent_records`
+
 ```sql
 consent_id           BIGINT PK IDENTITY
 customer_profile_id  BIGINT NOT NULL FK -> customer_profiles(customer_profile_id)
@@ -395,6 +408,7 @@ policy_version       VARCHAR(20) NULL
 ```
 
 ### `health_data_deletion_requests`
+
 ```sql
 deletion_request_id  BIGINT PK IDENTITY
 customer_profile_id  BIGINT NOT NULL FK -> customer_profiles(customer_profile_id)
@@ -405,6 +419,7 @@ processed_at         DATETIME2 NULL
 ```
 
 ### `email_otps` (technical — not in ERD, required for OTP implementation)
+
 ```sql
 otp_id      BIGINT PK IDENTITY
 user_id     BIGINT NOT NULL FK -> users(user_id)
@@ -416,6 +431,7 @@ created_at  DATETIME2 NOT NULL DEFAULT GETDATE()
 ```
 
 ### Initial Role Seed
+
 ```sql
 INSERT INTO roles (role_name, description) VALUES
   ('CUSTOMER',      'Resort customer: health, profile, booking access'),
@@ -427,6 +443,7 @@ INSERT INTO roles (role_name, description) VALUES
 ```
 
 **Column status:**
+
 - Confirmed from ERD: all columns except `email_otps` table
 - Inferred (technical): `email_otps` table; `stress_fatigue_level` enum values (mild/moderate/high from Web Demo)
 - Pending resolution: Q1 (`full_name` placement), Q3 (notification semantics), Q4 (child tables vs text), Q5 (TreatmentHealthNote author), Q6 (phone_number duplication), Q9 (request_type values)
@@ -506,15 +523,16 @@ com.hswrms.m1
 ```
 
 ### Layer Responsibilities
-| Layer | Responsibility |
-|---|---|
+
+| Layer      | Responsibility                                                                                      |
+| ---------- | --------------------------------------------------------------------------------------------------- |
 | Controller | HTTP request/response; input validation (JSR-303); delegates to Service; returns HTTP status + JSON |
-| Service | Business logic; enforces BR1-BR5; transaction management; calls Repository |
-| Repository | Spring Data JPA; no business logic |
-| Entity | JPA entity; maps to DB table; no business logic |
-| DTO | Request/response shapes; decoupled from entity |
-| Security | Spring Security config; `UserDetails` loading; session policy |
-| Exception | Centralized error response; maps exceptions to HTTP status codes |
+| Service    | Business logic; enforces BR1-BR5; transaction management; calls Repository                          |
+| Repository | Spring Data JPA; no business logic                                                                  |
+| Entity     | JPA entity; maps to DB table; no business logic                                                     |
+| DTO        | Request/response shapes; decoupled from entity                                                      |
+| Security   | Spring Security config; `UserDetails` loading; session policy                                       |
+| Exception  | Centralized error response; maps exceptions to HTTP status codes                                    |
 
 > [!NOTE]
 > No additional layers (Mapper frameworks, event bus, CQRS, etc.) are introduced. This is a conventional Spring MVC layered architecture appropriate for an academic project.
@@ -524,30 +542,32 @@ com.hswrms.m1
 ## 6. HTTP/JSON Boundary
 
 ### Auth Group (`/auth`)
-| Method | Path | Purpose | Actor |
-|---|---|---|---|
-| POST | `/auth/register` | Create User + CustomerProfile stub + send OTP | Guest |
-| POST | `/auth/verify-email` | Submit OTP, activate account, auto-login | Guest |
-| POST | `/auth/resend-otp` | Resend verification OTP | Guest |
-| POST | `/auth/login` | Email/password login, start session | Guest |
-| POST | `/auth/logout` | Invalidate session | Authenticated |
-| POST | `/auth/forgot-password` | Request password reset OTP/link | Guest/Registered |
-| POST | `/auth/reset-password` | Submit new password + reset token | Guest/Registered |
-| GET | `/auth/me` | Return current session user info and role | Authenticated |
+
+| Method | Path                    | Purpose                                       | Actor            |
+| ------ | ----------------------- | --------------------------------------------- | ---------------- |
+| POST   | `/auth/register`        | Create User + CustomerProfile stub + send OTP | Guest            |
+| POST   | `/auth/verify-email`    | Submit OTP, activate account, auto-login      | Guest            |
+| POST   | `/auth/resend-otp`      | Resend verification OTP                       | Guest            |
+| POST   | `/auth/login`           | Email/password login, start session           | Guest            |
+| POST   | `/auth/logout`          | Invalidate session                            | Authenticated    |
+| POST   | `/auth/forgot-password` | Request password reset OTP/link               | Guest/Registered |
+| POST   | `/auth/reset-password`  | Submit new password + reset token             | Guest/Registered |
+| GET    | `/auth/me`              | Return current session user info and role     | Authenticated    |
 
 ### Customer Group (`/customer/me`)
-| Method | Path | Purpose | Actor |
-|---|---|---|---|
-| GET | `/customer/me/profile` | Read own CustomerProfile | Customer |
-| PUT | `/customer/me/profile` | Update own CustomerProfile | Customer |
-| GET | `/customer/me/health-profile` | Read HealthProfile + allergies + dietary + notes | Customer |
-| PUT | `/customer/me/health-profile` | Upsert HealthProfile + child records | Customer |
-| GET | `/customer/me/consents` | List ConsentRecords | Customer |
-| POST | `/customer/me/consents` | Grant a consent | Customer |
-| PUT | `/customer/me/consents/{id}` | Revoke a consent | Customer |
-| POST | `/customer/me/health-data-deletion` | Submit deletion request | Customer |
-| GET | `/customer/me/health-data-deletion` | View current deletion request | Customer |
-| DELETE | `/customer/me/health-data-deletion/{id}` | Cancel pending deletion request | Customer |
+
+| Method | Path                                     | Purpose                                          | Actor    |
+| ------ | ---------------------------------------- | ------------------------------------------------ | -------- |
+| GET    | `/customer/me/profile`                   | Read own CustomerProfile                         | Customer |
+| PUT    | `/customer/me/profile`                   | Update own CustomerProfile                       | Customer |
+| GET    | `/customer/me/health-profile`            | Read HealthProfile + allergies + dietary + notes | Customer |
+| PUT    | `/customer/me/health-profile`            | Upsert HealthProfile + child records             | Customer |
+| GET    | `/customer/me/consents`                  | List ConsentRecords                              | Customer |
+| POST   | `/customer/me/consents`                  | Grant a consent                                  | Customer |
+| PUT    | `/customer/me/consents/{id}`             | Revoke a consent                                 | Customer |
+| POST   | `/customer/me/health-data-deletion`      | Submit deletion request                          | Customer |
+| GET    | `/customer/me/health-data-deletion`      | View current deletion request                    | Customer |
+| DELETE | `/customer/me/health-data-deletion/{id}` | Cancel pending deletion request                  | Customer |
 
 > [!NOTE]
 > These are high-level intentions, not finalized contracts. Exact request body fields, response shapes, validation rules, and HTTP status codes will be defined during implementation after user approval.
@@ -560,6 +580,7 @@ com.hswrms.m1
 ## 7. SQL Server Persistence Plan
 
 ### Database Connection (template)
+
 ```properties
 spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=hswrms_db;encrypt=false;trustServerCertificate=true
 spring.datasource.username=${DB_USERNAME}
@@ -569,10 +590,13 @@ spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.SQLServer2012Dialect
 ```
+
 Credentials stored in `application-local.properties` (gitignored) or environment variables.
 
 ### Schema Management
+
 **Recommended: Flyway**
+
 - `src/main/resources/db/migration/V1__create_m1_schema.sql` — all M1 tables
 - `src/main/resources/db/migration/V2__seed_roles.sql` — role seed data
 - `src/main/resources/db/migration/V3__seed_admin_user.sql` — initial admin account
@@ -581,12 +605,15 @@ Credentials stored in `application-local.properties` (gitignored) or environment
 **Alternative for early dev:** `ddl-auto=create` lets Hibernate generate the schema from entities. Switch to `validate + Flyway` before cross-module integration.
 
 ### OTP Storage
+
 **Recommendation: DB table `email_otps`** (Option A — simple)
+
 - No Redis infrastructure required.
 - OTP row: `user_id`, `otp_code`, `purpose`, `expires_at`, `used`.
 - Mark `used = true` after consumption. Delete/clean up expired rows periodically.
 
 ### JPA Notes
+
 - `@Entity` + `@Table` on all entities
 - `@OneToOne(fetch = LAZY)` for CustomerProfile → HealthProfile
 - `@OneToMany(fetch = LAZY)` for HealthProfile → FoodAllergy, DietaryRequirement, TreatmentHealthNote
@@ -624,18 +651,18 @@ graph TD
 
 > **[REVISED 2026-10-13]** Risks R1–R10 below are the historical draft's list (many answered or superseded: auth uses JWT; Q1/Q3 partially resolved by the committed CustomerProfile work; Q4/Q5/Q9 remain and are renumbered as D1/D2/D4/D7 in **R5**). New risks for the health slice are tracked in **R3–R5** of the revision.
 
-| ID | Risk / Decision | Impact | Action Required |
-|---|---|---|---|
-| R1 | Q1 not answered: `full_name` placement | Schema design blocked | Answer Q1 before Step 3 |
-| R2 | Q3 not answered: notification field semantics | CustomerProfile schema ambiguous | Answer Q3 before Step 3 |
-| R3 | Q2 not answered: SSO scope | Auth implementation scope | Answer Q2 before Step 7 |
-| R4 | M2 RetreatBooking dependency for deletion check | Deletion service stub needed | Coordinate with M2 team; implement stub |
-| R5 | OTP email requires SMTP | Email verification blocked | Configure SMTP or use mock/log in dev |
-| R6 | Q4 not answered: child tables vs text for allergies/dietary | HealthProfile schema | Answer Q4 before Step 3 |
-| R7 | Q5 not answered: TreatmentHealthNote author | RBAC design for note endpoint | Answer Q5 before Step 9 |
-| R8 | No test data strategy defined | Manual testing slow | Agree on seed SQL or test fixtures in Step 4 |
-| R9 | `account_status` state machine not formally defined | Auth logic gaps for locked/inactive accounts | Define transitions before Step 7 |
-| R10 | Q10 not answered: ConsentRecord single vs multi | Consent table design and UC09 behavior | Answer Q10 before Step 10 |
+| ID  | Risk / Decision                                             | Impact                                       | Action Required                              |
+| --- | ----------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| R1  | Q1 not answered: `full_name` placement                      | Schema design blocked                        | Answer Q1 before Step 3                      |
+| R2  | Q3 not answered: notification field semantics               | CustomerProfile schema ambiguous             | Answer Q3 before Step 3                      |
+| R3  | Q2 not answered: SSO scope                                  | Auth implementation scope                    | Answer Q2 before Step 7                      |
+| R4  | M2 RetreatBooking dependency for deletion check             | Deletion service stub needed                 | Coordinate with M2 team; implement stub      |
+| R5  | OTP email requires SMTP                                     | Email verification blocked                   | Configure SMTP or use mock/log in dev        |
+| R6  | Q4 not answered: child tables vs text for allergies/dietary | HealthProfile schema                         | Answer Q4 before Step 3                      |
+| R7  | Q5 not answered: TreatmentHealthNote author                 | RBAC design for note endpoint                | Answer Q5 before Step 9                      |
+| R8  | No test data strategy defined                               | Manual testing slow                          | Agree on seed SQL or test fixtures in Step 4 |
+| R9  | `account_status` state machine not formally defined         | Auth logic gaps for locked/inactive accounts | Define transitions before Step 7             |
+| R10 | Q10 not answered: ConsentRecord single vs multi             | Consent table design and UC09 behavior       | Answer Q10 before Step 10                    |
 
 ---
 

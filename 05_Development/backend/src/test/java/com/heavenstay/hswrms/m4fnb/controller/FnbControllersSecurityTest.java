@@ -18,7 +18,7 @@ import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
 import com.heavenstay.hswrms.m4fnb.dto.CreateDailyMealRequest;
 import com.heavenstay.hswrms.m4fnb.dto.UpdateOrderStatusRequest;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
-import com.heavenstay.hswrms.m4fnb.entity.MenuItemEntity;
+import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MenuItemRepository;
 import com.heavenstay.hswrms.security.JwtTokenProvider;
@@ -93,7 +93,7 @@ public class FnbControllersSecurityTest {
     private String managerToken;
     private String adminToken;
     private RetreatBooking testBooking;
-    private MenuItemEntity testMenuItem;
+    private MenuItem testMenuItem;
     private MealOrderEntity testOrder;
 
     @BeforeEach
@@ -185,7 +185,7 @@ public class FnbControllersSecurityTest {
         testBooking.setTotalEstimatedAmount(BigDecimal.valueOf(1000));
         testBooking = bookingRepository.saveAndFlush(testBooking);
 
-        testMenuItem = new MenuItemEntity("Special Soup " + ts, "SOUP", "ALL_DAY",
+        testMenuItem = new MenuItem("Special Soup " + ts, "SOUP", "ALL_DAY",
                 BigDecimal.valueOf(80), "vegan", null, "AVAILABLE");
         testMenuItem = menuItemRepository.saveAndFlush(testMenuItem);
 

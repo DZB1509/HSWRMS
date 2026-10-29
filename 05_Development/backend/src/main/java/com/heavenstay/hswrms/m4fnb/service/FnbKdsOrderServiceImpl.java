@@ -6,8 +6,8 @@ import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m4fnb.dto.*;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
-import com.heavenstay.hswrms.m4fnb.entity.MealOrderItemEntity;
-import com.heavenstay.hswrms.m4fnb.entity.MenuItemEntity;
+import com.heavenstay.hswrms.m4fnb.entity.MealOrderItem;
+import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
 import com.heavenstay.hswrms.m4fnb.integration.BookingContextPort;
 import com.heavenstay.hswrms.m4fnb.integration.DietaryProfilePort;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderItemRepository;
@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class MealOrderServiceImpl implements MealOrderService {
+public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
-    private static final Logger log = LoggerFactory.getLogger(MealOrderServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(FnbKdsOrderServiceImpl.class);
 
     private final MealOrderRepository mealOrderRepository;
     private final MenuItemRepository menuItemRepository;
@@ -46,7 +46,7 @@ public class MealOrderServiceImpl implements MealOrderService {
     private final FolioItemRepository folioItemRepository;
     private final AuditLogService auditLogService;
 
-    public MealOrderServiceImpl(MealOrderRepository mealOrderRepository,
+    public FnbKdsOrderServiceImpl(MealOrderRepository mealOrderRepository,
                                 MenuItemRepository menuItemRepository,
                                 MealOrderItemRepository mealOrderItemRepository,
                                 RetreatBookingRepository bookingRepository,
@@ -69,7 +69,7 @@ public class MealOrderServiceImpl implements MealOrderService {
     @Override
     @Transactional(readOnly = true)
     public List<MenuItemDto> getAvailableMenuItems(String category, String mealPeriod) {
-        List<MenuItemEntity> items = menuItemRepository.findAllAvailable();
+        List<MenuItem> items = menuItemRepository.findAllAvailable();
         return items.stream()
                 .filter(i -> category == null || category.equalsIgnoreCase(i.getCategory()))
                 .filter(i -> mealPeriod == null || i.getMealType() == null || i.getMealType().toLowerCase().contains(mealPeriod.toLowerCase()) || i.getMealType().equalsIgnoreCase("ALL_DAY"))
@@ -115,19 +115,22 @@ public class MealOrderServiceImpl implements MealOrderService {
             order.setCreatedAt(LocalDateTime.now());
         }
 
+        MealOrderEntity saved = mealOrderRepository.save(order);
+
         if (request.getMenuItemIds() != null) {
             for (Integer menuItemId : request.getMenuItemIds()) {
-                MenuItemEntity item = menuItemRepository.findById(menuItemId)
+                MenuItem item = menuItemRepository.findById(menuItemId)
                         .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with ID: " + menuItemId));
                 if (!"AVAILABLE".equalsIgnoreCase(item.getAvailabilityStatus())) {
                     throw new BusinessRuleException("MENU_ITEM_UNAVAILABLE",
                             "Menu item '" + item.getItemName() + "' is currently unavailable.");
                 }
-                order.addItem(new MealOrderItemEntity(order, item, 1));
+                MealOrderItem oi = new MealOrderItem(saved.getId(), item.getId(), 1, BigDecimal.ZERO);
+                mealOrderItemRepository.save(oi);
+                saved.addItem(oi);
             }
         }
 
-        MealOrderEntity saved = mealOrderRepository.save(order);
         return mapToDto(saved);
     }
 
@@ -149,8 +152,10 @@ public class MealOrderServiceImpl implements MealOrderService {
         order.setOrderStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
 
+        MealOrderEntity saved = mealOrderRepository.save(order);
+
         for (AlaCarteItemRequest itemReq : request.getItems()) {
-            MenuItemEntity item = menuItemRepository.findById(itemReq.getMenuItemId())
+            MenuItem item = menuItemRepository.findById(itemReq.getMenuItemId())
                     .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with ID: " + itemReq.getMenuItemId()));
             if (!"AVAILABLE".equalsIgnoreCase(item.getAvailabilityStatus())) {
                 throw new BusinessRuleException("MENU_ITEM_UNAVAILABLE",
@@ -159,10 +164,11 @@ public class MealOrderServiceImpl implements MealOrderService {
             if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
                 throw new BusinessRuleException("INVALID_QUANTITY", "Item quantity must be greater than 0.");
             }
-            order.addItem(new MealOrderItemEntity(order, item, itemReq.getQuantity()));
+            MealOrderItem oi = new MealOrderItem(saved.getId(), item.getId(), itemReq.getQuantity(), item.getPrice());
+            mealOrderItemRepository.save(oi);
+            saved.addItem(oi);
         }
 
-        MealOrderEntity saved = mealOrderRepository.save(order);
         return mapToDto(saved);
     }
 
@@ -441,11 +447,21 @@ public class MealOrderServiceImpl implements MealOrderService {
         }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
-        for (MealOrderItemEntity item : order.getItems()) {
-            BigDecimal price = item.getMenuItem() != null && item.getMenuItem().getPrice() != null
-                    ? item.getMenuItem().getPrice() : BigDecimal.ZERO;
-            BigDecimal lineTotal = price.multiply(BigDecimal.valueOf(item.getQuantity()));
-            totalAmount = totalAmount.add(lineTotal);
+        List<MealOrderItem> totalItems = order.getItems();
+        if ((totalItems == null || totalItems.isEmpty()) && order.getId() != null) {
+            totalItems = mealOrderItemRepository.findByMealOrderId(order.getId());
+            order.setItems(totalItems);
+        }
+        if (totalItems != null) {
+            for (MealOrderItem item : totalItems) {
+                if (item.getMenuItem() == null && item.getMenuItemId() != null) {
+                    item.setMenuItem(menuItemRepository.findById(item.getMenuItemId()).orElse(null));
+                }
+                BigDecimal price = item.getMenuItem() != null && item.getMenuItem().getPrice() != null
+                        ? item.getMenuItem().getPrice() : BigDecimal.ZERO;
+                BigDecimal lineTotal = price.multiply(BigDecimal.valueOf(item.getQuantity()));
+                totalAmount = totalAmount.add(lineTotal);
+            }
         }
 
         if (totalAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -495,18 +511,28 @@ public class MealOrderServiceImpl implements MealOrderService {
         }
 
         List<MealOrderItemDto> itemDtos = new ArrayList<>();
-        for (MealOrderItemEntity item : order.getItems()) {
-            MealOrderItemDto itemDto = new MealOrderItemDto();
-            itemDto.setMealOrderItemId(item.getMealOrderItemId());
-            if (item.getMenuItem() != null) {
-                itemDto.setMenuItemId(item.getMenuItem().getMenuItemId());
-                itemDto.setItemName(item.getMenuItem().getItemName());
-                itemDto.setUnitPrice(item.getMenuItem().getPrice());
-                BigDecimal price = item.getMenuItem().getPrice() != null ? item.getMenuItem().getPrice() : BigDecimal.ZERO;
-                itemDto.setLineTotal(price.multiply(BigDecimal.valueOf(item.getQuantity())));
+        List<MealOrderItem> prepItems = order.getItems();
+        if ((prepItems == null || prepItems.isEmpty()) && order.getId() != null) {
+            prepItems = mealOrderItemRepository.findByMealOrderId(order.getId());
+            order.setItems(prepItems);
+        }
+        if (prepItems != null) {
+            for (MealOrderItem item : prepItems) {
+                if (item.getMenuItem() == null && item.getMenuItemId() != null) {
+                    item.setMenuItem(menuItemRepository.findById(item.getMenuItemId()).orElse(null));
+                }
+                MealOrderItemDto itemDto = new MealOrderItemDto();
+                itemDto.setMealOrderItemId(item.getMealOrderItemId());
+                if (item.getMenuItem() != null) {
+                    itemDto.setMenuItemId(item.getMenuItem().getMenuItemId());
+                    itemDto.setItemName(item.getMenuItem().getItemName());
+                    itemDto.setUnitPrice(item.getMenuItem().getPrice());
+                    BigDecimal price = item.getMenuItem().getPrice() != null ? item.getMenuItem().getPrice() : BigDecimal.ZERO;
+                    itemDto.setLineTotal(price.multiply(BigDecimal.valueOf(item.getQuantity())));
+                }
+                itemDto.setQuantity(item.getQuantity());
+                itemDtos.add(itemDto);
             }
-            itemDto.setQuantity(item.getQuantity());
-            itemDtos.add(itemDto);
         }
         dto.setItems(itemDtos);
 
@@ -527,8 +553,16 @@ public class MealOrderServiceImpl implements MealOrderService {
 
         BigDecimal total = BigDecimal.ZERO;
         List<MealOrderItemDto> itemDtos = new ArrayList<>();
-        if (entity.getItems() != null) {
-            for (MealOrderItemEntity item : entity.getItems()) {
+        List<MealOrderItem> orderItems = entity.getItems();
+        if ((orderItems == null || orderItems.isEmpty()) && entity.getId() != null) {
+            orderItems = mealOrderItemRepository.findByMealOrderId(entity.getId());
+            entity.setItems(orderItems);
+        }
+        if (orderItems != null) {
+            for (MealOrderItem item : orderItems) {
+                if (item.getMenuItem() == null && item.getMenuItemId() != null) {
+                    item.setMenuItem(menuItemRepository.findById(item.getMenuItemId()).orElse(null));
+                }
                 MealOrderItemDto itemDto = new MealOrderItemDto();
                 itemDto.setMealOrderItemId(item.getMealOrderItemId());
                 if (item.getMenuItem() != null) {
@@ -549,7 +583,7 @@ public class MealOrderServiceImpl implements MealOrderService {
         return dto;
     }
 
-    private MenuItemDto mapToMenuItemDto(MenuItemEntity entity) {
+    private MenuItemDto mapToMenuItemDto(MenuItem entity) {
         MenuItemDto dto = new MenuItemDto();
         dto.setMenuItemId(entity.getMenuItemId());
         dto.setItemName(entity.getItemName());

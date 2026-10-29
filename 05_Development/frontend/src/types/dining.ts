@@ -1,7 +1,9 @@
 export type MealPeriod = 'breakfast' | 'lunch' | 'dinner' | 'all_day';
 export type FnbFulfillmentStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
 export type AlaCarteChargeType = 'fnb_extra';
-export type FolioPostingStatus = 'pending_checkout_folio' | 'settled';
+export type FolioPostingStatus = 'pending_checkout_folio' | 'settled' | 'NOT_APPLICABLE' | 'PENDING_RECONCILIATION' | 'POSTED_TO_FOLIO';
+export type DietaryVerificationStatus = 'VERIFIED' | 'UNVERIFIED' | 'NO_PROFILE_ATTACHED';
+export type LocationVerificationStatus = 'VERIFIED_VILLA' | 'UNVERIFIED_LOCATION';
 
 export interface LocalizedString {
   vi: string;
@@ -20,9 +22,12 @@ export interface DietaryMenuItem {
   mealPeriods: MealPeriod[];
   dietaryTags: ('vegetarian' | 'lacto_ovo_vegetarian' | 'vegan' | 'gluten_free' | 'gluten_conscious' | 'dairy_free' | 'keto' | 'pescatarian' | 'flexitarian')[];
   allergenTags: ('nuts' | 'shellfish' | 'soy' | 'eggs' | 'fish' | 'dairy')[];
-  price?: number; // Only for a-la-carte
+  price?: number;
+  backendId?: number;
   isExtra: boolean;
   calories?: number;
+  available?: boolean;
+  availableServings?: number;
 }
 
 export interface DailyMealSelection {
@@ -32,8 +37,18 @@ export interface DailyMealSelection {
   date: string; // YYYY-MM-DD format
   mealPeriod: MealPeriod;
   menuItemIds: string[]; // Support multiple choices per meal period if allowed
+  quantity?: number; // Portions selected (e.g. 1 portion, 2 portions)
+  items?: {
+    menuItemId: string;
+    quantity: number;
+    notes?: string;
+    inventoryStatus?: string;
+    inventoryMessage?: string | null;
+  }[];
   notes: string;
   status: FnbFulfillmentStatus; // Fulfillment status of the included retreat meal
+  inventoryStatus?: string;
+  inventoryMessage?: string | null;
 }
 
 export interface AlaCarteOrderLine {
@@ -77,13 +92,22 @@ export interface MealPrepEntry {
   customerName: string;
   villaNumber?: string;
   items: {
+    orderLineId?: number;
     menuItemId: string;
     quantity: number;
     notes?: string;
+    preparationStatus?: string;
+    inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
+    inventoryMessage?: string | null;
   }[];
   customerNotes?: string;
   dietaryNotes: string[]; // Combined relevant dietary tags from the minimal projection
+  dietaryVerificationStatus?: DietaryVerificationStatus;
+  locationVerificationStatus?: LocationVerificationStatus;
+  folioPostingStatus?: FolioPostingStatus;
   status: FnbFulfillmentStatus;
+  inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
+  inventoryMessage?: string | null;
 }
 
 export interface DiningContextType {
@@ -107,6 +131,7 @@ export interface DiningContextType {
   updateFulfillmentStatus: (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => void;
   getDailyPrepList: (date: string) => MealPrepEntry[];
   getActiveKitchenQueue: (date?: string) => MealPrepEntry[];
+  getOrderById?: (id: string) => MealPrepEntry | undefined;
 
   // Backend Integration & Polling
   isLoading?: boolean;
@@ -114,5 +139,15 @@ export interface DiningContextType {
   error?: string | null;
   refreshKitchenQueue?: (date?: string) => Promise<void>;
   cancelOrder?: (id: string, reason?: string) => Promise<void>;
+
+  // Live REST API Integration & Sync (Module 4)
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'offline';
+  fetchKitchenOrders?: (date: string) => Promise<MealPrepEntry[]>;
+  refreshMenu?: (asOfDate?: string) => Promise<void>;
+  ingredientInventory?: import('../features/m4-fnb/types/fnbDto').IngredientDemandResponse[];
+  refreshInventory?: (asOfDate?: string) => Promise<void>;
+  isInventoryStale?: boolean;
+  lastInventorySyncTime?: string | null;
+  inventorySyncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
 }
 

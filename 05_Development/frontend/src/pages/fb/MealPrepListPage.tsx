@@ -4,20 +4,47 @@ import { useDining } from '../../context/DiningContext';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 import { useNavigate } from 'react-router-dom';
-import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, RotateCw } from 'lucide-react';
-import { useKdsPolling } from '../../features/m4-fnb/hooks/useKdsPolling';
-import { useAuth } from '../../hooks/useAuth';
+import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, ChevronDown, ChevronUp, UtensilsCrossed, CheckCircle, Boxes } from 'lucide-react';
+import { MENU_ITEM_RECIPES } from '../../data/mockDining';
+import { AmanoiServiceLocationBadge } from '../../components/dining/ServiceLocationBadge';
+import { parseDiningNotes, getLocalDateString } from '../../utils/diningServiceHelper';
 
-const CANONICAL_RESORT_DATE = '2026-09-24';
+import { cleanMojibake } from '../../utils/textEncodingHelper';
+
+
 
 export const MealPrepListPage: React.FC = () => {
-  const { t } = useTranslation(['operations', 'customer']);
-  const { getDailyPrepList, updateFulfillmentStatus, menuItems, refreshKitchenQueue, cancelOrder } = useDining();
+  const { t, i18n } = useTranslation(['operations', 'customer']);
+  const {
+    getDailyPrepList,
+    updateFulfillmentStatus,
+    menuItems,
+    fetchKitchenOrders,
+    syncStatus,
+    ingredientInventory,
+    refreshInventory,
+    isInventoryStale,
+    lastInventorySyncTime,
+    inventorySyncStatus,
+    refreshMenu,
+  } = useDining();
   const navigate = useNavigate();
-  const { hasPermission, role } = useAuth();
 
-  // Screen 39 authorization: S39:U required for updating orders, backend strictly enforces
-  const canUpdate = hasPermission('S39:U') || role === 'fb_staff' || role === 'manager' || role === 'admin';
+  const currentLang = (i18n.language || 'vi') as 'vi' | 'en';
+  const localize = (obj: any): string => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return cleanMojibake(obj);
+    const val = obj[currentLang] || obj.vi || obj.en || Object.values(obj)[0] || '';
+    return cleanMojibake(val);
+  };
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Physical inventory section state
+  const [showPhysicalInventory, setShowPhysicalInventory] = useState(true);
+  const [ingredientSearch, setIngredientSearch] = useState('');
+
+  const [expandedRowRecipeId, setExpandedRowRecipeId] = useState<string | null>(null);
 
   const formatDietaryNote = (note: string) => {
     const normalized = note.toLowerCase().replace(/[\s-]+/g, '_');
@@ -29,43 +56,75 @@ export const MealPrepListPage: React.FC = () => {
     return t(`customer:dining.allergies.${normalized}`, note);
   };
 
-  // Canonical operational resort date default (Requirement 28)
-  const [date, setDate] = useState(CANONICAL_RESORT_DATE);
+  // Always default to current operational resort date (local today)
+  const [date, setDate] = useState(() => getLocalDateString());
   const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('active');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterLocation, setFilterLocation] = useState('all');
   const [filterDietaryOnly, setFilterDietaryOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // KDS short-polling: 10-15s interval (12s default) + manual refresh
-  const { isManualRefreshing, manualRefresh } = useKdsPolling({
-    intervalMs: 12000,
-    onPoll: async () => {
-      if (refreshKitchenQueue) {
-        await refreshKitchenQueue(date);
-      }
-    },
-  });
+  // Automatically sync with backend whenever the operational date changes
+  React.useEffect(() => {
+    if (fetchKitchenOrders) {
+      fetchKitchenOrders(date);
+    }
+    if (refreshInventory) {
+      refreshInventory(date);
+    }
+    if (refreshMenu) {
+      refreshMenu(date);
+    }
+  }, [date, fetchKitchenOrders, refreshInventory, refreshMenu]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchKitchenOrders ? fetchKitchenOrders(date) : Promise.resolve([]),
+        refreshMenu ? refreshMenu(date) : Promise.resolve(),
+        refreshInventory ? refreshInventory(date) : Promise.resolve(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const rawList = getDailyPrepList(date);
 
   const filteredList = rawList.filter((item) => {
     const matchesType = filterType === 'all' || item.type === filterType;
-    const matchesStatus =
-      filterStatus === 'active'
-        ? item.status === 'pending' || item.status === 'preparing' || item.status === 'ready'
-        : filterStatus === 'all' || item.status === filterStatus;
+    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
     const matchesDietary = !filterDietaryOnly || item.dietaryNotes.length > 0;
-
+    const parsedNotes = parseDiningNotes(item.customerNotes);
+    const matchesLocation =
+      filterLocation === 'all' ||
+      (filterLocation === 'IN_VILLA' && parsedNotes.isVillaDelivery) ||
+      (filterLocation === 'DINING_PAVILION' && !parsedNotes.isVillaDelivery);
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
       item.customerName.toLowerCase().includes(q) ||
-      (item.villaNumber && item.villaNumber.toLowerCase().includes(q));
+      (item.villaNumber && item.villaNumber.toLowerCase().includes(q)) ||
+      (item.customerNotes && item.customerNotes.toLowerCase().includes(q)) ||
+      item.items.some((line) => {
+        const dish = menuItems.find((m) => m.id === line.menuItemId || String(m.backendId) === String(line.menuItemId) || (m.backendId && String(m.backendId) === line.menuItemId.replace(/\D/g, '')));
+        if (!dish) return false;
+        const matchesDishName =
+          (dish.name.vi && dish.name.vi.toLowerCase().includes(q)) ||
+          (dish.name.en && dish.name.en.toLowerCase().includes(q));
+        const recipes = MENU_ITEM_RECIPES[line.menuItemId] || [];
+        const matchesIngredient = recipes.some((r) =>
+          (r.name.vi && r.name.vi.toLowerCase().includes(q)) ||
+          (r.name.en && r.name.en.toLowerCase().includes(q))
+        );
+        return matchesDishName || matchesIngredient;
+      });
 
-    return matchesType && matchesStatus && matchesDietary && matchesSearch;
+    return matchesType && matchesStatus && matchesLocation && matchesDietary && matchesSearch;
   });
 
   const totalItems = filteredList.length;
@@ -76,39 +135,19 @@ export const MealPrepListPage: React.FC = () => {
 
   const paginatedList = filteredList.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
 
-  const handleStatusChange = async (
+  const handleStatusChange = (
     id: string,
     type: 'retreat_meal' | 'a_la_carte',
-    newStatus: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
+    newStatus: 'pending' | 'preparing' | 'ready' | 'delivered'
   ) => {
-    if (!canUpdate) {
-      alert(t('common.forbidden', 'You do not have permission S39:U to update orders.'));
-      return;
-    }
-
-    if (newStatus === 'cancelled') {
-      const reason = window.prompt(t('fnb.cancellation.reasonPrompt', 'Cancellation reason is mandatory for staff. Please enter reason:'));
-      if (!reason || !reason.trim()) {
-        alert(t('fnb.cancellation.reasonRequired', 'Cancellation reason is required. Order was not cancelled.'));
-        return;
-      }
-      try {
-        if (cancelOrder) {
-          await cancelOrder(id, reason.trim());
-        }
-      } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : 'Failed to cancel order');
-      }
-      return;
-    }
-
     updateFulfillmentStatus(id, type, newStatus);
   };
 
   const handleClearFilters = () => {
-    setDate(CANONICAL_RESORT_DATE);
+    setDate(getLocalDateString());
     setFilterType('all');
-    setFilterStatus('active');
+    setFilterStatus('all');
+    setFilterLocation('all');
     setFilterDietaryOnly(false);
     setSearchQuery('');
     setCurrentPage(1);
@@ -135,24 +174,154 @@ export const MealPrepListPage: React.FC = () => {
     );
   };
 
+  const renderInventoryBadge = (status?: string, msg?: string | null) => {
+    if (!status || status === 'PENDING') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 600,
+            backgroundColor: 'var(--bg-soft)',
+            color: 'var(--text-tertiary)',
+            border: '1px solid var(--border-subtle)',
+          }}
+          title={msg || 'Chờ xác nhận chuẩn bị để xuất kho'}
+        >
+          Kho: Chờ xuất
+        </span>
+      );
+    }
+    if (status === 'CONSUMED') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 600,
+            backgroundColor: '#f6ffed',
+            color: '#389e0d',
+            border: '1px solid #b7eb8f',
+          }}
+          title={msg || 'Đã xuất kho nguyên liệu thành công'}
+        >
+          <CheckCircle size={10} /> Kho: Đã xuất
+        </span>
+      );
+    }
+    if (status === 'NOT_CONFIGURED') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 600,
+            backgroundColor: '#fffbe6',
+            color: '#d46b08',
+            border: '1px solid #ffe58f',
+          }}
+          title={msg || 'Món ăn chưa có công thức định lượng trong kho'}
+        >
+          <AlertTriangle size={10} /> Kho: Chưa có công thức
+        </span>
+      );
+    }
+    if (status === 'INSUFFICIENT_STOCK') {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: 700,
+            backgroundColor: '#fff1f0',
+            color: '#cf1322',
+            border: '1px solid #ffa39e',
+          }}
+          title={msg || 'Tồn kho khả dụng không đủ để xuất'}
+        >
+          <AlertTriangle size={10} /> Kho: Thiếu nguyên liệu
+        </span>
+      );
+    }
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontSize: '10px',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          fontWeight: 600,
+          backgroundColor: '#fff1f0',
+          color: '#cf1322',
+          border: '1px solid #ffa39e',
+        }}
+        title={msg || 'Lỗi xuất kho'}
+      >
+        <AlertTriangle size={10} /> Kho: Lỗi
+      </span>
+    );
+  };
+
   return (
     <div className="hsw-page-container" id="screen-39-meal-prep-list">
       <OperationalPageHeader
         title={t('fnb.prepList.title', 'Daily Meal Prep Queue')}
         subtitle={t('fnb.prepList.subtitle', 'Manage kitchen fulfillment schedule and dietary adaptations for resort customers.')}
         actions={
-          <button
-            type="button"
-            className="hsw-btn hsw-btn-secondary"
-            onClick={() => manualRefresh()}
-            disabled={isManualRefreshing}
-            id="btn-refresh-kds-queue"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            title="Refresh KDS Prep Queue (short polling 12s)"
-          >
-            <RotateCw size={14} className={isManualRefreshing ? 'hsw-spin' : ''} />
-            <span>{isManualRefreshing ? t('common.refreshing', 'Refreshing...') : t('common.refresh', 'Refresh')}</span>
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '3px 9px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: syncStatus === 'synced' ? 'rgba(46, 125, 50, 0.1)' : 'var(--bg-soft)',
+                color: syncStatus === 'synced' ? 'var(--accent-forest)' : 'var(--text-tertiary)',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: syncStatus === 'synced' ? 'var(--accent-forest)' : '#9ca3af',
+                }}
+              />
+              {syncStatus === 'synced' ? 'Live API Connected' : syncStatus === 'syncing' ? 'Syncing...' : 'Prototype Standalone'}
+            </span>
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing || syncStatus === 'syncing'}
+              title="Refresh live kitchen preparation queue from backend"
+              id="btn-sync-kitchen-orders"
+            >
+              <RotateCcw size={13} className={isRefreshing || syncStatus === 'syncing' ? 'hsw-spin' : ''} />
+              <span>Sync API</span>
+            </button>
+          </div>
         }
       />
 
@@ -238,15 +407,32 @@ export const MealPrepListPage: React.FC = () => {
               }}
               id="filter-fulfillment-status"
             >
-              <option value="active">{t('fnb.prepList.statusActive', 'Active Queue (Pending, Preparing, Ready)')}</option>
-              <option value="all">{t('fnb.prepList.allStatuses', 'All Statuses (History)')}</option>
+              <option value="all">{t('fnb.prepList.allStatuses', 'All Statuses')}</option>
               <option value="pending">{t('fnb.status.pending', 'Pending')}</option>
               <option value="preparing">{t('fnb.status.preparing', 'Preparing')}</option>
               <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
               <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
+              <option value="cancelled">{t('fnb.status.cancelled', 'Cancelled')}</option>
             </select>
-
           </div>
+
+          <div style={{ flex: '1 1 160px', minWidth: '150px' }}>
+            <select
+              className="hsw-select"
+              style={{ width: '100%', height: '34px', fontSize: '12px' }}
+              value={filterLocation}
+              onChange={(e) => {
+                setFilterLocation(e.target.value);
+                setCurrentPage(1);
+              }}
+              id="filter-service-location"
+            >
+              <option value="all">📍 {currentLang === 'vi' ? 'Tất cả điểm phục vụ' : 'All Dining Venues'}</option>
+              <option value="DINING_PAVILION">🍽️ {currentLang === 'vi' ? 'Nhà hàng Trung tâm' : 'Dining Pavilion'}</option>
+              <option value="IN_VILLA">🏡 {currentLang === 'vi' ? 'Giao Biệt thự (In-Villa)' : 'In-Villa Delivery'}</option>
+            </select>
+          </div>
+
 
           {/* Dietary Attention toggle */}
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', userSelect: 'none' }}>
@@ -270,9 +456,241 @@ export const MealPrepListPage: React.FC = () => {
             onClick={handleClearFilters}
           >
             <RotateCcw size={12} />
-            <span>Reset Filters</span>
+            <span>{t('fnb.prepList.resetFilters', 'Reset Filters')}</span>
           </button>
         </div>
+      </div>
+
+      {/* Physical Usable Ingredient Stock Monitoring Section */}
+      <div
+        className="hsw-physical-inventory-card"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-md)',
+          padding: '16px',
+          marginBottom: '20px',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+        id="fnb-physical-inventory-section"
+      >
+        {/* Header & Toggle */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+          onClick={() => setShowPhysicalInventory((prev) => !prev)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(26, 104, 158, 0.12)',
+                color: '#1a689e',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Boxes size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {t('fnb.prepList.physicalStockTitle', 'Tồn Kho Nguyên Liệu Khả Dụng Thực Tế (Usable Stock)')}
+                </h3>
+                {inventorySyncStatus === 'syncing' ? (
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                    ⏳ Đang đồng bộ kho...
+                  </span>
+                ) : isInventoryStale ? (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      backgroundColor: '#fff1f0',
+                      color: '#cf1322',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 600,
+                      border: '1px solid #ffa39e',
+                    }}
+                  >
+                    ⚠️ Tồn kho có thể chưa mới nhất
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      color: 'var(--accent-forest)',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✓ Tự động cập nhật sau mỗi lần trừ kho
+                  </span>
+                )}
+              </div>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                {t(
+                  'fnb.prepList.physicalStockSubtitle',
+                  'Số lượng nguyên liệu vật lý thực tế từ các lô kho hợp lệ (FEFO: FRESH, GOOD, NEAR_EXPIRY).'
+                )}
+                {lastInventorySyncTime && ` · Đồng bộ lúc: ${lastInventorySyncTime}`}
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+              style={{ padding: '4px 10px', fontSize: '12px', gap: '4px' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (refreshInventory) refreshInventory(date);
+                if (refreshMenu) refreshMenu(date);
+              }}
+              title="Làm mới tồn kho ngay lập tức"
+            >
+              <RotateCcw size={13} />
+              <span>{t('common.refresh', 'Làm mới')}</span>
+            </button>
+            <button
+              type="button"
+              className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
+              style={{ padding: '4px 8px' }}
+              aria-label="Toggle physical inventory panel"
+            >
+              {showPhysicalInventory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Expandable Inventory Table */}
+        {showPhysicalInventory && (
+          <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+            {/* Search filter row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
+                <Search
+                  size={13}
+                  style={{
+                    position: 'absolute',
+                    left: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-tertiary)',
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder={t('fnb.prepList.searchIngredientPlaceholder', 'Tìm tên nguyên liệu...')}
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
+                  className="hsw-input"
+                  style={{ width: '100%', paddingLeft: '30px', height: '32px', fontSize: '12px' }}
+                />
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Tổng cộng: <strong>{ingredientInventory?.length || 0}</strong> nguyên liệu trong hệ thống
+              </div>
+            </div>
+
+            {/* Inventory table */}
+            <div style={{ overflowX: 'auto', maxHeight: '320px', overflowY: 'auto' }}>
+              <table
+                style={{
+                  width: '100%',
+                  fontSize: '12px',
+                  borderCollapse: 'collapse',
+                  backgroundColor: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-xs)',
+                }}
+              >
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--bg-soft)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', position: 'sticky', top: 0, zIndex: 1 }}>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      Tên Nguyên Liệu
+                    </th>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)', width: '120px' }}>
+                      Đơn Vị Đo
+                    </th>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent-forest)', textAlign: 'right', width: '180px' }}>
+                      Tồn Kho Khả Dụng (Usable)
+                    </th>
+                    <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', width: '140px' }}>
+                      Tình Trạng
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(ingredientInventory || [])
+                    .filter((item) => {
+                      if (!ingredientSearch.trim()) return true;
+                      const q = ingredientSearch.toLowerCase().trim();
+                      return item.ingredientName.toLowerCase().includes(q) || String(item.ingredientId).includes(q);
+                    })
+                    .map((item) => {
+                      const isShortage = item.status === 'SHORTAGE' || item.shortfall > 0;
+                      const isZero = Number(item.usableQuantity) <= 0;
+
+                      return (
+                        <tr
+                          key={item.ingredientId}
+                          style={{
+                            borderBottom: '1px solid var(--border-subtle)',
+                            backgroundColor: isZero ? 'rgba(211, 47, 47, 0.03)' : undefined,
+                          }}
+                        >
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {cleanMojibake(item.ingredientName)}
+                            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '6px', fontWeight: 400 }}>
+                              #{item.ingredientId}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            {item.unitOfMeasure}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: isZero ? '#d32f2f' : 'var(--text-primary)', fontSize: '13px' }}>
+                            {Number(item.usableQuantity).toLocaleString()} {item.unitOfMeasure}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            {isZero ? (
+                              <span style={{ color: '#d32f2f', fontWeight: 600, fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'rgba(211, 47, 47, 0.08)' }}>
+                                ● Hết hàng
+                              </span>
+                            ) : isShortage ? (
+                              <span style={{ color: '#ed6c02', fontWeight: 600, fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'rgba(237, 108, 2, 0.08)' }}>
+                                ▲ Thiếu hụt
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--accent-forest)', fontWeight: 600, fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'rgba(46, 125, 50, 0.08)' }}>
+                                ✓ Khả dụng
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {(!ingredientInventory || ingredientInventory.length === 0) && (
+                    <tr>
+                      <td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                        Chưa có dữ liệu tồn kho nguyên liệu từ máy chủ.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Prep Queue Table (Requirements 31 & 32) */}
@@ -308,50 +726,167 @@ export const MealPrepListPage: React.FC = () => {
                     <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px', fontWeight: 600 }}>
                       {item.type === 'retreat_meal' ? 'RETREAT' : 'EXTRA A-LA-CARTE'}
                     </div>
+                    {item.type === 'a_la_carte' && (
+                      <div style={{ marginTop: '3px' }}>
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontWeight: 600,
+                            backgroundColor: item.folioPostingStatus === 'POSTED_TO_FOLIO' ? '#f6ffed' : '#fff7e6',
+                            color: item.folioPostingStatus === 'POSTED_TO_FOLIO' ? '#389e0d' : '#d46b08',
+                            border: `1px solid ${item.folioPostingStatus === 'POSTED_TO_FOLIO' ? '#b7eb8f' : '#ffd591'}`
+                          }}
+                        >
+                          {item.folioPostingStatus === 'POSTED_TO_FOLIO' ? 'Folio: Đã tính' : 'Folio: Chờ soát'}
+                        </span>
+                      </div>
+                    )}
                   </td>
 
-                  {/* Customer & Villa (Fixed "Villa Villa" duplication) */}
+                  {/* Customer & Villa & Amanoi Service Point */}
                   <td onClick={() => navigate(`/fb/orders/${item.id}`)} style={{ cursor: 'pointer' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.customerName}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--accent-olive)' }}>
-                      {formatVilla(item.villaNumber)}
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.customerName)}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--accent-olive)', marginBottom: '4px' }}>
+                      {cleanMojibake(formatVilla(item.villaNumber))}
                     </div>
+                    <AmanoiServiceLocationBadge
+                      notes={item.customerNotes}
+                      villaNumber={item.villaNumber}
+                      compact={true}
+                      lang={currentLang}
+                    />
+                    {item.locationVerificationStatus === 'UNVERIFIED_LOCATION' && (
+                      <div style={{ marginTop: '3px' }}>
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontWeight: 600,
+                            backgroundColor: '#fffbe6',
+                            color: '#d46b08',
+                            border: '1px solid #ffe58f',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                          }}
+                          title="Số Villa do khách tự nhập hoặc chưa xác nhận trạng thái M2"
+                        >
+                          <AlertTriangle size={9} /> Chưa xác minh Villa
+                        </span>
+                      </div>
+                    )}
                   </td>
 
                   {/* Items list */}
                   <td onClick={() => navigate(`/fb/orders/${item.id}`)} style={{ cursor: 'pointer' }}>
                     <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '13px' }}>
                       {item.items.map((lineItem, idx) => {
-                        const menuItem = menuItems.find((m) => m.id === lineItem.menuItemId);
+                        const menuItem = menuItems.find((m) => m.id === lineItem.menuItemId || String(m.backendId) === String(lineItem.menuItemId) || (m.backendId && String(m.backendId) === lineItem.menuItemId.replace(/\D/g, '')));
+                        const recipes = MENU_ITEM_RECIPES[lineItem.menuItemId] || (menuItem ? MENU_ITEM_RECIPES[menuItem.id] : []) || [];
+                        const isExpanded = expandedRowRecipeId === `${item.id}-${lineItem.menuItemId}`;
+
                         return (
-                          <li key={idx}>
-                            <strong>{lineItem.quantity}x</strong> {menuItem?.name.en || 'Culinary Item'}
+                          <li key={idx} style={{ marginBottom: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span><strong>{lineItem.quantity}x</strong> {menuItem ? localize(menuItem.name) : 'Culinary Item'}</span>
+                                {lineItem.inventoryStatus && lineItem.inventoryStatus !== 'PENDING' && (
+                                  renderInventoryBadge(lineItem.inventoryStatus, lineItem.inventoryMessage)
+                                )}
+                              </span>
+                              {recipes.length > 0 && (
+                                <button
+                                  type="button"
+                                  className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
+                                  style={{ height: '18px', padding: '0 5px', fontSize: '10px', gap: '2px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedRowRecipeId(isExpanded ? null : `${item.id}-${lineItem.menuItemId}`);
+                                  }}
+                                  title="Xem định lượng nguyên liệu món này"
+                                >
+                                  <UtensilsCrossed size={10} />
+                                  <span>{isExpanded ? t('fnb.prepList.hideRecipe', 'Thu gọn') : t('fnb.prepList.viewRecipe', 'Công thức')}</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Inline Ingredient Quantity Breakdown for this Order */}
+                            {isExpanded && recipes.length > 0 && (
+                              <div
+                                style={{
+                                  marginTop: '4px',
+                                  padding: '6px 8px',
+                                  backgroundColor: 'var(--bg-soft)',
+                                  borderRadius: 'var(--radius-xs)',
+                                  border: '1px solid var(--border-subtle)',
+                                  fontSize: '11px',
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div style={{ fontWeight: 600, color: 'var(--accent-forest)', marginBottom: '3px' }}>
+                                  Định lượng {lineItem.quantity} suất (và quy đổi 100 suất):
+                                </div>
+                                <ul style={{ margin: 0, paddingLeft: '12px', lineHeight: 1.35 }}>
+                                  {recipes.map((r) => (
+                                    <li key={r.ingredientId}>
+                                      {localize(r.name)}: <strong>{r.quantityPerServing * lineItem.quantity} {r.unit}</strong>{' '}
+                                      <span style={{ color: 'var(--text-tertiary)' }}>(100 suất: {(r.quantityPerServing * 100).toLocaleString()} {r.unit})</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </li>
                         );
                       })}
                     </ul>
                     {item.customerNotes && (
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          color: 'var(--text-secondary)',
-                          backgroundColor: 'var(--bg-soft)',
-                          padding: '2px 6px',
-                          borderRadius: 'var(--radius-xs)',
-                          marginTop: '4px',
-                          display: 'inline-block',
-                          fontStyle: 'italic',
-                        }}
-                      >
-                        "{item.customerNotes}"
+                      <div style={{ marginTop: '6px' }}>
+                        <AmanoiServiceLocationBadge
+                          notes={item.customerNotes}
+                          villaNumber={item.villaNumber}
+                          showInstructions={true}
+                          compact={false}
+                          lang={currentLang}
+                        />
+                        {(() => {
+                          const parsed = parseDiningNotes(item.customerNotes);
+                          return parsed.cleanNotes ? (
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                color: 'var(--text-secondary)',
+                                backgroundColor: 'var(--bg-soft)',
+                                padding: '3px 6px',
+                                borderRadius: 'var(--radius-xs)',
+                                marginTop: '4px',
+                                display: 'inline-block',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              "{parsed.cleanNotes}"
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </td>
 
-                  {/* Dietary vs Allergy Semantics (Requirement 32) */}
+
+                  {/* Dietary vs Allergy Semantics (Requirement 32 & Revision 2.0.3 Blocker 1) */}
                   <td onClick={() => navigate(`/fb/orders/${item.id}`)} style={{ cursor: 'pointer' }}>
                     {item.dietaryNotes.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {item.dietaryVerificationStatus !== 'VERIFIED' && (
+                          <span className="hsw-alert-allergy" style={{ backgroundColor: '#fff1f0', borderColor: '#ffa39e', color: '#cf1322', fontWeight: 700 }} title="CẢNH BÁO: Hồ sơ y tế chưa được M1 xác nhận!">
+                            <AlertTriangle size={11} />
+                            <span>Chưa xác minh</span>
+                          </span>
+                        )}
                         {item.dietaryNotes.map((note, idx) => {
                           const allergy = isAllergy(note);
                           return allergy ? (
@@ -367,14 +902,20 @@ export const MealPrepListPage: React.FC = () => {
                           );
                         })}
                       </div>
+                    ) : item.dietaryVerificationStatus === 'VERIFIED' ? (
+                      <span style={{ color: 'var(--accent-forest)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 500 }}>
+                        <CheckCircle size={12} />
+                        <span>Đã xác minh</span>
+                      </span>
                     ) : (
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                        {t('fnb.prepList.noAlerts', 'Standard')}
+                      <span className="hsw-alert-allergy" style={{ backgroundColor: '#fff1f0', borderColor: '#ffa39e', color: '#cf1322', fontWeight: 700 }} title="CẢNH BÁO AN TOÀN LÂM SÀNG: Chưa có hồ sơ y tế M1">
+                        <AlertTriangle size={11} />
+                        <span>⚠️ Chưa xác minh</span>
                       </span>
                     )}
                   </td>
 
-                  {/* Status Dropdown */}
+                  {/* Status Dropdown & Inventory Status */}
                   <td>
                     <select
                       className="hsw-ops-status-select"
@@ -390,6 +931,8 @@ export const MealPrepListPage: React.FC = () => {
                             ? '#fef3e2'
                             : item.status === 'ready'
                             ? '#eef6fc'
+                            : item.status === 'cancelled'
+                            ? '#fff1f0'
                             : 'var(--success-bg)',
                         color:
                           item.status === 'pending'
@@ -398,17 +941,21 @@ export const MealPrepListPage: React.FC = () => {
                             ? '#9a6114'
                             : item.status === 'ready'
                             ? '#1a689e'
+                            : item.status === 'cancelled'
+                            ? '#cf1322'
                             : 'var(--success)',
                       }}
                       id={`status-select-${item.id}`}
-                      disabled={!canUpdate || item.status === 'delivered' || item.status === 'cancelled'}
                     >
-                      <option value="pending">{t('fnb.status.pending', 'Pending')}</option>
-                      <option value="preparing">{t('fnb.status.preparing', 'Preparing')}</option>
-                      <option value="ready">{t('fnb.status.ready', 'Ready')}</option>
-                      <option value="delivered">{t('fnb.status.delivered', 'Delivered')}</option>
-                      <option value="cancelled">{t('fnb.status.cancelled', 'Cancelled')}</option>
+                      <option value="pending" disabled={item.status !== 'pending'}>{t('fnb.status.pending', 'Pending')}</option>
+                      <option value="preparing" disabled={item.status !== 'pending' && item.status !== 'preparing'}>{t('fnb.status.preparing', 'Preparing')}</option>
+                      <option value="ready" disabled={item.status !== 'preparing' && item.status !== 'ready'}>{t('fnb.status.ready', 'Ready')}</option>
+                      <option value="delivered" disabled={item.status !== 'ready' && item.status !== 'delivered'}>{t('fnb.status.delivered', 'Delivered')}</option>
+                      <option value="cancelled" disabled={item.status === 'delivered' || item.status === 'cancelled'}>{t('fnb.status.cancelled', 'Cancelled')}</option>
                     </select>
+                    <div style={{ marginTop: '5px' }}>
+                      {renderInventoryBadge(item.inventoryStatus, item.inventoryMessage)}
+                    </div>
                   </td>
 
                   {/* Action CTA (Requirement 33) */}
