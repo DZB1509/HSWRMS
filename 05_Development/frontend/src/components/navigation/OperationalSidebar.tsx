@@ -1,3 +1,4 @@
+import { HeavenStayLogo } from '../common/HeavenStayLogo';
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -176,12 +177,12 @@ export const OperationalSidebar: React.FC<{
       aria-label="Thanh điều hướng nhân viên"
     >
       <div className="hsw-sidebar-header">
-        <Link to={`/${role}/dashboard`} className="hsw-brand-logo">
-          <Sparkles size={20} style={{ color: 'var(--accent-sand)', flexShrink: 0 }} />
-          <div>
-            HEAVENSTAY
-            <span>{t('operations.sidebar.operationalSuite', 'HỆ THỐNG VẬN HÀNH')}</span>
-          </div>
+        <Link to={`/${role}/dashboard`} className="hsw-brand-logo" style={{ textDecoration: 'none' }}>
+          <HeavenStayLogo
+            variant="operations"
+            size="sm"
+            subtitle={t('operations.sidebar.operationalSuite', 'HỆ THỐNG VẬN HÀNH')}
+          />
         </Link>
       </div>
 
