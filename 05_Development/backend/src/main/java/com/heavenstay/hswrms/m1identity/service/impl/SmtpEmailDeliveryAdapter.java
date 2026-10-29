@@ -1,5 +1,6 @@
 package com.heavenstay.hswrms.m1identity.service.impl;
 
+import com.heavenstay.hswrms.common.exception.EmailDeliveryException;
 import com.heavenstay.hswrms.m1identity.service.EmailDeliveryAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,11 +47,12 @@ public class SmtpEmailDeliveryAdapter implements EmailDeliveryAdapter {
 
         try {
             mailSender.send(message);
-            log.info("Verification email dispatched to {}", toEmail);
+            log.info("Verification email dispatched via SMTP");
         } catch (MailException ex) {
-            log.error("Failed to send verification email to {}: {}", toEmail, ex.getMessage());
-            throw new IllegalStateException(
-                    "Email delivery failed. Registration cannot proceed without a verified email address.", ex);
+            // Log only the failure reason — never the recipient, OTP, or credentials.
+            log.error("Failed to send verification email via SMTP: {}", ex.getMessage());
+            throw new EmailDeliveryException(
+                    "Email delivery failed. The verification code was not sent; please try again.", ex);
         }
     }
 }

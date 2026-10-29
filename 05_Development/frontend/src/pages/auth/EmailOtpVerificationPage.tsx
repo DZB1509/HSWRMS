@@ -81,6 +81,7 @@ export const EmailOtpVerificationPage: React.FC = () => {
         case 'OTP_NOT_FOUND': return t('auth.alerts.otpNotFound');
         case 'OTP_CONSUMED': return t('auth.alerts.otpAlreadyUsed');
         case 'RESOURCE_NOT_FOUND': return t('auth.alerts.accountNotFound');
+        case 'EMAIL_DELIVERY_FAILED': return t('auth.alerts.emailDeliveryFailed');
         case 'VALIDATION_ERROR': return error.validationErrors?.[0]?.message || t('auth.alerts.otpInvalid');
         case 'NETWORK_ERROR': return t('auth.alerts.networkError');
         default:

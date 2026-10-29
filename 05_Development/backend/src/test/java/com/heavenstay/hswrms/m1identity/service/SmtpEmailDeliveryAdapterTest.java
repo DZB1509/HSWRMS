@@ -1,5 +1,6 @@
 package com.heavenstay.hswrms.m1identity.service;
 
+import com.heavenstay.hswrms.common.exception.EmailDeliveryException;
 import com.heavenstay.hswrms.m1identity.service.impl.SmtpEmailDeliveryAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class SmtpEmailDeliveryAdapterTest {
                 .when(mailSender).send(any(SimpleMailMessage.class));
 
         assertThatThrownBy(() -> adapter.sendVerificationOtp("guest@example.com", "123456"))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(EmailDeliveryException.class)
                 .hasMessageContaining("Email delivery failed");
     }
 }

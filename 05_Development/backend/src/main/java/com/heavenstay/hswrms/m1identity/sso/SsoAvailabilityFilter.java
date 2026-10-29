@@ -11,16 +11,16 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 
 /**
- * Guard for the OAuth authorization start endpoint: when Google credentials have
- * not been configured (no client registration available), redirect the SPA to a
- * controlled "not configured" state instead of sending the user to Google with a
- * broken authorization URL. Registered only inside the dedicated SSO chain.
+ * Guard for the OAuth authorization start endpoints: when a provider's
+ * credentials have not been configured (no client registration available),
+ * redirect the SPA to a controlled "not configured" state instead of sending
+ * the user to the provider with a broken authorization URL. Registered only
+ * inside the dedicated SSO chain.
  */
 public class SsoAvailabilityFilter extends OncePerRequestFilter {
 
     private static final String AUTHORIZE_PREFIX = "/api/v1/auth/sso/";
     private static final String CALLBACK_PREFIX = "/api/v1/auth/sso/callback/";
-    private static final String GOOGLE_REGISTRATION_ID = "google";
 
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final String frontendBaseUrl;
@@ -37,7 +37,18 @@ public class SsoAvailabilityFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         boolean isAuthorizeStart = "GET".equalsIgnoreCase(request.getMethod())
                 && path.startsWith(AUTHORIZE_PREFIX) && !path.startsWith(CALLBACK_PREFIX);
-        if (isAuthorizeStart && clientRegistrationRepository.findByRegistrationId(GOOGLE_REGISTRATION_ID) == null) {
+        if (!isAuthorizeStart) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        // The registration id is the last path segment: /api/v1/auth/sso/{id}.
+        String registrationId = path.substring(AUTHORIZE_PREFIX.length());
+        int slash = registrationId.indexOf('/');
+        if (slash >= 0) {
+            registrationId = registrationId.substring(0, slash);
+        }
+        if (!org.springframework.util.StringUtils.hasText(registrationId)
+                || clientRegistrationRepository.findByRegistrationId(registrationId) == null) {
             response.sendRedirect(UriComponentsBuilder
                     .fromUriString(frontendBaseUrl)
                     .path("/auth/sso/callback")

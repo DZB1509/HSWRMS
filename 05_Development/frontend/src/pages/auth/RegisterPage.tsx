@@ -12,7 +12,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { setAuthToken } from '../../api/client/apiClient';
 import { resolvePostLoginTarget } from './roleRouting';
 import { registerRequest, ssoRegisterRequest, ssoResolveTicket } from '../../api/auth/authApi';
-import { type SsoRegistrationPrefillData } from '../../api/auth/authApi';
+import { type SsoProvider, type SsoRegistrationPrefillData } from '../../api/auth/authApi';
 import { AppApiError } from '../../api/errors/apiError';
 
 export const RegisterPage: React.FC = () => {
@@ -35,7 +35,13 @@ export const RegisterPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const ssoTicket = searchParams.get('ssoTicket');
   const [isSsoRegistration, setIsSsoRegistration] = useState(false);
+  const [ssoProvider, setSsoProvider] = useState<SsoProvider | null>(null);
   const [isResolving, setIsResolving] = useState(false);
+
+  // Facebook exposes no email_verified claim, so its registration always takes
+  // the OTP route and therefore requires a password. Google's verified email
+  // keeps the password optional (SSO-only account).
+  const requiresSsoPassword = isSsoRegistration && ssoProvider === 'facebook';
 
   useEffect(() => {
     if (!ssoTicket || isSsoRegistration || isResolving) return;
@@ -47,6 +53,7 @@ export const RegisterPage: React.FC = () => {
         const prefill: SsoRegistrationPrefillData = response.data;
         setFullName(prefill.fullName);
         setEmail(prefill.email);
+        setSsoProvider(prefill.provider.toLowerCase() === 'facebook' ? 'facebook' : 'google');
         setIsSsoRegistration(true);
       } catch {
         // Resolution failed — fall back to normal registration without prefill.
@@ -86,6 +93,12 @@ export const RegisterPage: React.FC = () => {
       // SSO prefill already filled the name, but the user may clear it.
       newErrors.fullName = t('auth.alerts.fullNameRequired');
     }
+    if (requiresSsoPassword) {
+      // Facebook registration always verifies by email OTP, so a password is
+      // mandatory even though the account arrived via SSO.
+      if (!password || password.length < 8) newErrors.password = t('auth.alerts.passwordMinLength');
+      if (password !== confirmPassword) newErrors.confirmPassword = t('auth.alerts.passwordMismatch');
+    }
     if (!consent) newErrors.consent = t('auth.alerts.consentRequired');
 
     if (Object.keys(newErrors).length > 0) {
@@ -99,11 +112,14 @@ export const RegisterPage: React.FC = () => {
 
     try {
       if (isSsoRegistration && ssoTicket) {
-        // SSO-only registration: no password, email comes from the server-bound ticket.
+        // SSO registration: email comes from the server-bound ticket. Google
+        // (verified) needs no password and auto-signs-in; Facebook requires a
+        // password and answers SSO_OTP_REQUIRED → continue via the OTP screen.
         const response = await ssoRegisterRequest({
           ssoTicket,
           fullName: fullName.trim(),
           phone: phone.trim() || undefined,
+          password: requiresSsoPassword ? password : undefined,
           consent,
         });
         // SSO registration auto-signs in; persist the standard JWT login session
@@ -134,6 +150,14 @@ export const RegisterPage: React.FC = () => {
         navigate('/register/verify');
       }
     } catch (error) {
+      if (error instanceof AppApiError && error.code === 'SSO_OTP_REQUIRED') {
+        // Facebook registration: the PENDING account and OTP exist server-side,
+        // but no JWT is issued until the mailbox is proven via the OTP screen.
+        sessionStorage.setItem('hswrms_pending_verification_email', email.trim());
+        showToast(t('auth.alerts.otpDispatched'), 'success');
+        navigate('/register/verify', { replace: true });
+        return;
+      }
       const message = toUserMessage(error);
       setFormError(message);
       showToast(message, 'error');
@@ -187,7 +211,9 @@ export const RegisterPage: React.FC = () => {
             }}
           >
             <strong>{t('auth.register.ssoBannerTitle')}:</strong> {t(
-              'auth.register.ssoBannerBody'
+              requiresSsoPassword
+                ? 'auth.register.ssoBannerBodyFacebook'
+                : 'auth.register.ssoBannerBody'
             )}
           </div>
         )}
@@ -235,7 +261,7 @@ export const RegisterPage: React.FC = () => {
           />
         </FormField>
 
-        {!isSsoRegistration && (
+        {(!isSsoRegistration || requiresSsoPassword) && (
           <>
             <FormField
               label={t('auth.register.passwordLabel')}

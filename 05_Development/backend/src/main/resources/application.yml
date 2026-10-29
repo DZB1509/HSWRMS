@@ -71,6 +71,11 @@ app:
     frontend-base-url: ${SSO_FRONTEND_BASE_URL:http://localhost:5173}
     login-ticket-ttl-ms: 300000
     registration-ticket-ttl-ms: 600000
+    # Facebook LINK ticket TTL must cover the 10-minute OTP issued alongside it
+    # (AuthService.sendFacebookLinkOtp). A shorter ticket TTL expired the ticket
+    # before the user finished entering a still-valid OTP → "sign-in request has
+    # expired". Aligned to the OTP validity window (10 min).
+    link-ticket-ttl-ms: 600000
 
   billing:
     # VAT applied to chargeable extras (Spa / F&B). Typical values: 0.08 or 0.10
