@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FolioItemRepository extends JpaRepository<FolioItemEntity, Long> {
@@ -17,7 +18,11 @@ public interface FolioItemRepository extends JpaRepository<FolioItemEntity, Long
 
     boolean existsBySourceSpaSessionId(Long sourceSpaSessionId);
 
+    Optional<FolioItemEntity> findBySourceSpaSessionId(Long sourceSpaSessionId);
+
     boolean existsBySourceMealOrderId(Long sourceMealOrderId);
+
+    Optional<FolioItemEntity> findBySourceMealOrderId(Long sourceMealOrderId);
 
     @Query("SELECT fi FROM FolioItemEntity fi WHERE fi.chargedAt >= :start AND fi.chargedAt <= :end")
     List<FolioItemEntity> findItemsInDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

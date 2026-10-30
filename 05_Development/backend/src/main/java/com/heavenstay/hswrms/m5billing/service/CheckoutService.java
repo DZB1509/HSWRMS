@@ -165,8 +165,19 @@ public class CheckoutService {
         InvoiceEntity invoice = invoiceRepository.findByIdWithDetails(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
 
+        // 1. Acquire pessimistic write lock on Folio & Booking to serialize against concurrent order placements & deliveries
         FolioEntity folio = invoice.getFolio();
-        RetreatBooking booking = folio.getRetreatBooking();
+        if (folio != null && folio.getFolioId() != null) {
+            folio = folioRepository.findByIdForUpdate(folio.getFolioId()).orElse(folio);
+        }
+        RetreatBooking booking = folio != null ? folio.getRetreatBooking() : null;
+        if (booking != null && booking.getRetreatBookingId() != null) {
+            booking = bookingRepository.findByIdForUpdate(booking.getRetreatBookingId()).orElse(booking);
+        }
+
+        // Re-fetch invoice with latest items and amounts inside the locked transaction
+        invoice = invoiceRepository.findByIdWithDetails(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
 
         // 1. Invoice status check: cancelled invoice can never finalize or be treated as valid checkout
         if ("CANCELLED".equalsIgnoreCase(invoice.getInvoiceStatus())) {

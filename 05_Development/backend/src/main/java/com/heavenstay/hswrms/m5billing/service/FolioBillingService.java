@@ -20,8 +20,12 @@ import com.heavenstay.hswrms.m5billing.entity.InvoiceEntity;
 import com.heavenstay.hswrms.m5billing.repository.FolioItemRepository;
 import com.heavenstay.hswrms.m5billing.repository.FolioRepository;
 import com.heavenstay.hswrms.m5billing.repository.InvoiceRepository;
+import com.heavenstay.hswrms.m5billing.repository.CreditNoteRepository;
 import com.heavenstay.hswrms.m5billing.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m6admin.service.AuditLogService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +42,8 @@ import java.util.stream.Collectors;
 @Service
 public class FolioBillingService {
 
+    private static final Logger log = LoggerFactory.getLogger(FolioBillingService.class);
+
     private final FolioRepository folioRepository;
     private final FolioItemRepository folioItemRepository;
     private final InvoiceRepository invoiceRepository;
@@ -47,8 +53,10 @@ public class FolioBillingService {
     private final MealOrderRepository mealOrderRepository;
     private final CustomerProfileRepository customerProfileRepository;
     private final AuditLogService auditLogService;
+    private final CreditNoteRepository creditNoteRepository;
     private final BigDecimal vatRate;
 
+    @Autowired
     public FolioBillingService(FolioRepository folioRepository,
                                FolioItemRepository folioItemRepository,
                                InvoiceRepository invoiceRepository,
@@ -58,6 +66,7 @@ public class FolioBillingService {
                                MealOrderRepository mealOrderRepository,
                                CustomerProfileRepository customerProfileRepository,
                                AuditLogService auditLogService,
+                               CreditNoteRepository creditNoteRepository,
                                @Value("${app.billing.vat-rate:0.08}") BigDecimal vatRate) {
         this.folioRepository = folioRepository;
         this.folioItemRepository = folioItemRepository;
@@ -68,7 +77,23 @@ public class FolioBillingService {
         this.mealOrderRepository = mealOrderRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.auditLogService = auditLogService;
+        this.creditNoteRepository = creditNoteRepository;
         this.vatRate = vatRate != null ? vatRate : new BigDecimal("0.08");
+    }
+
+    public FolioBillingService(FolioRepository folioRepository,
+                               FolioItemRepository folioItemRepository,
+                               InvoiceRepository invoiceRepository,
+                               PaymentTransactionRepository paymentTransactionRepository,
+                               RetreatBookingRepository bookingRepository,
+                               SpaSessionRepository spaSessionRepository,
+                               MealOrderRepository mealOrderRepository,
+                               CustomerProfileRepository customerProfileRepository,
+                               AuditLogService auditLogService,
+                               BigDecimal vatRate) {
+        this(folioRepository, folioItemRepository, invoiceRepository, paymentTransactionRepository,
+             bookingRepository, spaSessionRepository, mealOrderRepository, customerProfileRepository,
+             auditLogService, null, vatRate);
     }
 
     @Transactional
@@ -98,6 +123,15 @@ public class FolioBillingService {
 
     @Transactional
     public FolioItemResponseDTO postFolioCharge(PostChargeRequestDTO request) {
+        return postFolioChargeInternal(request, false);
+    }
+
+    @Transactional
+    public FolioItemResponseDTO postFolioChargeIdempotent(PostChargeRequestDTO request) {
+        return postFolioChargeInternal(request, true);
+    }
+
+    private FolioItemResponseDTO postFolioChargeInternal(PostChargeRequestDTO request, boolean idempotent) {
         RetreatBooking booking = bookingRepository.findById(request.getRetreatBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found with ID: " + request.getRetreatBookingId()));
 
@@ -106,6 +140,34 @@ public class FolioBillingService {
 
         // Acquire pessimistic lock on the folio row to serialize concurrent modifications to this folio
         folio = folioRepository.findByIdForUpdate(folio.getFolioId()).orElse(folio);
+
+        // Idempotency pre-check: if already posted, return existing charge immediately without re-validating folio state
+        String requestedCategory = request.getChargeCategory() != null ? request.getChargeCategory().trim().toUpperCase() : "";
+        if ("FNB".equals(requestedCategory) && request.getSourceMealOrderId() != null) {
+            if (folioItemRepository.existsBySourceMealOrderId(request.getSourceMealOrderId())) {
+                if (idempotent) {
+                    log.info("Meal order ID {} has already been posted to a folio, returning existing charge idempotently.",
+                            request.getSourceMealOrderId());
+                    return folioItemRepository.findBySourceMealOrderId(request.getSourceMealOrderId())
+                            .map(this::mapToFolioItemResponse)
+                            .orElse(null);
+                }
+                throw new BusinessRuleException("DUPLICATE_CHARGE",
+                        "Meal order ID " + request.getSourceMealOrderId() + " has already been posted to a folio.");
+            }
+        } else if ("SPA".equals(requestedCategory) && request.getSourceSpaSessionId() != null) {
+            if (folioItemRepository.existsBySourceSpaSessionId(request.getSourceSpaSessionId())) {
+                if (idempotent) {
+                    log.info("Spa session ID {} has already been posted to a folio, returning existing charge idempotently.",
+                            request.getSourceSpaSessionId());
+                    return folioItemRepository.findBySourceSpaSessionId(request.getSourceSpaSessionId())
+                            .map(this::mapToFolioItemResponse)
+                            .orElse(null);
+                }
+                throw new BusinessRuleException("DUPLICATE_CHARGE",
+                        "Spa session ID " + request.getSourceSpaSessionId() + " has already been posted to a folio.");
+            }
+        }
 
         if ("CLOSED".equalsIgnoreCase(folio.getFolioStatus())) {
             throw new BusinessRuleException("FOLIO_CLOSED", "Cannot post charges to a closed folio.");
@@ -144,13 +206,23 @@ public class FolioBillingService {
                     .orElseThrow(() -> new ResourceNotFoundException("Meal order not found with ID: " + request.getSourceMealOrderId()));
 
             if (folioItemRepository.existsBySourceMealOrderId(request.getSourceMealOrderId())) {
+                if (idempotent) {
+                    log.info("Meal order ID {} has already been posted to a folio, returning existing charge idempotently.",
+                            request.getSourceMealOrderId());
+                    return folioItemRepository.findBySourceMealOrderId(request.getSourceMealOrderId())
+                            .map(this::mapToFolioItemResponse)
+                            .orElse(null);
+                }
                 throw new BusinessRuleException("DUPLICATE_CHARGE",
                         "Meal order ID " + request.getSourceMealOrderId() + " has already been posted to a folio.");
             }
-            if (!booking.getRetreatBookingId().equals(mealOrder.getRetreatBooking().getRetreatBookingId())) {
+            Integer orderBookingId = mealOrder.getRetreatBookingId() != null
+                    ? mealOrder.getRetreatBookingId()
+                    : (mealOrder.getRetreatBooking() != null ? mealOrder.getRetreatBooking().getRetreatBookingId() : null);
+            if (!booking.getRetreatBookingId().equals(orderBookingId)) {
                 throw new BusinessRuleException("BOOKING_MISMATCH",
                         "Meal order ID " + request.getSourceMealOrderId() + " belongs to booking "
-                                + mealOrder.getRetreatBooking().getRetreatBookingId() + ", not booking " + booking.getRetreatBookingId());
+                                + orderBookingId + ", not booking " + booking.getRetreatBookingId());
             }
             if ("DAILY_MEAL".equalsIgnoreCase(mealOrder.getOrderType())) {
                 throw new BusinessRuleException("CANNOT_CHARGE_INCLUDED_SERVICE",
@@ -175,6 +247,13 @@ public class FolioBillingService {
                     .orElseThrow(() -> new ResourceNotFoundException("Spa session not found with ID: " + request.getSourceSpaSessionId()));
 
             if (folioItemRepository.existsBySourceSpaSessionId(request.getSourceSpaSessionId())) {
+                if (idempotent) {
+                    log.info("Spa session ID {} has already been posted to a folio, returning existing charge idempotently.",
+                            request.getSourceSpaSessionId());
+                    return folioItemRepository.findBySourceSpaSessionId(request.getSourceSpaSessionId())
+                            .map(this::mapToFolioItemResponse)
+                            .orElse(null);
+                }
                 throw new BusinessRuleException("DUPLICATE_CHARGE",
                         "Spa session ID " + request.getSourceSpaSessionId() + " has already been posted to a folio.");
             }
@@ -246,6 +325,9 @@ public class FolioBillingService {
         FolioEntity folio = folioRepository.findByRetreatBookingId(retreatBookingId)
                 .orElseGet(() -> createDefaultFolioForBooking(booking));
 
+        // Acquire pessimistic lock on folio to serialize against concurrent order deliveries or postings
+        folio = folioRepository.findByIdForUpdate(folio.getFolioId()).orElse(folio);
+
         // BILLING GUARD INVARIANT: Validate zero pending/preparing/ready orders
         validateBillingGuard(retreatBookingId);
 
@@ -312,9 +394,17 @@ public class FolioBillingService {
 
         List<MealOrderEntity> unsettledMeals = mealOrderRepository.findUnsettledOrdersForBooking(retreatBookingId);
         if (!unsettledMeals.isEmpty()) {
-            throw new BusinessRuleException("UNSETTLED_SERVICE_ORDERS",
-                    "Warning: Unsettled service orders exist. Cannot proceed to invoice generation or checkout while "
-                            + unsettledMeals.size() + " dining order(s) remain PENDING, PREPARING, or READY.");
+            StringBuilder sb = new StringBuilder();
+            sb.append("Warning: Unsettled service orders exist. Cannot proceed to invoice generation or checkout while ")
+              .append(unsettledMeals.size()).append(" dining order(s) remain PENDING, PREPARING, or READY: [");
+            for (int i = 0; i < unsettledMeals.size(); i++) {
+                MealOrderEntity m = unsettledMeals.get(i);
+                if (i > 0) sb.append(", ");
+                sb.append("Order #").append(m.getId()).append(" (").append(m.getOrderStatus()).append(", ")
+                  .append(m.getMealType()).append(", date: ").append(m.getOrderDate()).append(")");
+            }
+            sb.append("]. Settle or cancel before checkout.");
+            throw new BusinessRuleException("UNSETTLED_SERVICE_ORDERS", sb.toString());
         }
     }
 
@@ -330,6 +420,9 @@ public class FolioBillingService {
         BigDecimal fnbCharges = BigDecimal.ZERO;
 
         for (FolioItemEntity item : items) {
+            if (Boolean.TRUE.equals(item.getIsVoided())) {
+                continue;
+            }
             BigDecimal amt = item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO;
             if ("PACKAGE".equalsIgnoreCase(item.getChargeCategory())) {
                 packageCharges = packageCharges.add(amt);
@@ -489,7 +582,9 @@ public class FolioBillingService {
                 item.getChargedAt(),
                 item.getSourceBookingId(),
                 item.getSourceSpaSessionId(),
-                item.getSourceMealOrderId()
+                item.getSourceMealOrderId(),
+                item.getIsVoided(),
+                item.getVoidedAdjustmentRequestId()
         );
     }
 
@@ -512,7 +607,15 @@ public class FolioBillingService {
             amountPaid = BigDecimal.ZERO;
         }
 
-        BigDecimal amountDue = invoice.getFinalAmount().subtract(amountPaid);
+        BigDecimal creditNotes = BigDecimal.ZERO;
+        if (creditNoteRepository != null) {
+            BigDecimal cnSum = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoice.getInvoiceId());
+            if (cnSum != null) {
+                creditNotes = cnSum;
+            }
+        }
+
+        BigDecimal amountDue = invoice.getFinalAmount().subtract(amountPaid).subtract(creditNotes);
         if (amountDue.compareTo(BigDecimal.ZERO) < 0) {
             amountDue = BigDecimal.ZERO;
         }

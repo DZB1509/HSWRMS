@@ -39,6 +39,12 @@ public class FolioItemEntity {
     @Column(name = "source_meal_order_id")
     private Long sourceMealOrderId;
 
+    @Column(name = "is_voided", nullable = false)
+    private Boolean isVoided = Boolean.FALSE;
+
+    @Column(name = "voided_adjustment_request_id")
+    private Long voidedAdjustmentRequestId;
+
     public FolioItemEntity() {}
 
     public FolioItemEntity(FolioEntity folio, String chargeCategory, String description,
@@ -150,5 +156,25 @@ public class FolioItemEntity {
 
     public void setSourceMealOrderId(Long sourceMealOrderId) {
         this.sourceMealOrderId = sourceMealOrderId;
+    }
+
+    public Boolean getIsVoided() {
+        return isVoided != null ? isVoided : Boolean.FALSE;
+    }
+
+    public boolean isVoided() {
+        return Boolean.TRUE.equals(this.isVoided);
+    }
+
+    public void setIsVoided(Boolean isVoided) {
+        this.isVoided = isVoided != null ? isVoided : Boolean.FALSE;
+    }
+
+    public Long getVoidedAdjustmentRequestId() {
+        return voidedAdjustmentRequestId;
+    }
+
+    public void setVoidedAdjustmentRequestId(Long voidedAdjustmentRequestId) {
+        this.voidedAdjustmentRequestId = voidedAdjustmentRequestId;
     }
 }

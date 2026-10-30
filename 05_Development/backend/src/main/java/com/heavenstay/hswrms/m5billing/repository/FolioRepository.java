@@ -17,6 +17,15 @@ public interface FolioRepository extends JpaRepository<FolioEntity, Long> {
     @Query("SELECT f FROM FolioEntity f WHERE f.folioId = :folioId")
     Optional<FolioEntity> findByIdForUpdate(@Param("folioId") Long folioId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT f FROM FolioEntity f WHERE f.retreatBooking.retreatBookingId = :bookingId")
+    Optional<FolioEntity> findByRetreatBookingIdForUpdate(@Param("bookingId") Integer bookingId);
+
+    default Optional<FolioEntity> findByRetreatBookingIdForUpdate(Long bookingId) {
+        if (bookingId == null || bookingId > Integer.MAX_VALUE) return Optional.empty();
+        return findByRetreatBookingIdForUpdate(bookingId.intValue());
+    }
+
     @Query("SELECT f FROM FolioEntity f LEFT JOIN FETCH f.retreatBooking b LEFT JOIN FETCH b.assignedVilla WHERE b.retreatBookingId = :bookingId")
     Optional<FolioEntity> findByRetreatBookingId(@Param("bookingId") Integer bookingId);
 

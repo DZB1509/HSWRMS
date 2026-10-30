@@ -56,6 +56,9 @@ public class FolioEntity {
     public void recalculateTotals() {
         BigDecimal sum = BigDecimal.ZERO;
         for (FolioItemEntity item : items) {
+            if (Boolean.TRUE.equals(item.getIsVoided())) {
+                continue;
+            }
             if (item.getAmount() != null) {
                 sum = sum.add(item.getAmount());
             }

@@ -14,6 +14,8 @@ public class FolioItemResponseDTO {
     private Long sourceBookingId;
     private Long sourceSpaSessionId;
     private Long sourceMealOrderId;
+    private Boolean isVoided = Boolean.FALSE;
+    private Long voidedAdjustmentRequestId;
 
     public FolioItemResponseDTO() {}
 
@@ -29,6 +31,17 @@ public class FolioItemResponseDTO {
         this.sourceBookingId = sourceBookingId;
         this.sourceSpaSessionId = sourceSpaSessionId;
         this.sourceMealOrderId = sourceMealOrderId;
+        this.isVoided = Boolean.FALSE;
+    }
+
+    public FolioItemResponseDTO(Long folioItemId, Long folioId, String chargeCategory,
+                                String description, BigDecimal amount, LocalDateTime chargedAt,
+                                Long sourceBookingId, Long sourceSpaSessionId, Long sourceMealOrderId,
+                                Boolean isVoided, Long voidedAdjustmentRequestId) {
+        this(folioItemId, folioId, chargeCategory, description, amount, chargedAt,
+             sourceBookingId, sourceSpaSessionId, sourceMealOrderId);
+        this.isVoided = isVoided != null ? isVoided : Boolean.FALSE;
+        this.voidedAdjustmentRequestId = voidedAdjustmentRequestId;
     }
 
     public Long getFolioItemId() {
@@ -101,5 +114,25 @@ public class FolioItemResponseDTO {
 
     public void setSourceMealOrderId(Long sourceMealOrderId) {
         this.sourceMealOrderId = sourceMealOrderId;
+    }
+
+    public Boolean getIsVoided() {
+        return isVoided != null ? isVoided : Boolean.FALSE;
+    }
+
+    public boolean isVoided() {
+        return Boolean.TRUE.equals(this.isVoided);
+    }
+
+    public void setIsVoided(Boolean isVoided) {
+        this.isVoided = isVoided != null ? isVoided : Boolean.FALSE;
+    }
+
+    public Long getVoidedAdjustmentRequestId() {
+        return voidedAdjustmentRequestId;
+    }
+
+    public void setVoidedAdjustmentRequestId(Long voidedAdjustmentRequestId) {
+        this.voidedAdjustmentRequestId = voidedAdjustmentRequestId;
     }
 }
