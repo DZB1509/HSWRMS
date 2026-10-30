@@ -540,6 +540,27 @@ export const ReceptionistBookingsPage: React.FC = () => {
                             <Eye size={13} /> Chi Tiết
                           </button>
 
+                          {b.bookingStatus === 'CHECKED_IN' && (
+                            <button
+                              onClick={() => navigate('/customer/folio/' + b.bookingReference)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '6px 10px',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid #1565c0',
+                                backgroundColor: '#1565c0',
+                                color: '#ffffff',
+                                fontWeight: 600,
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Folio & Check-out <ArrowRight size={11} />
+                            </button>
+                          )}
+
                           {b.bookingStatus === 'CONFIRMED' && (
                             <button
                               onClick={() => navigate(`/receptionist/check-in/${b.bookingReference}`)}

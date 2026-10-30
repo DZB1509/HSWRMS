@@ -72,7 +72,7 @@ export const SpaBookingPage: React.FC = () => {
   }, [backendTreatments, fallbackTreatments]);
 
   const [selectedTreatmentId, setSelectedTreatmentId] = useState<string>(treatmentIdFromQuery || '1');
-  const [selectedDate, setSelectedDate] = useState<string>('2026-09-26');
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [timeRange, setTimeRange] = useState<TimeRangeOption>('ANY');
   const [flexibleWithDate, setFlexibleWithDate] = useState<boolean>(true);
   const [specialRequest, setSpecialRequest] = useState<string>('');
@@ -92,7 +92,7 @@ export const SpaBookingPage: React.FC = () => {
   // Available dates (next 7 days)
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const base = new Date('2026-09-25');
+    const base = new Date();
     for (let i = 0; i < 7; i++) {
       const d = new Date(base);
       d.setDate(d.getDate() + i);

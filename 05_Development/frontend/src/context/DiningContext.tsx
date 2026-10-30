@@ -670,14 +670,14 @@ const getLocalDateString = (d: Date = new Date()): string => {
   const [error, setError] = useState<string | null>(null);
 
   const getActiveKitchenQueue = useCallback((date?: string): MealPrepEntry[] => {
-    const targetDate = date || '2026-09-24';
+    const targetDate = date || new Date().toISOString().split('T')[0];
     return getDailyPrepList(targetDate).filter(
       item => item.status === 'pending' || item.status === 'preparing' || item.status === 'ready'
     );
   }, [getDailyPrepList]);
 
   const refreshKitchenQueue = useCallback(async (date?: string) => {
-    const targetDate = date || '2026-09-24';
+    const targetDate = date || new Date().toISOString().split('T')[0];
     setIsRefreshing(true);
     try {
       await fetchKitchenOrders(targetDate);

@@ -20,7 +20,7 @@ import type { LocalizedString } from '../../types/spa';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
 const CURRENT_THERAPIST_ID = 'THER-01'; // Demo: logged-in therapist
-const TODAY = '2026-09-26';
+const TODAY = new Date().toISOString().split('T')[0];
 
 export const TherapistDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');

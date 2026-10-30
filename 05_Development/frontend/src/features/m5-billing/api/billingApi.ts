@@ -12,6 +12,10 @@ import type {
   RevenueAnalytics,
   OccupancyAnalytics,
   TherapistUtilization,
+  CreateAdjustmentRequest,
+  AdjustmentDecisionRequest,
+  AdjustmentResponse,
+  CreditNoteResponse,
 } from '../types';
 
 interface ApiResponse<T> {
@@ -145,5 +149,36 @@ export const billingApi = {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  // Adjustments & Credit Notes (WP-1B)
+  submitAdjustmentRequest: async (data: CreateAdjustmentRequest): Promise<AdjustmentResponse> => {
+    const res = await apiClient.post<ApiResponse<AdjustmentResponse>>('/billing/adjustments', data);
+    return res.data;
+  },
+
+  listAdjustments: async (params?: { folioId?: number; bookingId?: number; status?: string }): Promise<AdjustmentResponse[]> => {
+    const res = await apiClient.get<ApiResponse<AdjustmentResponse[]>>('/billing/adjustments', { params });
+    return res.data;
+  },
+
+  getAdjustment: async (id: number): Promise<AdjustmentResponse> => {
+    const res = await apiClient.get<ApiResponse<AdjustmentResponse>>(`/billing/adjustments/${id}`);
+    return res.data;
+  },
+
+  processAdjustmentDecision: async (id: number, data: AdjustmentDecisionRequest): Promise<AdjustmentResponse> => {
+    const res = await apiClient.post<ApiResponse<AdjustmentResponse>>(`/billing/adjustments/${id}/decision`, data);
+    return res.data;
+  },
+
+  getCreditNote: async (id: number): Promise<CreditNoteResponse> => {
+    const res = await apiClient.get<ApiResponse<CreditNoteResponse>>(`/billing/credit-notes/${id}`);
+    return res.data;
+  },
+
+  getCreditNotesForInvoice: async (invoiceId: number): Promise<CreditNoteResponse[]> => {
+    const res = await apiClient.get<ApiResponse<CreditNoteResponse[]>>(`/billing/invoices/${invoiceId}/credit-notes`);
+    return res.data;
   },
 };

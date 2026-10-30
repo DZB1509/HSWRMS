@@ -16,7 +16,7 @@ import {
 } from '../data/mockCustomer';
 import { useAuth } from '../hooks/useAuth';
 import { getMyProfile } from '../api/customer/customerProfileApi';
-import { getCustomerBookings } from '../api/booking/retreatBookingApi';
+import { getCustomerBookings, createCustomerBooking } from '../api/booking/retreatBookingApi';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
@@ -297,6 +297,34 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: new Date().toISOString().split('T')[0],
     };
     setBookings((prev) => [newBooking, ...prev]);
+
+    // Persist retreat booking transaction to backend SQL database
+    createCustomerBooking({
+      retreatPackageId: 1,
+      requestedVillaCategoryId: 1,
+      checkInDate: bookingData.startDate,
+      checkOutDate: bookingData.endDate,
+      guestCount: 1,
+      specialRequest: bookingData.specialRequests,
+    })
+      .then((persisted) => {
+        if (persisted?.bookingReference) {
+          setBookings((prev) =>
+            prev.map((b) =>
+              b.id === newBooking.id
+                ? {
+                    ...b,
+                    id: String(persisted.retreatBookingId),
+                    bookingReference: persisted.bookingReference || b.bookingReference,
+                  }
+                : b
+            )
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend booking persistence skipped or unavailable:', err);
+      });
     return newBooking;
   };
 

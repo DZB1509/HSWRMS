@@ -47,13 +47,13 @@ export const TherapistSchedulePage: React.FC = () => {
   };
   const therapist = getTherapistById(CURRENT_THERAPIST_ID);
 
-  const [selectedDate, setSelectedDate] = useState('2026-09-26');
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   // Default to COMPACT AGENDA-FIRST view per Requirement 8
   const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const base = new Date('2026-09-25');
+    const base = new Date();
     for (let i = 0; i < 5; i++) {
       const d = new Date(base);
       d.setDate(d.getDate() + i);
@@ -98,7 +98,7 @@ export const TherapistSchedulePage: React.FC = () => {
       <div className="therapist-date-nav" role="tablist" aria-label="Select Date">
         {availableDates.map((d) => {
           const dt = new Date(d + 'T00:00:00');
-          const isToday = d === '2026-09-26';
+          const isToday = d === new Date().toISOString().split('T')[0];
           const isActive = selectedDate === d;
           return (
             <button

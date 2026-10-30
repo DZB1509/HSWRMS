@@ -16,7 +16,15 @@ import {
   AlertTriangle,
   RotateCw,
   Download,
+  ShieldCheck,
+  FileText,
+  Check,
+  X,
 } from 'lucide-react';
+import type {
+  AdjustmentResponse,
+  CreditNoteResponse,
+} from '../../features/m5-billing/types';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useCustomer } from '../../context/CustomerContext';
@@ -60,6 +68,16 @@ export const FolioInvoicePage: React.FC = () => {
   // Simulated unsettled order toggle for presentation / evaluator testing
   const [simulateUnsettledOrder, setSimulateUnsettledOrder] = useState<boolean>(false);
 
+  // Financial Adjustment & Credit Note State (WP-1B)
+  const [adjustments, setAdjustments] = useState<AdjustmentResponse[]>([]);
+  const [creditNotes, setCreditNotes] = useState<CreditNoteResponse[]>([]);
+  const [selectedItemForAdjust, setSelectedItemForAdjust] = useState<FolioLineItem | null>(null);
+  const [adjustReason, setAdjustReason] = useState<string>('');
+  const [adjustAmount, setAdjustAmount] = useState<string>('');
+  const [rejectionReasonInput, setRejectionReasonInput] = useState<{ [id: number]: string }>({});
+  const [adjustMessage, setAdjustMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isSubmittingAdjust, setIsSubmittingAdjust] = useState<boolean>(false);
+
   useEffect(() => {
     let isMounted = true;
     const fetchBackendData = async () => {
@@ -76,6 +94,16 @@ export const FolioInvoicePage: React.FC = () => {
         if (isMounted) {
           setBackendFolio(data);
           setSyncError(null);
+        }
+        try {
+          const adjList = await billingApi.listAdjustments({ bookingId: numericBookingId });
+          if (isMounted) setAdjustments(adjList);
+          if (data.invoiceId) {
+            const cnList = await billingApi.getCreditNotesForInvoice(data.invoiceId);
+            if (isMounted) setCreditNotes(cnList);
+          }
+        } catch {
+          // ignore if adjustment service endpoint is not loaded yet
         }
       } catch {
         if (isMounted) {
@@ -105,6 +133,100 @@ export const FolioInvoicePage: React.FC = () => {
         'folio.unsettledWarning',
         'Warning: Unsettled service orders exist. All services must be marked Completed, Delivered, or Cancelled before settlement.'
       );
+
+  const isManagerOrAdmin = role === 'manager' || role === 'admin';
+
+  const isItemVoided = (item: FolioLineItem) => {
+    if (backendFolio?.items) {
+      const match = backendFolio.items.find(
+        (bi) =>
+          String(bi.folioItemId) === String(item.id) ||
+          (item.sourceType === 'fnb' && String(bi.sourceMealOrderId) === String(item.sourceId)) ||
+          (item.sourceType === 'spa' && String(bi.sourceSpaSessionId) === String(item.sourceId))
+      );
+      if (match) return Boolean(match.isVoided);
+    }
+    const relatedAdj = adjustments.find(
+      (a) =>
+        a.status === 'APPROVED' &&
+        a.adjustmentType === 'VOID' &&
+        (String(a.folioItemId) === String(item.id) ||
+         (item.sourceType === 'fnb' && String(a.sourceMealOrderId) === String(item.sourceId)))
+    );
+    return Boolean(relatedAdj);
+  };
+
+  const getBackendItemId = (item: FolioLineItem): number => {
+    if (backendFolio?.items) {
+      const match = backendFolio.items.find(
+        (bi) =>
+          String(bi.folioItemId) === String(item.id) ||
+          (item.sourceType === 'fnb' && String(bi.sourceMealOrderId) === String(item.sourceId)) ||
+          (item.sourceType === 'spa' && String(bi.sourceSpaSessionId) === String(item.sourceId))
+      );
+      if (match) return match.folioItemId;
+    }
+    const parsed = parseInt(item.id, 10);
+    return isNaN(parsed) ? 1 : parsed;
+  };
+
+  const handleRequestAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemForAdjust || !adjustReason.trim()) return;
+    setIsSubmittingAdjust(true);
+    setAdjustMessage(null);
+    try {
+      const itemId = getBackendItemId(selectedItemForAdjust);
+      const parsedAmount = adjustAmount.trim() ? parseFloat(adjustAmount.trim()) : undefined;
+      await billingApi.submitAdjustmentRequest({
+        folioItemId: itemId,
+        reason: adjustReason.trim(),
+        requestedAmount: parsedAmount,
+      });
+      setAdjustMessage({ text: 'Adjustment request submitted successfully. Pending Manager approval.', type: 'success' });
+      setSelectedItemForAdjust(null);
+      setAdjustReason('');
+      setAdjustAmount('');
+      if (numericBookingId) {
+        const updatedAdj = await billingApi.listAdjustments({ bookingId: numericBookingId });
+        setAdjustments(updatedAdj);
+        const updatedFolio = await billingApi.getFolio(numericBookingId);
+        setBackendFolio(updatedFolio);
+      }
+    } catch (err: any) {
+      setAdjustMessage({ text: err.response?.data?.message || err.message || 'Failed to submit adjustment request', type: 'error' });
+    } finally {
+      setIsSubmittingAdjust(false);
+    }
+  };
+
+  const handleManagerDecision = async (adjustmentId: number, decision: 'APPROVE' | 'REJECT') => {
+    const reason = rejectionReasonInput[adjustmentId];
+    if (decision === 'REJECT' && (!reason || !reason.trim())) {
+      setAdjustMessage({ text: 'Rejection reason is required before rejecting.', type: 'error' });
+      return;
+    }
+    setAdjustMessage(null);
+    try {
+      await billingApi.processAdjustmentDecision(adjustmentId, {
+        decision,
+        rejectionReason: reason ? reason.trim() : undefined,
+      });
+      setAdjustMessage({ text: `Adjustment request #${adjustmentId} has been ${decision}D successfully.`, type: 'success' });
+      if (numericBookingId) {
+        const updatedAdj = await billingApi.listAdjustments({ bookingId: numericBookingId });
+        setAdjustments(updatedAdj);
+        const updatedFolio = await billingApi.getFolio(numericBookingId);
+        setBackendFolio(updatedFolio);
+        if (updatedFolio.invoiceId) {
+          const cnList = await billingApi.getCreditNotesForInvoice(updatedFolio.invoiceId);
+          setCreditNotes(cnList);
+        }
+      }
+    } catch (err: any) {
+      setAdjustMessage({ text: err.response?.data?.message || err.message || 'Failed to process decision', type: 'error' });
+    }
+  };
 
   // Group line items
   const retreatItems = folioData.lineItems.filter((i) => i.sourceType === 'retreat');
@@ -480,13 +602,30 @@ export const FolioInvoicePage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      <td style={{ textAlign: 'right', fontWeight: 600, textDecoration: isItemVoided(item) ? 'line-through' : 'none', color: isItemVoided(item) ? '#94a3b8' : 'inherit' }}>
                         {item.totalAmount === 0 ? '0 VND' : formatVND(item.totalAmount)}
                       </td>
                       <td>
-                        <span className={`hsw-status-pill ${item.status}`}>
-                          {getStatusLabel(item.status)}
-                        </span>
+                        {isItemVoided(item) ? (
+                          <span className="hsw-status-pill" style={{ backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: 700 }}>
+                            VOIDED
+                          </span>
+                        ) : (
+                          <span className={`hsw-status-pill ${item.status}`}>
+                            {getStatusLabel(item.status)}
+                          </span>
+                        )}
+                        {isStaff && !isItemVoided(item) && item.totalAmount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedItemForAdjust(item)}
+                            className="hsw-btn hsw-btn-secondary"
+                            style={{ padding: '2px 8px', fontSize: '11px', marginLeft: '8px' }}
+                            title="Request financial void or credit note adjustment"
+                          >
+                            Adjust / Void
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -552,13 +691,30 @@ export const FolioInvoicePage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      <td style={{ textAlign: 'right', fontWeight: 600, textDecoration: isItemVoided(item) ? 'line-through' : 'none', color: isItemVoided(item) ? '#94a3b8' : 'inherit' }}>
                         {item.totalAmount === 0 ? '0 VND' : formatVND(item.totalAmount)}
                       </td>
                       <td>
-                        <span className={`hsw-status-pill ${item.status}`}>
-                          {getStatusLabel(item.status)}
-                        </span>
+                        {isItemVoided(item) ? (
+                          <span className="hsw-status-pill" style={{ backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: 700 }}>
+                            VOIDED
+                          </span>
+                        ) : (
+                          <span className={`hsw-status-pill ${item.status}`}>
+                            {getStatusLabel(item.status)}
+                          </span>
+                        )}
+                        {isStaff && !isItemVoided(item) && item.totalAmount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedItemForAdjust(item)}
+                            className="hsw-btn hsw-btn-secondary"
+                            style={{ padding: '2px 8px', fontSize: '11px', marginLeft: '8px' }}
+                            title="Request financial void or credit note adjustment"
+                          >
+                            Adjust / Void
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -567,6 +723,279 @@ export const FolioInvoicePage: React.FC = () => {
             </table>
           </div>
         </div>
+
+        {/* Section 4: Financial Adjustments & Credit Notes (WP-1B) */}
+        {(adjustments.length > 0 || creditNotes.length > 0 || isStaff) && (
+          <div className="hsw-folio-section" id="adjustments-and-credit-notes-section">
+            <div className="hsw-folio-section-header">
+              <div className="hsw-folio-section-title">
+                <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
+                <span>{t('folio.sections.adjustments', '4. Financial Adjustments & Credit Notes (Audit Trail)')}</span>
+              </div>
+              <div className="hsw-folio-section-amount" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {adjustments.length} Request(s) • {creditNotes.length} Credit Note(s)
+              </div>
+            </div>
+
+            {adjustMessage && (
+              <div
+                style={{
+                  padding: '8px 16px',
+                  marginBottom: '12px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: adjustMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                  color: adjustMessage.type === 'success' ? '#065f46' : '#991b1b',
+                  border: `1px solid ${adjustMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+                  fontSize: '13px',
+                }}
+              >
+                {adjustMessage.text}
+              </div>
+            )}
+
+            {/* Adjustments Table */}
+            <div className="hsw-folio-table-wrapper" style={{ marginBottom: '16px' }}>
+              <table className="hsw-folio-table">
+                <thead>
+                  <tr>
+                    <th>Req #</th>
+                    <th>Type</th>
+                    <th>Folio Item</th>
+                    <th>Amount</th>
+                    <th>Reason</th>
+                    <th>Requested At</th>
+                    <th>Status</th>
+                    {isManagerOrAdmin && <th>Manager Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {adjustments.length === 0 ? (
+                    <tr>
+                      <td colSpan={isManagerOrAdmin ? 8 : 7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--space-4)' }}>
+                        No financial adjustments recorded for this folio.
+                      </td>
+                    </tr>
+                  ) : (
+                    adjustments.map((adj) => (
+                      <tr key={adj.adjustmentRequestId}>
+                        <td>#{adj.adjustmentRequestId}</td>
+                        <td>
+                          <span className="hsw-source-badge" style={{ backgroundColor: adj.adjustmentType === 'VOID' ? '#e0f2fe' : '#f3e8ff', color: adj.adjustmentType === 'VOID' ? '#0369a1' : '#7e22ce' }}>
+                            {adj.adjustmentType}
+                          </span>
+                        </td>
+                        <td>Item #{adj.folioItemId} {adj.sourceMealOrderId ? `(Meal Order #${adj.sourceMealOrderId})` : ''}</td>
+                        <td style={{ fontWeight: 600 }}>{formatVND(adj.requestedAmount)}</td>
+                        <td style={{ maxWidth: '200px', wordBreak: 'break-word', fontSize: '12px' }}>
+                          {adj.reason}
+                          {adj.rejectionReason && (
+                            <div style={{ color: '#b91c1c', fontSize: '11px', marginTop: '2px' }}>
+                              Rejected: {adj.rejectionReason}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ fontSize: '11px' }}>{new Date(adj.requestedAt).toLocaleString()}</td>
+                        <td>
+                          <span
+                            className="hsw-status-pill"
+                            style={{
+                              backgroundColor:
+                                adj.status === 'APPROVED' ? '#dcfce7' :
+                                adj.status === 'REJECTED' ? '#fee2e2' : '#fef3c7',
+                              color:
+                                adj.status === 'APPROVED' ? '#15803d' :
+                                adj.status === 'REJECTED' ? '#b91c1c' : '#b45309',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {adj.status}
+                          </span>
+                        </td>
+                        {isManagerOrAdmin && (
+                          <td>
+                            {adj.status === 'PENDING_APPROVAL' ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleManagerDecision(adj.adjustmentRequestId, 'APPROVE')}
+                                    className="hsw-btn"
+                                    style={{ backgroundColor: '#10b981', color: '#fff', padding: '2px 8px', fontSize: '11px' }}
+                                  >
+                                    <Check size={12} /> Approve
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleManagerDecision(adj.adjustmentRequestId, 'REJECT')}
+                                    className="hsw-btn"
+                                    style={{ backgroundColor: '#ef4444', color: '#fff', padding: '2px 8px', fontSize: '11px' }}
+                                  >
+                                    <X size={12} /> Reject
+                                  </button>
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Rejection reason (if rejecting)"
+                                  value={rejectionReasonInput[adj.adjustmentRequestId] || ''}
+                                  onChange={(e) =>
+                                    setRejectionReasonInput({ ...rejectionReasonInput, [adj.adjustmentRequestId]: e.target.value })
+                                  }
+                                  style={{ fontSize: '11px', padding: '2px 4px', border: '1px solid var(--border-subtle)', borderRadius: '3px' }}
+                                />
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                {adj.approvedByUserId ? `Decided by User #${adj.approvedByUserId}` : '—'}
+                              </span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Issued Credit Notes Table */}
+            {creditNotes.length > 0 && (
+              <div>
+                <h4 style={{ fontSize: '13px', fontWeight: 600, margin: '8px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={14} style={{ color: 'var(--accent-forest)' }} /> Formal Credit Notes
+                </h4>
+                <div className="hsw-folio-table-wrapper">
+                  <table className="hsw-folio-table">
+                    <thead>
+                      <tr>
+                        <th>Credit Note #</th>
+                        <th>Invoice #</th>
+                        <th>Base Amount</th>
+                        <th>Tax (8%)</th>
+                        <th>Total Credit</th>
+                        <th>Issued At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {creditNotes.map((cn) => (
+                        <tr key={cn.creditNoteId}>
+                          <td style={{ fontWeight: 600, color: 'var(--accent-forest)' }}>{cn.creditNoteNumber}</td>
+                          <td>Invoice #{cn.invoiceId}</td>
+                          <td>{formatVND(cn.amount)}</td>
+                          <td>{formatVND(cn.taxAmount)}</td>
+                          <td style={{ fontWeight: 700, color: '#15803d' }}>{formatVND(cn.finalCreditAmount)}</td>
+                          <td style={{ fontSize: '11px' }}>{new Date(cn.issuedAt).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Adjustment Request Modal Dialog */}
+        {selectedItemForAdjust && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 'var(--radius-md)',
+                padding: '24px',
+                width: '100%',
+                maxWidth: '480px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
+                  Request Financial Adjustment
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setSelectedItemForAdjust(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ fontSize: '13px', color: '#475569', marginBottom: '16px', padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
+                <div><strong>Item:</strong> {getLocalizedTitle(selectedItemForAdjust)}</div>
+                <div><strong>Charge:</strong> {formatVND(selectedItemForAdjust.totalAmount)}</div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                  {backendFolio?.invoiceStatus === 'ISSUED' || backendFolio?.invoiceStatus === 'PAID'
+                    ? 'Invoice already issued: Approval will generate an official Credit Note.'
+                    : 'Invoice in draft/unissued: Approval will void the item and update draft balances.'}
+                </div>
+              </div>
+
+              <form onSubmit={handleRequestAdjustment}>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Reason for Adjustment *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                    placeholder="e.g. Guest returned dish due to kitchen defect or dietary error."
+                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Requested Amount (VND, optional — defaults to full charge)
+                  </label>
+                  <input
+                    type="number"
+                    step="1000"
+                    min="1000"
+                    max={selectedItemForAdjust.totalAmount}
+                    value={adjustAmount}
+                    onChange={(e) => setAdjustAmount(e.target.value)}
+                    placeholder={`Max ${selectedItemForAdjust.totalAmount}`}
+                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedItemForAdjust(null)}
+                    className="hsw-btn hsw-btn-secondary"
+                    disabled={isSubmittingAdjust}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="hsw-btn hsw-btn-retreat-primary"
+                    disabled={isSubmittingAdjust || !adjustReason.trim()}
+                  >
+                    {isSubmittingAdjust ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Consolidated Tax & Invoicing Summary (SRS BF-05 / Data Rule 21) */}
         <div
@@ -666,17 +1095,6 @@ export const FolioInvoicePage: React.FC = () => {
                   <span>{t('folio.action.proceedPayment', 'Proceed to Final Payment')}</span>
                 </button>
               </div>
-            ) : folioData.outstandingBalance > 0 ? (
-              <button
-                type="button"
-                className="hsw-btn hsw-btn-retreat-primary"
-                onClick={() => navigate(paymentRoute)}
-                id="btn-proceed-final-payment"
-              >
-                <CreditCard size={16} />
-                <span>{t('folio.action.proceedPayment', 'Proceed to Final Payment')}</span>
-                <ChevronRight size={16} />
-              </button>
             ) : isCheckedOut ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <span className="hsw-status-pill settled" style={{ padding: '6px 12px', fontSize: '13px' }}>
@@ -692,6 +1110,23 @@ export const FolioInvoicePage: React.FC = () => {
                   <span>{t('folio.action.leaveReview', 'Leave a Stay Review')}</span>
                 </Link>
               </div>
+            ) : !isStaff ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <span style={{ fontSize: '13px', color: '#64748b', fontStyle: 'italic', padding: '6px 12px', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-sm)', border: '1px solid #e2e8f0' }}>
+                  {t('folio.notice.customerViewOnly', 'Final settlement and resort checkout are finalized by the Reception Desk upon departure.')}
+                </span>
+              </div>
+            ) : folioData.outstandingBalance > 0 ? (
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-retreat-primary"
+                onClick={() => navigate(paymentRoute)}
+                id="btn-proceed-final-payment"
+              >
+                <CreditCard size={16} />
+                <span>{t('folio.action.proceedPayment', 'Proceed to Final Payment')}</span>
+                <ChevronRight size={16} />
+              </button>
             ) : (
               <button
                 type="button"

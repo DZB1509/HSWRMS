@@ -79,7 +79,7 @@ export const SpaConfirmationPage: React.FC = () => {
   const locationState = location.state as PendingBookingData | undefined;
 
   const pendingTreatmentId = locationState?.treatmentId || searchParams.get('treatment') || '';
-  const pendingDate = locationState?.date || searchParams.get('date') || '2026-09-26';
+  const pendingDate = locationState?.date || searchParams.get('date') || new Date().toISOString().split('T')[0];
   const pendingStartTime = locationState?.startTime || searchParams.get('time') || '';
   const pendingTherapistId = locationState?.therapistId || searchParams.get('therapist') || '';
   const pendingRoomId = locationState?.roomId || searchParams.get('room') || '';

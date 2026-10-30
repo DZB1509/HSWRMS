@@ -64,7 +64,7 @@ export const ManualExtraSpaPage: React.FC = () => {
   }, [checkedInCustomers, selectedCustomer]);
 
   const [selectedTreatmentId, setSelectedTreatmentId] = useState('');
-  const [selectedDate, setSelectedDate] = useState('2026-09-26');
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

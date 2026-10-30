@@ -14,6 +14,54 @@ export interface FolioItemResponse {
   sourceBookingId?: number | null;
   sourceSpaSessionId?: number | null;
   sourceMealOrderId?: number | null;
+  isVoided?: boolean;
+  voidedAdjustmentRequestId?: number | null;
+}
+
+export type AdjustmentType = 'VOID' | 'CREDIT_NOTE';
+export type AdjustmentStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+export interface CreateAdjustmentRequest {
+  folioItemId: number;
+  reason: string;
+  requestedAmount?: number;
+}
+
+export interface AdjustmentDecisionRequest {
+  decision: 'APPROVE' | 'REJECT';
+  rejectionReason?: string;
+}
+
+export interface AdjustmentResponse {
+  adjustmentRequestId: number;
+  folioItemId: number;
+  folioId: number;
+  retreatBookingId: number;
+  sourceMealOrderId?: number | null;
+  adjustmentType: AdjustmentType;
+  requestedAmount: number;
+  reason: string;
+  status: AdjustmentStatus;
+  requestedByUserId: number;
+  requestedAt: string;
+  approvedByUserId?: number | null;
+  approvedAt?: string | null;
+  rejectionReason?: string | null;
+  creditNoteId?: number | null;
+  creditNoteNumber?: string | null;
+}
+
+export interface CreditNoteResponse {
+  creditNoteId: number;
+  creditNoteNumber: string;
+  invoiceId: number;
+  folioItemId: number;
+  adjustmentRequestId: number;
+  amount: number;
+  taxAmount: number;
+  finalCreditAmount: number;
+  issuedAt: string;
+  issuedByUserId: number;
 }
 
 export interface FolioResponse {
