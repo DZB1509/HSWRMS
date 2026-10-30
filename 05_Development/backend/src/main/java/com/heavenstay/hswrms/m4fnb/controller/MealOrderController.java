@@ -75,20 +75,20 @@ public class MealOrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
+    @PreAuthorize("hasAnyAuthority('ROLE_FNB_STAFF', 'ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<List<KitchenOrderResponse>>> getKitchenOrders(
             @RequestParam(required = false) LocalDate date) {
         return ResponseEntity.ok(ApiResponse.ok(mealOrderService.listKitchenOrders(date == null ? LocalDate.now() : date)));
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
+    @PreAuthorize("hasAnyAuthority('ROLE_FNB_STAFF', 'ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<KitchenOrderResponse>> getKitchenOrder(@PathVariable Integer orderId) {
         return ResponseEntity.ok(ApiResponse.ok(mealOrderService.getKitchenOrder(orderId)));
     }
 
     @PatchMapping("/{orderId}/status")
-    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
+    @PreAuthorize("hasAnyAuthority('ROLE_FNB_STAFF', 'ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<KitchenOrderResponse>> updateOrderStatus(
             @PathVariable Integer orderId,
             @Valid @RequestBody UpdateOrderStatusRequest request) {
@@ -97,7 +97,7 @@ public class MealOrderController {
     }
 
     @PatchMapping("/{orderId}/items/{orderLineId}/preparation-status")
-    @PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
+    @PreAuthorize("hasAnyAuthority('ROLE_FNB_STAFF', 'ROLE_F&B STAFF')")
     public ResponseEntity<ApiResponse<KitchenOrderResponse>> updateOrderLinePreparationStatus(
             @PathVariable Integer orderId, @PathVariable Integer orderLineId,
             @Valid @RequestBody UpdateOrderStatusRequest request) {
@@ -111,7 +111,7 @@ public class MealOrderController {
      * that have not yet been posted to guest billing folios before checkout.
      */
     @GetMapping("/unposted-folio")
-    @PreAuthorize("hasAnyAuthority('ROLE_F&B STAFF', 'ROLE_RECEPTIONIST', 'ROLE_ADMIN', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_FNB_STAFF', 'ROLE_F&B STAFF', 'ROLE_RECEPTIONIST', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<ApiResponse<List<MealOrderResponse>>> getUnpostedAlaCarteOrders(
             @RequestParam(required = false) Integer bookingId) {
         return ResponseEntity.ok(ApiResponse.ok("UNPOSTED_ALA_CARTE_ORDERS",

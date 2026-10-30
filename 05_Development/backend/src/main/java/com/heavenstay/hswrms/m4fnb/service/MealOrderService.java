@@ -17,6 +17,7 @@ import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
 import com.heavenstay.hswrms.m4fnb.event.AlaCarteOrderPlacedEvent;
 import com.heavenstay.hswrms.m4fnb.integration.BookingContextPort;
 import com.heavenstay.hswrms.m4fnb.integration.DietaryProfilePort;
+import com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort;
 import com.heavenstay.hswrms.m4fnb.mapper.MealOrderMapper;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderItemRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
@@ -54,6 +55,7 @@ public class MealOrderService {
     private final ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider;
+    private final ObjectProvider<FolioStatusPort> folioStatusPortProvider;
     
 
     @Autowired
@@ -63,7 +65,8 @@ public class MealOrderService {
             ObjectProvider<BookingContextPort> bookingContextPortProvider,
             ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider,
             ApplicationEventPublisher eventPublisher,
-            ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider) {
+            ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider,
+            ObjectProvider<FolioStatusPort> folioStatusPortProvider) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.menuItemRepository = menuItemRepository;
@@ -75,7 +78,19 @@ public class MealOrderService {
         this.dietaryProfilePortProvider = dietaryProfilePortProvider;
         this.eventPublisher = eventPublisher;
         this.packageFnbServiceProvider = packageFnbServiceProvider;
-        
+        this.folioStatusPortProvider = folioStatusPortProvider;
+    }
+
+    public MealOrderService(MealOrderRepository orderRepository, MealOrderItemRepository orderItemRepository,
+            MenuItemRepository menuItemRepository, MenuItemIngredientRepository recipeRepository,
+            MealOrderMapper mealOrderMapper, MenuService menuService, InventoryService inventoryService,
+            ObjectProvider<BookingContextPort> bookingContextPortProvider,
+            ObjectProvider<DietaryProfilePort> dietaryProfilePortProvider,
+            ApplicationEventPublisher eventPublisher,
+            ObjectProvider<RetreatPackageFnbService> packageFnbServiceProvider) {
+        this(orderRepository, orderItemRepository, menuItemRepository, recipeRepository,
+                mealOrderMapper, menuService, inventoryService, bookingContextPortProvider,
+                dietaryProfilePortProvider, eventPublisher, packageFnbServiceProvider, null);
     }
 
     public MealOrderService(MealOrderRepository orderRepository, MealOrderItemRepository orderItemRepository,
@@ -147,6 +162,13 @@ public class MealOrderService {
         }
         BookingContextPort.FnbBookingContext booking = requireBookingPort()
                 .requireEligibleCustomerBooking(userId, request.bookingId(), request.orderDate());
+
+        FolioStatusPort folioPortCheck = folioStatusPortProvider != null ? folioStatusPortProvider.getIfAvailable() : null;
+        if (folioPortCheck != null && !folioPortCheck.isFolioOpenForBooking(request.bookingId())) {
+            throw new BusinessRuleException("FOLIO_CLOSED",
+                    "Cannot place dining orders for booking ID " + request.bookingId() + " because its folio is closed.");
+        }
+
         DietaryProfilePort.FoodProfileProjection profile = requireFoodProfile(userId);
         if (orderType == FnbOrderType.DAILY_MEAL) {
             List<MealOrderEntity> existingList = orderRepository.findByRetreatBookingId(request.bookingId())
@@ -195,6 +217,14 @@ public class MealOrderService {
         if (orderType == FnbOrderType.A_LA_CARTE) {
             eventPublisher.publishEvent(new AlaCarteOrderPlacedEvent(order.getId(), order.getRetreatBookingId(),
                     response.subtotal(), createdAt));
+            FolioStatusPort folioPort = folioStatusPortProvider != null ? folioStatusPortProvider.getIfAvailable() : null;
+            String updatedFolioStatus = (folioPort != null && folioPort.isMealOrderPostedToFolio(order.getId()))
+                    ? "POSTED_TO_FOLIO"
+                    : "PENDING_DELIVERY";
+            response = new MealOrderResponse(response.id(), response.bookingId(), response.orderDate(),
+                    response.mealType(), response.orderType(), response.status(), response.specialNotes(),
+                    response.createdAt(), response.subtotal(), response.items(), updatedFolioStatus,
+                    response.inventoryStatus());
         }
         return response;
     }
@@ -431,7 +461,8 @@ public class MealOrderService {
             }
             String folioStatus = "NOT_APPLICABLE";
             if ("A_LA_CARTE".equalsIgnoreCase(order.getOrderType())) {
-                boolean posted = false;
+                FolioStatusPort folioPort = folioStatusPortProvider != null ? folioStatusPortProvider.getIfAvailable() : null;
+                boolean posted = folioPort != null && folioPort.isMealOrderPostedToFolio(persistedOrderId);
                 folioStatus = posted ? "POSTED_TO_FOLIO" : "PENDING_RECONCILIATION";
             }
             responses.add(mealOrderMapper.toResponse(order,
@@ -450,12 +481,12 @@ public class MealOrderService {
                 ? orderRepository.findByRetreatBookingIdOrderByOrderDateDescCreatedAtDesc(bookingId)
                 : orderRepository.findByOrderStatusNotOrderByCreatedAtDesc(FnbOrderStatus.CANCELLED.name());
 
-        Object folioRepo = null;
+        FolioStatusPort folioPort = folioStatusPortProvider != null ? folioStatusPortProvider.getIfAvailable() : null;
 
         List<MealOrderEntity> unposted = orders.stream()
                 .filter(o -> "A_LA_CARTE".equalsIgnoreCase(o.getOrderType()))
                 .filter(o -> !FnbOrderStatus.CANCELLED.name().equalsIgnoreCase(o.getOrderStatus()))
-                .filter(o -> true)
+                .filter(o -> folioPort == null || !folioPort.isMealOrderPostedToFolio(o.getId()))
                 .toList();
 
         return mapOrders(unposted);

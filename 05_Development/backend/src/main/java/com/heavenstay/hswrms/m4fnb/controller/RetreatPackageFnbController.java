@@ -78,7 +78,7 @@ public class RetreatPackageFnbController {
      * Verifies if a food item violates the culinary safety guidelines of a given package.
      */
     @GetMapping("/{packageCode}/safety-check")
-    @PreAuthorize("hasAnyAuthority('ROLE_CUSTOMER','ROLE_F&B STAFF','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_CUSTOMER', 'ROLE_FNB_STAFF', 'ROLE_F&B STAFF', 'ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<String>>> checkDishSafety(
             @PathVariable String packageCode,
             @RequestParam String itemName,

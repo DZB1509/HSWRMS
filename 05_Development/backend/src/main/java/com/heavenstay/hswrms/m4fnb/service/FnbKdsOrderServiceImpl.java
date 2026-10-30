@@ -5,6 +5,9 @@ import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m4fnb.dto.*;
+import com.heavenstay.hswrms.m4fnb.event.AlaCarteOrderDeliveredEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderItem;
 import com.heavenstay.hswrms.m4fnb.entity.MenuItem;
@@ -45,6 +48,10 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
     private final FolioBillingService folioBillingService;
     private final FolioItemRepository folioItemRepository;
     private final AuditLogService auditLogService;
+    @Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
+    @Autowired(required = false)
+    private org.springframework.beans.factory.ObjectProvider<com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort> folioStatusPortProvider;
 
     public FnbKdsOrderServiceImpl(MealOrderRepository mealOrderRepository,
                                 MenuItemRepository menuItemRepository,
@@ -86,6 +93,14 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
         // Validate booking existence, ownership, and stay dates through BookingContextPort
         bookingContextPort.requireEligibleCustomerBooking(currentUserId, request.getRetreatBookingId(), orderDate);
+
+        if (folioStatusPortProvider != null) {
+            com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort folioPort = folioStatusPortProvider.getIfAvailable();
+            if (folioPort != null && !folioPort.isFolioOpenForBooking(request.getRetreatBookingId())) {
+                throw new BusinessRuleException("FOLIO_CLOSED",
+                        "Cannot place dining orders for booking ID " + request.getRetreatBookingId() + " because its folio is closed.");
+            }
+        }
 
         RetreatBooking booking = bookingRepository.findById(request.getRetreatBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found with ID: " + request.getRetreatBookingId()));
@@ -140,6 +155,14 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
         // Validate booking existence, ownership, and stay dates through BookingContextPort
         bookingContextPort.requireEligibleCustomerBooking(currentUserId, request.getRetreatBookingId(), orderDate);
+
+        if (folioStatusPortProvider != null) {
+            com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort folioPort = folioStatusPortProvider.getIfAvailable();
+            if (folioPort != null && !folioPort.isFolioOpenForBooking(request.getRetreatBookingId())) {
+                throw new BusinessRuleException("FOLIO_CLOSED",
+                        "Cannot place dining orders for booking ID " + request.getRetreatBookingId() + " because its folio is closed.");
+            }
+        }
 
         RetreatBooking booking = bookingRepository.findById(request.getRetreatBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found with ID: " + request.getRetreatBookingId()));
@@ -465,14 +488,26 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         }
 
         if (totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            Long bookingId = order.getRetreatBooking() != null
+                    ? order.getRetreatBooking().getRetreatBookingId().longValue()
+                    : (order.getRetreatBookingId() != null ? order.getRetreatBookingId().longValue() : null);
             PostChargeRequestDTO chargeReq = new PostChargeRequestDTO();
-            chargeReq.setRetreatBookingId(order.getRetreatBooking().getRetreatBookingId().longValue());
+            chargeReq.setRetreatBookingId(bookingId);
             chargeReq.setChargeCategory("FNB");
             chargeReq.setSourceMealOrderId(orderId);
             chargeReq.setAmount(totalAmount);
             chargeReq.setDescription("A-la-carte dining order #" + orderId);
-            folioBillingService.postFolioCharge(chargeReq);
-            log.info("Successfully posted Folio charge of {} for MealOrder ID {}", totalAmount, orderId);
+            folioBillingService.postFolioChargeIdempotent(chargeReq);
+            log.info("Successfully posted Folio charge of {} for delivered MealOrder ID {}", totalAmount, orderId);
+
+            if (eventPublisher != null) {
+                eventPublisher.publishEvent(new AlaCarteOrderDeliveredEvent(
+                        order.getId(),
+                        order.getRetreatBookingId(),
+                        totalAmount,
+                        LocalDateTime.now()
+                ));
+            }
         }
     }
 

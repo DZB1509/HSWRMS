@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/fnb/dashboard")
-@PreAuthorize("hasAuthority('ROLE_F&B STAFF')")
+@PreAuthorize("hasAnyAuthority('ROLE_FNB_STAFF', 'ROLE_F&B STAFF')")
 public class FnbDashboardController {
     private final FnbDashboardService dashboardService;
 

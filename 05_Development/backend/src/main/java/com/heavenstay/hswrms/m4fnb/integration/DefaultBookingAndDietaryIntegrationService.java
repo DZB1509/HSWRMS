@@ -140,6 +140,11 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
                     "Cannot place dining order for a CANCELLED booking.");
         }
 
+        if ("COMPLETED".equalsIgnoreCase(context.bookingStatus()) || "CHECKED_OUT".equalsIgnoreCase(context.bookingStatus())) {
+            throw new BusinessRuleException("BOOKING_COMPLETED",
+                    "Cannot place dining order for a completed or checked-out retreat booking.");
+        }
+
         if (orderDate.isBefore(checkIn) || orderDate.isAfter(checkOut)) {
             throw new BusinessRuleException("DATE_OUTSIDE_STAY",
                     "Order date " + orderDate + " falls outside of the booked retreat stay (" + checkIn + " to " + checkOut + ").");

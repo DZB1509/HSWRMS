@@ -47,7 +47,7 @@ public interface MealOrderRepository extends JpaRepository<MealOrderEntity, Inte
     }
 
     // --- Compatibility Methods for M5 Billing Settlement ---
-    @Query("SELECT m FROM MealOrderEntity m WHERE m.retreatBookingId = :bookingId AND m.orderStatus IN ('PENDING', 'PREPARING', 'READY')")
+    @Query("SELECT m FROM MealOrderEntity m WHERE m.retreatBookingId = :bookingId AND m.orderStatus NOT IN ('DELIVERED', 'SERVED', 'CANCELLED')")
     List<MealOrderEntity> findUnsettledOrdersForBooking(@Param("bookingId") Integer bookingId);
 
     default List<MealOrderEntity> findUnsettledOrdersForBooking(Long bookingId) {
