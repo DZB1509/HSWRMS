@@ -956,6 +956,9 @@ CREATE TABLE dbo.FolioItem (
     source_booking_id   INT NULL,
     source_spa_session_id INT NULL,
     source_meal_order_id INT NULL,
+    is_voided           BIT NOT NULL
+        CONSTRAINT DF_FolioItem_IsVoided DEFAULT (0),
+    voided_adjustment_request_id INT NULL,
 
     CONSTRAINT FK_FolioItem_Folio
         FOREIGN KEY (folio_id)
@@ -1056,6 +1059,82 @@ GO
 CREATE UNIQUE INDEX UX_PaymentTransaction_Reference
 ON dbo.PaymentTransaction(transaction_reference)
 WHERE transaction_reference IS NOT NULL;
+GO
+
+CREATE TABLE dbo.AdjustmentRequest (
+    adjustment_request_id   INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_AdjustmentRequest PRIMARY KEY,
+    folio_item_id           INT NOT NULL,
+    folio_id                INT NOT NULL,
+    retreat_booking_id      INT NOT NULL,
+    source_meal_order_id    INT NULL,
+    adjustment_type         VARCHAR(30) NOT NULL,
+    requested_amount        DECIMAL(18,2) NOT NULL,
+    reason                  NVARCHAR(500) NOT NULL,
+    status                  VARCHAR(30) NOT NULL
+        CONSTRAINT DF_AdjustmentRequest_Status DEFAULT ('PENDING_APPROVAL'),
+    requested_by_user_id    INT NOT NULL,
+    requested_at            DATETIME2(0) NOT NULL
+        CONSTRAINT DF_AdjustmentRequest_RequestedAt DEFAULT (SYSUTCDATETIME()),
+    approved_by_user_id     INT NULL,
+    approved_at             DATETIME2(0) NULL,
+    rejection_reason        NVARCHAR(500) NULL,
+
+    CONSTRAINT FK_AdjustmentRequest_FolioItem
+        FOREIGN KEY (folio_item_id) REFERENCES dbo.FolioItem(folio_item_id),
+    CONSTRAINT FK_AdjustmentRequest_Folio
+        FOREIGN KEY (folio_id) REFERENCES dbo.Folio(folio_id),
+    CONSTRAINT FK_AdjustmentRequest_Booking
+        FOREIGN KEY (retreat_booking_id) REFERENCES dbo.RetreatBooking(retreat_booking_id),
+    CONSTRAINT FK_AdjustmentRequest_MealOrder
+        FOREIGN KEY (source_meal_order_id) REFERENCES dbo.MealOrder(meal_order_id),
+    CONSTRAINT FK_AdjustmentRequest_RequestedByUser
+        FOREIGN KEY (requested_by_user_id) REFERENCES dbo.[User](user_id),
+    CONSTRAINT FK_AdjustmentRequest_ApprovedByUser
+        FOREIGN KEY (approved_by_user_id) REFERENCES dbo.[User](user_id),
+    CONSTRAINT CK_AdjustmentRequest_Type
+        CHECK (adjustment_type IN ('VOID', 'CREDIT_NOTE')),
+    CONSTRAINT CK_AdjustmentRequest_Amount
+        CHECK (requested_amount > 0),
+    CONSTRAINT CK_AdjustmentRequest_Status
+        CHECK (status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
+);
+GO
+
+CREATE TABLE dbo.CreditNote (
+    credit_note_id          INT IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_CreditNote PRIMARY KEY,
+    credit_note_number      NVARCHAR(50) NOT NULL,
+    invoice_id              INT NOT NULL,
+    folio_item_id           INT NOT NULL,
+    adjustment_request_id   INT NOT NULL,
+    amount                  DECIMAL(18,2) NOT NULL,
+    tax_amount              DECIMAL(18,2) NOT NULL
+        CONSTRAINT DF_CreditNote_TaxAmount DEFAULT (0),
+    final_credit_amount     DECIMAL(18,2) NOT NULL,
+    issued_at               DATETIME2(0) NOT NULL
+        CONSTRAINT DF_CreditNote_IssuedAt DEFAULT (SYSUTCDATETIME()),
+    issued_by_user_id       INT NOT NULL,
+
+    CONSTRAINT UQ_CreditNote_Number UNIQUE (credit_note_number),
+    CONSTRAINT UQ_CreditNote_AdjustmentRequest UNIQUE (adjustment_request_id),
+    CONSTRAINT FK_CreditNote_Invoice
+        FOREIGN KEY (invoice_id) REFERENCES dbo.Invoice(invoice_id),
+    CONSTRAINT FK_CreditNote_FolioItem
+        FOREIGN KEY (folio_item_id) REFERENCES dbo.FolioItem(folio_item_id),
+    CONSTRAINT FK_CreditNote_AdjustmentRequest
+        FOREIGN KEY (adjustment_request_id) REFERENCES dbo.AdjustmentRequest(adjustment_request_id),
+    CONSTRAINT FK_CreditNote_IssuedByUser
+        FOREIGN KEY (issued_by_user_id) REFERENCES dbo.[User](user_id),
+    CONSTRAINT CK_CreditNote_Amounts
+        CHECK (amount > 0 AND tax_amount >= 0 AND final_credit_amount > 0)
+);
+GO
+
+ALTER TABLE dbo.FolioItem
+    ADD CONSTRAINT FK_FolioItem_AdjustmentRequest
+    FOREIGN KEY (voided_adjustment_request_id)
+    REFERENCES dbo.AdjustmentRequest(adjustment_request_id);
 GO
 
 CREATE TABLE dbo.CustomerReview (
@@ -1306,6 +1385,18 @@ CREATE INDEX IX_FolioItem_Folio_Category
     ON dbo.FolioItem(folio_id, charge_category);
 GO
 
+/* Prevent duplicate charge items for the same source F&B meal order */
+CREATE UNIQUE NONCLUSTERED INDEX UX_FolioItem_SourceMealOrder
+    ON dbo.FolioItem(source_meal_order_id)
+    WHERE source_meal_order_id IS NOT NULL;
+GO
+
+/* Prevent duplicate charge items for the same source spa session */
+CREATE UNIQUE NONCLUSTERED INDEX UX_FolioItem_SourceSpaSession
+    ON dbo.FolioItem(source_spa_session_id)
+    WHERE source_spa_session_id IS NOT NULL;
+GO
+
 CREATE INDEX IX_IngredientBatch_Ingredient_Expiry
     ON dbo.IngredientBatch(ingredient_id, expiration_date);
 GO
@@ -1322,6 +1413,19 @@ GO
 CREATE NONCLUSTERED INDEX IX_AuditLog_TargetRefId
     ON dbo.AuditLog(target_ref_id, created_at DESC)
     WHERE target_ref_id IS NOT NULL;
+GO
+
+CREATE INDEX IX_AdjustmentRequest_FolioItem ON dbo.AdjustmentRequest(folio_item_id);
+GO
+CREATE INDEX IX_AdjustmentRequest_Folio ON dbo.AdjustmentRequest(folio_id);
+GO
+CREATE INDEX IX_AdjustmentRequest_Booking ON dbo.AdjustmentRequest(retreat_booking_id);
+GO
+CREATE INDEX IX_AdjustmentRequest_Status ON dbo.AdjustmentRequest(status);
+GO
+CREATE INDEX IX_CreditNote_Invoice ON dbo.CreditNote(invoice_id);
+GO
+CREATE INDEX IX_CreditNote_FolioItem ON dbo.CreditNote(folio_item_id);
 GO
 
 
