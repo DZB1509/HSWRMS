@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.m3spa.service;
 
+import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentStatus;
 import com.heavenstay.hswrms.m3spa.dto.request.GenerateCandidatesRequest;
 import com.heavenstay.hswrms.m3spa.dto.response.CandidateGenerationResultDto;
 import com.heavenstay.hswrms.m3spa.dto.response.SchedulingCandidateDto;
@@ -54,10 +56,14 @@ public class SchedulingEngineService {
      * Pure READ-ONLY candidate generation.
      * Generates indivisible bundles: Time Slot + Qualified Therapist + Compatible Room.
      * Does NOT reserve resources or persist any session.
+     * Supports BR-M3-08: Filters out rejected candidate IDs across negotiation rounds.
      */
     public CandidateGenerationResultDto generateCandidates(GenerateCandidatesRequest req) {
         SpaTreatment treatment = treatmentRepository.findById(req.getTreatmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Treatment", "treatmentId", req.getTreatmentId()));
+        if (treatment.getTreatmentStatus() != TreatmentStatus.ACTIVE) {
+            throw new BusinessRuleException("Selected Spa Treatment is currently inactive.");
+        }
 
         LocalTime openTime = parseTimeSafe(operatingOpenStr);
         LocalTime closeTime = parseTimeSafe(operatingCloseStr);
@@ -69,6 +75,7 @@ public class SchedulingEngineService {
 
         LocalDate requestedDate = req.getPreferredDate();
         Long excludeSessionId = req.getRescheduleSessionId();
+        List<String> rejectedCandidateIds = req.getRejectedCandidateIds();
 
         // 1. Find qualified therapists
         List<Therapist> qualifiedTherapists = therapistRepository.findQualifiedTherapists(
@@ -89,7 +96,8 @@ public class SchedulingEngineService {
         // 3. Search slots for requested date
         List<SchedulingCandidateDto> primaryCandidates = searchCandidatesForDate(
                 treatment, requestedDate, req.getTimeRangeConstraint(),
-                qualifiedTherapists, compatibleRooms, excludeSessionId, false, openTime, closeTime
+                qualifiedTherapists, compatibleRooms, excludeSessionId, false, openTime, closeTime,
+                rejectedCandidateIds
         );
 
         if (!primaryCandidates.isEmpty()) {
@@ -112,7 +120,8 @@ public class SchedulingEngineService {
             for (int i = 1; i <= searchHorizon; i++) {
                 LocalDate altDate = requestedDate.plusDays(i);
                 List<SchedulingCandidateDto> altSlots = searchCandidatesForDate(
-                        treatment, altDate, null, qualifiedTherapists, compatibleRooms, excludeSessionId, true, openTime, closeTime
+                        treatment, altDate, null, qualifiedTherapists, compatibleRooms, excludeSessionId, true, openTime, closeTime,
+                        rejectedCandidateIds
                 );
                 if (!altSlots.isEmpty()) {
                     alternativeCandidates.addAll(altSlots);
@@ -135,7 +144,8 @@ public class SchedulingEngineService {
             Long excludeSessionId,
             boolean isAlternative,
             LocalTime openTime,
-            LocalTime closeTime
+            LocalTime closeTime,
+            List<String> rejectedCandidateIds
     ) {
         List<SchedulingCandidateDto> candidates = new ArrayList<>();
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
@@ -175,6 +185,11 @@ public class SchedulingEngineService {
                     String candidateId = UUID.nameUUIDFromBytes(
                             (treatment.getTreatmentId() + "_" + therapist.getTherapistId() + "_" + room.getRoomId() + "_" + startAt).getBytes()
                     ).toString();
+
+                    // BR-M3-08: Exclude candidates previously rejected in this negotiation round
+                    if (rejectedCandidateIds != null && rejectedCandidateIds.contains(candidateId)) {
+                        continue;
+                    }
 
                     candidates.add(new SchedulingCandidateDto(
                             candidateId,

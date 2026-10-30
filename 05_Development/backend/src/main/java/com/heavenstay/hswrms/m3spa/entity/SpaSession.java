@@ -2,6 +2,7 @@ package com.heavenstay.hswrms.m3spa.entity;
 
 import com.heavenstay.hswrms.m3spa.entity.enums.BookingSource;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
+import com.heavenstay.hswrms.m3spa.entity.enums.SpaReminderStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -53,6 +54,22 @@ public class SpaSession {
 
     @Column(name = "customer_note", length = 1000)
     private String customerNote;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reminder_status", length = 20)
+    private SpaReminderStatus reminderStatus = SpaReminderStatus.PENDING;
+
+    @Column(name = "reminder_claimed_at")
+    private LocalDateTime reminderClaimedAt;
+
+    @Column(name = "reminder_claim_expires_at")
+    private LocalDateTime reminderClaimExpiresAt;
+
+    @Column(name = "reminder_claim_token", length = 64)
+    private String reminderClaimToken;
+
+    @Column(name = "reminder_sent_at")
+    private LocalDateTime reminderSentAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -179,5 +196,45 @@ public class SpaSession {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public SpaReminderStatus getReminderStatus() {
+        return reminderStatus;
+    }
+
+    public void setReminderStatus(SpaReminderStatus reminderStatus) {
+        this.reminderStatus = reminderStatus;
+    }
+
+    public LocalDateTime getReminderClaimedAt() {
+        return reminderClaimedAt;
+    }
+
+    public void setReminderClaimedAt(LocalDateTime reminderClaimedAt) {
+        this.reminderClaimedAt = reminderClaimedAt;
+    }
+
+    public LocalDateTime getReminderClaimExpiresAt() {
+        return reminderClaimExpiresAt;
+    }
+
+    public void setReminderClaimExpiresAt(LocalDateTime reminderClaimExpiresAt) {
+        this.reminderClaimExpiresAt = reminderClaimExpiresAt;
+    }
+
+    public String getReminderClaimToken() {
+        return reminderClaimToken;
+    }
+
+    public void setReminderClaimToken(String reminderClaimToken) {
+        this.reminderClaimToken = reminderClaimToken;
+    }
+
+    public LocalDateTime getReminderSentAt() {
+        return reminderSentAt;
+    }
+
+    public void setReminderSentAt(LocalDateTime reminderSentAt) {
+        this.reminderSentAt = reminderSentAt;
     }
 }

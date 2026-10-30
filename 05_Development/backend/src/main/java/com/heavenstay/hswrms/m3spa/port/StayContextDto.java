@@ -13,6 +13,7 @@ public class StayContextDto {
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
     private boolean active;
+    private String customerEmail;
 
     public StayContextDto() {
     }
@@ -110,5 +111,13 @@ public class StayContextDto {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
     }
 }

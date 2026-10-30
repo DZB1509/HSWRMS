@@ -2,6 +2,8 @@ package com.heavenstay.hswrms.m3spa.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GenerateCandidatesRequest {
 
@@ -15,6 +17,7 @@ public class GenerateCandidatesRequest {
     private Integer retreatBookingId;
     private Long rescheduleSessionId;
     private Integer alternativeSearchDays; // Optional client-requested search horizon
+    private List<String> rejectedCandidateIds = new ArrayList<>(); // BR-M3-08: Exclude previously rejected alternative candidates
 
     public GenerateCandidatesRequest() {
     }
@@ -30,6 +33,15 @@ public class GenerateCandidatesRequest {
         this.preferredDate = preferredDate;
         this.timeRangeConstraint = timeRangeConstraint;
         this.alternativeSearchDays = alternativeSearchDays;
+    }
+
+    public GenerateCandidatesRequest(Integer treatmentId, LocalDate preferredDate, String timeRangeConstraint,
+                                     Integer alternativeSearchDays, List<String> rejectedCandidateIds) {
+        this.treatmentId = treatmentId;
+        this.preferredDate = preferredDate;
+        this.timeRangeConstraint = timeRangeConstraint;
+        this.alternativeSearchDays = alternativeSearchDays;
+        this.rejectedCandidateIds = rejectedCandidateIds != null ? rejectedCandidateIds : new ArrayList<>();
     }
 
     public Integer getTreatmentId() {
@@ -78,5 +90,13 @@ public class GenerateCandidatesRequest {
 
     public void setAlternativeSearchDays(Integer alternativeSearchDays) {
         this.alternativeSearchDays = alternativeSearchDays;
+    }
+
+    public List<String> getRejectedCandidateIds() {
+        return rejectedCandidateIds;
+    }
+
+    public void setRejectedCandidateIds(List<String> rejectedCandidateIds) {
+        this.rejectedCandidateIds = rejectedCandidateIds != null ? rejectedCandidateIds : new ArrayList<>();
     }
 }

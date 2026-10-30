@@ -81,7 +81,7 @@ public class SpaSessionService {
                     .orElseThrow(() -> new BusinessRuleException("No active retreat stay found for current user."));
             resolvedBookingId = stay.getBookingId();
         } else {
-            resolvedBookingId = 101; // default test fallback
+            throw new BusinessRuleException("Authenticated customer context or retreat booking ID is required.");
         }
 
         // 2. Validate Treatment
@@ -200,7 +200,8 @@ public class SpaSessionService {
      */
     @Transactional
     public SpaSessionDto confirmAttendance(Long sessionId, Integer authenticatedUserId) {
-        SpaSession session = sessionRepository.findById(sessionId)
+        // Concern C: Serialized attendance confirmation using pessimistic write lock
+        SpaSession session = sessionRepository.findByIdWithLock(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
 
         if (authenticatedUserId != null) {
@@ -232,7 +233,8 @@ public class SpaSessionService {
      */
     @Transactional
     public SpaSessionDto cancelSession(Long sessionId, Integer authenticatedUserId) {
-        SpaSession session = sessionRepository.findById(sessionId)
+        // Concern C: Serialized attendance confirmation using pessimistic write lock
+        SpaSession session = sessionRepository.findByIdWithLock(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
 
         if (authenticatedUserId != null) {
@@ -242,8 +244,12 @@ public class SpaSessionService {
             }
         }
 
-        if (session.getSessionStatus() == SpaSessionStatus.COMPLETED ||
-            session.getSessionStatus() == SpaSessionStatus.CANCELLED) {
+        if (session.getSessionStatus() == SpaSessionStatus.CANCELLED) {
+            // Idempotent cancellation: safe handling of duplicate or repeated cancellation requests
+            return toDto(session, "Customer", true);
+        }
+
+        if (session.getSessionStatus() == SpaSessionStatus.COMPLETED) {
             throw new BusinessRuleException("Cannot cancel session already " + session.getSessionStatus());
         }
 
@@ -313,7 +319,8 @@ public class SpaSessionService {
      */
     @Transactional(readOnly = true)
     public TherapistSessionDetailDto getTherapistSessionDetail(Long sessionId, Integer therapistUserId) {
-        SpaSession session = sessionRepository.findById(sessionId)
+        // Concern C: Serialized attendance confirmation using pessimistic write lock
+        SpaSession session = sessionRepository.findByIdWithLock(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
 
         Therapist therapist = resolveTherapistForUser(therapistUserId);
@@ -353,7 +360,8 @@ public class SpaSessionService {
             throw new BusinessRuleException("Invalid session outcome. Permitted outcomes: COMPLETED, NO_SHOW.");
         }
 
-        SpaSession session = sessionRepository.findById(sessionId)
+        // Concern C: Serialized attendance confirmation using pessimistic write lock
+        SpaSession session = sessionRepository.findByIdWithLock(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
 
         Therapist therapist = resolveTherapistForUser(therapistUserId);
@@ -372,6 +380,10 @@ public class SpaSessionService {
         }
         return therapistRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Therapist record not found for user ID: " + userId));
+    }
+
+    public SpaSessionDto toDto(SpaSession s) {
+        return toDto(s, "Valued Guest", false);
     }
 
     private SpaSessionDto toDto(SpaSession s, String customerName, boolean isIncluded) {
@@ -399,6 +411,10 @@ public class SpaSessionService {
         dto.setSessionStatus(s.getSessionStatus());
         dto.setConfirmationStatus(s.getConfirmationStatus());
         dto.setCustomerNote(s.getCustomerNote());
+        dto.setReminderStatus(s.getReminderStatus());
+        dto.setReminderClaimedAt(s.getReminderClaimedAt());
+        dto.setReminderClaimExpiresAt(s.getReminderClaimExpiresAt());
+        dto.setReminderSentAt(s.getReminderSentAt());
         return dto;
     }
 }

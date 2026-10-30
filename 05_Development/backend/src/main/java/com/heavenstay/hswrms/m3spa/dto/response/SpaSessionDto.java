@@ -2,6 +2,7 @@ package com.heavenstay.hswrms.m3spa.dto.response;
 
 import com.heavenstay.hswrms.m3spa.entity.enums.BookingSource;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
+import com.heavenstay.hswrms.m3spa.entity.enums.SpaReminderStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 
 import java.math.BigDecimal;
@@ -31,6 +32,10 @@ public class SpaSessionDto {
     private SpaSessionStatus sessionStatus;
     private SpaConfirmationStatus confirmationStatus;
     private String customerNote;
+    private SpaReminderStatus reminderStatus;
+    private LocalDateTime reminderClaimedAt;
+    private LocalDateTime reminderClaimExpiresAt;
+    private LocalDateTime reminderSentAt;
 
     public SpaSessionDto() {
     }
@@ -209,5 +214,37 @@ public class SpaSessionDto {
 
     public void setCustomerNote(String customerNote) {
         this.customerNote = customerNote;
+    }
+
+    public SpaReminderStatus getReminderStatus() {
+        return reminderStatus;
+    }
+
+    public void setReminderStatus(SpaReminderStatus reminderStatus) {
+        this.reminderStatus = reminderStatus;
+    }
+
+    public LocalDateTime getReminderClaimedAt() {
+        return reminderClaimedAt;
+    }
+
+    public void setReminderClaimedAt(LocalDateTime reminderClaimedAt) {
+        this.reminderClaimedAt = reminderClaimedAt;
+    }
+
+    public LocalDateTime getReminderClaimExpiresAt() {
+        return reminderClaimExpiresAt;
+    }
+
+    public void setReminderClaimExpiresAt(LocalDateTime reminderClaimExpiresAt) {
+        this.reminderClaimExpiresAt = reminderClaimExpiresAt;
+    }
+
+    public LocalDateTime getReminderSentAt() {
+        return reminderSentAt;
+    }
+
+    public void setReminderSentAt(LocalDateTime reminderSentAt) {
+        this.reminderSentAt = reminderSentAt;
     }
 }
