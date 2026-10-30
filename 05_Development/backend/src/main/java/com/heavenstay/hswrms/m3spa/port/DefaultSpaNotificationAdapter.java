@@ -67,4 +67,58 @@ public class DefaultSpaNotificationAdapter implements SpaNotificationPort {
             return false;
         }
     }
+
+    @Override
+    public boolean sendScheduleChangeNotification(SpaSession session, String customerEmail, String customerName, String changeDetails) {
+        if (session == null) {
+            log.warn("Cannot send spa schedule change notification: session is null");
+            return false;
+        }
+
+        try {
+            String treatmentName = "Spa Treatment";
+            try {
+                if (session.getTreatment() != null && session.getTreatment().getTreatmentName() != null) {
+                    treatmentName = session.getTreatment().getTreatmentName();
+                }
+            } catch (Exception ignored) {
+            }
+
+            String practitionerName = "Assigned Specialist";
+            try {
+                if (session.getTherapist() != null && session.getTherapist().getDisplayName() != null) {
+                    practitionerName = session.getTherapist().getDisplayName();
+                }
+            } catch (Exception ignored) {
+            }
+
+            String roomName = "Treatment Suite";
+            try {
+                if (session.getTreatmentRoom() != null && session.getTreatmentRoom().getRoomName() != null) {
+                    roomName = session.getTreatmentRoom().getRoomName();
+                }
+            } catch (Exception ignored) {
+            }
+
+            String resolvedEmail = customerEmail != null && !customerEmail.isBlank() ? customerEmail : "guest@heavenstay.com";
+            String resolvedName = customerName != null && !customerName.isBlank() ? customerName : "Valued Guest";
+            String details = changeDetails != null ? changeDetails : "Schedule updated";
+
+            log.info("[SPA SCHEDULE CHANGE NOTIFICATION] -> Guest: {} <{}> | Session #{}: {} | Time: {}-{} | Specialist: {} | Suite: {} | Details: {}",
+                    resolvedName,
+                    resolvedEmail,
+                    session.getSpaSessionId(),
+                    treatmentName,
+                    session.getScheduledStartAt(),
+                    session.getScheduledEndAt(),
+                    practitionerName,
+                    roomName,
+                    details);
+
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to dispatch spa schedule change notification for session #{}: {}", session.getSpaSessionId(), e.getMessage());
+            return false;
+        }
+    }
 }

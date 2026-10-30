@@ -172,4 +172,21 @@ public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt
     );
+
+    @Query("SELECT s FROM SpaSession s " +
+           "WHERE s.therapist.therapistId = :therapistId " +
+           "AND s.sessionStatus IN (com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.SCHEDULED, com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.RESCHEDULING) " +
+           "AND s.scheduledEndAt > :now " +
+           "ORDER BY s.scheduledStartAt ASC")
+    List<SpaSession> findActiveUpcomingSessionsByTherapist(
+            @Param("therapistId") Integer therapistId,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("SELECT s FROM SpaSession s " +
+           "WHERE s.therapist.therapistStatus IN (com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus.INACTIVE, com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus.SUSPENDED) " +
+           "AND s.sessionStatus = com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.SCHEDULED " +
+           "AND s.scheduledEndAt > :now " +
+           "ORDER BY s.scheduledStartAt ASC")
+    List<SpaSession> findActiveUpcomingSessionsWithUnavailableTherapist(@Param("now") LocalDateTime now);
 }

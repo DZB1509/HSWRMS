@@ -17,6 +17,11 @@ import com.heavenstay.hswrms.m3spa.port.StayContextDto;
 import com.heavenstay.hswrms.m3spa.port.TherapistHealthProjectionPort;
 import com.heavenstay.hswrms.m3spa.port.TreatmentSafetyNotesDto;
 import com.heavenstay.hswrms.m3spa.repository.*;
+import com.heavenstay.hswrms.m3spa.service.event.SpaScheduleAcceptedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +36,8 @@ import java.util.stream.Collectors;
 @Service
 public class SpaSessionService {
 
+    private static final Logger log = LoggerFactory.getLogger(SpaSessionService.class);
+
     private final SpaSessionRepository sessionRepository;
     private final SpaTreatmentRepository treatmentRepository;
     private final TherapistRepository therapistRepository;
@@ -40,6 +47,7 @@ public class SpaSessionService {
     private final CustomerStayPort customerStayPort;
     private final TherapistHealthProjectionPort healthProjectionPort;
     private final BillingPort billingPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SpaSessionService(
             SpaSessionRepository sessionRepository,
@@ -52,6 +60,23 @@ public class SpaSessionService {
             TherapistHealthProjectionPort healthProjectionPort,
             BillingPort billingPort
     ) {
+        this(sessionRepository, treatmentRepository, therapistRepository, roomRepository,
+                qualificationRepository, compatibilityRepository, customerStayPort, healthProjectionPort, billingPort, null);
+    }
+
+    @Autowired
+    public SpaSessionService(
+            SpaSessionRepository sessionRepository,
+            SpaTreatmentRepository treatmentRepository,
+            TherapistRepository therapistRepository,
+            TreatmentRoomRepository roomRepository,
+            TherapistTreatmentQualificationRepository qualificationRepository,
+            TreatmentRoomCompatibilityRepository compatibilityRepository,
+            CustomerStayPort customerStayPort,
+            TherapistHealthProjectionPort healthProjectionPort,
+            BillingPort billingPort,
+            @Autowired(required = false) ApplicationEventPublisher eventPublisher
+    ) {
         this.sessionRepository = sessionRepository;
         this.treatmentRepository = treatmentRepository;
         this.therapistRepository = therapistRepository;
@@ -61,6 +86,7 @@ public class SpaSessionService {
         this.customerStayPort = customerStayPort;
         this.healthProjectionPort = healthProjectionPort;
         this.billingPort = billingPort;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -151,6 +177,12 @@ public class SpaSessionService {
                 throw new BusinessRuleException("Cannot reschedule a session in status " + existingSession.getSessionStatus());
             }
 
+            // Capture previous state for audit history (BR-M3-14)
+            String prevStatus = existingSession.getSessionStatus() != null ? existingSession.getSessionStatus().name() : null;
+            LocalDateTime prevStart = existingSession.getScheduledStartAt();
+            Integer prevTherapist = existingSession.getTherapist() != null ? existingSession.getTherapist().getTherapistId() : null;
+            Integer prevRoom = existingSession.getTreatmentRoom() != null ? existingSession.getTreatmentRoom().getRoomId() : null;
+
             // Atomically update session assignments
             existingSession.setTreatment(treatment);
             existingSession.setTherapist(therapist);
@@ -164,6 +196,17 @@ public class SpaSessionService {
             }
 
             SpaSession updated = sessionRepository.save(existingSession);
+
+            StayDetails stayInfo = resolveStayDetails(resolvedBookingId);
+            publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                    updated, "RESCHEDULED", prevStatus, updated.getSessionStatus().name(),
+                    prevStart, updated.getScheduledStartAt(),
+                    prevTherapist, updated.getTherapist().getTherapistId(),
+                    prevRoom, updated.getTreatmentRoom().getRoomId(),
+                    authenticatedUserId, "Customer", req.getCustomerNote(),
+                    stayInfo.email, stayInfo.name
+            ));
+
             return toDto(updated, stay != null ? stay.getCustomerName() : "Customer", isIncluded);
         } else {
             // New Session
@@ -190,6 +233,16 @@ public class SpaSessionService {
                         "Extra Spa: " + treatment.getTreatmentName()
                 );
             }
+
+            StayDetails stayInfo = resolveStayDetails(resolvedBookingId);
+            publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                    saved, "CREATED", null, saved.getSessionStatus().name(),
+                    null, saved.getScheduledStartAt(),
+                    null, saved.getTherapist().getTherapistId(),
+                    null, saved.getTreatmentRoom().getRoomId(),
+                    authenticatedUserId, "Customer", req.getCustomerNote(),
+                    stayInfo.email, stayInfo.name
+            ));
 
             return toDto(saved, stay != null ? stay.getCustomerName() : "Customer", isIncluded);
         }
@@ -223,8 +276,22 @@ public class SpaSessionService {
             throw new BusinessRuleException("Session attendance is already " + session.getConfirmationStatus());
         }
 
+        String prevConfirmation = session.getConfirmationStatus() != null ? session.getConfirmationStatus().name() : "PENDING";
         session.setConfirmationStatus(SpaConfirmationStatus.CONFIRMED);
         SpaSession updated = sessionRepository.save(session);
+
+        StayDetails stayInfo = resolveStayDetails(updated.getRetreatBookingId());
+        publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                updated, "ATTENDANCE_CONFIRMED", prevConfirmation, updated.getConfirmationStatus().name(),
+                updated.getScheduledStartAt(), updated.getScheduledStartAt(),
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                authenticatedUserId, "Customer", "Customer attendance confirmed",
+                stayInfo.email, stayInfo.name
+        ));
+
         return toDto(updated, "Customer", true);
     }
 
@@ -253,9 +320,23 @@ public class SpaSessionService {
             throw new BusinessRuleException("Cannot cancel session already " + session.getSessionStatus());
         }
 
+        String prevSessionStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
         session.setSessionStatus(SpaSessionStatus.CANCELLED);
         session.setConfirmationStatus(SpaConfirmationStatus.DECLINED);
         SpaSession updated = sessionRepository.save(session);
+
+        StayDetails stayInfo = resolveStayDetails(updated.getRetreatBookingId());
+        publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                updated, "CANCELLED", prevSessionStatus, "CANCELLED",
+                updated.getScheduledStartAt(), updated.getScheduledStartAt(),
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                authenticatedUserId, "Customer", "Customer requested cancellation",
+                stayInfo.email, stayInfo.name
+        ));
+
         return toDto(updated, "Customer", true);
     }
 
@@ -369,8 +450,22 @@ public class SpaSessionService {
             throw new BusinessRuleException("Therapist is not authorized to update outcomes for another therapist's session.");
         }
 
+        String prevOutcomeStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
         session.setSessionStatus(SpaSessionStatus.valueOf(outcome.toUpperCase()));
         SpaSession updated = sessionRepository.save(session);
+
+        StayDetails stayInfo = resolveStayDetails(updated.getRetreatBookingId());
+        publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                updated, outcome.toUpperCase(), prevOutcomeStatus, outcome.toUpperCase(),
+                updated.getScheduledStartAt(), updated.getScheduledStartAt(),
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                therapistUserId, "Therapist", notes,
+                stayInfo.email, stayInfo.name
+        ));
+
         return toDto(updated, "Customer", true);
     }
 
@@ -380,6 +475,41 @@ public class SpaSessionService {
         }
         return therapistRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Therapist record not found for user ID: " + userId));
+    }
+
+    private void publishScheduleEvent(SpaScheduleAcceptedEvent event) {
+        if (eventPublisher != null && event != null) {
+            try {
+                eventPublisher.publishEvent(event);
+            } catch (Exception ex) {
+                log.error("Failed to publish SpaScheduleAcceptedEvent: {}", ex.getMessage());
+            }
+        }
+    }
+
+    private StayDetails resolveStayDetails(Integer bookingId) {
+        if (bookingId == null || customerStayPort == null) {
+            return new StayDetails(null, "Valued Guest");
+        }
+        try {
+            Optional<StayContextDto> opt = customerStayPort.getStayById(bookingId);
+            if (opt.isPresent()) {
+                StayContextDto s = opt.get();
+                return new StayDetails(s.getCustomerEmail(), s.getCustomerName() != null ? s.getCustomerName() : "Valued Guest");
+            }
+        } catch (Exception ignored) {
+        }
+        return new StayDetails(null, "Valued Guest");
+    }
+
+    private static class StayDetails {
+        final String email;
+        final String name;
+
+        StayDetails(String email, String name) {
+            this.email = email;
+            this.name = name;
+        }
     }
 
     public SpaSessionDto toDto(SpaSession s) {

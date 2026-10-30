@@ -4,7 +4,10 @@ import com.heavenstay.hswrms.common.api.ApiResponse;
 import com.heavenstay.hswrms.m3spa.dto.request.CompleteSessionRequest;
 import com.heavenstay.hswrms.m3spa.dto.response.SpaSessionDto;
 import com.heavenstay.hswrms.m3spa.dto.response.TherapistSessionDetailDto;
+import com.heavenstay.hswrms.m3spa.entity.Therapist;
+import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
 import com.heavenstay.hswrms.m3spa.service.SpaSessionService;
+import com.heavenstay.hswrms.m3spa.service.TherapistStatusService;
 import com.heavenstay.hswrms.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -15,15 +18,19 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/therapist")
 public class TherapistController {
 
     private final SpaSessionService spaSessionService;
+    private final TherapistStatusService therapistStatusService;
 
-    public TherapistController(SpaSessionService spaSessionService) {
+    public TherapistController(SpaSessionService spaSessionService,
+                               TherapistStatusService therapistStatusService) {
         this.spaSessionService = spaSessionService;
+        this.therapistStatusService = therapistStatusService;
     }
 
     /**
@@ -85,5 +92,26 @@ public class TherapistController {
                 id, userId, req.getOutcome(), req.getTherapistNotes()
         );
         return ResponseEntity.ok(ApiResponse.ok("Session outcome recorded as " + req.getOutcome(), updated));
+    }
+
+    /**
+     * Updates therapist operational status (BR-M3-13).
+     * If transitioning to INACTIVE or SUSPENDED, triggers automatic recovery orchestration
+     * for all active upcoming sessions assigned to this therapist.
+     */
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'RECEPTIONIST')")
+    public ResponseEntity<ApiResponse<Therapist>> updateTherapistStatus(
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> body
+    ) {
+        String statusStr = body != null ? body.get("status") : null;
+        if (statusStr == null || statusStr.isBlank()) {
+            throw new IllegalArgumentException("Therapist status is required");
+        }
+        String reason = body != null && body.get("reason") != null ? body.get("reason") : "Administrative status update";
+        TherapistStatus newStatus = TherapistStatus.valueOf(statusStr.toUpperCase());
+        Therapist updated = therapistStatusService.updateTherapistStatus(id, newStatus, reason);
+        return ResponseEntity.ok(ApiResponse.ok("Therapist status updated successfully", updated));
     }
 }

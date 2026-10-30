@@ -71,6 +71,9 @@ public class SpaSession {
     @Column(name = "reminder_sent_at")
     private LocalDateTime reminderSentAt;
 
+    @Column(name = "external_calendar_event_id", length = 255)
+    private String externalCalendarEventId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -236,5 +239,13 @@ public class SpaSession {
 
     public void setReminderSentAt(LocalDateTime reminderSentAt) {
         this.reminderSentAt = reminderSentAt;
+    }
+
+    public String getExternalCalendarEventId() {
+        return externalCalendarEventId;
+    }
+
+    public void setExternalCalendarEventId(String externalCalendarEventId) {
+        this.externalCalendarEventId = externalCalendarEventId;
     }
 }

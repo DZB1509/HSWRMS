@@ -19,5 +19,16 @@ public interface SpaNotificationPort {
      * @return true if notification was accepted/dispatched, false if dispatch failed
      */
     boolean sendAppointmentReminder(SpaSession session, String customerEmail, String customerName);
+
+    /**
+     * Sends a notification informing the customer of an accepted schedule change (BR-M3-14).
+     *
+     * @param session the modified spa session
+     * @param customerEmail customer contact email (if available)
+     * @param customerName customer full name
+     * @param changeDetails human-readable details of the change (e.g. reschedule, cancellation, rematch)
+     * @return true if notification was accepted/dispatched, false if dispatch failed
+     */
+    boolean sendScheduleChangeNotification(SpaSession session, String customerEmail, String customerName, String changeDetails);
 }
 

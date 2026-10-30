@@ -9,16 +9,22 @@ import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentRoomStatus;
+import com.heavenstay.hswrms.m3spa.port.CustomerStayPort;
+import com.heavenstay.hswrms.m3spa.port.StayContextDto;
 import com.heavenstay.hswrms.m3spa.repository.SpaSessionRepository;
 import com.heavenstay.hswrms.m3spa.repository.TherapistRepository;
 import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
+import com.heavenstay.hswrms.m3spa.service.event.SpaScheduleAcceptedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * M3 System-Initiated Recovery Engine.
@@ -39,13 +45,26 @@ public class SessionRecoveryService {
     private final SpaSessionRepository sessionRepository;
     private final TherapistRepository therapistRepository;
     private final TreatmentRoomRepository roomRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final CustomerStayPort customerStayPort;
 
     public SessionRecoveryService(SpaSessionRepository sessionRepository,
                                   TherapistRepository therapistRepository,
                                   TreatmentRoomRepository roomRepository) {
+        this(sessionRepository, therapistRepository, roomRepository, null, null);
+    }
+
+    @Autowired
+    public SessionRecoveryService(SpaSessionRepository sessionRepository,
+                                  TherapistRepository therapistRepository,
+                                  TreatmentRoomRepository roomRepository,
+                                  @Autowired(required = false) ApplicationEventPublisher eventPublisher,
+                                  @Autowired(required = false) CustomerStayPort customerStayPort) {
         this.sessionRepository = sessionRepository;
         this.therapistRepository = therapistRepository;
         this.roomRepository = roomRepository;
+        this.eventPublisher = eventPublisher;
+        this.customerStayPort = customerStayPort;
     }
 
     /**
@@ -112,11 +131,23 @@ public class SessionRecoveryService {
         if (targetTherapist != null && targetRoom != null) {
             log.info("Same-time recovery successful for session #{}. Preserved interval {}-{}. Assigned therapist #{}, room #{}.",
                     sessionId, startAt, endAt, targetTherapist.getTherapistId(), targetRoom.getRoomId());
+
+            String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
             session.setTherapist(targetTherapist);
             session.setTreatmentRoom(targetRoom);
             session.setSessionStatus(SpaSessionStatus.SCHEDULED);
             session.setConfirmationStatus(SpaConfirmationStatus.PENDING);
-            sessionRepository.save(session);
+            SpaSession saved = sessionRepository.save(session);
+
+            publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                    saved, "RECOVERED", prevStatus, "SCHEDULED",
+                    startAt, startAt,
+                    currentTherapist.getTherapistId(), targetTherapist.getTherapistId(),
+                    currentRoom.getRoomId(), targetRoom.getRoomId(),
+                    null, "SYSTEM", "Automated same-time rematching",
+                    resolveCustomerEmail(saved.getRetreatBookingId()),
+                    resolveCustomerName(saved.getRetreatBookingId())
+            ));
 
             return new RecoveryResultDto(
                     sessionId,
@@ -132,8 +163,19 @@ public class SessionRecoveryService {
         // 4. Same-time recovery impossible: Time-change required
         // System MUST NOT silently commit a new time without customer consent!
         log.info("Same-time recovery unavailable for session #{}. Retaining in RESCHEDULING status awaiting Customer consent.", sessionId);
+        String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
         session.setSessionStatus(SpaSessionStatus.RESCHEDULING);
-        sessionRepository.save(session);
+        SpaSession saved = sessionRepository.save(session);
+
+        publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                saved, "RESCHEDULING", prevStatus, "RESCHEDULING",
+                startAt, startAt,
+                currentTherapist.getTherapistId(), null,
+                currentRoom.getRoomId(), null,
+                null, "SYSTEM", "Same-time replacement unavailable; awaiting customer consent",
+                resolveCustomerEmail(saved.getRetreatBookingId()),
+                resolveCustomerName(saved.getRetreatBookingId())
+        ));
 
         return new RecoveryResultDto(
                 sessionId,
@@ -144,5 +186,35 @@ public class SessionRecoveryService {
                 null,
                 "Same-time recovery unavailable. Customer consent required for any schedule modification."
         );
+    }
+
+    private void publishScheduleEvent(SpaScheduleAcceptedEvent event) {
+        if (eventPublisher != null && event != null) {
+            try {
+                eventPublisher.publishEvent(event);
+            } catch (Exception ex) {
+                log.error("Failed to publish SpaScheduleAcceptedEvent from SessionRecoveryService: {}", ex.getMessage());
+            }
+        }
+    }
+
+    private String resolveCustomerEmail(Integer bookingId) {
+        if (bookingId == null || customerStayPort == null) return null;
+        try {
+            Optional<StayContextDto> opt = customerStayPort.getStayById(bookingId);
+            return opt.map(StayContextDto::getCustomerEmail).orElse(null);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String resolveCustomerName(Integer bookingId) {
+        if (bookingId == null || customerStayPort == null) return "Valued Guest";
+        try {
+            Optional<StayContextDto> opt = customerStayPort.getStayById(bookingId);
+            return opt.map(StayContextDto::getCustomerName).orElse("Valued Guest");
+        } catch (Exception ignored) {
+            return "Valued Guest";
+        }
     }
 }
