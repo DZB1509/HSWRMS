@@ -10,6 +10,10 @@ import com.heavenstay.hswrms.m1identity.repository.CustomerProfileRepository;
 import com.heavenstay.hswrms.m1identity.repository.RoleRepository;
 import com.heavenstay.hswrms.m1identity.repository.UserRepository;
 import com.heavenstay.hswrms.m1identity.repository.UserRoleRepository;
+import com.heavenstay.hswrms.m3spa.entity.Therapist;
+import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
+import com.heavenstay.hswrms.m3spa.repository.TherapistRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -69,7 +73,12 @@ public class DevAccountBootstrap implements ApplicationRunner {
     );
 
     private static final List<AccountSeed> ACCOUNT_SEEDS = List.of(
-            new AccountSeed("customer@heavenstay.dev", "Demo Customer", "Customer", true)
+            new AccountSeed("customer@heavenstay.dev", "Demo Customer", "Customer", true),
+            new AccountSeed("receptionist@heavenstay.dev", "Demo Receptionist", "Receptionist", false),
+            new AccountSeed("therapist@heavenstay.dev", "Demo Therapist", "Therapist", false),
+            new AccountSeed("fbstaff@heavenstay.dev", "Demo F&B Staff", "F&B Staff", false),
+            new AccountSeed("manager@heavenstay.dev", "Demo Manager", "Manager", false),
+            new AccountSeed("admin@heavenstay.dev", "Demo Admin", "Admin", false)
     );
 
     private final RoleRepository roleRepository;
@@ -78,18 +87,21 @@ public class DevAccountBootstrap implements ApplicationRunner {
     private final CustomerProfileRepository customerProfileRepository;
     private final ConsentRecordRepository consentRecordRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ObjectProvider<TherapistRepository> therapistRepositoryProvider;
 
     public DevAccountBootstrap(RoleRepository roleRepository, UserRepository userRepository,
                                UserRoleRepository userRoleRepository,
                                CustomerProfileRepository customerProfileRepository,
                                ConsentRecordRepository consentRecordRepository,
-                               PasswordEncoder passwordEncoder) {
+                               PasswordEncoder passwordEncoder,
+                               ObjectProvider<TherapistRepository> therapistRepositoryProvider) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.consentRecordRepository = consentRecordRepository;
         this.passwordEncoder = passwordEncoder;
+        this.therapistRepositoryProvider = therapistRepositoryProvider;
     }
 
     @Override
@@ -181,6 +193,16 @@ public class DevAccountBootstrap implements ApplicationRunner {
                 .anyMatch(assigned -> role.getRoleId().equals(assigned.getId().getRoleId()));
         if (!hasRole) {
             userRoleRepository.save(new UserRole(user, role));
+        }
+
+        if ("Therapist".equalsIgnoreCase(seed.roleName())) {
+            TherapistRepository therapistRepo = therapistRepositoryProvider.getIfAvailable();
+            if (therapistRepo != null && therapistRepo.findByUserId(user.getUserId()).isEmpty()) {
+                Therapist therapist = new Therapist(user.getUserId(), TherapistStatus.ACTIVE);
+                therapist.setDisplayName(seed.fullName());
+                therapistRepo.save(therapist);
+                log.info("Seeded demo Therapist record for user ID {}", user.getUserId());
+            }
         }
 
         if (seed.customer()) {

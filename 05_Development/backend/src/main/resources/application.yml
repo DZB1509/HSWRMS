@@ -62,9 +62,9 @@ app:
     scheduling:
       # Operational parameters configurable by environment.
       # No unapproved business defaults are hard-coded.
-      operating-open: ${SPA_OPEN_TIME:}
-      operating-close: ${SPA_CLOSE_TIME:}
-      alternative-search-days: ${SPA_ALT_DAYS:}
+      operating-open: ${SPA_OPEN_TIME:08:00}
+      operating-close: ${SPA_CLOSE_TIME:20:00}
+      alternative-search-days: ${SPA_ALT_DAYS:3}
 
   # Google SSO (S05/S06). Credentials are read from environment variables.
   # Redirect URI: http://localhost:8080/api/v1/auth/sso/callback/google
