@@ -32,7 +32,7 @@ public class AdjustmentController {
      * Submit an adjustment request for a posted FolioItem.
      */
     @PostMapping("/adjustments")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'STAFF', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<AdjustmentResponseDTO>> submitAdjustmentRequest(
             @Valid @RequestBody CreateAdjustmentRequestDTO request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -46,7 +46,7 @@ public class AdjustmentController {
      * List adjustment requests with optional filtering by folio, booking, or status.
      */
     @GetMapping("/adjustments")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'STAFF', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<AdjustmentResponseDTO>>> listAdjustments(
             @RequestParam(required = false) Long folioId,
             @RequestParam(required = false) Long bookingId,
@@ -68,7 +68,7 @@ public class AdjustmentController {
      * Get details of a single adjustment request.
      */
     @GetMapping("/adjustments/{id}")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'STAFF', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<AdjustmentResponseDTO>> getAdjustmentDetails(@PathVariable("id") Long id) {
         AdjustmentResponseDTO response = adjustmentService.getAdjustmentRequestDetails(id);
         return ResponseEntity.ok(ApiResponse.ok("Adjustment request retrieved successfully", response));
@@ -99,21 +99,52 @@ public class AdjustmentController {
      * View details of an issued Credit Note.
      */
     @GetMapping("/credit-notes/{id}")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'STAFF', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<CreditNoteResponseDTO>> getCreditNoteDetails(@PathVariable("id") Long id) {
         CreditNoteResponseDTO response = adjustmentService.getCreditNoteDetails(id);
         return ResponseEntity.ok(ApiResponse.ok("Credit note retrieved successfully", response));
     }
 
     /**
+     * List all Credit Notes or filter by status (e.g. PENDING_REFUND, REFUNDED, CREDIT_APPLIED).
+     */
+    @GetMapping("/credit-notes")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'STAFF', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<CreditNoteResponseDTO>>> listCreditNotes(
+            @RequestParam(required = false) String status) {
+        List<CreditNoteResponseDTO> list = adjustmentService.getCreditNotesByStatus(status);
+        return ResponseEntity.ok(ApiResponse.ok("Credit notes retrieved successfully", list));
+    }
+
+    /**
      * View Credit Notes linked to a specific Invoice.
      */
     @GetMapping("/invoices/{invoiceId}/credit-notes")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'STAFF', 'FNB_STAFF', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<CreditNoteResponseDTO>>> getCreditNotesForInvoice(
             @PathVariable("invoiceId") Long invoiceId) {
         List<CreditNoteResponseDTO> list = adjustmentService.getCreditNotesForInvoice(invoiceId);
         return ResponseEntity.ok(ApiResponse.ok("Credit notes for invoice retrieved successfully", list));
     }
-}
 
+    /**
+     * Manager settlement confirmation: Transition a Credit Note from PENDING_REFUND to REFUNDED.
+     */
+    @PostMapping("/credit-notes/{id}/settle-refund")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<CreditNoteResponseDTO>> settleRefund(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody SettleRefundDTO settleDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new BusinessRuleException("AUTHENTICATION_REQUIRED", "Authenticated user is required.");
+        }
+        Long settledByUserId = userDetails.getUserId().longValue();
+        Collection<String> roles = userDetails.getAuthorities() != null ?
+                userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()) :
+                Collections.emptyList();
+
+        CreditNoteResponseDTO response = adjustmentService.confirmRefundSettlement(id, settleDTO, settledByUserId, roles);
+        return ResponseEntity.ok(ApiResponse.ok("Credit note refund settled successfully", response));
+    }
+}

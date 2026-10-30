@@ -227,9 +227,14 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                      "PAID".equalsIgnoreCase(invoiceOpt.get().getInvoiceStatus()));
 
             if (!invoiceIssuedOrPaid) {
-                // VOID BEFORE INVOICE ISSUANCE
-                item.setIsVoided(true);
-                item.setVoidedAdjustmentRequestId(adj.getAdjustmentRequestId());
+                // PRE-INVOICE ADJUSTMENT: update adjustedAmount and void only if 100% adjusted
+                item.setAdjustedAmount(newTotal);
+                if (newTotal.compareTo(item.getAmount()) >= 0) {
+                    item.setIsVoided(true);
+                    item.setVoidedAdjustmentRequestId(adj.getAdjustmentRequestId());
+                } else {
+                    item.setIsVoided(false);
+                }
                 folioItemRepository.save(item);
 
                 // Recalculate totals on Folio
@@ -256,11 +261,13 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                 AdjustmentRequestEntity saved = adjustmentRequestRepository.save(adj);
 
                 auditLogService.record(approverUserId, "APPROVE_VOID", "AdjustmentRequest#" + requestId, "SUCCESS");
-                log.info("Adjustment void approved [id={}, folioItemId={}, amount={}]", requestId, item.getFolioItemId(), adj.getRequestedAmount());
+                log.info("Adjustment void/reduction approved [id={}, folioItemId={}, amount={}, adjustedTotal={}, remainingPayable={}]",
+                        requestId, item.getFolioItemId(), adj.getRequestedAmount(), newTotal, item.getPayableAmount());
                 return mapToAdjustmentResponse(saved);
             } else {
                 // CREDIT NOTE AFTER INVOICE ISSUANCE
                 InvoiceEntity invoice = invoiceOpt.get();
+                boolean isPaid = "PAID".equalsIgnoreCase(invoice.getInvoiceStatus());
 
                 adj.setAdjustmentType("CREDIT_NOTE");
                 adj.setStatus("APPROVED");
@@ -273,6 +280,10 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                 BigDecimal taxAmount = baseAmount.multiply(vatRate).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal finalCredit = baseAmount.add(taxAmount);
 
+                // If invoice is already PAID, record refund liability (PENDING_REFUND); if ISSUED, apply against balance
+                String cnStatus = isPaid ? "PENDING_REFUND" : "CREDIT_APPLIED";
+                BigDecimal refundAmount = isPaid ? finalCredit : BigDecimal.ZERO;
+
                 CreditNoteEntity creditNote = new CreditNoteEntity(
                         cnNumber,
                         invoice,
@@ -281,18 +292,94 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                         baseAmount,
                         taxAmount,
                         finalCredit,
-                        approverUserId
+                        approverUserId,
+                        cnStatus,
+                        refundAmount
                 );
                 creditNoteRepository.save(creditNote);
 
                 auditLogService.record(approverUserId, "ISSUE_CREDIT_NOTE", "CreditNote#" + cnNumber, "SUCCESS");
-                log.info("Credit note issued [cnNumber={}, invoiceId={}, amount={}, finalCredit={}]",
-                        cnNumber, invoice.getInvoiceId(), baseAmount, finalCredit);
+                log.info("Credit note issued [cnNumber={}, invoiceId={}, status={}, amount={}, finalCredit={}, refundAmount={}]",
+                        cnNumber, invoice.getInvoiceId(), cnStatus, baseAmount, finalCredit, refundAmount);
                 return mapToAdjustmentResponse(saved, creditNote);
             }
         } else {
             throw new BusinessRuleException("INVALID_DECISION", "Decision must be APPROVE or REJECT.");
         }
+    }
+
+    @Override
+    @Transactional
+    public CreditNoteResponseDTO confirmRefundSettlement(Long creditNoteId, SettleRefundDTO settleDTO,
+                                                         Long settledByUserId, Collection<String> userRoles) {
+        if (creditNoteId == null) {
+            throw new BusinessRuleException("INVALID_CREDIT_NOTE_ID", "Credit note ID is required.");
+        }
+        if (settleDTO == null) {
+            throw new BusinessRuleException("SETTLEMENT_PAYLOAD_REQUIRED", "Settlement details are required.");
+        }
+        if (settleDTO.getSettlementAmount() == null || settleDTO.getSettlementAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("INVALID_SETTLEMENT_AMOUNT", "Settlement amount must be greater than zero.");
+        }
+        if (settleDTO.getTransactionReference() == null || settleDTO.getTransactionReference().trim().isEmpty()) {
+            throw new BusinessRuleException("TRANSACTION_REF_REQUIRED", "Transaction reference is required.");
+        }
+        if (settledByUserId == null) {
+            throw new BusinessRuleException("SETTLER_REQUIRED", "Settler user ID is required.");
+        }
+
+        boolean isManagerOrAdmin = userRoles != null && userRoles.stream().anyMatch(role -> {
+            String r = role.toUpperCase();
+            return r.contains("MANAGER") || r.contains("ADMIN");
+        });
+
+        if (!isManagerOrAdmin) {
+            throw new BusinessRuleException("UNAUTHORIZED_SETTLER", "Only Managers or Admins can confirm refund settlements.");
+        }
+
+        CreditNoteEntity creditNote = creditNoteRepository.findByIdForUpdate(creditNoteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Credit note not found with ID: " + creditNoteId));
+
+        // Idempotency: If already refunded, verify matching reference or reject conflict
+        if ("REFUNDED".equalsIgnoreCase(creditNote.getStatus())) {
+            if (creditNote.getRefundTransactionRef() != null &&
+                    !creditNote.getRefundTransactionRef().equalsIgnoreCase(settleDTO.getTransactionReference().trim())) {
+                throw new BusinessRuleException("SETTLEMENT_ALREADY_COMPLETED",
+                        "Credit note #" + creditNoteId + " is already settled under transaction ref: " + creditNote.getRefundTransactionRef());
+            }
+            log.info("Credit note #{} is already REFUNDED (idempotent settlement acknowledgement)", creditNoteId);
+            return mapToCreditNoteResponse(creditNote);
+        }
+
+        if (!"PENDING_REFUND".equalsIgnoreCase(creditNote.getStatus())) {
+            throw new BusinessRuleException("INVALID_SETTLEMENT_STATE",
+                    "Credit note is not eligible for refund settlement. Current status: " + creditNote.getStatus());
+        }
+
+        if (settleDTO.getSettlementAmount().compareTo(creditNote.getFinalCreditAmount()) > 0) {
+            throw new BusinessRuleException("EXCEEDS_CREDIT_AMOUNT",
+                    "Settlement amount (" + settleDTO.getSettlementAmount() + ") cannot exceed credit note final credit amount (" + creditNote.getFinalCreditAmount() + ").");
+        }
+
+        if (settleDTO.getSettlementAmount().compareTo(creditNote.getFinalCreditAmount()) < 0) {
+            throw new BusinessRuleException("UNDERPAYMENT_REJECTED",
+                    "Full refund settlement required. Settlement amount (" + settleDTO.getSettlementAmount() + ") cannot be less than final credit amount (" + creditNote.getFinalCreditAmount() + ").");
+        }
+
+        creditNote.setStatus("REFUNDED");
+        creditNote.setRefundAmount(settleDTO.getSettlementAmount());
+        creditNote.setSettledAt(LocalDateTime.now());
+        creditNote.setSettledByUserId(settledByUserId);
+        creditNote.setRefundTransactionRef(settleDTO.getTransactionReference().trim());
+        creditNote.setSettlementNotes(settleDTO.getNotes() != null ? settleDTO.getNotes().trim() : null);
+
+        CreditNoteEntity saved = creditNoteRepository.save(creditNote);
+        auditLogService.record(settledByUserId, "SETTLE_REFUND", "CreditNote#" + creditNote.getCreditNoteNumber(), "SUCCESS");
+        log.info("Credit note refund settled [id={}, cnNumber={}, amount={}, txRef={}, settler={}]",
+                saved.getCreditNoteId(), saved.getCreditNoteNumber(), saved.getRefundAmount(),
+                saved.getRefundTransactionRef(), settledByUserId);
+
+        return mapToCreditNoteResponse(saved);
     }
 
     private String generateCreditNoteNumber(InvoiceEntity invoice, AdjustmentRequestEntity adj) {
@@ -360,13 +447,23 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                 .stream().map(this::mapToCreditNoteResponse).collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<CreditNoteResponseDTO> getCreditNotesByStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return creditNoteRepository.findAll().stream().map(this::mapToCreditNoteResponse).collect(Collectors.toList());
+        }
+        return creditNoteRepository.findByStatusOrderByIssuedAtDesc(status.trim().toUpperCase())
+                .stream().map(this::mapToCreditNoteResponse).collect(Collectors.toList());
+    }
+
     private AdjustmentResponseDTO mapToAdjustmentResponse(AdjustmentRequestEntity adj) {
         Optional<CreditNoteEntity> cnOpt = creditNoteRepository.findByAdjustmentRequestAdjustmentRequestId(adj.getAdjustmentRequestId());
         return mapToAdjustmentResponse(adj, cnOpt.orElse(null));
     }
 
     private AdjustmentResponseDTO mapToAdjustmentResponse(AdjustmentRequestEntity adj, CreditNoteEntity cn) {
-        return new AdjustmentResponseDTO(
+        AdjustmentResponseDTO dto = new AdjustmentResponseDTO(
                 adj.getAdjustmentRequestId(),
                 adj.getFolioItem().getFolioItemId(),
                 adj.getFolio().getFolioId(),
@@ -384,6 +481,11 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                 cn != null ? cn.getCreditNoteId() : null,
                 cn != null ? cn.getCreditNoteNumber() : null
         );
+        if (cn != null) {
+            dto.setCreditNoteStatus(cn.getStatus());
+            dto.setRefundAmount(cn.getRefundAmount());
+        }
+        return dto;
     }
 
     private CreditNoteResponseDTO mapToCreditNoteResponse(CreditNoteEntity cn) {
@@ -397,8 +499,13 @@ public class AdjustmentServiceImpl implements AdjustmentService {
                 cn.getTaxAmount(),
                 cn.getFinalCreditAmount(),
                 cn.getIssuedAt(),
-                cn.getIssuedByUserId()
+                cn.getIssuedByUserId(),
+                cn.getStatus(),
+                cn.getRefundAmount(),
+                cn.getSettledAt(),
+                cn.getSettledByUserId(),
+                cn.getRefundTransactionRef(),
+                cn.getSettlementNotes()
         );
     }
 }
-

@@ -25,5 +25,9 @@ public interface AdjustmentService {
     CreditNoteResponseDTO getCreditNoteByNumber(String creditNoteNumber);
 
     List<CreditNoteResponseDTO> getCreditNotesForInvoice(Long invoiceId);
-}
 
+    List<CreditNoteResponseDTO> getCreditNotesByStatus(String status);
+
+    CreditNoteResponseDTO confirmRefundSettlement(Long creditNoteId, SettleRefundDTO settleDTO,
+                                                 Long settledByUserId, Collection<String> userRoles);
+}

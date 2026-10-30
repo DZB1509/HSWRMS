@@ -37,17 +37,42 @@ public class CreditNoteEntity {
     @Column(name = "final_credit_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal finalCreditAmount;
 
+    @Column(name = "status", nullable = false, length = 30)
+    private String status = "CREDIT_APPLIED"; // CREDIT_APPLIED, PENDING_REFUND, REFUNDED
+
+    @Column(name = "refund_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal refundAmount = BigDecimal.ZERO;
+
     @Column(name = "issued_at", nullable = false)
     private LocalDateTime issuedAt = LocalDateTime.now();
 
     @Column(name = "issued_by_user_id", nullable = false)
     private Long issuedByUserId;
 
+    @Column(name = "settled_at")
+    private LocalDateTime settledAt;
+
+    @Column(name = "settled_by_user_id")
+    private Long settledByUserId;
+
+    @Column(name = "refund_transaction_ref", length = 100)
+    private String refundTransactionRef;
+
+    @Column(name = "settlement_notes", length = 500)
+    private String settlementNotes;
+
     public CreditNoteEntity() {}
 
     public CreditNoteEntity(String creditNoteNumber, InvoiceEntity invoice, FolioItemEntity folioItem,
                             AdjustmentRequestEntity adjustmentRequest, BigDecimal amount, BigDecimal taxAmount,
                             BigDecimal finalCreditAmount, Long issuedByUserId) {
+        this(creditNoteNumber, invoice, folioItem, adjustmentRequest, amount, taxAmount, finalCreditAmount,
+             issuedByUserId, "CREDIT_APPLIED", BigDecimal.ZERO);
+    }
+
+    public CreditNoteEntity(String creditNoteNumber, InvoiceEntity invoice, FolioItemEntity folioItem,
+                            AdjustmentRequestEntity adjustmentRequest, BigDecimal amount, BigDecimal taxAmount,
+                            BigDecimal finalCreditAmount, Long issuedByUserId, String status, BigDecimal refundAmount) {
         this.creditNoteNumber = creditNoteNumber;
         this.invoice = invoice;
         this.folioItem = folioItem;
@@ -56,6 +81,8 @@ public class CreditNoteEntity {
         this.taxAmount = taxAmount != null ? taxAmount : BigDecimal.ZERO;
         this.finalCreditAmount = finalCreditAmount;
         this.issuedByUserId = issuedByUserId;
+        this.status = status != null ? status : "CREDIT_APPLIED";
+        this.refundAmount = refundAmount != null ? refundAmount : BigDecimal.ZERO;
         this.issuedAt = LocalDateTime.now();
     }
 
@@ -138,5 +165,52 @@ public class CreditNoteEntity {
     public void setIssuedByUserId(Long issuedByUserId) {
         this.issuedByUserId = issuedByUserId;
     }
-}
 
+    public String getStatus() {
+        return status != null ? status : "CREDIT_APPLIED";
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public BigDecimal getRefundAmount() {
+        return refundAmount != null ? refundAmount : BigDecimal.ZERO;
+    }
+
+    public void setRefundAmount(BigDecimal refundAmount) {
+        this.refundAmount = refundAmount != null ? refundAmount : BigDecimal.ZERO;
+    }
+
+    public LocalDateTime getSettledAt() {
+        return settledAt;
+    }
+
+    public void setSettledAt(LocalDateTime settledAt) {
+        this.settledAt = settledAt;
+    }
+
+    public Long getSettledByUserId() {
+        return settledByUserId;
+    }
+
+    public void setSettledByUserId(Long settledByUserId) {
+        this.settledByUserId = settledByUserId;
+    }
+
+    public String getRefundTransactionRef() {
+        return refundTransactionRef;
+    }
+
+    public void setRefundTransactionRef(String refundTransactionRef) {
+        this.refundTransactionRef = refundTransactionRef;
+    }
+
+    public String getSettlementNotes() {
+        return settlementNotes;
+    }
+
+    public void setSettlementNotes(String settlementNotes) {
+        this.settlementNotes = settlementNotes;
+    }
+}

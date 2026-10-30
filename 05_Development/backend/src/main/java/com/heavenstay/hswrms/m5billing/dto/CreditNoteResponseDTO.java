@@ -15,12 +15,35 @@ public class CreditNoteResponseDTO {
     private BigDecimal finalCreditAmount;
     private LocalDateTime issuedAt;
     private Long issuedByUserId;
+    private String status;
+    private BigDecimal refundAmount;
+    private LocalDateTime settledAt;
+    private Long settledByUserId;
+    private String refundTransactionRef;
+    private String settlementNotes;
 
     public CreditNoteResponseDTO() {}
 
     public CreditNoteResponseDTO(Long creditNoteId, String creditNoteNumber, Long invoiceId, Long folioItemId,
                                  Long adjustmentRequestId, BigDecimal amount, BigDecimal taxAmount,
                                  BigDecimal finalCreditAmount, LocalDateTime issuedAt, Long issuedByUserId) {
+        this(creditNoteId, creditNoteNumber, invoiceId, folioItemId, adjustmentRequestId, amount, taxAmount,
+             finalCreditAmount, issuedAt, issuedByUserId, "CREDIT_APPLIED", BigDecimal.ZERO);
+    }
+
+    public CreditNoteResponseDTO(Long creditNoteId, String creditNoteNumber, Long invoiceId, Long folioItemId,
+                                 Long adjustmentRequestId, BigDecimal amount, BigDecimal taxAmount,
+                                 BigDecimal finalCreditAmount, LocalDateTime issuedAt, Long issuedByUserId,
+                                 String status, BigDecimal refundAmount) {
+        this(creditNoteId, creditNoteNumber, invoiceId, folioItemId, adjustmentRequestId, amount, taxAmount,
+             finalCreditAmount, issuedAt, issuedByUserId, status, refundAmount, null, null, null, null);
+    }
+
+    public CreditNoteResponseDTO(Long creditNoteId, String creditNoteNumber, Long invoiceId, Long folioItemId,
+                                 Long adjustmentRequestId, BigDecimal amount, BigDecimal taxAmount,
+                                 BigDecimal finalCreditAmount, LocalDateTime issuedAt, Long issuedByUserId,
+                                 String status, BigDecimal refundAmount, LocalDateTime settledAt,
+                                 Long settledByUserId, String refundTransactionRef, String settlementNotes) {
         this.creditNoteId = creditNoteId;
         this.creditNoteNumber = creditNoteNumber;
         this.invoiceId = invoiceId;
@@ -31,6 +54,12 @@ public class CreditNoteResponseDTO {
         this.finalCreditAmount = finalCreditAmount;
         this.issuedAt = issuedAt;
         this.issuedByUserId = issuedByUserId;
+        this.status = status;
+        this.refundAmount = refundAmount != null ? refundAmount : BigDecimal.ZERO;
+        this.settledAt = settledAt;
+        this.settledByUserId = settledByUserId;
+        this.refundTransactionRef = refundTransactionRef;
+        this.settlementNotes = settlementNotes;
     }
 
     public Long getCreditNoteId() {
@@ -112,5 +141,52 @@ public class CreditNoteResponseDTO {
     public void setIssuedByUserId(Long issuedByUserId) {
         this.issuedByUserId = issuedByUserId;
     }
-}
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public BigDecimal getRefundAmount() {
+        return refundAmount;
+    }
+
+    public void setRefundAmount(BigDecimal refundAmount) {
+        this.refundAmount = refundAmount;
+    }
+
+    public LocalDateTime getSettledAt() {
+        return settledAt;
+    }
+
+    public void setSettledAt(LocalDateTime settledAt) {
+        this.settledAt = settledAt;
+    }
+
+    public Long getSettledByUserId() {
+        return settledByUserId;
+    }
+
+    public void setSettledByUserId(Long settledByUserId) {
+        this.settledByUserId = settledByUserId;
+    }
+
+    public String getRefundTransactionRef() {
+        return refundTransactionRef;
+    }
+
+    public void setRefundTransactionRef(String refundTransactionRef) {
+        this.refundTransactionRef = refundTransactionRef;
+    }
+
+    public String getSettlementNotes() {
+        return settlementNotes;
+    }
+
+    public void setSettlementNotes(String settlementNotes) {
+        this.settlementNotes = settlementNotes;
+    }
+}
