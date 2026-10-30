@@ -15,6 +15,7 @@ import {
   Key,
 } from 'lucide-react';
 import { useOperations } from '../../context/OperationsContext';
+import { recordResidenceDeclaration } from '../../api/booking/retreatBookingApi';
 import { useToast } from '../../components/common/Toast';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalStatusChip } from '../../components/operations/OperationalStatusChip';
@@ -34,6 +35,7 @@ export const CheckInPage: React.FC = () => {
     saveCheckInDraft,
     completeCheckIn,
     startCheckIn,
+    refreshOperationsData,
   } = useOperations();
 
   const arrival = getArrivalByBookingRef(bookingId || '');
@@ -105,14 +107,33 @@ export const CheckInPage: React.FC = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     saveCheckInDraft(arrival.bookingReference, formData);
-    showToast(t('operations.checkIn.draftSaved', 'Check-in and residence details saved to operational draft.'), 'info');
+    const numBookingId = parseInt(arrival.bookingReference.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    if (!isNaN(numBookingId) && formData.idNumber) {
+      try {
+        await recordResidenceDeclaration(numBookingId, {
+          fullName: formData.fullLegalName || arrival.customerName,
+          nationality: formData.nationality,
+          identificationNumber: formData.idNumber,
+          identificationType: (formData.idType === 'national_id' ? 'CCCD' : formData.idType.toUpperCase()) || 'CCCD',
+          dateOfBirth: formData.dateOfBirth,
+          permanentAddress: formData.permanentAddress,
+        });
+        await refreshOperationsData();
+        showToast('Đã lưu thông tin khai báo cư trú thành công vào hệ thống SQL Server.', 'success');
+        return;
+      } catch (err: any) {
+        showToast(err?.response?.data?.message || 'Lỗi khi lưu thông tin cư trú xuống SQL Server.', 'error');
+        return;
+      }
+    }
+    showToast('Đã lưu bản nháp thông tin nhận phòng và cư trú.', 'info');
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!canCompleteCheckIn || !arrival.assignedVillaId) {
-      showToast(t('operations.checkIn.cannotCheckInNotice', 'All readiness requirements must be fulfilled before completing check-in.'), 'warning');
+      showToast('Vui lòng hoàn tất toàn bộ điều kiện (tiền cọc, cư trú, biệt thự sẵn sàng) trước khi hoàn tất nhận phòng.', 'warning');
       return;
     }
 
@@ -121,6 +142,7 @@ export const CheckInPage: React.FC = () => {
 
     if (result.success) {
       showToast(result.message, 'success');
+      await refreshOperationsData();
       // Navigate to arrivals or refresh view
       setTimeout(() => {
         setIsSubmitting(false);

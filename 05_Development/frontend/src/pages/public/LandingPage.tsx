@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
@@ -18,7 +18,7 @@ import { ImageReveal } from '../../components/motion/ImageReveal';
 import { MagneticButton } from '../../components/motion/MagneticButton';
 import { PillarsStickyStory } from '../../components/motion/PillarsStickyStory';
 import { ExperiencesStickyStory } from '../../components/motion/ExperiencesStickyStory';
-import { MOCK_RETREAT_PACKAGES } from '../../data/mockRetreats';
+import { getRetreatPackages, type RetreatPackageDto } from '../../api/booking/retreatBookingApi';
 
 export const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -28,6 +28,18 @@ export const LandingPage: React.FC = () => {
   const heroHeadlineRef = useRef<HTMLHeadingElement>(null);
   const heroSubRef = useRef<HTMLParagraphElement>(null);
   const heroCtaRef = useRef<HTMLDivElement>(null);
+  const [featuredPackages, setFeaturedPackages] = useState<RetreatPackageDto[]>([]);
+
+  useEffect(() => {
+    getRetreatPackages()
+      .then((pkgs) => {
+        setFeaturedPackages(pkgs.slice(0, 3));
+      })
+      .catch((err) => {
+        console.error('Failed to load retreat packages for landing page from SQL Server:', err);
+        setFeaturedPackages([]);
+      });
+  }, []);
 
   // Hash-based smooth scroll for deep links from external routes or reload
   useEffect(() => {
@@ -450,8 +462,8 @@ export const LandingPage: React.FC = () => {
               alignItems: 'stretch',
             }}
           >
-            {MOCK_RETREAT_PACKAGES.map((retreat, index) => (
-              <RevealOnScroll key={retreat.id} delayMs={index * 120} className="hsw-retreat-grid-item">
+            {featuredPackages.map((retreat, index) => (
+              <RevealOnScroll key={retreat.retreatPackageId} delayMs={index * 120} className="hsw-retreat-grid-item">
                 <RetreatCard retreat={retreat} />
               </RevealOnScroll>
             ))}

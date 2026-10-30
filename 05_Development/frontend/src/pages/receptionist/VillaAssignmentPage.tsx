@@ -23,6 +23,7 @@ export const VillaAssignmentPage: React.FC = () => {
     villas,
     getArrivalByBookingRef,
     assignVillaToBooking,
+    refreshOperationsData,
   } = useOperations();
 
   const arrival = getArrivalByBookingRef(bookingId || '');
@@ -79,18 +80,19 @@ export const VillaAssignmentPage: React.FC = () => {
     }
 
     if (villa.status === 'occupied' && villa.currentBookingRef !== arrival.bookingReference) {
-      showToast(t('operations.villaAssignment.occupiedAlert', 'Villa is currently occupied by an active stay.'), 'error');
+      showToast('Biệt thự hiện đang có khách lưu trú.', 'error');
       return;
     }
 
     if (villa.capacity < arrival.partySize) {
-      showToast(t('operations.villaAssignment.capacityAlert', 'Villa capacity is smaller than party size.'), 'warning');
+      showToast('Sức chứa của biệt thự nhỏ hơn số lượng khách trong đoàn.', 'warning');
       return;
     }
 
     const res = assignVillaToBooking(arrival.bookingReference, villa.id);
     if (res.success) {
       showToast(res.message, 'success');
+      refreshOperationsData();
       // Return to check-in screen after small delay
       setTimeout(() => {
         navigate(`/receptionist/check-in/${arrival.bookingReference}`);

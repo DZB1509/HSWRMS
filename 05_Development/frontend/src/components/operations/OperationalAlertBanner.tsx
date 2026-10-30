@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Info, AlertCircle, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Info, AlertCircle, ArrowRight, X } from 'lucide-react';
 import type { OperationalAlert } from '../../types/operations';
+import { useOperations } from '../../context/OperationsContext';
 
 interface OperationalAlertBannerProps {
   alerts: OperationalAlert[];
@@ -10,6 +11,7 @@ interface OperationalAlertBannerProps {
 
 export const OperationalAlertBanner: React.FC<OperationalAlertBannerProps> = ({ alerts }) => {
   const { t } = useTranslation();
+  const { dismissAlert } = useOperations();
   if (!alerts || alerts.length === 0) return null;
 
   return (
@@ -55,27 +57,47 @@ export const OperationalAlertBanner: React.FC<OperationalAlertBannerProps> = ({ 
               </div>
             </div>
 
-            {alert.actionPath && (
-              <Link
-                to={alert.actionPath}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0, marginLeft: 'var(--space-3)' }}>
+              {alert.actionPath && (
+                <Link
+                  to={alert.actionPath}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: 600,
+                    color: color,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  <span>{t('operations.common.resolve', 'Xử Lý')}</span>
+                  <ArrowRight size={12} />
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={() => dismissAlert(alert.id)}
+                title="Đóng cảnh báo"
                 style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: color,
+                  padding: '2px',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  fontWeight: 600,
-                  color: color,
-                  textDecoration: 'underline',
-                  marginLeft: 'var(--space-3)',
-                  flexShrink: 0,
+                  justifyContent: 'center',
+                  opacity: 0.8,
                 }}
               >
-                <span>{t('operations.common.resolve', 'Resolve')}</span>
-                <ArrowRight size={12} />
-              </Link>
-            )}
+                <X size={14} />
+              </button>
+            </div>
           </div>
         );
       })}
     </div>
   );
 };
+

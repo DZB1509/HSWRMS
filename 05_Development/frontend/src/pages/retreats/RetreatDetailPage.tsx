@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,37 +10,126 @@ import {
   Sparkles,
   ShieldCheck,
   Utensils,
-  Heart,
+  AlertCircle,
+  Loader2,
+  Home,
+  Info,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
 import { RevealOnScroll } from '../../components/motion/RevealOnScroll';
 import { TextReveal } from '../../components/motion/TextReveal';
-import { ImageReveal } from '../../components/motion/ImageReveal';
 import { ParallaxMedia } from '../../components/motion/ParallaxMedia';
 import { MagneticButton } from '../../components/motion/MagneticButton';
-import { MOCK_RETREAT_PACKAGES } from '../../data/mockRetreats';
 import { formatVND } from '../../i18n';
+import { getRetreatPackages, type RetreatPackageDto } from '../../api/booking/retreatBookingApi';
 
 export const RetreatDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t, i18n } = useTranslation();
-  const lang = i18n.language as 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr';
 
-  // Match by slug or id
-  const retreat =
-    MOCK_RETREAT_PACKAGES.find((pkg) => pkg.slug === id || pkg.id === id) ||
-    MOCK_RETREAT_PACKAGES[0];
+  const [dbPackage, setDbPackage] = useState<RetreatPackageDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const name = retreat.names[lang] || retreat.names.en || retreat.names.vi;
-  const tagline = retreat.taglines[lang] || retreat.taglines.en || retreat.taglines.vi;
-  const description = retreat.descriptions[lang] || retreat.descriptions.en || retreat.descriptions.vi;
-  const villaName = retreat.villaName[lang] || retreat.villaName.en || retreat.villaName.vi;
-  const villaDesc = retreat.villaDescription[lang] || retreat.villaDescription.en || retreat.villaDescription.vi;
-  const suitableList = retreat.suitableFor[lang] || retreat.suitableFor.en || retreat.suitableFor.vi;
-  const inclusionsList = retreat.inclusions[lang] || retreat.inclusions.en || retreat.inclusions.vi;
-  const spaHighlights = retreat.wellnessHighlights[lang] || retreat.wellnessHighlights.en || retreat.wellnessHighlights.vi;
-  const diningHighlights = retreat.diningHighlights[lang] || retreat.diningHighlights.en || retreat.diningHighlights.vi;
+  useEffect(() => {
+    let isCancelled = false;
+    setLoading(true);
+    setError(null);
+
+    getRetreatPackages()
+      .then((list) => {
+        if (!isCancelled) {
+          const match = list.find(
+            (p) =>
+              String(p.retreatPackageId) === id ||
+              p.packageCode.toLowerCase() === id?.toLowerCase()
+          );
+          if (match) {
+            setDbPackage(match);
+          } else {
+            setDbPackage(null);
+          }
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          setError(err?.message || 'Could not load retreat package from SQL Server backend.');
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) setLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: 'var(--space-20) 0', textAlign: 'center' }}>
+        <Container size="standard">
+          <Loader2
+            className="animate-spin"
+            size={40}
+            style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-4)' }}
+          />
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+            Retrieving package details directly from SQL Server...
+          </p>
+        </Container>
+      </div>
+    );
+  }
+
+  if (error || !dbPackage) {
+    return (
+      <div style={{ padding: 'var(--space-16) 0', textAlign: 'center' }}>
+        <Container size="narrow">
+          <AlertCircle size={40} style={{ color: '#b91c1c', margin: '0 auto var(--space-4)' }} />
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
+            {t('retreat.detail.notFoundTitle', 'Gói nghỉ dưỡng không tồn tại')}
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', lineHeight: 1.6 }}>
+            {error || t('retreat.detail.notFoundDesc', 'Không tìm thấy thông tin gói nghỉ dưỡng này trong cơ sở dữ liệu SQL Server (MSG01: No search results).')}
+          </p>
+          <Link to="/retreats">
+            <Button variant="primary">
+              <ArrowLeft size={16} />
+              <span>{t('retreat.detail.backToList', 'Quay lại danh sách gói nghỉ dưỡng')}</span>
+            </Button>
+          </Link>
+        </Container>
+      </div>
+    );
+  }
+
+  const name = dbPackage.packageName;
+  const days = dbPackage.durationNights + 1;
+  const nights = dbPackage.durationNights;
+  const startingPrice = dbPackage.basePrice;
+  const wellnessGoal = dbPackage.wellnessGoal || '—';
+  const villaCategories =
+    dbPackage.eligibleVillaCategories && dbPackage.eligibleVillaCategories.length > 0
+      ? dbPackage.eligibleVillaCategories.map((v) => v.categoryName).join(', ')
+      : '—';
+
+  // Parse included treatments lines from DB
+  const treatmentLines = dbPackage.includedTreatments
+    ? dbPackage.includedTreatments
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+    : [];
+
+  // Parse dietary plan lines from DB
+  const dietaryLines = dbPackage.dietaryPlan
+    ? dbPackage.dietaryPlan
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+    : [];
 
   return (
     <div className="hsw-retreat-detail-page" style={{ paddingBottom: 'var(--space-16)' }}>
@@ -62,7 +151,7 @@ export const RetreatDetailPage: React.FC = () => {
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, overflow: 'hidden' }}>
           <ParallaxMedia speed={0.06} style={{ width: '100%', height: '115%', top: '-7%' }}>
             <img
-              src={retreat.heroImage}
+              src="/images/hero-resort-cliff.jpg"
               alt={name}
               style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.65 }}
             />
@@ -71,7 +160,8 @@ export const RetreatDetailPage: React.FC = () => {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to top, rgba(23, 29, 21, 0.95) 0%, rgba(23, 29, 21, 0.35) 60%, rgba(23, 29, 21, 0.7) 100%)',
+              background:
+                'linear-gradient(to top, rgba(23, 29, 21, 0.95) 0%, rgba(23, 29, 21, 0.35) 60%, rgba(23, 29, 21, 0.7) 100%)',
             }}
           />
         </div>
@@ -92,7 +182,7 @@ export const RetreatDetailPage: React.FC = () => {
               }}
             >
               <ArrowLeft size={14} />
-              <span>{t('retreat.detail.backToList')}</span>
+              <span>{t('retreat.detail.backToList', 'Tất cả các gói nghỉ dưỡng')}</span>
             </Link>
           </div>
 
@@ -109,12 +199,18 @@ export const RetreatDetailPage: React.FC = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Clock size={14} style={{ color: 'var(--accent-sand)' }} />
-              <span>{retreat.days} {t('labels.days')} · {retreat.nights} {t('labels.nights')}</span>
+              <span>
+                {days} {t('labels.days', 'Ngày')} · {nights} {t('labels.nights', 'Đêm')}
+              </span>
             </div>
             <span>•</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <MapPin size={14} style={{ color: 'var(--accent-sand)' }} />
-              <span>{villaName}</span>
+              <span>{villaCategories}</span>
+            </div>
+            <span>•</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: 'var(--accent-sand)', fontWeight: 600 }}>{dbPackage.packageCode}</span>
             </div>
           </div>
 
@@ -133,21 +229,6 @@ export const RetreatDetailPage: React.FC = () => {
             >
               {name}
             </TextReveal>
-            {retreat.names.en && retreat.names.en !== name && (
-              <div
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--accent-sand)',
-                  marginTop: '8px',
-                }}
-              >
-                {retreat.names.en}
-              </div>
-            )}
           </div>
 
           <p
@@ -159,7 +240,7 @@ export const RetreatDetailPage: React.FC = () => {
               marginBottom: 'var(--space-6)',
             }}
           >
-            {tagline}
+            {wellnessGoal}
           </p>
 
           <div
@@ -171,24 +252,30 @@ export const RetreatDetailPage: React.FC = () => {
             }}
           >
             <div>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255, 255, 255, 0.7)' }}>
-                {t('labels.startingFrom')}
+              <div
+                style={{
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                }}
+              >
+                {t('labels.startingFrom', 'Giá khởi điểm từ')}
               </div>
               <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--accent-sand)' }}>
-                {formatVND(retreat.startingPrice, i18n.language)}
+                {formatVND(startingPrice, i18n.language)}
               </div>
             </div>
 
-            {/* Note: Clicking this navigates to Screen 15 (Retreat Booking Form), which remains the official placeholder */}
             <MagneticButton distance={0.2} maxOffset={6}>
-              <Link to="/customer/booking/new">
+              <Link to={`/customer/booking/new?packageId=${dbPackage.retreatPackageId}`}>
                 <Button
                   variant="primary"
                   size="lg"
                   className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
                   icon={<ArrowRight size={17} />}
                 >
-                  {t('retreat.detail.ctaBookHero', t('retreat.detail.ctaBook'))}
+                  {t('retreat.detail.ctaBookHero', 'Đặt Gói Nghỉ Dưỡng')}
                 </Button>
               </Link>
             </MagneticButton>
@@ -197,9 +284,15 @@ export const RetreatDetailPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          2. Overview & Philosophy
+          2. Overview & Wellness Goal
           ==================================================================== */}
-      <section style={{ padding: 'var(--space-12) 0', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
+      <section
+        style={{
+          padding: 'var(--space-12) 0',
+          borderBottom: '1px solid var(--border-subtle)',
+          backgroundColor: 'var(--bg-canvas)',
+        }}
+      >
         <Container size="standard">
           <RevealOnScroll>
             <div style={{ maxWidth: '820px', margin: '0 auto', textAlign: 'center' }}>
@@ -217,20 +310,32 @@ export const RetreatDetailPage: React.FC = () => {
                   marginBottom: 'var(--space-3)',
                 }}
               >
-                {t('retreat.detail.overview')}
+                {t('retreat.detail.overview', 'Mục Tiêu Trị Liệu & Sức Khỏe')}
               </span>
               <TextReveal as="p" style={{ fontSize: 'var(--text-lg)', lineHeight: 1.8, color: 'var(--text-primary)' }}>
-                {description}
+                {wellnessGoal}
               </TextReveal>
+              {dbPackage.targetGuest && (
+                <div style={{ marginTop: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                  <strong>{t('retreat.detail.targetGuest', 'Đối tượng phù hợp: ')}</strong>
+                  {dbPackage.targetGuest}
+                </div>
+              )}
             </div>
           </RevealOnScroll>
         </Container>
       </section>
 
       {/* ====================================================================
-          3. MaestroClass-style Numbered Journey ("What the X Days Hold")
+          3. Included Treatments & Therapies
           ==================================================================== */}
-      <section style={{ padding: 'var(--space-16) 0', backgroundColor: '#ffffff', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section
+        style={{
+          padding: 'var(--space-16) 0',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
         <Container size="standard">
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
             <span
@@ -247,7 +352,7 @@ export const RetreatDetailPage: React.FC = () => {
                 marginBottom: 'var(--space-3)',
               }}
             >
-              {t('retreat.detail.itineraryTitle')}
+              {t('retreat.detail.treatmentsTitle', 'Liệu Trình & Trị Liệu')}
             </span>
             <h2
               style={{
@@ -258,95 +363,49 @@ export const RetreatDetailPage: React.FC = () => {
                 margin: 0,
               }}
             >
-              {t('retreat.detail.daysOfRest', { days: retreat.days })}
+              {t('retreat.detail.includedTreatmentsHeading', 'Chương Trình Trị Liệu Đã Bao Gồm')}
             </h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-            {retreat.itinerary.map((stage, idx) => {
-              const stageTitle = stage.title[lang] || stage.title.en || stage.title.vi;
-              const stageDesc = stage.description[lang] || stage.description.en || stage.description.vi;
-
-              const stageHighlights = Array.isArray(stage.highlights)
-                ? stage.highlights
-                : (stage.highlights[lang] || stage.highlights.en || stage.highlights.vi || []);
-
-              return (
-                <RevealOnScroll key={stage.day} delayMs={idx * 80}>
+          <div style={{ maxWidth: '820px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {treatmentLines.length > 0 ? (
+              treatmentLines.map((treatment, idx) => (
+                <RevealOnScroll key={idx} delayMs={idx * 60}>
                   <div
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '80px 1fr',
-                      gap: 'var(--space-6)',
-                      padding: 'var(--space-6)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 'var(--space-4)',
+                      padding: 'var(--space-5)',
                       backgroundColor: 'var(--bg-canvas)',
                       border: '1px solid var(--border-subtle)',
                       borderRadius: 'var(--radius-sm)',
                     }}
                   >
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: 'var(--text-3xl)',
-                        color: 'var(--accent-olive)',
-                        fontWeight: 400,
-                        borderRight: '1px solid var(--border-subtle)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {stage.stageNumber}
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-forest)', fontWeight: 700, marginBottom: '4px' }}>
-                        {t('labels.days')} {stage.day}
-                      </div>
-                      <h3
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: 'var(--text-2xl)',
-                          color: 'var(--text-primary)',
-                          margin: '0 0 var(--space-2)',
-                        }}
-                      >
-                        {stageTitle}
-                      </h3>
-                      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 var(--space-4)' }}>
-                        {stageDesc}
-                      </p>
-
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {stageHighlights.map((h, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              fontSize: '11px',
-                              padding: '2px 8px',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid var(--border-subtle)',
-                              borderRadius: 'var(--radius-pill)',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            ✓ {h}
-                          </span>
-                        ))}
-                      </div>
+                    <CheckCircle2 size={20} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', lineHeight: 1.6, fontWeight: 500 }}>
+                      {treatment}
                     </div>
                   </div>
                 </RevealOnScroll>
-              );
-            })}
+              ))
+            ) : (
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>—</p>
+            )}
           </div>
         </Container>
       </section>
 
       {/* ====================================================================
-          4. Inclusions & Accommodation Showcase
+          4. Nutrition, Dietary Plan & Extra Charge Policy
           ==================================================================== */}
-      <section style={{ padding: 'var(--space-16) 0', backgroundColor: 'var(--bg-soft)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section
+        style={{
+          padding: 'var(--space-16) 0',
+          backgroundColor: 'var(--bg-soft)',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
         <Container size="standard">
           <div
             style={{
@@ -355,78 +414,71 @@ export const RetreatDetailPage: React.FC = () => {
               gap: 'var(--space-12)',
             }}
           >
-            {/* Left: Inclusions List */}
+            {/* Left: Dietary Plan */}
             <RevealOnScroll>
               <div>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.14em',
-                    color: 'var(--accent-olive)',
-                    backgroundColor: 'var(--accent-sand-soft)',
-                    padding: '4px 12px',
-                    borderRadius: 'var(--radius-pill)',
-                    marginBottom: 'var(--space-3)',
-                  }}
-                >
-                  {t('retreat.detail.whatIncluded')}
-                </span>
-                <h2
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-forest)', marginBottom: 'var(--space-3)' }}>
+                  <Utensils size={20} />
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.14em',
+                    }}
+                  >
+                    {t('retreat.detail.dietaryHeading', 'Chế Độ Dinh Dưỡng Thực Dưỡng')}
+                  </span>
+                </div>
+                <h3
                   style={{
                     fontFamily: 'var(--font-display)',
-                    fontSize: 'var(--text-3xl)',
+                    fontSize: 'var(--text-2xl)',
                     color: 'var(--text-primary)',
-                    marginBottom: 'var(--space-6)',
+                    marginBottom: 'var(--space-4)',
                   }}
                 >
-                  {t('retreat.detail.comprehensiveCare')}
-                </h2>
+                  {t('retreat.detail.organicNutrition', 'Ẩm Thực Tinh Khiết')}
+                </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                  {inclusionsList.map((inc, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <CheckCircle2 size={18} style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }} />
-                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', lineHeight: 1.6 }}>{inc}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ marginTop: 'var(--space-6)', fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                  {t('retreat.detail.priceDisclaimer')}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  {dietaryLines.length > 0 ? (
+                    dietaryLines.map((line, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <Sparkles size={16} style={{ color: 'var(--accent-olive)', flexShrink: 0, marginTop: '3px' }} />
+                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', lineHeight: 1.6 }}>{line}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ color: 'var(--text-secondary)' }}>—</p>
+                  )}
                 </div>
               </div>
             </RevealOnScroll>
 
-            {/* Right: Villa Accommodation */}
+            {/* Right: Policies & Extras */}
             <RevealOnScroll delayMs={150}>
               <div
                 style={{
                   backgroundColor: '#ffffff',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-sm)',
-                  overflow: 'hidden',
+                  padding: 'var(--space-6)',
                   boxShadow: 'var(--shadow-card)',
                 }}
               >
-                <ImageReveal
-                  src={retreat.galleryImages[1] || retreat.heroImage}
-                  alt={villaName}
-                  aspectRatio="16 / 10"
-                />
-                <div style={{ padding: 'var(--space-6)' }}>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-olive)', fontWeight: 700, marginBottom: '4px' }}>
-                    {t('retreat.detail.accommodationTitle')}
-                  </div>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
-                    {villaName}
-                  </h3>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
-                    {villaDesc}
-                  </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-olive)', marginBottom: 'var(--space-3)' }}>
+                  <Info size={18} />
+                  <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+                    {t('retreat.detail.policyTitle', 'Quy Định & Phụ Phí')}
+                  </span>
                 </div>
+                <h4 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-3)' }}>
+                  {t('retreat.detail.includedNotice', 'Quyền Lợi & Điều Khoản Gói')}
+                </h4>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  {dbPackage.extraChargePolicy || '—'}
+                </p>
               </div>
             </RevealOnScroll>
           </div>
@@ -434,101 +486,98 @@ export const RetreatDetailPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          5. Highlights: Spa & Dining & Suitable For
+          5. Eligible Villa Categories
           ==================================================================== */}
-      <section style={{ padding: 'var(--space-16) 0', backgroundColor: '#ffffff', borderBottom: '1px solid var(--border-subtle)' }}>
-        <Container size="standard">
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: 'var(--space-8)',
-            }}
-          >
-            <RevealOnScroll delayMs={100}>
-              <div
+      {dbPackage.eligibleVillaCategories && dbPackage.eligibleVillaCategories.length > 0 && (
+        <section
+          style={{
+            padding: 'var(--space-16) 0',
+            backgroundColor: '#ffffff',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
+        >
+          <Container size="standard">
+            <div style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
+              <span
                 style={{
-                  padding: 'var(--space-8)',
-                  backgroundColor: 'var(--bg-canvas)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
+                  display: 'inline-block',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.14em',
+                  color: 'var(--accent-olive)',
+                  backgroundColor: 'var(--accent-sand-soft)',
+                  padding: '4px 12px',
+                  borderRadius: 'var(--radius-pill)',
+                  marginBottom: 'var(--space-3)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-forest)', marginBottom: 'var(--space-4)' }}>
-                  <Sparkles size={20} />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', margin: 0 }}>
-                    {t('retreat.detail.wellnessHighlights')}
-                  </h3>
-                </div>
-                <ul style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                  {spaHighlights.map((sh, idx) => (
-                    <li key={idx}>{sh}</li>
-                  ))}
-                </ul>
-              </div>
-            </RevealOnScroll>
+                {t('retreat.detail.villasTitle', 'Không Gian Lưu Trú')}
+              </span>
+              <h2
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(28px, 4vw, 42px)',
+                  fontWeight: 400,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                }}
+              >
+                {t('retreat.detail.eligibleVillas', 'Hạng Villa Phù Hợp Với Gói Nghỉ Dưỡng')}
+              </h2>
+            </div>
 
-            <RevealOnScroll delayMs={200}>
-              <div
-                style={{
-                  padding: 'var(--space-8)',
-                  backgroundColor: 'var(--bg-canvas)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-forest)', marginBottom: 'var(--space-4)' }}>
-                  <Utensils size={20} />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', margin: 0 }}>
-                    {t('retreat.detail.diningHighlights')}
-                  </h3>
-                </div>
-                <ul style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                  {diningHighlights.map((dh, idx) => (
-                    <li key={idx}>{dh}</li>
-                  ))}
-                </ul>
-              </div>
-            </RevealOnScroll>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: 'var(--space-8)',
+              }}
+            >
+              {dbPackage.eligibleVillaCategories.map((cat) => (
+                <RevealOnScroll key={cat.villaCategoryId}>
+                  <div
+                    style={{
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--bg-canvas)',
+                      padding: 'var(--space-6)',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-forest)', marginBottom: 'var(--space-2)' }}>
+                        <Home size={18} />
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', margin: 0 }}>
+                          {cat.categoryName}
+                        </h3>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--accent-olive)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+                        {cat.bedroomCount} Phòng ngủ · Tối đa {cat.maxOccupancy} khách {cat.hasPrivatePool ? '· Có hồ bơi riêng' : ''}
+                      </div>
+                      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        {cat.featuresAndAmenities || cat.areaDescription || '—'}
+                      </p>
+                    </div>
 
-            <RevealOnScroll delayMs={300}>
-              <div
-                style={{
-                  padding: 'var(--space-8)',
-                  backgroundColor: 'var(--bg-canvas)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-forest)', marginBottom: 'var(--space-4)' }}>
-                  <Heart size={20} />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', margin: 0 }}>
-                    {t('retreat.detail.suitableForTitle')}
-                  </h3>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {suitableList.map((st, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '11px',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {st}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </RevealOnScroll>
-          </div>
-        </Container>
-      </section>
+                    <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-subtle)' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
+                        Trạng thái hạng phòng:
+                      </span>{' '}
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-forest)' }}>
+                        {cat.categoryStatus}
+                      </span>
+                    </div>
+                  </div>
+                </RevealOnScroll>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ====================================================================
           6. Final Reservation Action Panel
@@ -546,21 +595,21 @@ export const RetreatDetailPage: React.FC = () => {
                 marginBottom: 'var(--space-3)',
               }}
             >
-              {t('retreat.detail.readyToBook')}
+              {t('retreat.detail.readyToBook', 'Bắt Đầu Hành Trình Của Bạn')}
             </h2>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto var(--space-6)' }}>
-              {t('retreat.detail.depositNote')}
+              {t('retreat.detail.depositNote', 'Thanh toán tiền cọc trực tiếp qua cổng VNPay để xác nhận đặt chỗ an toàn.')}
             </p>
 
             <MagneticButton distance={0.2} maxOffset={6}>
-              <Link to="/customer/booking/new">
+              <Link to={`/customer/booking/new?packageId=${dbPackage.retreatPackageId}`}>
                 <Button
                   variant="primary"
                   size="lg"
                   className="hsw-btn-retreat-primary hsw-btn-retreat-hero"
                   icon={<ArrowRight size={17} />}
                 >
-                  {t('retreat.detail.ctaBook')} — {formatVND(retreat.startingPrice, i18n.language)}
+                  {t('retreat.detail.ctaBook', 'Đặt Gói Nghỉ Dưỡng')} — {formatVND(startingPrice, i18n.language)}
                 </Button>
               </Link>
             </MagneticButton>

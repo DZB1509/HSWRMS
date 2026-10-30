@@ -86,7 +86,7 @@ export const VillaStatusPage: React.FC = () => {
     // Validate illegal transitions immediately
     if (villa.status === 'occupied' && targetStatus === 'ready') {
       showToast(
-        t('operations.villaStatus.occupiedToReadyWarning', 'An occupied villa cannot transition directly to Ready. Please initiate Cleaning & Housekeeping inspection first.'),
+        'Biệt thự đang có khách lưu trú không thể chuyển trực tiếp sang trạng thái Sẵn sàng. Vui lòng chuyển sang Dọn dẹp trước.',
         'error'
       );
       return;

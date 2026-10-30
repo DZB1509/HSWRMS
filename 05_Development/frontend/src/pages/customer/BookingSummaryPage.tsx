@@ -1,237 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ShieldCheck,
   CreditCard,
-  QrCode,
   Building2,
   Calendar,
   User,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
   ArrowLeft,
   X,
   Lock,
+  ExternalLink,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
 import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader';
 import { PaymentSummary } from '../../components/customer/PaymentSummary';
-import { useCustomer } from '../../context/CustomerContext';
-import { MOCK_RETREAT_PACKAGES } from '../../data/mockRetreats';
+import {
+  getCustomerBookingDetail,
+  getVNPayDepositUrl,
+  simulateSandboxVNPayPayment,
+  type BookingSummaryResponse,
+} from '../../api/booking/retreatBookingApi';
 import { formatVND } from '../../i18n';
-
-type SupportedLanguage = 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr';
-
-interface DraftBookingData {
-  retreatSlug: string;
-  retreatName: Record<string, string>;
-  heroImage: string;
-  startDate: string;
-  endDate: string;
-  days: number;
-  nights: number;
-  villaType: Record<string, string>;
-  villaNumber?: string;
-  customerCount: number;
-  totalPrice: number;
-  depositAmount: number;
-  remainingBalance: number;
-  specialRequests?: string;
-  arrivalNotes?: string;
-}
 
 export const BookingSummaryPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language as SupportedLanguage;
   const navigate = useNavigate();
-  const { profile, createBooking } = useCustomer();
+  const [searchParams] = useSearchParams();
+  const bookingIdParam = searchParams.get('bookingId');
 
-  const [draft, setDraft] = useState<DraftBookingData | null>(null);
+  const [booking, setBooking] = useState<BookingSummaryResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [isVnpayModalOpen, setIsVnpayModalOpen] = useState(false);
-  const [vnpayMethod, setVnpayMethod] = useState<'qr' | 'atm' | 'card'>('qr');
   const [simulationState, setSimulationState] = useState<'idle' | 'processing' | 'success' | 'failure'>('idle');
+  const [vnpayInitData, setVnpayInitData] = useState<{
+    paymentUrl: string;
+    transactionReference: string;
+    txnRef?: string;
+    testCallbackUrl?: string;
+  } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('hsw_draft_booking');
-      if (stored) {
-        setDraft(JSON.parse(stored));
-      } else {
-        // Fallback default if accessed directly
-        const defaultPkg = MOCK_RETREAT_PACKAGES[0];
-        const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() + 14);
-        const end = new Date(start);
-        end.setDate(start.getDate() + defaultPkg.nights);
+    let isCancelled = false;
 
-        const fallbackDraft: DraftBookingData = {
-          retreatSlug: defaultPkg.slug,
-          retreatName: defaultPkg.names,
-          heroImage: defaultPkg.heroImage,
-          startDate: start.toISOString().split('T')[0],
-          endDate: end.toISOString().split('T')[0],
-          days: defaultPkg.days,
-          nights: defaultPkg.nights,
-          villaType: defaultPkg.villaName,
-          villaNumber: 'Villa #102',
-          customerCount: 1,
-          totalPrice: defaultPkg.startingPrice,
-          depositAmount: Math.round(defaultPkg.startingPrice * 0.3),
-          remainingBalance: defaultPkg.startingPrice - Math.round(defaultPkg.startingPrice * 0.3),
-          specialRequests: 'Quiet villa location requested',
-          arrivalNotes: 'Arrival at 14:00',
-        };
-        setDraft(fallbackDraft);
+    const loadBooking = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        let bId: number | null = bookingIdParam ? parseInt(bookingIdParam, 10) : null;
+
+        if (!bId) {
+          const cached = sessionStorage.getItem('hsw_active_draft_booking');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            bId = parsed.retreatBookingId;
+          }
+        }
+
+        if (bId) {
+          const res = await getCustomerBookingDetail(bId);
+          if (!isCancelled) {
+            setBooking(res);
+          }
+        } else {
+          if (!isCancelled) {
+            setLoadError('No active reservation found. Please select a retreat package to begin.');
+          }
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          setLoadError(err?.message || 'Failed to retrieve reservation details from server.');
+        }
+      } finally {
+        if (!isCancelled) setLoading(false);
       }
-    } catch {
-      // Fallback
-    }
-  }, []);
+    };
 
-  if (!draft) {
+    loadBooking();
+    return () => {
+      isCancelled = true;
+    };
+  }, [bookingIdParam]);
+
+  const handleOpenPayment = async () => {
+    if (!booking) return;
+    setActionError(null);
+    setSimulationState('idle');
+
+    try {
+      const res = await getVNPayDepositUrl(booking.retreatBookingId);
+      setVnpayInitData(res);
+      setIsVnpayModalOpen(true);
+    } catch (err: any) {
+      alert('Unable to initialize VNPay payment gateway: ' + (err?.message || 'Server error'));
+    }
+  };
+
+  const handleSimulatePayment = async (outcome: 'success' | 'failure') => {
+    if (!vnpayInitData || !booking) return;
+    setSimulationState('processing');
+    setActionError(null);
+
+    try {
+      const responseCode = outcome === 'success' ? '00' : '24';
+      const txnRef = vnpayInitData.transactionReference || vnpayInitData.txnRef;
+      if (!txnRef) {
+        throw new Error('Mã giao dịch VNPay không hợp lệ');
+      }
+
+      await simulateSandboxVNPayPayment(
+        txnRef,
+        booking.depositAmount,
+        responseCode
+      );
+
+      // Clear cached session draft
+      sessionStorage.removeItem('hsw_active_draft_booking');
+      setIsVnpayModalOpen(false);
+
+      // Notify operations and booking lists
+      window.dispatchEvent(new CustomEvent('hswrms_booking_deposit_success', { detail: { bookingId: booking.retreatBookingId } }));
+
+      if (outcome === 'success') {
+        navigate(
+          `/customer/booking/deposit-result?bookingId=${booking.retreatBookingId}&ref=${encodeURIComponent(txnRef)}&status=success`
+        );
+      } else {
+        navigate(
+          `/customer/booking/deposit-result?bookingId=${booking.retreatBookingId}&ref=${encodeURIComponent(txnRef)}&status=failed`
+        );
+      }
+    } catch (err: any) {
+      setSimulationState('idle');
+      setActionError(err?.message || 'Lỗi xử lý xác nhận thanh toán VNPay.');
+    }
+  };
+
+  if (loading) {
     return (
       <div style={{ padding: 'var(--space-16) 0', textAlign: 'center' }}>
         <Container size="standard">
-          <p>{t('common.loading', 'Loading reservation details...')}</p>
+          <Loader2 className="animate-spin" size={36} style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-4)' }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Retrieving reservation details from SQL Server...</p>
         </Container>
       </div>
     );
   }
 
-  const pkgTitle = draft.retreatName[lang] || draft.retreatName.en || draft.retreatName.vi;
-  const villaTitle = draft.villaType[lang] || draft.villaType.en || draft.villaType.vi;
+  if (loadError || !booking) {
+    return (
+      <div style={{ padding: 'var(--space-16) 0', textAlign: 'center' }}>
+        <Container size="standard">
+          <AlertCircle size={40} style={{ color: '#b91c1c', margin: '0 auto var(--space-4)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>No Active Booking Found</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)' }}>{loadError || 'Reservation session not found.'}</p>
+          <Button variant="primary" onClick={() => navigate('/customer/booking/new')}>
+            Start New Reservation
+          </Button>
+        </Container>
+      </div>
+    );
+  }
 
-  const handleOpenPayment = () => {
-    setIsVnpayModalOpen(true);
-    setSimulationState('idle');
-  };
-
-  const handleSimulatePayment = (outcome: 'success' | 'failure') => {
-    setSimulationState('processing');
-
-    setTimeout(() => {
-      if (outcome === 'success') {
-        const fullPkg = MOCK_RETREAT_PACKAGES.find((p) => p.slug === draft.retreatSlug) || MOCK_RETREAT_PACKAGES[0];
-        
-        // Transform fullPkg.itinerary to customer ItineraryDay[]
-        const adaptedItinerary = fullPkg.itinerary.map((d) => ({
-          day: d.day,
-          title: {
-            vi: d.title.vi || `Ngày ${d.day}`,
-            en: d.title.en || `Day ${d.day}`,
-            'zh-CN': d.title['zh-CN'] || `第 ${d.day} 天`,
-            ja: d.title.ja || `${d.day}日目`,
-            fr: d.title.fr || `Jour ${d.day}`,
-          },
-          activities: [
-            {
-              time: '07:30',
-              name: {
-                vi: 'Khởi Động Thân Tâm & Thiền Định Buổi Sáng',
-                en: 'Morning Pranayama & Sunrise Meditation',
-                'zh-CN': '晨间呼吸调息与日出冥想',
-                ja: '朝のプラーナヤーマ＆瞑想',
-                fr: 'Méditation Matinale au Lever du Soleil',
-              },
-              type: 'mindfulness' as const,
-              location: 'Lotus Lake Pavilion',
-            },
-            {
-              time: '14:30',
-              name: {
-                vi: 'Trị Liệu Dưỡng Sinh Toàn Diện',
-                en: 'Personalized Holistic Therapy Ritual',
-                'zh-CN': '量身定制全息草本疗愈',
-                ja: 'ホリスティック・トリートメント',
-                fr: 'Rituel Thérapeutique Holistique',
-              },
-              type: 'spa' as const,
-              location: 'Herbal Sanctuary Treatment Suites',
-            },
-            {
-              time: '18:30',
-              name: {
-                vi: 'Bữa Tối Dưỡng Sinh Thực Dưỡng',
-                en: 'Organic Farm-to-Table Nourishing Dinner',
-                'zh-CN': '有机农场采摘滋养晚餐',
-                ja: 'オーガニック滋養ディナー',
-                fr: 'Dîner Biologique Ferme-à-Table',
-              },
-              type: 'dining' as const,
-              location: 'The Botanical Pavilion',
-            },
-          ],
-        }));
-
-        const newBooking = createBooking({
-          retreatSlug: draft.retreatSlug,
-          retreatName: {
-            vi: draft.retreatName.vi || pkgTitle,
-            en: draft.retreatName.en || pkgTitle,
-            'zh-CN': draft.retreatName['zh-CN'] || pkgTitle,
-            ja: draft.retreatName.ja || pkgTitle,
-            fr: draft.retreatName.fr || pkgTitle,
-          },
-          heroImage: draft.heroImage,
-          startDate: draft.startDate,
-          endDate: draft.endDate,
-          days: draft.days,
-          nights: draft.nights,
-          villaType: {
-            vi: draft.villaType.vi || villaTitle,
-            en: draft.villaType.en || villaTitle,
-            'zh-CN': draft.villaType['zh-CN'] || villaTitle,
-            ja: draft.villaType.ja || villaTitle,
-            fr: draft.villaType.fr || villaTitle,
-          },
-          villaNumber: draft.villaNumber || 'Villa #102',
-          status: 'upcoming',
-          totalPrice: draft.totalPrice,
-          depositAmount: draft.depositAmount,
-          remainingBalance: draft.remainingBalance,
-          depositStatus: 'paid',
-          paymentDetails: {
-            transactionId: `VNPAY-${Date.now().toString().slice(-8)}`,
-            paymentMethod:
-              vnpayMethod === 'qr'
-                ? 'VNPay QR Code'
-                : vnpayMethod === 'atm'
-                ? 'Local Domestic Banking (ATM)'
-                : 'International Credit Card',
-            paidAt: new Date().toISOString(),
-            cardLast4: '8821',
-          },
-          specialRequests: draft.specialRequests,
-          arrivalNotes: draft.arrivalNotes,
-          itinerary: adaptedItinerary,
-        });
-
-        // Clear draft
-        sessionStorage.removeItem('hsw_draft_booking');
-        setIsVnpayModalOpen(false);
-
-        // Navigate to Screen 17 with success
-        navigate(`/customer/booking/deposit-result?ref=${newBooking.bookingReference}&status=success`);
-      } else {
-        setIsVnpayModalOpen(false);
-        const tempRef = `HSW-TMP-${Date.now().toString().slice(-5)}`;
-        navigate(`/customer/booking/deposit-result?ref=${tempRef}&status=failed`);
-      }
-    }, 1200);
-  };
+  const pkgTitle = booking.packageName;
+  const villaTitle = booking.requestedCategoryName;
+  const remainingBalance = booking.totalEstimatedAmount - booking.depositAmount;
 
   return (
     <div className="hsw-booking-summary-page" style={{ padding: 'var(--space-6) 0 var(--space-16)' }}>
       <Container size="standard">
         <CustomerPageHeader
-          badge={t('customer.bookingSummary.badge', 'Step 2 of 3 · Review & Deposit')}
-          title={t('customer.bookingSummary.title', 'Booking Summary & Deposit')}
-          subtitle={t('customer.bookingSummary.subtitle', 'Review your retreat reservation details before confirming your 30% deposit.')}
+          badge={t('customer.bookingSummary.badge', 'Đặt Kỳ Nghỉ > Tóm Tắt & Đặt Cọc')}
+          title={t('customer.bookingSummary.title', 'Tóm Tắt Đặt Kỳ Nghỉ & Đặt Cọc')}
+          subtitle={t('customer.bookingSummary.subtitle', 'Kiểm tra thông tin chi tiết kỳ nghỉ của quý khách trước khi thanh toán 30% tiền cọc qua cổng VNPay.')}
         />
 
         <div
@@ -254,46 +203,29 @@ export const BookingSummaryPage: React.FC = () => {
                 boxShadow: 'var(--shadow-card)',
               }}
             >
-              <div style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
-                <img
-                  src={draft.heroImage}
-                  alt={pkgTitle}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <div
+              <div
+                style={{
+                  padding: 'var(--space-6)',
+                  backgroundColor: 'var(--accent-forest)',
+                  color: '#ffffff',
+                }}
+              >
+                <span
                   style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 'var(--space-4)',
-                    left: 'var(--space-4)',
-                    right: 'var(--space-4)',
-                    color: '#ffffff',
+                    display: 'inline-block',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    marginBottom: '4px',
                   }}
                 >
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      backdropFilter: 'blur(8px)',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    {t('customer.bookingSummary.retreatPackage', 'Retreat Package')}
-                  </span>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0 }}>
-                    {pkgTitle}
-                  </h2>
-                </div>
+                  {t('customer.bookingSummary.retreatPackage', 'Gói Nghỉ Dưỡng')} · {booking.bookingReference || `#${booking.retreatBookingId}`}
+                </span>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0 }}>
+                  {pkgTitle}
+                </h2>
               </div>
 
               <div style={{ padding: 'var(--space-6)' }}>
@@ -310,37 +242,37 @@ export const BookingSummaryPage: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <Calendar size={13} />
-                      <span>{t('customer.bookingForm.checkInDate', 'Arrival Date')}</span>
+                      <span>{t('customer.bookingForm.checkInDate', 'Ngày Nhận Phòng')}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {draft.startDate}
+                      {booking.checkInDate}
                     </div>
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <Calendar size={13} />
-                      <span>{t('customer.bookingForm.checkOutDate', 'Departure Date')}</span>
+                      <span>{t('customer.bookingForm.checkOutDate', 'Ngày Trả Phòng')}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {draft.endDate}
+                      {booking.checkOutDate}
                     </div>
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
-                      <Clock size={13} />
-                      <span>{t('customer.bookingSummary.duration', 'Duration')}</span>
+                      <User size={13} />
+                      <span>Số Lượng Khách</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {draft.days} {t('labels.days', 'Days')} · {draft.nights} {t('labels.nights', 'Nights')}
+                      {booking.guestCount || 1} Khách
                     </div>
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       <Building2 size={13} />
-                      <span>{t('customer.bookingSummary.villa', 'Accommodation')}</span>
+                      <span>{t('customer.bookingSummary.villa', 'Hạng Biệt Thự')}</span>
                     </div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {villaTitle}
@@ -348,15 +280,8 @@ export const BookingSummaryPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Customer Information */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 'var(--space-3)' }}>
-                    <User size={15} style={{ color: 'var(--accent-forest)' }} />
-                    <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                      {t('customer.bookingSummary.customer', 'Customer Details')}
-                    </h3>
-                  </div>
-
+                {/* Reservation Notes / Special Requests */}
+                {booking.specialRequest && (
                   <div
                     style={{
                       backgroundColor: 'var(--bg-soft)',
@@ -367,15 +292,9 @@ export const BookingSummaryPage: React.FC = () => {
                       color: 'var(--text-secondary)',
                     }}
                   >
-                    <div><strong>{profile.fullName}</strong></div>
-                    <div>{profile.email} · {profile.phone}</div>
-                    {draft.specialRequests && (
-                      <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed var(--border-subtle)' }}>
-                        <strong>{t('customer.bookingForm.specialRequests', 'Special Requests')}:</strong> {draft.specialRequests}
-                      </div>
-                    )}
+                    <strong>{t('customer.bookingForm.specialRequests', 'Yêu cầu đặc biệt')}:</strong> {booking.specialRequest}
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -392,11 +311,11 @@ export const BookingSummaryPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
                 <CreditCard size={18} style={{ color: 'var(--accent-forest)' }} />
                 <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  {t('customer.bookingSummary.depositSection', 'Deposit Payment Method')}
+                  {t('customer.bookingSummary.depositSection', 'Phương Thức Thanh Toán Đặt Cọc')}
                 </h3>
               </div>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 var(--space-4)' }}>
-                {t('customer.bookingSummary.paymentMethodHint', 'Pay 30% deposit securely via VNPay Hospitality Gateway.')}
+                Thanh toán khoản cọc 30% an toàn qua cổng VNPay. Hệ thống giữ chỗ biệt thự trong 15 phút.
               </p>
 
               <div
@@ -429,10 +348,10 @@ export const BookingSummaryPage: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    VNPay Hospitality Gateway
+                    Cổng Thanh Toán VNPay
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    QR Code · Local ATM Cards · Visa / MasterCard / JCB
+                    Mã QR · Thẻ ATM Nội Địa · Visa / MasterCard / JCB
                   </div>
                 </div>
               </div>
@@ -452,7 +371,7 @@ export const BookingSummaryPage: React.FC = () => {
                 }}
               >
                 <ArrowLeft size={14} />
-                <span>{t('customer.bookingDetail.backToList', 'Modify reservation details')}</span>
+                <span>← Thay đổi ngày lưu trú hoặc hạng biệt thự</span>
               </Link>
             </div>
           </div>
@@ -460,8 +379,8 @@ export const BookingSummaryPage: React.FC = () => {
           {/* Right Column: Price & Deposit Breakdown + Pay CTA */}
           <div>
             <PaymentSummary
-              totalPrice={draft.totalPrice}
-              depositAmount={draft.depositAmount}
+              totalPrice={booking.totalEstimatedAmount}
+              depositAmount={booking.depositAmount}
               highlightDeposit={true}
             />
 
@@ -479,7 +398,7 @@ export const BookingSummaryPage: React.FC = () => {
                   boxShadow: 'var(--shadow-md)',
                 }}
               >
-                {t('customer.bookingSummary.payDepositBtn', 'Pay Deposit via VNPay (30%)')}
+                → Thanh Toán Tiền Cọc Qua VNPay ({formatVND(booking.depositAmount, i18n.language)})
               </Button>
 
               <div
@@ -494,14 +413,14 @@ export const BookingSummaryPage: React.FC = () => {
                 }}
               >
                 <Lock size={12} />
-                <span>{t('customer.payment.sslGuarantee', 'Encrypted & Certified VNPay Hospitality Transaction')}</span>
+                <span>{t('customer.payment.sslGuarantee', 'Giao dịch được mã hóa & bảo mật qua cổng VNPay')}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* VNPay Simulated Payment Modal */}
-        {isVnpayModalOpen && (
+        {/* VNPay Modal */}
+        {isVnpayModalOpen && vnpayInitData && (
           <div
             role="dialog"
             aria-modal="true"
@@ -522,7 +441,7 @@ export const BookingSummaryPage: React.FC = () => {
               style={{
                 backgroundColor: 'var(--surface)',
                 borderRadius: 'var(--radius-lg)',
-                maxWidth: '480px',
+                maxWidth: '520px',
                 width: '100%',
                 overflow: 'hidden',
                 boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
@@ -542,7 +461,7 @@ export const BookingSummaryPage: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontWeight: 800, letterSpacing: '1px' }}>VNPAY</span>
-                  <span style={{ fontSize: '11px', opacity: 0.85 }}>| Gateway Sandbox</span>
+                  <span style={{ fontSize: '11px', opacity: 0.85 }}>| Cổng Thanh Toán Nghỉ Dưỡng</span>
                 </div>
                 <button
                   type="button"
@@ -558,7 +477,7 @@ export const BookingSummaryPage: React.FC = () => {
                     justifyContent: 'center',
                     padding: '4px',
                   }}
-                  aria-label={t('common.close', 'Close')}
+                  aria-label={t('common.close', 'Đóng')}
                 >
                   <X size={18} />
                 </button>
@@ -576,136 +495,56 @@ export const BookingSummaryPage: React.FC = () => {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  {t('customer.bookingSummary.vnpayModal.title', 'VNPay Hospitality Gateway (Simulation)')}
+                  Xác Nhận Thanh Toán Tiền Cọc Kỳ Nghỉ
                 </h3>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '0 0 var(--space-4)' }}>
-                  {t('customer.bookingSummary.vnpayModal.desc', 'Select a simulated payment method to complete your retreat deposit of')}{' '}
-                  <strong style={{ color: 'var(--accent-forest)' }}>
-                    {formatVND(draft.depositAmount, i18n.language)}
+                  Mã tham chiếu giao dịch trên hệ thống:{' '}
+                  <strong style={{ fontFamily: 'monospace', color: 'var(--accent-forest)' }}>
+                    {vnpayInitData.transactionReference || vnpayInitData.txnRef}
                   </strong>
                 </p>
 
-                {/* Simulated Payment Methods */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
-                  <button
-                    type="button"
-                    onClick={() => setVnpayMethod('qr')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      padding: 'var(--space-3) var(--space-4)',
-                      borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${vnpayMethod === 'qr' ? 'var(--accent-forest)' : 'var(--border-subtle)'}`,
-                      backgroundColor: vnpayMethod === 'qr' ? 'rgba(44, 76, 56, 0.05)' : '#ffffff',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <QrCode size={20} style={{ color: 'var(--accent-forest)' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {t('customer.bookingSummary.vnpayModal.methodQr', 'VNPay QR Code')}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        Scan via banking app (Vietcombank, Techcombank, BIDV, etc.)
-                      </div>
-                    </div>
-                  </button>
+                {actionError && (
+                  <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(185, 28, 28, 0.08)', color: '#b91c1c', fontSize: 'var(--text-xs)', marginBottom: 'var(--space-4)' }}>
+                    {actionError}
+                  </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={() => setVnpayMethod('atm')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      padding: 'var(--space-3) var(--space-4)',
-                      borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${vnpayMethod === 'atm' ? 'var(--accent-forest)' : 'var(--border-subtle)'}`,
-                      backgroundColor: vnpayMethod === 'atm' ? 'rgba(44, 76, 56, 0.05)' : '#ffffff',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Building2 size={20} style={{ color: 'var(--accent-forest)' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {t('customer.bookingSummary.vnpayModal.methodAtm', 'Local Domestic ATM / Internet Banking')}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        Over 40 Vietnamese domestic commercial banks
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setVnpayMethod('card')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      padding: 'var(--space-3) var(--space-4)',
-                      borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${vnpayMethod === 'card' ? 'var(--accent-forest)' : 'var(--border-subtle)'}`,
-                      backgroundColor: vnpayMethod === 'card' ? 'rgba(44, 76, 56, 0.05)' : '#ffffff',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <CreditCard size={20} style={{ color: 'var(--accent-forest)' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {t('customer.bookingSummary.vnpayModal.methodCard', 'Visa / MasterCard / JCB')}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        Global international cards with 3D Secure
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Simulation Control Notice */}
+                {/* Amount display */}
                 <div
                   style={{
                     backgroundColor: 'var(--bg-soft)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: 'var(--space-3)',
-                    fontSize: '11px',
-                    color: 'var(--text-muted)',
-                    marginBottom: 'var(--space-6)',
-                    lineHeight: 1.5,
+                    padding: 'var(--space-4)',
+                    marginBottom: 'var(--space-5)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                    <ShieldCheck size={13} />
-                    <span>Prototype Simulation Mode</span>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>SỐ TIỀN ĐẶT CỌC (30%)</div>
+                    <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--accent-forest)' }}>
+                      {formatVND(booking.depositAmount, i18n.language)}
+                    </div>
                   </div>
-                  {t('customer.bookingSummary.vnpayModal.secureNotice', 'Simulated sandbox transaction. No real funds or credit cards will be charged.')}
+                  <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    70% còn lại thanh toán khi nhận phòng:<br />
+                    <strong>{formatVND(remainingBalance, i18n.language)}</strong>
+                  </div>
                 </div>
 
                 {/* Actions */}
                 {simulationState === 'processing' ? (
-                  <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
-                    <div
-                      style={{
-                        display: 'inline-block',
-                        width: '28px',
-                        height: '28px',
-                        border: '3px solid rgba(44, 76, 56, 0.2)',
-                        borderTopColor: 'var(--accent-forest)',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite',
-                        marginBottom: 'var(--space-2)',
-                      }}
-                    />
-                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-forest)' }}>
-                      Connecting to VNPay secure host & verifying deposit...
+                  <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
+                    <Loader2 className="animate-spin" size={32} style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-2)' }} />
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent-forest)' }}>
+                      Đang xác thực chữ ký HMAC-SHA512 & cập nhật SQL Server...
                     </div>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    {/* Dev Sandbox Live Trigger */}
                     <button
                       type="button"
                       onClick={() => handleSimulatePayment('success')}
@@ -727,9 +566,36 @@ export const BookingSummaryPage: React.FC = () => {
                       }}
                     >
                       <CheckCircle2 size={16} />
-                      <span>{t('customer.bookingSummary.vnpayModal.methodSimulateSuccess', 'Simulate Successful Deposit')}</span>
+                      <span>Xác Nhận Thanh Toán Cọc & Xác Thực Chữ Ký (VNPay Sandbox)</span>
                     </button>
 
+                    {/* Open VNPay Gateway Directly */}
+                    {vnpayInitData.paymentUrl && (
+                      <a
+                        href={vnpayInitData.paymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          width: '100%',
+                          padding: '10px 16px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: '#005baa',
+                          color: '#ffffff',
+                          textDecoration: 'none',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <ExternalLink size={14} />
+                        <span>Mở Cổng Thanh Toán VNPay Chính Thức</span>
+                      </a>
+                    )}
+
+                    {/* Failure Trigger */}
                     <button
                       type="button"
                       onClick={() => handleSimulatePayment('failure')}
@@ -750,7 +616,7 @@ export const BookingSummaryPage: React.FC = () => {
                       }}
                     >
                       <AlertTriangle size={14} />
-                      <span>{t('customer.bookingSummary.vnpayModal.methodSimulateFailure', 'Simulate Payment Failure / Cancel')}</span>
+                      <span>Giả Lập Giao Dịch Thất Bại / Hủy Thanh Toán</span>
                     </button>
                   </div>
                 )}
@@ -762,3 +628,4 @@ export const BookingSummaryPage: React.FC = () => {
     </div>
   );
 };
+

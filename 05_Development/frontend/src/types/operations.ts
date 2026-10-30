@@ -112,4 +112,7 @@ export interface OperationsContextType {
   submitDailyResidenceDeclarations: () => { count: number; message: string };
   markResidenceDeclaration: (bookingRef: string, status: ResidenceDeclarationStatus) => void;
   refreshDbVillas?: () => Promise<void>;
+  isLoading: boolean;
+  refreshOperationsData: () => Promise<void>;
+  dismissAlert: (alertId: string) => void;
 }

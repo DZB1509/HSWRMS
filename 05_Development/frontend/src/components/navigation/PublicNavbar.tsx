@@ -327,7 +327,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
             </Link>
           )}
 
-          <Link to="/retreats" className="hide-on-mobile">
+          <Link to="/customer/booking/new" className="hide-on-mobile">
             <Button
               variant="primary"
               size="sm"
@@ -431,7 +431,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
           </div>
 
           <div className="hsw-mobile-nav-actions">
-            <Link to="/retreats" style={{ width: '100%' }} onClick={() => setMobileMenuOpen(false)}>
+            <Link to="/customer/booking/new" style={{ width: '100%' }} onClick={() => setMobileMenuOpen(false)}>
               <Button
                 variant="primary"
                 size="lg"

@@ -96,10 +96,19 @@ export const CustomerNavbar: React.FC = () => {
             <span>{t('customer.nav.dashboard', 'Dashboard')}</span>
           </Link>
 
+          {/* Book Retreat */}
+          <Link
+            to="/customer/booking/new"
+            className={`hsw-customer-nav-link ${location.pathname.startsWith('/customer/booking') ? 'active' : ''}`}
+          >
+            <Calendar size={15} />
+            <span>{t('customer.nav.bookRetreat', 'Đặt Kỳ Nghỉ')}</span>
+          </Link>
+
           {/* My Bookings */}
           <Link
             to="/customer/bookings"
-            className={`hsw-customer-nav-link ${location.pathname.startsWith('/customer/bookings') ? 'active' : ''}`}
+            className={`hsw-customer-nav-link ${location.pathname === '/customer/bookings' || location.pathname.startsWith('/customer/bookings/') ? 'active' : ''}`}
           >
             <Calendar size={15} />
             <span>{t('customer.nav.bookings', 'My Bookings')}</span>

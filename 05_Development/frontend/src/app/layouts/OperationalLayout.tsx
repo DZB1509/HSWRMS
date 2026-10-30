@@ -11,8 +11,13 @@ import { CursorEffectToggle } from '../../components/common/CursorEffectToggle';
 
 export const OperationalLayout: React.FC = () => {
   const { role } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
+
+  const resortDateStr = new Date().toLocaleDateString(
+    i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh-CN' ? 'zh-CN' : i18n.language === 'ja' ? 'ja-JP' : i18n.language === 'fr' ? 'fr-FR' : 'en-US',
+    { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }
+  );
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -68,11 +73,11 @@ export const OperationalLayout: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calendar size={14} style={{ color: 'var(--accent-olive)' }} />
               <span>
-                {t('operations.common.resortDate', 'Resort Date')}: <strong>{t('operations.common.dateValue', 'Thursday, 24 Sep 2026')}</strong>
+                {t('operations.common.resortDate', 'Resort Date')}: <strong>{resortDateStr}</strong>
               </span>
             </div>
             <div style={{
-              padding: '2px 8px',
+                  padding: '2px 8px',
               borderRadius: 'var(--radius-pill)',
               backgroundColor: 'var(--bg-soft)',
               fontWeight: 600,

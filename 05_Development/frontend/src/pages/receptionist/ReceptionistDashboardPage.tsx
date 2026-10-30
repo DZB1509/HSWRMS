@@ -22,7 +22,11 @@ import { ResidenceDeclarationSummary } from '../../components/operations/Residen
 export const ReceptionistDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { arrivals, villas, todayDate, alerts } = useOperations();
+  const { arrivals, villas, alerts, refreshOperationsData } = useOperations();
+
+  React.useEffect(() => {
+    refreshOperationsData();
+  }, [refreshOperationsData]);
 
   // Metrics
   const totalArrivals = arrivals.length;
@@ -34,7 +38,14 @@ export const ReceptionistDashboardPage: React.FC = () => {
   const maintenanceVillas = villas.filter((v) => v.status === 'maintenance').length;
   const reservedVillas = villas.filter((v) => v.status === 'reserved').length;
 
+  const totalVillas = villas.length;
+  const occupancyPercent = totalVillas > 0 ? Math.round((occupiedVillas / totalVillas) * 100) : 0;
+
   const currentLang = (i18n.language || 'en') as 'en' | 'vi' | 'zh-CN' | 'ja' | 'fr';
+  const localizedTodayDate = new Date().toLocaleDateString(
+    currentLang === 'vi' ? 'vi-VN' : currentLang === 'zh-CN' ? 'zh-CN' : currentLang === 'ja' ? 'ja-JP' : currentLang === 'fr' ? 'fr-FR' : 'en-US',
+    { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }
+  );
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
@@ -88,7 +99,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
             {totalArrivals}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-            {todayDate}
+            {localizedTodayDate}
           </div>
         </div>
 
@@ -133,10 +144,10 @@ export const ReceptionistDashboardPage: React.FC = () => {
             <Home size={16} style={{ color: 'var(--accent-forest)' }} />
           </div>
           <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
-            {occupiedVillas} <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 400 }}>/ {villas.length}</span>
+            {occupiedVillas} <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 400 }}>/ {totalVillas}</span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-            {t('operations.dashboard.resortOccupancyPercent', { percent: Math.round((occupiedVillas / villas.length) * 100), defaultValue: `${Math.round((occupiedVillas / villas.length) * 100)}% resort occupancy` })}
+            {t('operations.dashboard.resortOccupancyPercent', { percent: occupancyPercent, defaultValue: `${occupancyPercent}% resort occupancy` })}
           </div>
         </div>
 
@@ -316,6 +327,13 @@ export const ReceptionistDashboardPage: React.FC = () => {
                     </tr>
                   );
                 })}
+                {arrivals.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>
+                      {t('operations.arrivals.noArrivals', 'Không có khách đến trong ngày này (SQL Server: 0 records)')}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

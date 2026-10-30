@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type {
   Villa,
   VillaStatus,
@@ -10,197 +10,179 @@ import type {
   ResidenceDeclarationStatus,
 } from '../types/operations';
 import {
-  INITIAL_VILLAS,
-  INITIAL_ARRIVALS,
-  INITIAL_OPERATIONAL_ALERTS,
-} from '../data/mockOperations';
-import { useCustomer } from './CustomerContext';
+  getReceptionistVillas,
+  getDailyArrivals,
+  updatePhysicalVillaStatus,
+  recordResidenceDeclaration,
+  assignPhysicalVilla,
+} from '../api/booking/retreatBookingApi';
+
+import { useAuth } from '../hooks/useAuth';
 
 const OperationsContext = createContext<OperationsContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  VILLAS: 'hsw_operations_villas_v1',
-  ARRIVALS: 'hsw_operations_arrivals_v1',
   TRANSIENT_IDENTITY: 'hsw_transient_identity_session_v1',
 };
 
-// SENSITIVE DATA MINIMIZATION & PRIVACY AUDIT:
-// Strip sensitive identity values (ID number, DOB, permanent address)
-// before saving operational records to persistent localStorage.
-const sanitizeArrivalForLocalStorage = (arrival: ArrivalRecord): ArrivalRecord => {
-  const { identityVerification, ...rest } = arrival;
-  return {
-    ...rest,
-    identityVerification: identityVerification
-      ? {
-        fullLegalName: identityVerification.fullLegalName,
-        nationality: identityVerification.nationality,
-        residenceCountry: identityVerification.residenceCountry,
-        idType: identityVerification.idType,
-        idNumber: '', // Redacted from plain localStorage
-        dateOfBirth: '', // Redacted from plain localStorage
-        permanentAddress: '', // Redacted from plain localStorage
-        arrivalTransport: identityVerification.arrivalTransport,
-        receptionistNotes: identityVerification.receptionistNotes,
-        verifiedAt: identityVerification.verifiedAt,
-        verifiedBy: identityVerification.verifiedBy,
-      }
-      : undefined,
-  };
-};
-
 export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { bookings } = useCustomer();
+  const { role } = useAuth();
+  const [villas, setVillas] = useState<Villa[]>([]);
+  const [arrivals, setArrivals] = useState<ArrivalRecord[]>([]);
+  const [alerts, setAlerts] = useState<OperationalAlert[]>([]);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [villas, setVillas] = useState<Villa[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.VILLAS);
-      return saved ? JSON.parse(saved) : INITIAL_VILLAS;
-    } catch {
-      return INITIAL_VILLAS;
-    }
+  const dismissAlert = (alertId: string) => {
+    setDismissedAlertIds((prev) => new Set([...prev, alertId]));
+    setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+  };
+
+  const todayDate = new Date().toLocaleDateString('vi-VN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 
-  const [arrivals, setArrivals] = useState<ArrivalRecord[]>(() => {
+  // Zero Template / Zero Mock Policy: fetch directly from SQL Server
+  const syncWithBackend = async () => {
+    setIsLoading(true);
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ARRIVALS);
-      const parsed: ArrivalRecord[] = saved ? JSON.parse(saved) : INITIAL_ARRIVALS;
+      const [villasRes, arrivalsRes] = await Promise.allSettled([
+        getReceptionistVillas(),
+        getDailyArrivals(),
+      ]);
 
-      // Merge with transient session storage for sensitive identity data
-      let transientMap: Record<string, CustomerIdentityVerification> = {};
-      try {
-        const sessionData = sessionStorage.getItem(STORAGE_KEYS.TRANSIENT_IDENTITY);
-        if (sessionData) transientMap = JSON.parse(sessionData);
-      } catch {
-        // Session storage error ignored
-      }
+      if (villasRes.status === 'fulfilled') {
+        const mappedVillas: Villa[] = (villasRes.value || []).map((pv) => {
+          const vId = pv.villaId || pv.physicalVillaId || 1;
+          const st: VillaStatus =
+            pv.villaStatus === 'AVAILABLE'
+              ? 'ready'
+              : pv.villaStatus === 'OCCUPIED'
+              ? 'occupied'
+              : pv.villaStatus === 'NEEDS_CLEANING'
+              ? 'cleaning'
+              : 'maintenance';
 
-      const mergedWithSession = parsed.map((a) => {
-        if (transientMap[a.bookingReference]) {
           return {
-            ...a,
-            identityVerification: transientMap[a.bookingReference],
+            id: String(vId),
+            code: pv.villaNumber,
+            name: {
+              en: `Villa ${pv.villaNumber}`,
+              vi: `Biệt Thự ${pv.villaNumber}`,
+              'zh-CN': `别墅 ${pv.villaNumber}`,
+              ja: `ヴィラ ${pv.villaNumber}`,
+              fr: `Villa ${pv.villaNumber}`,
+            },
+            category: pv.categoryName,
+            capacity: pv.maxOccupancy || 2,
+            bedType: 'King Organic Bed',
+            features: pv.viewAndOperationalNotes ? [pv.viewAndOperationalNotes] : ['Resort Standards'],
+            status: st,
+            housekeeping: pv.isClean ? 'inspected' : 'in_progress',
+            currentBookingRef: pv.isOccupied ? 'ACTIVE' : undefined,
           };
-        }
-        return a;
-      });
-
-      // Merge with any newly created bookings from CustomerContext
-      const seeded = [...mergedWithSession];
-      bookings.forEach((b) => {
-        if (!seeded.some((a) => a.bookingReference === b.bookingReference)) {
-          seeded.unshift({
-            id: `ARR-${b.bookingReference.replace('HSW-', '')}`,
-            bookingReference: b.bookingReference,
-            customerId: 'usr-cust-01',
-            customerName: 'Eleanor Vance',
-            customerPhone: '+84 901 234 567',
-            customerEmail: 'eleanor.vance@example.com',
-            retreatSlug: b.retreatSlug,
-            retreatName: b.retreatName,
-            heroImage: b.heroImage,
-            startDate: b.startDate,
-            endDate: b.endDate,
-            days: b.days,
-            nights: b.nights,
-            partySize: 1,
-            expectedArrivalTime: '14:00',
-            depositStatus: b.depositStatus === 'paid' ? 'paid' : 'pending',
-            totalPrice: b.totalPrice,
-            depositAmount: b.depositAmount,
-            assignedVillaId: 'V-102',
-            assignedVillaNumber: b.villaNumber || 'Villa #102',
-            villaCategory: 'Lotus Pond Pool Sanctuary',
-            villaReadiness: 'ready',
-            arrivalStatus: b.status === 'in_stay' ? 'checked_in' : 'arrived',
-            residenceDeclarationStatus: 'pending',
-            specialRequests: b.specialRequests,
-            arrivalNotes: b.arrivalNotes,
-            wellnessProfileCompleted: true,
-          });
-        }
-      });
-      return seeded;
-    } catch {
-      return INITIAL_ARRIVALS;
-    }
-  });
-
-  const [alerts, setAlerts] = useState<OperationalAlert[]>(INITIAL_OPERATIONAL_ALERTS);
-  const todayDate = 'Thursday, 24 Sep 2026';
-
-  // Synchronize villa inventory directly with backend REST API (SQL Server / DB)
-  const refreshDbVillas = useCallback(async () => {
-    try {
-      const res = await fetch('http://localhost:8080/api/v1/villas');
-      if (res.ok) {
-        const json = await res.json();
-        const apiData = Array.isArray(json) ? json : json.data;
-        if (Array.isArray(apiData) && apiData.length > 0) {
-          const mapped: Villa[] = apiData.map((v: any) => {
-            const num: string = v.villaNumber || `V${v.villaId}`;
-            const code: string = num.replace(/^V/, '');
-            let st: VillaStatus = 'ready';
-            if (v.villaStatus === 'OCCUPIED') st = 'occupied';
-            else if (v.villaStatus === 'NEEDS_CLEANING' || v.villaStatus === 'CLEANING') st = 'cleaning';
-            else if (v.villaStatus === 'MAINTENANCE') st = 'maintenance';
-            else if (v.villaStatus === 'RESERVED') st = 'reserved';
-
-            let hk: HousekeepingStatus = 'clean';
-            if (st === 'cleaning') hk = 'in_progress';
-            else if (st === 'maintenance') hk = 'dirty';
-
-            return {
-              id: num,
-              code: code,
-              name: {
-                vi: `${num} - ${v.villaCategory?.categoryName || 'Biệt Thự'}`,
-                en: `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
-                'zh-CN': `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
-                ja: `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
-                fr: `${num} - ${v.villaCategory?.categoryName || 'Villa'}`,
-              },
-              category: v.villaCategory?.categoryName || 'Garden Villa',
-              capacity: v.maxOccupancy || 2,
-              bedType: v.bedType || v.bedroomInfo || '1 King Bed',
-              status: st,
-              housekeeping: hk,
-              currentBookingRef: st === 'occupied' ? `BK-2026-${code}8` : undefined,
-              currentCustomerName: st === 'occupied' ? `Customer ${num}` : undefined,
-              features: v.amenities ? v.amenities.split(',').map((s: string) => s.trim()) : [],
-            };
-          });
-          setVillas(mapped);
-        }
+        });
+        setVillas(mappedVillas);
+      } else {
+        setVillas([]);
       }
-    } catch {
-      // Backend unavailable, fallback to existing local storage
+
+      if (arrivalsRes.status === 'fulfilled') {
+        const mappedArrivals: ArrivalRecord[] = (arrivalsRes.value || []).map((a) => {
+          const nights = a.checkInDate && a.checkOutDate
+            ? Math.max(1, Math.round((new Date(a.checkOutDate).getTime() - new Date(a.checkInDate).getTime()) / (1000 * 3600 * 24)))
+            : 2;
+
+          return {
+            id: String(a.retreatBookingId),
+            bookingReference: a.bookingReference || `HSW-BK-${a.retreatBookingId}`,
+            customerId: String(a.customerProfileId),
+            customerName: a.customerFullName || '—',
+            customerPhone: a.customerPhone || '—',
+            customerEmail: a.customerEmail || '—',
+            retreatSlug: 'retreat-' + a.retreatBookingId,
+            retreatName: {
+              en: a.packageName,
+              vi: a.packageName,
+              'zh-CN': a.packageName,
+              ja: a.packageName,
+              fr: a.packageName,
+            },
+            heroImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
+            startDate: a.checkInDate,
+            endDate: a.checkOutDate,
+            days: nights + 1,
+            nights,
+            partySize: a.guestCount || 1,
+            expectedArrivalTime: '14:00',
+            depositStatus: a.depositPaid > 0 ? 'paid' : 'pending',
+            totalPrice: a.totalEstimatedAmount || (a.depositPaid > 0 ? a.depositPaid / 0.3 : 0),
+            depositAmount: a.depositPaid,
+            assignedVillaId: a.assignedVillaId ? String(a.assignedVillaId) : undefined,
+            assignedVillaNumber: a.assignedVillaNumber ? `Villa #${a.assignedVillaNumber}` : undefined,
+            villaCategory: a.requestedCategoryName,
+            villaReadiness: a.assignedVillaId ? 'ready' : 'unassigned',
+            arrivalStatus: (a.bookingStatus === 'CHECKED_IN' ? 'checked_in' : 'expected') as any,
+            residenceDeclarationStatus: a.hasResidenceRecord ? 'ready' : 'pending',
+            specialRequests: undefined,
+            wellnessProfileCompleted: a.hasHealthProfile ?? false,
+          };
+        });
+        setArrivals(mappedArrivals);
+
+        // Derive alerts dynamically from real arrival records in SQL Server
+        const realAlerts: OperationalAlert[] = [];
+        mappedArrivals.forEach((arr) => {
+          const alertId = `alert-unassigned-${arr.id}`;
+          // Only alert for unassigned villas if arrival is not checked-in and not dismissed
+          if (!arr.assignedVillaId && arr.arrivalStatus !== 'checked_in' && !dismissedAlertIds.has(alertId)) {
+            realAlerts.push({
+              id: alertId,
+              type: 'unassigned_villa',
+              severity: 'warning',
+              title: `Chưa phân bổ biệt thự: ${arr.customerName}`,
+              description: `Chưa phân bổ biệt thự: Đặt chỗ ${arr.bookingReference} (${arr.customerName}) cần được gán biệt thự hạng ${arr.villaCategory}.`,
+              bookingRef: arr.bookingReference,
+              actionPath: `/receptionist/check-in/${arr.bookingReference}/villa`,
+            });
+          }
+        });
+        setAlerts(realAlerts);
+      } else {
+        setArrivals([]);
+        setAlerts([]);
+      }
+    } catch (err) {
+      console.error('Error fetching live operations data from SQL Server:', err);
+      setVillas([]);
+      setArrivals([]);
+      setAlerts([]);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    refreshDbVillas();
-  }, [refreshDbVillas]);
+    syncWithBackend();
 
-  // Persistence to localStorage: Villas operational state
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.VILLAS, JSON.stringify(villas));
-    } catch {
-      // Storage error ignored
-    }
-  }, [villas]);
+    const handleAuthChange = () => {
+      syncWithBackend();
+    };
 
-  // Persistence to localStorage: Operational state only.
-  // Sensitive identity fields (ID number, DOB, permanent address) are NEVER written to localStorage.
-  useEffect(() => {
-    try {
-      const sanitized = arrivals.map(sanitizeArrivalForLocalStorage);
-      localStorage.setItem(STORAGE_KEYS.ARRIVALS, JSON.stringify(sanitized));
-    } catch {
-      // Storage error ignored
-    }
-  }, [arrivals]);
+    const handleDepositSuccess = () => {
+      syncWithBackend();
+    };
+
+    window.addEventListener('hswrms_auth_changed', handleAuthChange);
+    window.addEventListener('hswrms_booking_deposit_success', handleDepositSuccess);
+    return () => {
+      window.removeEventListener('hswrms_auth_changed', handleAuthChange);
+      window.removeEventListener('hswrms_booking_deposit_success', handleDepositSuccess);
+    };
+  }, [role]);
 
   const getVillaById = (id: string): Villa | undefined => {
     return villas.find((v) => v.id === id || v.code === id);
@@ -280,11 +262,22 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
 
     // Remove any unassigned_villa alert for this booking
-    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef));
+    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.id !== `alert-unassigned-${arrival.id}`));
+    setDismissedAlertIds((prev) => new Set([...prev, `alert-unassigned-${arrival.id}`]));
+
+    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    const numVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
+    if (!isNaN(numBookingId) && !isNaN(numVillaId)) {
+      assignPhysicalVilla(numBookingId, numVillaId)
+        .then(() => syncWithBackend())
+        .catch((err) => {
+          console.warn('Sync assign villa to backend failed:', err);
+        });
+    }
 
     return {
       success: true,
-      message: `${villa.name.en} successfully assigned to booking ${bookingRef}.`,
+      message: `Đã phân bổ Biệt thự #${villa.code} cho đặt chỗ ${bookingRef}.`,
     };
   };
 
@@ -311,10 +304,10 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       (newStatus === 'ready'
         ? 'inspected'
         : newStatus === 'cleaning'
-          ? 'in_progress'
-          : newStatus === 'maintenance'
-            ? 'dirty'
-            : villa.housekeeping);
+        ? 'in_progress'
+        : newStatus === 'maintenance'
+        ? 'dirty'
+        : villa.housekeeping);
 
     setVillas((prev) =>
       prev.map((v) => {
@@ -340,19 +333,35 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               newStatus === 'ready'
                 ? 'ready'
                 : newStatus === 'cleaning'
-                  ? 'cleaning'
-                  : newStatus === 'maintenance'
-                    ? 'maintenance'
-                    : a.villaReadiness,
+                ? 'cleaning'
+                : newStatus === 'maintenance'
+                ? 'maintenance'
+                : a.villaReadiness,
           };
         }
         return a;
       })
     );
 
+    // Sync status with backend SQL Server
+    const numericVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
+    if (!isNaN(numericVillaId)) {
+      let backendStatus = 'AVAILABLE';
+      if (newStatus === 'cleaning') backendStatus = 'NEEDS_CLEANING';
+      else if (newStatus === 'maintenance') backendStatus = 'MAINTENANCE';
+      else if (newStatus === 'occupied') backendStatus = 'OCCUPIED';
+
+      updatePhysicalVillaStatus(numericVillaId, backendStatus)
+        .then(() => syncWithBackend())
+        .catch((err) => {
+          console.warn('Sync physical villa status to backend failed:', err);
+        });
+    }
+
+    const viStatus = newStatus === 'ready' ? 'Sẵn sàng' : newStatus === 'cleaning' ? 'Đang dọn dẹp' : newStatus === 'maintenance' ? 'Bảo trì' : 'Đang sử dụng';
     return {
       success: true,
-      message: `Villa #${villa.code} status updated to ${newStatus}.`,
+      message: `Cập nhật trạng thái Biệt thự #${villa.code} thành ${viStatus}.`,
     };
   };
 
@@ -494,12 +503,34 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
     );
 
+    // Sync Residence declaration and Physical Villa assignment to backend SQL Server
+    const numBookingId = parseInt(bookingRef.replace(/\D/g, ''), 10) || parseInt(arrival.id.replace(/\D/g, ''), 10);
+    const numVillaId = parseInt(villaId.replace(/\D/g, ''), 10);
+    if (!isNaN(numBookingId)) {
+      recordResidenceDeclaration(numBookingId, {
+        fullName: identityData.fullLegalName,
+        nationality: identityData.nationality,
+        identificationNumber: identityData.idNumber,
+        identificationType: identityData.idType === 'national_id' ? 'CCCD' : identityData.idType.toUpperCase(),
+        dateOfBirth: identityData.dateOfBirth,
+        permanentAddress: identityData.permanentAddress,
+      }).catch((err) => console.warn('Sync residence record to backend failed:', err));
+    }
+    if (!isNaN(numBookingId) && !isNaN(numVillaId)) {
+      assignPhysicalVilla(numBookingId, numVillaId)
+        .then(() => syncWithBackend())
+        .catch((err) => {
+          console.warn('Sync assign villa check-in to backend failed:', err);
+        });
+    }
+
     // 3. Clear relevant operational alerts
-    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.villaId !== villa.id));
+    setAlerts((prev) => prev.filter((alt) => alt.bookingRef !== bookingRef && alt.id !== `alert-unassigned-${arrival.id}`));
+    setDismissedAlertIds((prev) => new Set([...prev, `alert-unassigned-${arrival.id}`]));
 
     return {
       success: true,
-      message: `Check-in completed successfully for ${arrival.customerName}. Villa #${villa.code} key issued.`,
+      message: `Nhận phòng thành công cho khách hàng ${arrival.customerName}. Đã bàn giao chìa khóa Biệt thự #${villa.code}.`,
     };
   };
 
@@ -548,7 +579,10 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         completeCheckIn,
         submitDailyResidenceDeclarations,
         markResidenceDeclaration,
-        refreshDbVillas,
+        isLoading,
+        refreshDbVillas: syncWithBackend,
+        refreshOperationsData: syncWithBackend,
+        dismissAlert,
       }}
     >
       {children}

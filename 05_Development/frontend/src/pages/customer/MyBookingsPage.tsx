@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,41 +7,74 @@ import {
   ArrowRight,
   Sparkles,
   Search,
+  Loader2,
+  AlertCircle,
+  User,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
 import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader';
-import { BookingStatusChip } from '../../components/customer/BookingStatusChip';
-import { useCustomer } from '../../context/CustomerContext';
+import {
+  getCustomerBookings,
+  type CustomerBookingSummary,
+} from '../../api/booking/retreatBookingApi';
 import { formatVND } from '../../i18n';
 
-type SupportedLanguage = 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr';
 type FilterTab = 'all' | 'upcoming' | 'completed' | 'cancelled';
 
 export const MyBookingsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language as SupportedLanguage;
   const navigate = useNavigate();
-  const { bookings } = useCustomer();
+
+  const [bookings, setBookings] = useState<CustomerBookingSummary[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchBookings = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const list = await getCustomerBookings();
+        if (!isCancelled) {
+          setBookings(list);
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          setLoadError(err?.message || 'Failed to retrieve bookings from server.');
+        }
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+
+    fetchBookings();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
   const filteredBookings = bookings.filter((b) => {
     // Tab filter
+    const status = b.bookingStatus.toUpperCase();
     if (activeTab === 'upcoming') {
-      if (b.status !== 'upcoming' && b.status !== 'in_stay') return false;
+      if (status !== 'CONFIRMED' && status !== 'PENDING' && status !== 'CHECKED_IN') return false;
     } else if (activeTab === 'completed') {
-      if (b.status !== 'completed') return false;
+      if (status !== 'COMPLETED') return false;
     } else if (activeTab === 'cancelled') {
-      if (b.status !== 'cancelled') return false;
+      if (status !== 'CANCELLED') return false;
     }
 
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const pkgName = (b.retreatName[lang] || b.retreatName.en || b.retreatName.vi).toLowerCase();
-      const ref = b.bookingReference.toLowerCase();
+      const pkgName = (b.packageName || '').toLowerCase();
+      const ref = (b.bookingReference || '').toLowerCase();
       return pkgName.includes(q) || ref.includes(q);
     }
 
@@ -59,7 +92,7 @@ export const MyBookingsPage: React.FC = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate('/customer/retreats')}
+              onClick={() => navigate('/customer/booking/new')}
               icon={<Sparkles size={14} />}
               style={{
                 borderColor: 'var(--accent-forest)',
@@ -138,7 +171,7 @@ export const MyBookingsPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search reference or package..."
+              placeholder="Tìm theo mã đặt chỗ hoặc tên gói kỳ nghỉ..."
               style={{
                 width: '100%',
                 padding: '8px 12px 8px 32px',
@@ -151,8 +184,26 @@ export const MyBookingsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div style={{ padding: 'var(--space-12) 0', textAlign: 'center' }}>
+            <Loader2 className="animate-spin" size={36} style={{ color: 'var(--accent-forest)', margin: '0 auto var(--space-4)' }} />
+            <p style={{ color: 'var(--text-secondary)' }}>Đang tải danh sách kỳ nghỉ từ hệ thống...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {loadError && !loading && (
+          <div style={{ padding: 'var(--space-8)', textAlign: 'center', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+            <AlertCircle size={36} style={{ color: '#b91c1c', margin: '0 auto var(--space-3)' }} />
+            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-2)' }}>Không Thể Tải Danh Sách Kỳ Nghỉ</h3>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>{loadError}</p>
+            <Button variant="primary" size="sm" onClick={() => window.location.reload()}>Thử Lại</Button>
+          </div>
+        )}
+
         {/* Bookings List */}
-        {filteredBookings.length === 0 ? (
+        {!loading && !loadError && filteredBookings.length === 0 ? (
           <div
             style={{
               backgroundColor: 'var(--surface)',
@@ -194,7 +245,7 @@ export const MyBookingsPage: React.FC = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => navigate('/customer/retreats')}
+              onClick={() => navigate('/customer/booking/new')}
               style={{
                 backgroundColor: 'var(--accent-forest)',
                 color: '#ffffff',
@@ -205,150 +256,200 @@ export const MyBookingsPage: React.FC = () => {
             </Button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-            {filteredBookings.map((b) => {
-              const pkgName = b.retreatName[lang] || b.retreatName.en || b.retreatName.vi;
-              const villaName = b.villaType[lang] || b.villaType.en || b.villaType.vi;
+          !loading && !loadError && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+              {filteredBookings.map((b) => {
+                const pkgName = b.packageName;
+                const villaName = b.requestedCategoryName;
 
-              return (
-                <div
-                  key={b.id}
-                  className="customer-booking-card"
-                  id={`booking-card-${b.id}`}
-                >
-                  {/* Left Column: Image */}
-                  <div className="customer-booking-card-media">
-                    <img
-                      src={b.heroImage}
-                      alt={pkgName}
-                    />
+                return (
+                  <div
+                    key={b.retreatBookingId}
+                    className="customer-booking-card"
+                    id={`booking-card-${b.retreatBookingId}`}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(240px, 1fr) 220px',
+                      backgroundColor: 'var(--surface)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      overflow: 'hidden',
+                      boxShadow: 'var(--shadow-card)',
+                    }}
+                  >
+                    {/* Middle Column: Details */}
                     <div
                       style={{
-                        position: 'absolute',
-                        top: 'var(--space-3)',
-                        left: 'var(--space-3)',
+                        padding: 'var(--space-6)',
                         display: 'flex',
-                        gap: '6px',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        borderRight: '1px solid var(--border-subtle)',
                       }}
                     >
-                      <BookingStatusChip status={b.status} />
-                    </div>
-                  </div>
-
-                  {/* Middle Column: Details */}
-                  <div
-                    style={{
-                      padding: 'var(--space-6)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      borderRight: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '11px',
-                          color: 'var(--text-muted)',
-                          marginBottom: 'var(--space-2)',
-                        }}
-                      >
-                        <span style={{ fontWeight: 700, letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-                          {t('customer.bookingsList.ref', 'Ref')}: {b.bookingReference}
-                        </span>
-                        <span>·</span>
-                        <BookingStatusChip depositStatus={b.depositStatus} />
-                      </div>
-
-                      <h3
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: 'var(--text-lg)',
-                          fontWeight: 500,
-                          color: 'var(--text-primary)',
-                          margin: '0 0 var(--space-3)',
-                        }}
-                      >
-                        {pkgName}
-                      </h3>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Calendar size={14} style={{ color: 'var(--accent-forest)' }} />
-                          <span>
-                            {b.startDate} → {b.endDate} ({b.days} {t('labels.days', 'Days')} / {b.nights} {t('labels.nights', 'Nights')})
+                      <div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                            marginBottom: 'var(--space-2)',
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+                            {t('customer.bookingsList.ref', 'Ref')}: {b.bookingReference}
+                          </span>
+                          <span>·</span>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              backgroundColor:
+                                b.bookingStatus === 'CONFIRMED'
+                                  ? 'rgba(44, 76, 56, 0.1)'
+                                  : b.bookingStatus === 'CHECKED_IN'
+                                  ? 'rgba(37, 99, 235, 0.1)'
+                                  : b.bookingStatus === 'CANCELLED'
+                                  ? 'rgba(185, 28, 28, 0.1)'
+                                  : 'rgba(217, 119, 6, 0.1)',
+                              color:
+                                b.bookingStatus === 'CONFIRMED'
+                                  ? 'var(--accent-forest)'
+                                  : b.bookingStatus === 'CHECKED_IN'
+                                  ? '#2563eb'
+                                  : b.bookingStatus === 'CANCELLED'
+                                  ? '#b91c1c'
+                                  : '#d97706',
+                            }}
+                          >
+                            {b.bookingStatus === 'CONFIRMED'
+                              ? 'Đã xác nhận'
+                              : b.bookingStatus === 'CHECKED_IN'
+                              ? 'Đã nhận phòng'
+                              : b.bookingStatus === 'COMPLETED'
+                              ? 'Đã hoàn tất'
+                              : b.bookingStatus === 'CANCELLED'
+                              ? 'Đã hủy'
+                              : 'Chờ đặt cọc'}
+                          </span>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              backgroundColor: (b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL') ? 'rgba(44, 76, 56, 0.1)' : 'rgba(217, 119, 6, 0.1)',
+                              color: (b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL') ? 'var(--accent-forest)' : '#d97706',
+                            }}
+                          >
+                            {(b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL')
+                              ? 'Tiền cọc: Đã thanh toán'
+                              : 'Tiền cọc: Chờ thanh toán'}
                           </span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Building2 size={14} style={{ color: 'var(--accent-forest)' }} />
-                          <span>
-                            {villaName} {b.villaNumber ? `(${b.villaNumber})` : ''}
-                          </span>
+                        <h3
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 'var(--text-lg)',
+                            fontWeight: 500,
+                            color: 'var(--text-primary)',
+                            margin: '0 0 var(--space-3)',
+                          }}
+                        >
+                          {pkgName}
+                        </h3>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Calendar size={14} style={{ color: 'var(--accent-forest)' }} />
+                            <span>
+                              {b.checkInDate} → {b.checkOutDate}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Building2 size={14} style={{ color: 'var(--accent-forest)' }} />
+                            <span>
+                              {villaName} {b.assignedVillaNumber ? `(${b.assignedVillaNumber})` : ''}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <User size={14} style={{ color: 'var(--accent-forest)' }} />
+                            <span>Số lượng: {b.guestCount || 1} Khách</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--border-subtle)' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {t('customer.depositResult.amountPaid', 'Tiền cọc')}:{' '}
+                          <strong style={{ color: 'var(--accent-forest)' }}>
+                            {formatVND(b.depositAmount, i18n.language)}
+                          </strong>{' '}
+                          / Tổng cộng: {formatVND(b.totalAmount || b.totalEstimatedAmount, i18n.language)}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--border-subtle)' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {t('customer.depositResult.amountPaid', 'Deposit Paid')}:{' '}
-                        <strong style={{ color: 'var(--accent-forest)' }}>
-                          {formatVND(b.depositAmount, i18n.language)}
-                        </strong>{' '}
-                        / Total {formatVND(b.totalPrice, i18n.language)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: CTA */}
-                  <div
-                    style={{
-                      padding: 'var(--space-6)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      backgroundColor: 'var(--bg-soft)',
-                      gap: 'var(--space-3)',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {b.status === 'upcoming'
-                        ? 'Schedule Confirmed'
-                        : b.status === 'in_stay'
-                        ? 'Welcome in Residence'
-                        : b.status === 'completed'
-                        ? 'Past Sanctuary Journey'
-                        : 'Reservation Cancelled'}
-                    </div>
-
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => navigate(`/customer/bookings/${b.id}`)}
-                      icon={<ArrowRight size={14} />}
+                    {/* Right Column: CTA */}
+                    <div
                       style={{
-                        backgroundColor: 'var(--accent-forest)',
-                        color: '#ffffff',
-                        fontWeight: 600,
-                        width: '100%',
-                        maxWidth: '220px',
+                        padding: 'var(--space-6)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: 'var(--bg-soft)',
+                        gap: 'var(--space-3)',
+                        textAlign: 'center',
                       }}
-                      data-cursor="view"
                     >
-                      {t('customer.bookingsList.viewDetails', 'View Details & Itinerary')}
-                    </Button>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {b.bookingStatus === 'CONFIRMED'
+                          ? 'Lịch trình đã xác nhận'
+                          : b.bookingStatus === 'CHECKED_IN'
+                          ? 'Đang lưu trú tại khu nghỉ'
+                          : b.bookingStatus === 'COMPLETED'
+                          ? 'Kỳ nghỉ đã hoàn tất'
+                          : b.bookingStatus === 'CANCELLED'
+                          ? 'Đặt chỗ đã hủy'
+                          : (b.depositStatus === 'PAID' || b.paymentStatus === 'SUCCESSFUL')
+                          ? 'Đã thanh toán cọc'
+                          : 'Chờ thanh toán cọc'}
+                      </div>
+
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/customer/bookings/${b.retreatBookingId}`)}
+                        icon={<ArrowRight size={14} />}
+                        style={{
+                          backgroundColor: 'var(--accent-forest)',
+                          color: '#ffffff',
+                          fontWeight: 600,
+                          width: '100%',
+                          maxWidth: '220px',
+                        }}
+                      >
+                        {t('customer.bookingsList.viewDetails', 'Xem Chi Tiết & Lịch Trình')}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )
         )}
       </Container>
     </div>
   );
 };
+

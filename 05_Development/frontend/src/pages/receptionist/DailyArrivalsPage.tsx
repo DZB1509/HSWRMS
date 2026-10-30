@@ -1,16 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
   ArrowRight,
   AlertCircle,
+  Plus,
+  X,
 } from 'lucide-react';
 import { useOperations } from '../../context/OperationsContext';
+import { Button } from '../../components/common/Button';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 import { OperationalStatusChip } from '../../components/operations/OperationalStatusChip';
 import { ResidenceDeclarationSummary } from '../../components/operations/ResidenceDeclarationSummary';
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
+import {
+  createWalkInBooking,
+  getRetreatPackages,
+  getVillaCategories,
+  type RetreatPackageDto,
+  type VillaCategoryDto,
+} from '../../api/booking/retreatBookingApi';
 
 export const DailyArrivalsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -22,6 +32,59 @@ export const DailyArrivalsPage: React.FC = () => {
   const [readinessFilter, setReadinessFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Walk-in booking state
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [packages, setPackages] = useState<RetreatPackageDto[]>([]);
+  const [categories, setCategories] = useState<VillaCategoryDto[]>([]);
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInEmail, setWalkInEmail] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const [walkInPkgId, setWalkInPkgId] = useState<number>(1);
+  const [walkInCatId, setWalkInCatId] = useState<number>(1);
+  const [walkInCheckIn, setWalkInCheckIn] = useState(new Date().toISOString().split('T')[0]);
+  const [walkInCheckOut, setWalkInCheckOut] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().split('T')[0];
+  });
+  const [walkInGuests, setWalkInGuests] = useState<number>(1);
+  const [walkInPaymentMethod, setWalkInPaymentMethod] = useState<'CASH' | 'POS' | 'VNPAY'>('CASH');
+  const [walkInSubmitting, setWalkInSubmitting] = useState(false);
+  const [walkInError, setWalkInError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getRetreatPackages().then(setPackages).catch(() => {});
+    getVillaCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  const handleCreateWalkIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWalkInSubmitting(true);
+    setWalkInError(null);
+    try {
+      const res = await createWalkInBooking({
+        customerFullName: walkInName,
+        customerEmail: walkInEmail,
+        customerPhone: walkInPhone,
+        retreatPackageId: walkInPkgId,
+        requestedVillaCategoryId: walkInCatId,
+        checkInDate: walkInCheckIn,
+        checkOutDate: walkInCheckOut,
+        guestCount: walkInGuests,
+        depositPaymentMethod: walkInPaymentMethod,
+      });
+
+      setIsWalkInModalOpen(false);
+      alert(`Tạo đặt phòng trực tiếp thành công! Mã đặt chỗ: #${res.retreatBookingId}`);
+      navigate(`/receptionist/check-in/${res.retreatBookingId}`);
+    } catch (err: any) {
+      setWalkInError(err?.message || 'Không thể tạo đặt phòng trực tiếp.');
+    } finally {
+      setWalkInSubmitting(false);
+    }
+  };
+
 
   const currentLang = (i18n.language || 'en') as 'en' | 'vi' | 'zh-CN' | 'ja' | 'fr';
 
@@ -71,12 +134,21 @@ export const DailyArrivalsPage: React.FC = () => {
         subtitle={t('operations.arrivals.subtitle', 'Monitor expected customer arrivals, review villa assignments, and verify check-in readiness.')}
         badge="Screen #21"
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
               {todayDate}
             </span>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsWalkInModalOpen(true)}
+              icon={<Plus size={14} />}
+            >
+              + New Walk-In Booking
+            </Button>
           </div>
         }
+
       />
 
       {/* Residence Declaration Summary Bar */}
@@ -423,6 +495,195 @@ export const DailyArrivalsPage: React.FC = () => {
           </>
         )}
       </div>
+      {/* Walk-In Booking Modal */}
+      {isWalkInModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 19, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-4)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--surface)',
+              borderRadius: 'var(--radius-md)',
+              maxWidth: '540px',
+              width: '100%',
+              padding: 'var(--space-6)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={18} style={{ color: 'var(--accent-forest)' }} />
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>
+                  Create Walk-In Booking (FR-M2-06)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsWalkInModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {walkInError && (
+              <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(185, 28, 28, 0.08)', color: '#b91c1c', fontSize: 'var(--text-xs)', marginBottom: 'var(--space-4)' }}>
+                {walkInError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateWalkIn}>
+              <div style={{ marginBottom: 'var(--space-3)' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Customer Legal Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Tran Van An"
+                  value={walkInName}
+                  onChange={(e) => setWalkInName(e.target.value)}
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="customer@example.com"
+                    value={walkInEmail}
+                    onChange={(e) => setWalkInEmail(e.target.value)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="+84 901 234 567"
+                    value={walkInPhone}
+                    onChange={(e) => setWalkInPhone(e.target.value)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 'var(--space-3)' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Retreat Package *</label>
+                <select
+                  value={walkInPkgId}
+                  onChange={(e) => {
+                    const pkgId = parseInt(e.target.value, 10);
+                    setWalkInPkgId(pkgId);
+                    const pkg = packages.find((p) => p.retreatPackageId === pkgId);
+                    if (pkg && pkg.eligibleVillaCategories && pkg.eligibleVillaCategories.length > 0) {
+                      setWalkInCatId(pkg.eligibleVillaCategories[0].villaCategoryId);
+                    }
+                  }}
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                >
+                  {packages.map((p) => (
+                    <option key={p.retreatPackageId} value={p.retreatPackageId}>
+                      {p.packageName} ({p.durationNights}N - {p.wellnessGoal})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 'var(--space-3)' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Villa Category *</label>
+                <select
+                  value={walkInCatId}
+                  onChange={(e) => setWalkInCatId(parseInt(e.target.value, 10))}
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                >
+                  {categories.map((c) => (
+                    <option key={c.villaCategoryId} value={c.villaCategoryId}>
+                      {c.categoryName} (Max {c.maxOccupancy} Guests)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Check-in Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={walkInCheckIn}
+                    onChange={(e) => setWalkInCheckIn(e.target.value)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Check-out Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={walkInCheckOut}
+                    onChange={(e) => setWalkInCheckOut(e.target.value)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Number of Guests *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    required
+                    value={walkInGuests}
+                    onChange={(e) => setWalkInGuests(parseInt(e.target.value, 10) || 1)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>Deposit Method *</label>
+                  <select
+                    value={walkInPaymentMethod}
+                    onChange={(e) => setWalkInPaymentMethod(e.target.value as any)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}
+                  >
+                    <option value="CASH">Cash at Desk</option>
+                    <option value="POS">POS Terminal Card</option>
+                    <option value="VNPAY">VNPay QR / Gateway</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+                <Button variant="secondary" size="sm" type="button" onClick={() => setIsWalkInModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit" disabled={walkInSubmitting}>
+                  {walkInSubmitting ? 'Creating Booking...' : 'Create & Proceed to Check-In'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
