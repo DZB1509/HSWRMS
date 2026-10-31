@@ -8,14 +8,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFolio } from '../../context/FolioContext';
-import { useGovernance } from '../../hooks/useGovernance';
 import { formatVND } from '../../i18n';
 
 export const SystemOverviewPage: React.FC = () => {
   const { role } = useAuth();
   const { t, i18n } = useTranslation(['operations', 'common']);
   const { getRevenueAnalytics, getOccupancyAnalytics, getTherapistUtilizationAnalytics } = useFolio();
-  const { policeExportSummary } = useGovernance();
 
   // Cross-module single source of truth analytics
   const revenue = getRevenueAnalytics();
@@ -60,7 +58,7 @@ export const SystemOverviewPage: React.FC = () => {
             {t('operations.systemOverview.statusHonestyTitle', 'Tình Trạng Sức Khỏe Vận Hành Ứng Dụng')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.systemOverview.statusHonestyDesc', 'Tất cả các chỉ số vận hành bên dưới phản ánh trung thực trạng thái liên mô-đun được tính toán từ các lượt đặt phòng đang hoạt động, lịch trị liệu, đơn món ăn và các khoản phí folio đã quyết toán.')}
+            {t('operations.systemOverview.statusHonestyDesc', 'Only metrics returned from verified backend analytics are shown. Metrics without a verified source are marked unavailable.')}
           </span>
         </div>
       </div>
@@ -73,32 +71,32 @@ export const SystemOverviewPage: React.FC = () => {
             {t('operations.systemOverview.accommodationTitle', 'Tình Trạng Lưu Trú & Biệt Thự Nghỉ Dưỡng (Mô-đun 2)')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {occupancy.totalVillas} {t('operations.systemOverview.totalVillas', 'Tổng số căn biệt thự thực tế')}
+            {Number.isFinite(occupancy.totalVillas) ? occupancy.totalVillas : 'Unavailable'} {t('operations.systemOverview.totalVillas', 'Tổng số căn biệt thự thực tế')}
           </span>
         </div>
 
         <div className="hsw-gov-grid" style={{ marginBottom: 0 }}>
           <div className="hsw-gov-kpi hsw-kpi-occupied">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.occupied', 'Đang có khách')}</span>
-            <span className="hsw-gov-kpi-val" style={{ color: 'var(--accent-forest)' }}>{occupancy.occupiedCount}</span>
-            <span className="hsw-gov-kpi-sub">{occupancy.occupancyRate}% {t('manager.occupancy.rate', 'công suất')}</span>
+            <span className="hsw-gov-kpi-val" style={{ color: 'var(--accent-forest)' }}>{Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 'Unavailable'}</span>
+            <span className="hsw-gov-kpi-sub">{Number.isFinite(occupancy.occupancyRate) ? occupancy.occupancyRate : 'Unavailable'}% {t('manager.occupancy.rate', 'công suất')}</span>
           </div>
 
           <div className="hsw-gov-kpi hsw-kpi-ready">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.available', 'Sẵn sàng đón khách')}</span>
-            <span className="hsw-gov-kpi-val">{occupancy.readyCount}</span>
+            <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.readyCount) ? occupancy.readyCount : 'Unavailable'}</span>
             <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.inspectedReady', 'Đã dọn dẹp & kiểm tra')}</span>
           </div>
 
           <div className="hsw-gov-kpi hsw-kpi-cleaning">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.cleaning', 'Đang dọn dẹp')}</span>
-            <span className="hsw-gov-kpi-val" style={{ color: 'var(--warning)' }}>{occupancy.cleaningCount}</span>
+            <span className="hsw-gov-kpi-val" style={{ color: 'var(--warning)' }}>{Number.isFinite(occupancy.cleaningCount) ? occupancy.cleaningCount : 'Unavailable'}</span>
             <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.turnoverQueue', 'Hàng đợi buồng phòng')}</span>
           </div>
 
           <div className="hsw-gov-kpi hsw-kpi-maintenance">
             <span className="hsw-gov-kpi-label">{t('manager.occupancy.maintenance', 'Bảo trì')}</span>
-            <span className="hsw-gov-kpi-val" style={{ color: 'var(--text-muted)' }}>{occupancy.maintenanceCount}</span>
+            <span className="hsw-gov-kpi-val" style={{ color: 'var(--text-muted)' }}>{Number.isFinite(occupancy.maintenanceCount) ? occupancy.maintenanceCount : 'Unavailable'}</span>
             <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.outOfOrder', 'Bảo trì theo lịch')}</span>
           </div>
         </div>
@@ -119,20 +117,20 @@ export const SystemOverviewPage: React.FC = () => {
             <div className="hsw-overview-subcard hsw-card-spa-sessions">
               <div className="subcard-label">{t('manager.therapists.totalSessions', 'Lịch Hẹn Đã Đặt')}</div>
               <div className="subcard-val">
-                {therapists.totalScheduledSessions}
+                {Number.isFinite(therapists.totalScheduledSessions) ? therapists.totalScheduledSessions : 'Unavailable'}
               </div>
               <div className="subcard-sub">
-                {therapists.completedSessions} hoàn thành · {therapists.noShowSessions} vắng mặt
+                {Number.isFinite(therapists.completedSessions) ? therapists.completedSessions : 'Unavailable'} hoàn thành · {Number.isFinite(therapists.noShowSessions) ? therapists.noShowSessions : 'Unavailable'} vắng mặt
               </div>
             </div>
 
             <div className="hsw-overview-subcard hsw-card-spa-time">
               <div className="subcard-label">{t('manager.therapists.totalMinutes', 'Thời Lượng Trị Liệu Đã Đặt')}</div>
               <div className="subcard-val">
-                {therapists.totalBookedMinutes} phút
+                {Number.isFinite(therapists.totalBookedMinutes) ? therapists.totalBookedMinutes : 'Unavailable'} phút
               </div>
               <div className="subcard-sub">
-                {therapists.totalBookedHours} giờ chăm sóc trực tiếp
+                {Number.isFinite(therapists.totalBookedHours) ? therapists.totalBookedHours : 'Unavailable'} giờ chăm sóc trực tiếp
               </div>
             </div>
           </div>
@@ -151,7 +149,7 @@ export const SystemOverviewPage: React.FC = () => {
             <div className="hsw-overview-subcard hsw-card-revenue">
               <div className="subcard-label">{t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}</div>
               <div className="subcard-val">
-                {formatVND(revenue.totalRevenue, i18n.language)}
+                {(Number.isFinite(revenue.totalRevenue) ? formatVND(revenue.totalRevenue, i18n.language) : 'Unavailable')}
               </div>
               <div className="subcard-sub">
                 Doanh thu đã quyết toán tổng hợp
@@ -171,45 +169,9 @@ export const SystemOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Police Residence Declaration Compliance Section (Law on Residence 2020) */}
-      <div className="hsw-gov-card">
-        <div className="hsw-gov-card-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
-            <h2 className="hsw-gov-card-title" style={{ margin: 0 }}>
-              {t('operations.systemOverview.policeComplianceTitle', 'Tuân Thủ Khai Báo Tạm Trú Với Cơ Quan Công An')}
-            </h2>
-          </div>
-          <span className={`hsw-audit-pill ${policeExportSummary.status === 'SUBMITTED' ? 'success' : policeExportSummary.status === 'READY' ? 'ready' : 'denied'}`} style={{ fontSize: '11px' }}>
-            {policeExportSummary.status === 'READY' ? 'SẴN SÀNG' : policeExportSummary.status === 'SUBMITTED' ? 'ĐÃ NỘP' : 'CHỜ XỬ LÝ'}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div className="hsw-compliance-box" style={{ flex: '1 1 100%' }}>
-            <p style={{ margin: '0 0 var(--space-2) 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {t('operations.systemOverview.policeComplianceDesc', 'Các biện pháp bảo vệ vận hành theo Luật Cư trú 2020 và Nghị định 13/2023/NĐ-CP. HSWRMS tự động tổng hợp danh sách tạm trú hàng ngày cho khách nội địa và quốc tế được đăng ký khi làm thủ tục check-in.')}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', fontSize: '11px', color: 'var(--text-muted)' }}>
-              <span>
-                <strong>{t('operations.systemOverview.batchId', 'Mã Lô Khai Báo')}:</strong> <code>{policeExportSummary.batchId}</code>
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.totalResidents', 'Khách Đang Lưu Trú Đã Đăng Ký')}:</strong> {policeExportSummary.totalRecords}
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.domestic', 'Khách Trong Nước (CCCD)')}:</strong> {policeExportSummary.domesticCount} · <strong>{t('operations.systemOverview.foreign', 'Khách Quốc Tế (Hộ Chiếu)')}:</strong> {policeExportSummary.foreignCount}
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.batchSchedule', 'Khung Giờ Chốt Lô')}:</strong> 22:00 Hàng Ngày
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.generatedAt', 'Thời Gian Lập Lô')}:</strong> {policeExportSummary.generatedAt}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="hsw-gov-card" role="status">
+        <h2 className="hsw-gov-card-title">{t('operations.systemOverview.policeComplianceTitle', 'Police residency export')}</h2>
+        <p>Unavailable: the backend has no verified residence-record source. No resident count, batch status, or submission status is shown.</p>
       </div>
     </div>
   );

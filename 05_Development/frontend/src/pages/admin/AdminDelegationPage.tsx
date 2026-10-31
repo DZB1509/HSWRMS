@@ -25,6 +25,7 @@ import {
   type DelegationViewDto,
   type DelegablePermissionViewDto,
 } from '../../features/m6-admin/api/delegationApi';
+import { evaluatePermission } from '../../features/m6-admin/api/staffAccountsApi';
 import {
   MODULE_DESCRIPTIONS,
   ACTION_NAMES,
@@ -39,6 +40,8 @@ export const AdminDelegationPage: React.FC = () => {
     () => validateDelegationAuthorization(currentUser),
     [currentUser]
   );
+  const canCreate = evaluatePermission(currentUser, 'S52:C');
+  const canRevoke = evaluatePermission(currentUser, 'S52:D');
 
   const [delegations, setDelegations] = useState<DelegationViewDto[]>([]);
   const [delegablePermissions, setDelegablePermissions] = useState<DelegablePermissionViewDto[]>([]);
@@ -55,10 +58,19 @@ export const AdminDelegationPage: React.FC = () => {
 
   // Inspector state
   const [selectedDelegation, setSelectedDelegation] = useState<DelegationViewDto | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [managerUserId, setManagerUserId] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validUntil, setValidUntil] = useState('');
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
+  const [mutationPending, setMutationPending] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!canView) {
       setLoading(false);
+      setDelegations([]);
+      setDelegablePermissions([]);
       setError('Bạn không có quyền truy cập Ủy Quyền Quản Lý (Yêu cầu quyền S52:V).');
       return;
     }
@@ -76,12 +88,69 @@ export const AdminDelegationPage: React.FC = () => {
       setDelegablePermissions(delegables);
     } catch (err: any) {
       const msg = err?.message || 'Không thể tải danh sách ủy quyền từ máy chủ';
+      setDelegations([]);
+      setDelegablePermissions([]);
       setError(msg);
       showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
   }, [canView, showToast]);
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canCreate || mutationPending) return;
+    const managerId = Number(managerUserId);
+    const start = new Date(validFrom);
+    const end = new Date(validUntil);
+    if (!Number.isInteger(managerId) || managerId <= 0 || selectedPermissionIds.length === 0 ||
+        Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setMutationError('Enter a valid Manager user ID, select at least one delegable permission, and provide a valid time range.');
+      return;
+    }
+    setMutationPending(true);
+    setMutationError(null);
+    try {
+      const created = await delegationApi.create({
+        managerUserId: managerId,
+        permissionIds: selectedPermissionIds,
+        validFrom: start.toISOString(),
+        validUntil: end.toISOString(),
+      });
+      setDelegations((previous) => [created, ...previous]);
+      setShowCreateForm(false);
+      setManagerUserId('');
+      setSelectedPermissionIds([]);
+      showToast('Delegation created by the server and recorded in the audit log.', 'success');
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Delegation could not be created.';
+      setMutationError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setMutationPending(false);
+    }
+  };
+
+  const handleRevoke = async (delegation: DelegationViewDto) => {
+    if (!canRevoke || mutationPending) return;
+    if (!window.confirm(`Revoke delegation DEL-${delegation.delegationId}?`)) return;
+    setMutationPending(true);
+    setMutationError(null);
+    try {
+      const revoked = await delegationApi.revoke(delegation.delegationId);
+      setDelegations((previous) => previous.map((item) => item.delegationId === revoked.delegationId ? revoked : item));
+      setSelectedDelegation(revoked);
+      showToast('Delegation revoked by the server and recorded in the audit log.', 'success');
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Delegation could not be revoked.';
+      setMutationError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setMutationPending(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -158,7 +227,7 @@ export const AdminDelegationPage: React.FC = () => {
                 backgroundColor: 'var(--accent-sand)',
                 color: 'var(--text-primary)',
               }}>
-                Phân Hệ S52 (Chỉ Đọc & Tra Cứu)
+                Phân Hệ S52 (Tra Cứu & Quản Lý Ủy Quyền)
               </span>
             </div>
             <p className="hsw-gov-subtitle">
@@ -177,15 +246,15 @@ export const AdminDelegationPage: React.FC = () => {
               {t('common.actions.refresh', 'Làm Mới')}
             </Button>
 
-            {/* Mutation button disabled in Phase 5.4 */}
             <Button
               variant="primary"
               size="sm"
-              disabled={true}
+              disabled={!canCreate || loading || mutationPending}
+              onClick={() => { setMutationError(null); setShowCreateForm((shown) => !shown); }}
               icon={<Plus size={15} />}
-              title="Tính năng Cấp quyền ủy quyền mới (POST) tạm thời bị khóa trong Phase 5.4 (Read-Only Audit)"
+              title={!canCreate ? 'Requires S52:C permission.' : 'Create a server-audited, time-limited delegation.'}
             >
-              Cấp Ủy Quyền (Đang Khóa)
+              {showCreateForm ? 'Đóng biểu mẫu' : 'Cấp Ủy Quyền'}
             </Button>
           </div>
         </div>
@@ -214,6 +283,44 @@ export const AdminDelegationPage: React.FC = () => {
           </div>
           <Button variant="secondary" size="sm" onClick={loadData}>Thử lại</Button>
         </div>
+      )}
+
+      {mutationError && (
+        <div className="hsw-gov-banner" role="alert" style={{ backgroundColor: '#fbeeed', borderColor: 'var(--danger)', marginBottom: 'var(--space-4)' }}>
+          {mutationError}
+        </div>
+      )}
+
+      {showCreateForm && canCreate && (
+        <form className="hsw-gov-card" onSubmit={handleCreate} style={{ marginBottom: 'var(--space-4)' }}>
+          <h2 className="hsw-gov-card-title">Create time-limited Manager delegation</h2>
+          <p className="hsw-gov-subtitle">The server verifies that the target is an active Manager, all selected permissions are delegable, and the validity period is acceptable.</p>
+          <label style={{ display: 'block', margin: 'var(--space-3) 0' }}>
+            Manager user ID
+            <input type="number" min="1" step="1" value={managerUserId} onChange={(e) => setManagerUserId(e.target.value)} required disabled={mutationPending} />
+          </label>
+          <fieldset disabled={mutationPending} style={{ border: '1px solid var(--border-subtle)', padding: 'var(--space-3)' }}>
+            <legend>Server-listed delegable permissions</legend>
+            {delegablePermissions.length === 0 ? <p role="status">No delegable permissions are available from the server.</p> : delegablePermissions.map((permission) => (
+              <label key={permission.permissionId} style={{ display: 'block', margin: '4px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedPermissionIds.includes(permission.permissionId)}
+                  onChange={(e) => setSelectedPermissionIds((previous) => e.target.checked
+                    ? [...new Set([...previous, permission.permissionId])]
+                    : previous.filter((id) => id !== permission.permissionId))}
+                /> {permission.module}:{permission.action}
+              </label>
+            ))}
+          </fieldset>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', margin: 'var(--space-3) 0' }}>
+            <label>Effective from <input type="datetime-local" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} required disabled={mutationPending} /></label>
+            <label>Effective until <input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} required disabled={mutationPending} /></label>
+          </div>
+          <Button type="submit" variant="primary" disabled={mutationPending || !canCreate || delegablePermissions.length === 0}>
+            {mutationPending ? 'Saving…' : 'Create delegation'}
+          </Button>
+        </form>
       )}
 
       {/* Filter and Search Bar */}
@@ -394,16 +501,16 @@ export const AdminDelegationPage: React.FC = () => {
                             Chi Tiết
                           </Button>
 
-                          {/* Revoke button disabled in Phase 5.4 */}
                           <Button
                             variant="tertiary"
                             size="sm"
-                            disabled={true}
+                            disabled={!canRevoke || mutationPending || (!isActive && !isPending)}
+                            onClick={(e) => { e.stopPropagation(); void handleRevoke(del); }}
                             style={{ color: 'var(--danger)' }}
                             icon={<Lock size={12} />}
-                            title="Tính năng Thu hồi ủy quyền (POST /revoke) tạm thời bị khóa trong Phase 5.4 (Read-Only Audit)"
+                            title={!canRevoke ? 'Requires S52:D permission.' : 'Revoke this pending or active delegation.'}
                           >
-                            Thu Hồi (Khóa)
+                            Thu Hồi
                           </Button>
                         </div>
                       </td>

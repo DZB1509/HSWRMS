@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * FR-M6-07 / UC84 – System Overview Dashboard, Admin Dashboard (S49), and Manager Dashboard (S54).
@@ -79,14 +78,14 @@ public class SystemOverviewService {
         }
 
         List<WidgetView> widgets = new ArrayList<>();
-        widgets.add(new WidgetView("resort_occupancy", "Estimated Resort Occupancy", true,
-                "78.5%", "Calculated from current active retreat bookings"));
-        widgets.add(new WidgetView("daily_arrivals", "Today's Arrivals", true,
-                14, "Expected check-in arrivals for today"));
-        widgets.add(new WidgetView("spa_utilization", "Spa Therapist Workload", true,
-                "82.0%", "Average confirmed treatment hours vs therapist availability"));
-        widgets.add(new WidgetView("average_rating", "Customer Review KPI", true,
-                "4.85 / 5.0", "Consolidated retreat feedback score"));
+        widgets.add(new WidgetView("resort_occupancy", "Estimated Resort Occupancy", false,
+                null, "Unavailable: no verified occupancy aggregation is connected to this dashboard."));
+        widgets.add(new WidgetView("daily_arrivals", "Today's Arrivals", false,
+                null, "Unavailable: no verified arrivals source is connected to this dashboard."));
+        widgets.add(new WidgetView("spa_utilization", "Spa Therapist Workload", false,
+                null, "Unavailable: no verified therapist utilization aggregation is connected to this dashboard."));
+        widgets.add(new WidgetView("average_rating", "Customer Review KPI", false,
+                null, "Unavailable: no verified review aggregation is connected to this dashboard."));
 
         return new DashboardView("Manager Operational & Analytics Dashboard", navigation, widgets);
     }
@@ -96,15 +95,12 @@ public class SystemOverviewService {
         List<WidgetView> widgets = new ArrayList<>();
 
         // Operational widgets (available to both Admin and Manager)
-        widgets.add(new WidgetView("villa_status", "Villa Operational Status", true,
-                Map.of("Vacant", 12, "Occupied", 28, "Needs Cleaning", 4, "Maintenance", 2),
-                "Real-time physical villa breakdown"));
-        widgets.add(new WidgetView("arrivals_departures", "Today's Movements", true,
-                Map.of("Arrivals", 14, "Departures", 11, "In-House", 56),
-                "Guest check-in & check-out traffic"));
-        widgets.add(new WidgetView("spa_daily_sessions", "Today's Spa Schedule", true,
-                Map.of("Completed", 8, "Confirmed", 16, "Pending Confirmation", 4),
-                "Automated Spa & Therapy engine schedule load"));
+        widgets.add(new WidgetView("villa_status", "Villa Operational Status", false,
+                null, "Unavailable: no verified physical villa aggregation is connected to this dashboard."));
+        widgets.add(new WidgetView("arrivals_departures", "Today's Movements", false,
+                null, "Unavailable: no verified arrivals and departures source is connected to this dashboard."));
+        widgets.add(new WidgetView("spa_daily_sessions", "Today's Spa Schedule", false,
+                null, "Unavailable: no verified Spa schedule aggregation is connected to this dashboard."));
 
         // Admin-only widgets
         boolean hasAdminWidgets = actor.admin() || permissions.userHas(actor.userId(), "S55_ADMIN_WIDGETS", "V");
@@ -124,9 +120,6 @@ public class SystemOverviewService {
 
     @Transactional(readOnly = true)
     public String generatePoliceResidencyReportCsv(CurrentActor actor) {
-        audit.record(actor, "Export Police Residency Declaration Report", "ResidenceRecord", "ALL", AuditLogService.SUCCESS);
-        return "ResidenceRecordID,CustomerName,PassportOrID,Nationality,VillaAssigned,CheckInDate,CheckOutDate,Status\n"
-                + "101,Vinh Pham,001200000001,Vietnam,Villa 101,2026-10-10,2026-10-14,Active\n"
-                + "102,John Smith,USA987654321,United States,Villa 104,2026-10-09,2026-10-15,Active\n";
+        throw new UnsupportedOperationException("Police residency export is unavailable: no verified residence-record source is connected.");
     }
 }

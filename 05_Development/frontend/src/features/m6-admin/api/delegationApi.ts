@@ -95,8 +95,8 @@ export function validateDelegationAuthorization(
 }
 
 /**
- * Read-Only Delegation API client.
- * Strictly does NOT implement or expose any mutation methods (create/revoke).
+ * Delegation API client backed by the M6 S52 controller. The backend validates
+ * the active Manager, permission delegability, date range and audit record.
  */
 export const delegationApi = {
   /**
@@ -123,5 +123,17 @@ export const delegationApi = {
       return res.data;
     }
     return [];
+  },
+
+  create: async (body: { managerUserId: number; permissionIds: number[]; validFrom: string; validUntil: string }): Promise<DelegationViewDto> => {
+    const res = await apiClient.post<ApiEnvelope<DelegationViewDto>>('/admin/delegations', body);
+    if (res?.data && validateDelegationView(res.data)) return res.data;
+    throw new Error('The server returned an invalid delegation response.');
+  },
+
+  revoke: async (delegationId: number): Promise<DelegationViewDto> => {
+    const res = await apiClient.post<ApiEnvelope<DelegationViewDto>>(`/admin/delegations/${delegationId}/revoke`);
+    if (res?.data && validateDelegationView(res.data)) return res.data;
+    throw new Error('The server returned an invalid delegation response.');
   },
 };

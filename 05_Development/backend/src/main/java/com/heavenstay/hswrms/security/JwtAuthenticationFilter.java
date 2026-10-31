@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         return userAccountRepository.findById(userId)
                 .map(a -> UserAccount.ACTIVE.equals(a.getAccountStatus()))
-                .orElse(true);
+                .orElse(false);
     }
 
     @Override

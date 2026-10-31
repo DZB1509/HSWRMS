@@ -250,7 +250,7 @@ export const AppRouter: React.FC = () => {
         <Route path="revenue" element={<RevenueDashboardPage />} />
         <Route path="occupancy" element={<OccupancyReportPage />} />
         <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
-        <Route path="system-overview" element={<SystemOverviewPage />} />
+        <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
         <Route index element={<Navigate to="/manager/dashboard" replace />} />
       </Route>
 
@@ -286,7 +286,7 @@ export const AppRouter: React.FC = () => {
         <Route path="permissions" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S51:V"><PermissionMatrixPage /></RoleGuard>} />
         <Route path="delegation" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S52:V"><AdminDelegationPage /></RoleGuard>} />
         <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S53:V"><SensitiveAuditLogPage /></RoleGuard>} />
-        <Route path="system-overview" element={<SystemOverviewPage />} />
+        <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 
