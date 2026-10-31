@@ -542,7 +542,7 @@ export const ReceptionistBookingsPage: React.FC = () => {
 
                           {b.bookingStatus === 'CHECKED_IN' && (
                             <button
-                              onClick={() => navigate('/customer/folio/' + b.bookingReference)}
+                              onClick={() => navigate('/customer/folio/' + b.retreatBookingId)}
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',

@@ -17,9 +17,9 @@ import {
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useCustomer } from '../../context/CustomerContext';
-import { billingApi } from '../../features/m5-billing/api/billingApi';
+import { useAuth } from '../../app/providers/AuthProvider';
 
-export const ReviewRatingPage: React.FC = () => {
+const ReviewRatingPageForIdentity: React.FC<{ identity: string | null }> = ({ identity }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { bookingId } = useParams<{ bookingId?: string }>();
@@ -176,34 +176,23 @@ export const ReviewRatingPage: React.FC = () => {
   // ── 3. POST-CHECKOUT REVIEW FORM ──────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!identity || !profile || profile.id !== identity) {
+      setErrorMsg(t('review.profileUnavailable', 'Your Customer profile is not available for this identity.'));
+      return;
+    }
     setErrorMsg(null);
     setIsSubmitting(true);
 
     try {
-      // Backend submission
-      try {
-        await billingApi.submitReview({
-          retreatBookingId: Number(bookingId) || 1,
-          overallRating,
-          roomRating: villaRating,
-          spaRating: spaRating,
-          diningRating: diningRating,
-          comments: feedback,
-        });
-      } catch (err: any) {
-        if (err?.code === 'DUPLICATE_REVIEW') {
-          setErrorMsg('A review has already been submitted for this stay.');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
       // Context sync
-      const result = submitReview(targetBookingRef, {
+      const result = await submitReview(targetBookingRef, {
         bookingReference: targetBookingRef,
         customerId: profile.id,
         customerName: profile.fullName,
         overallRating,
+        roomRating: villaRating,
+        spaRating,
+        diningRating,
         feedback,
       });
 
@@ -436,6 +425,12 @@ export const ReviewRatingPage: React.FC = () => {
       </Container>
     </div>
   );
+};
+
+export const ReviewRatingPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const identity = currentUser?.id ?? null;
+  return <ReviewRatingPageForIdentity key={identity ?? 'anonymous'} identity={identity} />;
 };
 
 export default ReviewRatingPage;

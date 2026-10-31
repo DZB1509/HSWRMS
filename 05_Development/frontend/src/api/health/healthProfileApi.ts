@@ -30,7 +30,7 @@ export interface UpdateHealthProfileBody {
   injurySurgeryHistory?: string | null;
   mobilityJointNotes?: string | null;
   currentMedications?: string | null;
-  stressFatigueLevel?: string;
+  stressFatigueLevel?: string | null;
   foodAllergies?: string[];
   foodIntoleranceNotes?: string | null;
   dietaryRequirements?: string[];

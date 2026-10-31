@@ -24,6 +24,7 @@ export const CustomerDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const lang = (i18n.language as 'vi' | 'en' | 'zh-CN' | 'ja' | 'fr') || 'en';
   const { profile, activeBooking, wellnessProfile } = useCustomer();
+  const wellnessIsComplete = wellnessProfile?.isComplete === true;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -87,14 +88,14 @@ export const CustomerDashboardPage: React.FC = () => {
                 margin: '0 0 var(--space-2)',
               }}
             >
-              {getGreeting()}, {profile.fullName}
+              {getGreeting()}, {profile?.fullName ?? ''}
             </h1>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0, maxWidth: '640px' }}>
               {t('customer.dashboard.welcomeSub', 'Welcome back to your mindful retreat journey at HeavenStay.')}
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          {profile?.membershipTier ? <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <span
               style={{
                 display: 'inline-flex',
@@ -112,7 +113,7 @@ export const CustomerDashboardPage: React.FC = () => {
               <ShieldCheck size={14} />
               <span>{profile.membershipTier}</span>
             </span>
-          </div>
+          </div> : null}
         </div>
 
         {/* ====================================================================
@@ -316,14 +317,14 @@ export const CustomerDashboardPage: React.FC = () => {
                   style={{
                     fontSize: '11px',
                     fontWeight: 700,
-                    color: wellnessProfile.isComplete ? 'var(--text-success)' : 'var(--text-warning)',
-                    backgroundColor: wellnessProfile.isComplete ? 'var(--surface-success)' : 'var(--surface-warning)',
-                    border: `1px solid ${wellnessProfile.isComplete ? 'var(--border-success)' : 'var(--border-warning)'}`,
+                    color: wellnessIsComplete ? 'var(--text-success)' : 'var(--text-warning)',
+                    backgroundColor: wellnessIsComplete ? 'var(--surface-success)' : 'var(--surface-warning)',
+                    border: `1px solid ${wellnessIsComplete ? 'var(--border-success)' : 'var(--border-warning)'}`,
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-pill)',
                   }}
                 >
-                  {wellnessProfile.isComplete
+                  {wellnessIsComplete
                     ? t('customer.dashboard.wellnessJourney.profileComplete', 'Complete & Active')
                     : t('customer.dashboard.wellnessJourney.profileIncomplete', 'Action Recommended')}
                 </span>

@@ -9,46 +9,42 @@ import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader
 import { updateMyProfile } from '../../api/customer/customerProfileApi';
 import { AppApiError } from '../../api/errors/apiError';
 import { User, Phone, Lock, Bell, Shield, Save } from 'lucide-react';
+import type { CustomerProfile } from '../../types/customer';
+
+const toAccountFormData = (source: CustomerProfile | null) => ({
+  fullName: source?.fullName ?? '',
+  email: source?.email ?? '',
+  phone: source?.phone ?? '',
+  dateOfBirth: source?.dateOfBirth ?? '',
+  address: source?.address ?? '',
+  preferredLanguage: source?.preferredLanguage ?? '',
+  emergencyName: source?.emergencyContact.name ?? '',
+  emergencyPhone: source?.emergencyContact.phone ?? '',
+  emergencyRelationship: source?.emergencyContact.relationship ?? '',
+  notifyEmail: source?.notificationPreferences.email ?? false,
+  notifySms: source?.notificationPreferences.sms ?? false,
+  notifyWellness: source?.notificationPreferences.wellnessReminders ?? false,
+});
 
 export const AccountSettingsPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const identity = currentUser?.role === 'customer' ? currentUser.id : null;
+  return <AccountSettingsPageForIdentity key={identity ?? 'no-customer-identity'} />;
+};
+
+const AccountSettingsPageForIdentity: React.FC = () => {
   const { t } = useTranslation();
   const { profile, refreshServerProfile, isProfileLoading } = useCustomer();
   const { loginWithCredentials, currentUser } = useAuth();
   const { showToast } = useToast();
 
-  const [formData, setFormData] = useState({
-    fullName: profile.fullName,
-    email: profile.email,
-    phone: profile.phone,
-    dateOfBirth: profile.dateOfBirth,
-    address: profile.address,
-    preferredLanguage: profile.preferredLanguage,
-    emergencyName: profile.emergencyContact.name,
-    emergencyPhone: profile.emergencyContact.phone,
-    emergencyRelationship: profile.emergencyContact.relationship,
-    notifyEmail: profile.notificationPreferences.email,
-    notifySms: profile.notificationPreferences.sms,
-    notifyWellness: profile.notificationPreferences.wellnessReminders,
-  });
+  const [formData, setFormData] = useState(() => toAccountFormData(profile));
 
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setFormData({
-      fullName: profile.fullName,
-      email: profile.email,
-      phone: profile.phone,
-      dateOfBirth: profile.dateOfBirth,
-      address: profile.address,
-      preferredLanguage: profile.preferredLanguage,
-      emergencyName: profile.emergencyContact.name,
-      emergencyPhone: profile.emergencyContact.phone,
-      emergencyRelationship: profile.emergencyContact.relationship,
-      notifyEmail: profile.notificationPreferences.email,
-      notifySms: profile.notificationPreferences.sms,
-      notifyWellness: profile.notificationPreferences.wellnessReminders,
-    });
+    setFormData(toAccountFormData(profile));
   }, [profile]);
 
   const [passwordState, setPasswordState] = useState({
@@ -72,6 +68,12 @@ export const AccountSettingsPage: React.FC = () => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) return;
+    if (!profile || profile.id !== currentUser?.id) {
+      const message = t('customer.account.profileUnavailable', 'Your Customer profile is not available for this identity.');
+      setFormError(message);
+      showToast(message, 'error');
+      return;
+    }
     setFormError(null);
 
     const fullName = formData.fullName.trim();
@@ -526,11 +528,11 @@ export const AccountSettingsPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
                 <Shield size={20} style={{ color: 'var(--accent-forest)' }} />
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--accent-forest)' }}>
-                  {profile.membershipTier}
+                  {profile?.membershipTier || t('customer.account.membershipUnavailable', 'Membership details unavailable')}
                 </h3>
               </div>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '0 0 var(--space-4)', lineHeight: 1.6 }}>
-                {t('customer.account.memberSince', 'Member Since')}: <strong>{profile.memberSince}</strong>
+                {t('customer.account.memberSince', 'Member Since')}: <strong>{profile?.memberSince || '—'}</strong>
               </p>
               <div style={{ fontSize: '11px', color: 'var(--accent-olive)', fontWeight: 600 }}>
                 ✓ Priority Villa Allocation · Dedicated Wellness Concierge · Seasonal Herbal Blends

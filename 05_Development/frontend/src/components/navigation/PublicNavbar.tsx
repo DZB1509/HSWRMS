@@ -224,11 +224,11 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
                   className="hsw-avatar-circle"
                   style={heroActive ? { backgroundColor: 'var(--accent-sand)', color: '#2B2B2B' } : undefined}
                 >
-                  {getInitials(profile.fullName || currentUser?.name || 'EV')}
+                  {getInitials(profile?.fullName || currentUser?.name || '')}
                 </div>
                 <div className="hsw-customer-user-text" style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: heroActive ? '#ffffff' : 'var(--text-primary)' }}>
-                    {profile.fullName || currentUser?.name || 'Eleanor Vance'}
+                    {profile?.fullName || currentUser?.name || ''}
                   </div>
                   <div style={{ fontSize: '11px', color: heroActive ? 'rgba(255, 255, 255, 0.8)' : 'var(--accent-olive)' }}>
                     {activeBooking ? `${activeBooking.villaNumber || 'Villa #102'} · Reserved` : 'Sanctuary Member'}
@@ -383,11 +383,11 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
                 }}
               >
                 <div className="hsw-avatar-circle">
-                  {getInitials(profile.fullName || currentUser?.name || 'EV')}
+                  {getInitials(profile?.fullName || currentUser?.name || '')}
                 </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {profile.fullName || currentUser?.name || 'Eleanor Vance'}
+                    {profile?.fullName || currentUser?.name || ''}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--accent-olive)' }}>
                     {activeBooking ? `${activeBooking.villaNumber || 'Villa #102'} · Reserved` : 'Sanctuary Member'}

@@ -7,18 +7,14 @@ import {
   TrendingUp,
   Users2,
   Activity,
-  ArrowRight,
-  Sparkles,
   Lock
 } from 'lucide-react';
 import { useFolio } from '../../context/FolioContext';
-import { useGovernance } from '../../hooks/useGovernance';
 import { formatVND } from '../../i18n';
 
 export const ManagerDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'common']);
   const { getRevenueAnalytics, getOccupancyAnalytics, getTherapistUtilizationAnalytics } = useFolio();
-  const { activeDelegations, permissionRules } = useGovernance();
 
   // M5 Validated Single Source of Truth selectors
   const revenue = getRevenueAnalytics();
@@ -26,7 +22,6 @@ export const ManagerDashboardPage: React.FC = () => {
   const therapists = getTherapistUtilizationAnalytics();
 
   // Find active delegation for Manager
-  const activeManagerDelegation = activeDelegations.find((d) => d.delegateRole === 'manager');
 
   return (
     <div style={{ padding: 'var(--space-6) var(--space-8)' }}>
@@ -54,56 +49,9 @@ export const ManagerDashboardPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Temporary Delegated Authority Banner (If Active) */}
-      {activeManagerDelegation && (
-        <div className="hsw-gov-banner" style={{ borderLeftColor: '#1a6b68', backgroundColor: '#f0f9f8' }}>
-          <Sparkles size={18} style={{ color: '#1a6b68', flexShrink: 0, marginTop: '2px' }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-              <strong style={{ color: '#1a6b68', fontSize: 'var(--text-sm)' }}>
-                {t('operations.managerDashboard.delegationActiveTitle', 'Quyền Hạn Ủy Quyền Tạm Thời Đang Hiệu Lực')}
-              </strong>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                {t('operations.managerDashboard.expires', 'Hết hạn lúc')}: <strong>{activeManagerDelegation.expiresAt}</strong>
-              </span>
-            </div>
-            <p style={{ margin: '4px 0 var(--space-2) 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-              {t('operations.managerDashboard.delegationDesc', 'Quản trị viên Alexander Wright đã tạm thời ủy quyền cho bạn các năng lực vận hành sau:')}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              {activeManagerDelegation.capabilities.map((c) => {
-                const rule = permissionRules.find((r) => r.capability === c);
-                const linkPath = c === 'configure_business_parameters' ? '/admin/business-params'
-                  : '/manager/system-overview';
-
-                return (
-                  <Link
-                    key={c}
-                    to={linkPath}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '3px 8px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #7fc1be',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: '#1a6b68',
-                      textDecoration: 'none'
-                    }}
-                  >
-                    <Sparkles size={11} />
-                    {rule ? t(rule.nameKey, rule.defaultName) : c}
-                    <ArrowRight size={11} />
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <div role="status" className="hsw-gov-banner">
+        Manager delegation status is unavailable here because this page has no verified delegation read contract.
+      </div>
 
       {/* Validated Executive KPI Summary (Single Source of Truth) */}
       <div className="hsw-gov-grid">
@@ -112,7 +60,7 @@ export const ManagerDashboardPage: React.FC = () => {
             {t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}
           </span>
           <span className="hsw-gov-kpi-val" style={{ fontSize: 'var(--text-2xl)', color: 'var(--accent-forest)' }}>
-            {formatVND(revenue.totalRevenue, i18n.language)}
+            {(Number.isFinite(revenue.totalRevenue) ? formatVND(revenue.totalRevenue, i18n.language) : 'Unavailable')}
           </span>
           <span className="hsw-gov-kpi-sub">
             {t('operations.managerDashboard.revenueSub', 'Tổng hợp từ Gói nghỉ dưỡng, Spa & Ẩm thực')}
@@ -123,9 +71,9 @@ export const ManagerDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('manager.occupancy.rate', 'Tỷ Lệ Lấp Đầy')}
           </span>
-          <span className="hsw-gov-kpi-val">{occupancy.occupancyRate}%</span>
+          <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.occupancyRate) ? occupancy.occupancyRate : 'Unavailable'}%</span>
           <span className="hsw-gov-kpi-sub">
-            {occupancy.occupiedCount} / {occupancy.totalVillas} {t('operations.managerDashboard.villasOccupied', 'biệt thự đang có khách')}
+            {Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 'Unavailable'} / {Number.isFinite(occupancy.totalVillas) ? occupancy.totalVillas : 'Unavailable'} {t('operations.managerDashboard.villasOccupied', 'biệt thự đang có khách')}
           </span>
         </div>
 
@@ -133,9 +81,9 @@ export const ManagerDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('manager.therapists.totalPractitioners', 'Kỹ Thuật Viên Đang Làm Việc')}
           </span>
-          <span className="hsw-gov-kpi-val">{therapists.totalTherapists}</span>
+          <span className="hsw-gov-kpi-val">{Number.isFinite(therapists.totalTherapists) ? therapists.totalTherapists : 'Unavailable'}</span>
           <span className="hsw-gov-kpi-sub">
-            {therapists.totalBookedMinutes} {t('manager.therapists.axisMinutes', 'phút đã đặt')} ({therapists.totalScheduledSessions} buổi)
+            {Number.isFinite(therapists.totalBookedMinutes) ? therapists.totalBookedMinutes : 'Unavailable'} {t('manager.therapists.axisMinutes', 'phút đã đặt')} ({Number.isFinite(therapists.totalScheduledSessions) ? therapists.totalScheduledSessions : 'Unavailable'} buổi)
           </span>
         </div>
 
@@ -143,9 +91,9 @@ export const ManagerDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('operations.managerDashboard.activeStays', 'Lượt Lưu Trú Hiện Tại')}
           </span>
-          <span className="hsw-gov-kpi-val">{occupancy.occupiedCount}</span>
+          <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 'Unavailable'}</span>
           <span className="hsw-gov-kpi-sub">
-            {occupancy.reservedCount} {t('manager.occupancy.reserved', 'lượt đặt trước sắp đến')}
+            {Number.isFinite(occupancy.reservedCount) ? occupancy.reservedCount : 'Unavailable'} {t('manager.occupancy.reserved', 'lượt đặt trước sắp đến')}
           </span>
         </div>
       </div>
