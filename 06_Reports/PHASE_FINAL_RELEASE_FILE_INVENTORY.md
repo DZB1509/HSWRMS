@@ -1,11 +1,11 @@
 # HSWRMS — FINAL RELEASE FILE INVENTORY & COMMIT GROUPING REPORT
 
-**Project:** HeavenStay Wellness Resort Management System (HSWRMS)  
-**Repository:** `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`  
-**Target Branch:** `feature/hswrms-m1-m6-integration`  
-**Baseline HEAD Commit:** `77389306de4388a6cf95c6115a3e0936cbc6f9a1`  
-**Expected Remote:** `isp-origin` (`https://gitlab.com/manhnc2/fal26-isp392-is2005-g1.git`)  
-**Audit Timestamp:** 2026-10-31T03:11:00+07:00  
+**Project:** HeavenStay Wellness Resort Management System (HSWRMS)
+**Repository:** `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`
+**Target Branch:** `feature/hswrms-m1-m6-integration`
+**Baseline HEAD Commit:** `77389306de4388a6cf95c6115a3e0936cbc6f9a1`
+**Expected Remote:** `isp-origin` (`https://gitlab.com/manhnc2/fal26-isp392-is2005-g1.git`)
+**Audit Timestamp:** 2026-10-31T03:11:00+07:00
 
 ---
 
@@ -122,3 +122,15 @@
 | **Commit 2** | `feat(m3): add resilient therapist session recovery` | M3 therapist availability management, reactive event listener, recovery scheduler, session reassignment queries, and recovery orchestration tests. |
 | **Commit 3** | `feat(m3): add durable schedule audit and dispatch outbox` | M3 persistent schedule audit history, transactional outbox entity, repository, worker with exponential backoff, calendar & SMTP adapters, migrations `V011` & `V012`, master `schema.sql`, and tests. |
 | **Commit 4** | `docs(hswrms): record integration and release verification evidence` | Authoritative technical reports for M2 merge, M3 BR compliance, WP-1B acceptance, outbox reliability, and release file inventory. |
+
+---
+
+## 6. POST-RELEASE REMEDIATION & SYNCHRONIZATION ADDENDUM (Baseline `d930b75`)
+
+Following synchronization with collaborator commits (`875b0e6`..`d930b75`, including migration `V014`), the post-release remediation package comprises 11 tracked/new files organized into 3 logical commits:
+
+| Group | Commit Subject | Included Files |
+| :--- | :--- | :--- |
+| **Post-Release Commit 1** | `fix(m3): reconcile session identifiers and harden outbox dispatch` | `05_Development/database/migrations/V015__m3_reconcile_spa_session_identifier_types.sql`, `05_Development/database/schema.sql`, `SpaDispatchOutboxEntity.java`, `SpaDispatchOutboxRepository.java`, `SpaDispatchOutboxWorker.java`, `SpaDispatchOutboxTest.java` (6 files) |
+| **Post-Release Commit 2** | `test(m5): align billing safety tests with demo booking resolution` | `05_Development/frontend/src/features/m5-billing/utils/bookingResolver.test.ts`, `05_Development/frontend/src/features/m5-billing/utils/paymentSafety.test.ts` (2 files) |
+| **Post-Release Commit 3** | `docs(hswrms): document post-release remediation and verification` | `06_Reports/PHASE_FINAL_RELEASE_COMMIT_AND_PUSH_REPORT.md`, `06_Reports/PHASE_POST_RELEASE_M2_M3_SCHEMA_CONSISTENCY_REPORT.md`, `06_Reports/PHASE_POST_RELEASE_M2_M3_DEFECT_REMEDIATION_REPORT.md`, `06_Reports/PHASE_FINAL_RELEASE_FILE_INVENTORY.md` (4 files) |
