@@ -37,7 +37,7 @@ const timeDiffMinutes = (startStr: string, endStr: string): number => {
 export const TherapistSchedulePage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
-  const { getSessionsByTherapist, getTherapistById, startSession } = useSpa();
+  const { getSessionsByTherapist, getTherapistById } = useSpa();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | null): string => {
@@ -73,10 +73,6 @@ export const TherapistSchedulePage: React.FC = () => {
     const hour = 8 + i;
     return `${String(hour).padStart(2, '0')}:00`;
   });
-
-  const handleStartSession = (sessionId: string) => {
-    startSession(sessionId);
-  };
 
   const formattedDateTitle = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -376,15 +372,12 @@ export const TherapistSchedulePage: React.FC = () => {
                             <button
                               type="button"
                               className="therapist-start-action-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartSession(session.id);
-                              }}
+                              disabled
                               id={`therapist-timeline-start-${session.id}`}
-                              title={t('therapist.startSession', 'Start Session')}
+                              title="Unavailable: the approved session lifecycle does not persist IN_PROGRESS."
                             >
                               <Play size={12} />
-                              <span>{t('therapist.start', 'Start')}</span>
+                              <span>Start unavailable</span>
                             </button>
                           )}
                         </div>

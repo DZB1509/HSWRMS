@@ -1382,6 +1382,20 @@ CREATE TABLE dbo.SpaSession (
 
     customer_note       NVARCHAR(1000) NULL,
 
+    reminder_status     VARCHAR(20) NULL
+
+        CONSTRAINT DF_SpaSession_ReminderStatus DEFAULT ('PENDING'),
+
+    reminder_claimed_at DATETIME2(0) NULL,
+
+    reminder_claim_expires_at DATETIME2(0) NULL,
+
+    reminder_claim_token VARCHAR(64) NULL,
+
+    reminder_sent_at    DATETIME2(0) NULL,
+
+    external_calendar_event_id VARCHAR(255) NULL,
+
     created_at          DATETIME2(0) NOT NULL
 
         CONSTRAINT DF_SpaSession_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -1430,7 +1444,13 @@ CREATE TABLE dbo.SpaSession (
 
         CHECK (confirmation_status IN
 
-            ('PENDING','CONFIRMED','DECLINED','EXPIRED'))
+            ('PENDING','CONFIRMED','DECLINED','EXPIRED')),
+
+    CONSTRAINT CK_SpaSession_ReminderStatus
+
+        CHECK (reminder_status IS NULL OR reminder_status IN
+
+            ('PENDING','CLAIMED','SENT','RETRYABLE_FAILURE'))
 
 );
 
@@ -1449,6 +1469,15 @@ GO
 CREATE INDEX IX_SpaSession_Room_Time
 
     ON dbo.SpaSession (room_id, scheduled_start_at, scheduled_end_at);
+
+GO
+
+
+CREATE NONCLUSTERED INDEX IX_SpaSession_ReminderDue
+
+    ON dbo.SpaSession (session_status, confirmation_status, scheduled_start_at)
+
+    INCLUDE (reminder_status, reminder_sent_at, reminder_claim_expires_at, reminder_claim_token);
 
 GO
 
@@ -1492,7 +1521,8 @@ BEGIN
 
            AND q.treatment_id = i.treatment_id
 
-        WHERE q.therapist_id IS NULL
+        WHERE i.session_status IN ('SCHEDULED', 'RESCHEDULING')
+          AND q.therapist_id IS NULL
 
     )
 
@@ -1516,7 +1546,8 @@ BEGIN
 
            AND c.treatment_id = i.treatment_id
 
-        WHERE c.room_id IS NULL
+        WHERE i.session_status IN ('SCHEDULED', 'RESCHEDULING')
+          AND c.room_id IS NULL
 
     )
 

@@ -5,10 +5,10 @@
  * 1. Final confirmation before mutation.
  * 2. Atomic Re-Check: Both a specific Therapist AND a specific Treatment Room
  *    must be available. If either conflicts, mutation FAILS entirely.
- * 3. Stale availability protection: Re-checks in centralized SpaContext.
+ * 3. Stale availability protection: Re-checks through the server scheduling API.
  * 4. Structured conflict handling: THERAPIST_UNAVAILABLE, ROOM_UNAVAILABLE, BOTH_UNAVAILABLE.
  * 5. Success transitions atomically to Screen 29 (My Spa Sessions).
- * 6. Prototype calendar sync and ~1h reminder simulation state.
+ * 6. Notification delivery is reported only when the server exposes that state.
  */
 
 import React, { useState } from 'react';
@@ -28,11 +28,9 @@ import {
   Heart,
   Leaf,
   AlertCircle,
-  AlertTriangle,
   RotateCcw,
   Bell,
   Shield,
-  Zap,
 } from 'lucide-react';
 import type { LocalizedString, SessionChargeType, SpaConflictType } from '../../types/spa';
 import type { SchedulingCandidate } from '../../features/m3-spa/types/spaTypes';
@@ -65,8 +63,6 @@ export const SpaConfirmationPage: React.FC = () => {
     getTreatmentById,
     getTherapistById,
     getRoomById,
-    bookSpaSession,
-    simulateSlotConflict,
   } = useSpa();
 
   const { activeBooking, profile } = useCustomer();
@@ -94,7 +90,6 @@ export const SpaConfirmationPage: React.FC = () => {
     conflictType: SpaConflictType;
     message: string;
   } | null>(null);
-  const [simulatedNotice, setSimulatedNotice] = useState<string | null>(null);
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | null): string => {
@@ -125,93 +120,39 @@ export const SpaConfirmationPage: React.FC = () => {
     setIsSubmitting(true);
     setConflictError(null);
 
-    // If candidate bundle exists from Screen 27
     const candidate = locationState?.selectedCandidate;
-    if (candidate) {
-      try {
-        const res = await spaApi.confirmReservation({
-          treatmentId: candidate.treatmentId,
-          therapistId: candidate.therapistId,
-          roomId: candidate.roomId,
-          scheduledStartAt: candidate.scheduledStartAt,
-          scheduledEndAt: candidate.scheduledEndAt,
-          customerNote: locationState?.customerNote,
-          bookingSource: 'CUSTOMER',
-          rescheduleSessionId: locationState?.rescheduleSessionId,
-        });
-
-        setIsSubmitting(false);
-        navigate(`/customer/spa/confirmation?session=${res.spaSessionId}`);
-        return;
-      } catch (err: unknown) {
-        setIsSubmitting(false);
-        const msg = err instanceof Error ? err.message : 'Scheduling conflict: Therapist or Treatment Room is no longer available.';
-        setConflictError({
-          conflictType: 'RESOURCE_UNAVAILABLE',
-          message: msg,
-        });
-        return;
-      }
-    }
-
-    // Fallback if navigating from legacy state
-    if (!pendingTreatment || !pendingTherapist || !pendingRoom || pendingTherapistId === 'any' || pendingRoomId === 'any') {
+    if (!candidate) {
       setIsSubmitting(false);
+      setConflictError({
+        conflictType: 'RESOURCE_UNAVAILABLE',
+        message: 'Select a current server-generated scheduling candidate before confirming.',
+      });
       return;
     }
 
-    const bookingRef = activeBooking?.bookingReference || locationState?.bookingReference;
-    const custId = profile?.id || locationState?.customerId;
-    const custName = profile?.fullName || locationState?.customerName;
-
-    // Centralized atomic re-check and mutation
-    setTimeout(() => {
-      const result = bookSpaSession({
-        bookingReference: bookingRef || 'HSW-101',
-        customerId: custId || 'CUST-001',
-        customerName: custName || 'Customer',
-        treatmentId: pendingTreatment.id,
-        therapistId: pendingTherapist.id,
-        roomId: pendingRoom.id,
-        date: pendingDate,
-        startTime: pendingStartTime,
-        chargeType: pendingTreatment.isIncludedInRetreat ? 'included' : 'extra',
-        customerSpecialRequest: pendingRequest || undefined,
-        bookingSource: 'customer_portal',
+    try {
+      const res = await spaApi.confirmReservation({
+        treatmentId: candidate.treatmentId,
+        therapistId: candidate.therapistId,
+        roomId: candidate.roomId,
+        scheduledStartAt: candidate.scheduledStartAt,
+        scheduledEndAt: candidate.scheduledEndAt,
+        customerNote: locationState?.customerNote,
+        bookingSource: 'CUSTOMER',
+        rescheduleSessionId: locationState?.rescheduleSessionId,
       });
 
       setIsSubmitting(false);
-
-      if (result.success) {
-        if (result.session?.id) {
-          navigate(`/customer/spa/confirmation?session=${result.session.id}`);
-        } else {
-          navigate('/customer/spa/sessions');
-        }
-      } else {
-        setConflictError({
-          conflictType: result.conflictType || 'RESOURCE_UNAVAILABLE',
-          message: result.message,
-        });
-      }
-    }, 600);
-  };
-
-  // ── TEST E: Simulate Stale Slot Conflict ──────────────
-  const handleSimulateConflict = () => {
-    if (!pendingTherapist || !pendingRoom) return;
-    simulateSlotConflict({
-      date: pendingDate,
-      startTime: pendingStartTime,
-      therapistId: pendingTherapist.id,
-      roomId: pendingRoom.id,
-    });
-    setSimulatedNotice(
-      t(
-        'spa.conflictInjectedNotice',
-        'Slot conflict injected! Click "Confirm & Reserve Session" below to verify that atomic re-check prevents booking.'
-      )
-    );
+      navigate(`/customer/spa/confirmation?session=${res.spaSessionId}`);
+    } catch (err: unknown) {
+      setIsSubmitting(false);
+      const msg = err instanceof Error ? err.message : 'Scheduling conflict: Therapist or Treatment Room is no longer available.';
+      setConflictError({
+        conflictType: 'RESOURCE_UNAVAILABLE',
+        message: msg,
+      });
+      return;
+    }
   };
 
   // ── CASE 1: Displaying an already confirmed session ────
@@ -299,10 +240,9 @@ export const SpaConfirmationPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Prototype Calendar & Reminder Simulation Banner */}
             <div className="spa-confirmation-notice">
               <Bell size={16} />
-              <span>{t('spa.calendarReminderNotice', 'Calendar sync & ~1-hour reminder metadata scheduled (prototype simulation).')}</span>
+              <span>{t('spa.calendarReminderNotice', 'Booking confirmed. Notification delivery status is managed by the scheduling service.')}</span>
             </div>
 
             <div className="spa-confirmation-id">
@@ -350,41 +290,6 @@ export const SpaConfirmationPage: React.FC = () => {
               )}
             </p>
           </div>
-
-          {/* Test Simulation Controls (For TEST E) */}
-          <div className="spa-test-simulation-bar" style={{
-            margin: '1rem 0',
-            padding: '0.75rem 1rem',
-            background: 'rgba(234, 179, 8, 0.08)',
-            border: '1px dashed rgba(234, 179, 8, 0.4)',
-            borderRadius: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#eab308', fontSize: '0.85rem' }}>
-              <Zap size={16} />
-              <span>{t('spa.simulateConflictNotice', 'Quality Assurance / Test Control:')}</span>
-            </div>
-            <button
-              type="button"
-              className="spa-secondary-btn"
-              style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-              onClick={handleSimulateConflict}
-              id="btn-simulate-stale-conflict"
-            >
-              {t('spa.simulateConflictBtn', 'Simulate Stale Slot Conflict (Test E)')}
-            </button>
-          </div>
-
-          {simulatedNotice && (
-            <div className="ops-alert-banner ops-alert-banner--warning" style={{ marginBottom: '1rem' }}>
-              <AlertTriangle size={16} />
-              <span style={{ fontSize: '0.85rem' }}>{simulatedNotice}</span>
-            </div>
-          )}
 
           {/* Conflict Error Alert (Re-check failure) */}
           {conflictError && (
@@ -555,6 +460,7 @@ export const SpaConfirmationPage: React.FC = () => {
               onClick={handleConfirmReservation}
               disabled={
                 isSubmitting ||
+                !locationState?.selectedCandidate ||
                 !(activeBooking?.bookingReference || locationState?.bookingReference) ||
                 !(profile?.id || locationState?.customerId)
               }

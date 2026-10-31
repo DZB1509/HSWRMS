@@ -2,6 +2,7 @@ package com.heavenstay.hswrms.m3spa.dto.request;
 
 import com.heavenstay.hswrms.m3spa.entity.enums.BookingSource;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.AssertTrue;
 import java.time.LocalDateTime;
 
 public class ConfirmReservationRequest {
@@ -79,6 +80,11 @@ public class ConfirmReservationRequest {
 
     public void setScheduledEndAt(LocalDateTime scheduledEndAt) {
         this.scheduledEndAt = scheduledEndAt;
+    }
+
+    @AssertTrue(message = "scheduledEndAt must be after scheduledStartAt")
+    public boolean isScheduledIntervalValid() {
+        return scheduledStartAt == null || scheduledEndAt == null || scheduledEndAt.isAfter(scheduledStartAt);
     }
 
     public Integer getRetreatBookingId() {

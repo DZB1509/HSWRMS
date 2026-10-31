@@ -6,7 +6,7 @@
  * Provides privacy-first data projections for therapist view.
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useReducer, useRef } from 'react';
 import type {
   SpaTreatment,
   TreatmentRoom,
@@ -17,15 +17,14 @@ import type {
   AtomicBookingResult,
   TherapistSafeWellnessView,
   SpaContextType,
-  SessionChargeType,
 } from '../types/spa';
+import { spaApi } from '../features/m3-spa/api/spaApi';
+import { useAuth } from '../hooks/useAuth';
 import {
-  INITIAL_TREATMENTS,
-  INITIAL_ROOMS,
-  INITIAL_THERAPISTS,
-  INITIAL_SPA_SESSIONS,
-} from '../data/mockSpa';
-import { useCustomer } from './CustomerContext';
+  createIdentityScopedState,
+  identityScopedReducer,
+  selectIdentityScopedState,
+} from '../utils/identityScopedState';
 
 const SpaContext = createContext<SpaContextType | undefined>(undefined);
 
@@ -62,12 +61,62 @@ const sessionsOverlap = (
 // ──────────────────────────────────────────────
 
 export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { wellnessProfile } = useCustomer();
+  const { role, currentUser } = useAuth();
+  const identity = currentUser?.id ?? null;
+  const [treatments, setTreatments] = useState<SpaTreatment[]>([]);
+  const [rooms] = useState<TreatmentRoom[]>([]);
+  const [therapists] = useState<Therapist[]>([]);
+  const [sessionState, dispatchSessionState] = useReducer(
+    identityScopedReducer<SpaSession[]>,
+    createIdentityScopedState<SpaSession[]>(null, []),
+  );
+  const sessionRequestSequence = useRef(0);
+  const currentIdentitySessions = selectIdentityScopedState(sessionState, identity, []);
+  const sessions = currentIdentitySessions.data;
+  const isLoading = currentIdentitySessions.isLoading;
+  const error = currentIdentitySessions.error;
 
-  const [treatments] = useState<SpaTreatment[]>(INITIAL_TREATMENTS);
-  const [rooms, setRooms] = useState<TreatmentRoom[]>(INITIAL_ROOMS);
-  const [therapists, setTherapists] = useState<Therapist[]>(INITIAL_THERAPISTS);
-  const [sessions, setSessions] = useState<SpaSession[]>(INITIAL_SPA_SESSIONS);
+  useEffect(() => {
+    let active = true;
+    const requestId = ++sessionRequestSequence.current;
+    dispatchSessionState({
+      type: 'begin',
+      identity,
+      requestId,
+      emptyData: [],
+      isLoading: identity !== null,
+    });
+
+    if (identity === null) {
+      return () => { active = false; };
+    }
+
+    const sessionRequest = role === 'therapist' ? spaApi.getTherapistDashboard() : spaApi.getMySpaSessions();
+    Promise.allSettled([spaApi.getTreatments(), sessionRequest]).then(([treatmentResult, sessionResult]) => {
+      if (!active) return;
+      if (treatmentResult.status === 'fulfilled') setTreatments(treatmentResult.value.map(item => {
+        const name = item.treatmentName;
+        const localized = { vi:name,en:name,'zh-CN':name,ja:name,fr:name };
+        return { id:String(item.treatmentId), name:localized, category:(item.category.toLowerCase() as SpaTreatment['category']), description:{...localized,vi:item.description,en:item.description,'zh-CN':item.description,ja:item.description,fr:item.description}, durationMinutes:item.durationMinutes, price:item.basePrice, isIncludedInRetreat:item.isIncluded, imageUrl:'', benefits:[], contraindications:[] };
+      }));
+      const nextSessions = sessionResult.status === 'fulfilled' ? sessionResult.value.map(item => {
+        const name = { vi:item.treatmentName,en:item.treatmentName,'zh-CN':item.treatmentName,ja:item.treatmentName,fr:item.treatmentName };
+        const resource = { vi:item.roomName,en:item.roomName,'zh-CN':item.roomName,ja:item.roomName,fr:item.roomName };
+        const status = item.sessionStatus === 'COMPLETED' ? 'completed' : item.sessionStatus === 'NO_SHOW' ? 'no_show' : item.sessionStatus === 'CANCELLED' ? 'cancelled' : item.confirmationStatus === 'PENDING' ? 'booked' : 'confirmed';
+        return { id:String(item.spaSessionId), bookingReference:item.bookingReference, customerId:'', customerName:item.customerName, treatmentId:String(item.treatmentId), treatmentName:name, therapistId:String(item.therapistId), therapistName:item.therapistName, roomId:String(item.roomId), roomName:resource, date:item.date, startTime:item.startTime, endTime:item.endTime, durationMinutes:item.durationMinutes, status, chargeType:item.isIncluded ? 'included' : 'extra', price:item.basePrice, customerSpecialRequest:item.customerNote, createdAt:item.scheduledStartAt } as SpaSession;
+      }) : [];
+      dispatchSessionState({
+        type: 'resolve',
+        identity,
+        requestId,
+        data: nextSessions,
+        error: treatmentResult.status === 'rejected' || sessionResult.status === 'rejected'
+          ? 'Some Spa data could not be loaded from the server.'
+          : null,
+      });
+    });
+    return () => { active = false; };
+  }, [identity, role]);
 
   // ── Lookups ────────────────────────────────
 
@@ -182,164 +231,10 @@ export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // BUSINESS RULE: Therapist + Room must BOTH be available
   // at the exact same time, or the booking fails entirely.
 
-  const bookSpaSession = useCallback(
-    (params: {
-      bookingReference: string;
-      customerId: string;
-      customerName: string;
-      treatmentId: string;
-      therapistId: string;
-      roomId: string;
-      date: string;
-      startTime: string;
-      chargeType: SessionChargeType;
-      customerSpecialRequest?: string;
-      bookingSource?: 'customer_portal' | 'receptionist_manual';
-    }): AtomicBookingResult => {
-      const treatment = treatments.find((t) => t.id === params.treatmentId);
-      if (!treatment) {
-        return { success: false, message: 'Treatment not found.' };
-      }
-
-      if (!params.therapistId || params.therapistId === 'any') {
-        return {
-          success: false,
-          conflictType: 'THERAPIST_UNAVAILABLE',
-          message: 'Booking failed: A specific assigned therapist is required before confirming a session.',
-        };
-      }
-
-      const therapist = therapists.find((t) => t.id === params.therapistId);
-      if (!therapist) {
-        return {
-          success: false,
-          conflictType: 'THERAPIST_UNAVAILABLE',
-          message: 'Therapist not found.',
-        };
-      }
-
-      if (!params.roomId || params.roomId === 'any' || params.roomId === 'unspecified') {
-        return {
-          success: false,
-          conflictType: 'ROOM_UNAVAILABLE',
-          message: 'Booking failed: A specific treatment room is required before confirming a session.',
-        };
-      }
-
-      const room = rooms.find((r) => r.id === params.roomId);
-      if (!room) {
-        return {
-          success: false,
-          conflictType: 'ROOM_UNAVAILABLE',
-          message: 'Treatment room not found.',
-        };
-      }
-
-      const endTime = minutesToTime(timeToMinutes(params.startTime) + treatment.durationMinutes);
-
-      // Check Therapist availability (ATOMIC condition 1)
-      const activeSessions = sessions.filter(
-        (s) => s.date === params.date && !['cancelled', 'no_show'].includes(s.status)
-      );
-
-      const therapistConflict = activeSessions.some(
-        (s) =>
-          s.therapistId === params.therapistId &&
-          sessionsOverlap(params.startTime, endTime, s.startTime, s.endTime)
-      );
-
-      // Check Room availability (ATOMIC condition 2)
-      const roomConflict = activeSessions.some(
-        (s) =>
-          s.roomId === params.roomId &&
-          sessionsOverlap(params.startTime, endTime, s.startTime, s.endTime)
-      );
-
-      // ATOMIC FAIL: If EITHER is unavailable, booking fails entirely WITHOUT MUTATION
-      if (therapistConflict || roomConflict) {
-        const alternativeSlots = getAvailableSlots(params.treatmentId, params.date);
-        const reasons: string[] = [];
-        if (therapistConflict) reasons.push(`${therapist.name} is not available at ${params.startTime}`);
-        if (roomConflict) reasons.push(`${room.name.en} is occupied at ${params.startTime}`);
-
-        const conflictType =
-          therapistConflict && roomConflict
-            ? 'BOTH_UNAVAILABLE'
-            : therapistConflict
-            ? 'THERAPIST_UNAVAILABLE'
-            : 'ROOM_UNAVAILABLE';
-
-        return {
-          success: false,
-          conflictType,
-          message: `Booking failed: ${reasons.join('; ')}. Please select an alternative slot.`,
-          alternativeSlots: alternativeSlots.slice(0, 10),
-        };
-      }
-
-      // Room maintenance/cleaning check
-      if (room.status === 'maintenance') {
-        return {
-          success: false,
-          conflictType: 'ROOM_UNAVAILABLE',
-          message: `${room.name.en} is currently under maintenance.`,
-          alternativeSlots: getAvailableSlots(params.treatmentId, params.date).slice(0, 10),
-        };
-      }
-
-      // Therapist off-duty check
-      if (therapist.availability === 'off_duty' || therapist.availability === 'on_leave') {
-        return {
-          success: false,
-          conflictType: 'THERAPIST_UNAVAILABLE',
-          message: `${therapist.name} is currently ${therapist.availability.replace('_', ' ')}.`,
-          alternativeSlots: getAvailableSlots(params.treatmentId, params.date).slice(0, 10),
-        };
-      }
-
-      const startMin = timeToMinutes(params.startTime);
-      const reminderMin = Math.max(0, startMin - 60);
-
-      // ── SUCCESS: Create session atomically with mock calendar and folio metadata ──
-      const newSession: SpaSession = {
-        id: `SES-${Date.now().toString(36).toUpperCase()}`,
-        bookingReference: params.bookingReference,
-        customerId: params.customerId,
-        customerName: params.customerName,
-        treatmentId: params.treatmentId,
-        treatmentName: treatment.name,
-        therapistId: params.therapistId,
-        therapistName: therapist.name,
-        roomId: params.roomId,
-        roomName: room.name,
-        date: params.date,
-        startTime: params.startTime,
-        endTime,
-        durationMinutes: treatment.durationMinutes,
-        status: 'confirmed',
-        chargeType: params.chargeType,
-        price: params.chargeType === 'included' ? 0 : treatment.price,
-        customerSpecialRequest: params.customerSpecialRequest,
-        createdAt: new Date().toISOString(),
-        // Prototype calendar sync & ~1h reminder simulation
-        calendarSyncStatus: 'synced',
-        reminderScheduledAt: new Date().toISOString(),
-        reminderDueAt: `${params.date}T${minutesToTime(reminderMin)}:00`,
-        // Traceable future folio metadata
-        bookingSource: params.bookingSource || 'customer_portal',
-        folioPostingStatus: params.chargeType === 'included' ? 'included_in_package' : 'pending_checkout_folio',
-      };
-
-      setSessions((prev) => [...prev, newSession]);
-
-      return {
-        success: true,
-        session: newSession,
-        message: `Spa session confirmed: ${treatment.name.en} with ${therapist.name} at ${params.startTime} in ${room.name.en}.`,
-      };
-    },
-    [treatments, therapists, rooms, sessions, getAvailableSlots]
-  );
+  const bookSpaSession = useCallback((): AtomicBookingResult => ({
+    success: false,
+    message: 'Local Spa booking is disabled. Use the server candidate generation and atomic reservation flow.',
+  }), []);
 
   // ── Test Simulation: Introduce slot conflict (for TEST E validation) ──
   const simulateSlotConflict = useCallback(
@@ -386,180 +281,48 @@ export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         folioPostingStatus: 'included_in_package',
       };
 
-      setSessions((prev) => [...prev, simSession]);
+      if (identity !== null) {
+        dispatchSessionState({
+          type: 'update',
+          identity,
+          update: (prev) => [...prev, simSession],
+        });
+      }
     },
-    [therapists, rooms]
+    [therapists, rooms, identity]
   );
 
   // ── Session Lifecycle ──────────────────────
 
-  const updateSessionStatus = useCallback(
-    (
-      sessionId: string,
-      newStatus: SpaSessionStatus,
-      therapistNotes?: string
-    ): { success: boolean; message: string } => {
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) {
-        return { success: false, message: `Session ${sessionId} not found.` };
-      }
+  const persistSessionAction = useCallback(async (sessionId: string, outcome: 'CANCELLED' | 'COMPLETED' | 'NO_SHOW', therapistNotes?: string) => {
+    if (identity === null) return { success: false, message: 'Sign in to update a Spa session.' };
+    const numericId = Number(sessionId.replace(/\D/g, ''));
+    if (!Number.isSafeInteger(numericId) || numericId <= 0) return { success: false, message: 'A persisted server session ID is required.' };
+    try {
+      const saved = outcome === 'CANCELLED' ? await spaApi.cancelSession(numericId) : await spaApi.recordOutcome(numericId, { outcome, therapistNotes });
+      const status: SpaSessionStatus = saved.sessionStatus === 'COMPLETED' ? 'completed' : saved.sessionStatus === 'NO_SHOW' ? 'no_show' : saved.sessionStatus === 'CANCELLED' ? 'cancelled' : saved.confirmationStatus === 'PENDING' ? 'booked' : 'confirmed';
+      dispatchSessionState({
+        type: 'update',
+        identity,
+        update: (prev) => prev.map(session => session.id === sessionId ? { ...session, status, customerSpecialRequest: saved.customerNote || session.customerSpecialRequest } : session),
+      });
+      return { success: true, message: `Server confirmed session status ${saved.sessionStatus}.` };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : 'The server did not confirm the session change.' };
+    }
+  }, [identity]);
 
-      // Validate state transitions
-      const validTransitions: Record<SpaSessionStatus, SpaSessionStatus[]> = {
-        booked: ['confirmed', 'cancelled'],
-        confirmed: ['in_progress', 'cancelled', 'no_show'],
-        in_progress: ['completed'],
-        completed: [],
-        no_show: [],
-        cancelled: [],
-      };
-
-      if (!validTransitions[session.status]?.includes(newStatus)) {
-        return {
-          success: false,
-          message: `Cannot transition from ${session.status} to ${newStatus}.`,
-        };
-      }
-
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === sessionId) {
-            return {
-              ...s,
-              status: newStatus,
-              therapistNotes: therapistNotes ?? s.therapistNotes,
-              completedAt: newStatus === 'completed' ? new Date().toISOString() : s.completedAt,
-            };
-          }
-          return s;
-        })
-      );
-
-      // Update therapist/room state when session starts or ends
-      if (newStatus === 'in_progress') {
-        setTherapists((prev) =>
-          prev.map((t) =>
-            t.id === session.therapistId ? { ...t, availability: 'busy', currentSessionId: sessionId } : t
-          )
-        );
-        setRooms((prev) =>
-          prev.map((r) =>
-            r.id === session.roomId ? { ...r, status: 'occupied', currentSessionId: sessionId } : r
-          )
-        );
-      } else if (['completed', 'no_show', 'cancelled'].includes(newStatus)) {
-        setTherapists((prev) =>
-          prev.map((t) =>
-            t.currentSessionId === sessionId ? { ...t, availability: 'available', currentSessionId: undefined } : t
-          )
-        );
-        setRooms((prev) =>
-          prev.map((r) =>
-            r.currentSessionId === sessionId ? { ...r, status: 'available', currentSessionId: undefined } : r
-          )
-        );
-      }
-
-      return { success: true, message: `Session ${sessionId} updated to ${newStatus}.` };
-    },
-    [sessions]
-  );
-
-  const cancelSession = useCallback(
-    (sessionId: string) => updateSessionStatus(sessionId, 'cancelled'),
-    [updateSessionStatus]
-  );
-
-  const startSession = useCallback(
-    (sessionId: string) => updateSessionStatus(sessionId, 'in_progress'),
-    [updateSessionStatus]
-  );
-
-  const completeSession = useCallback(
-    (sessionId: string, therapistNotes?: string) =>
-      updateSessionStatus(sessionId, 'completed', therapistNotes),
-    [updateSessionStatus]
-  );
-
-  const markNoShow = useCallback(
-    (sessionId: string) => updateSessionStatus(sessionId, 'no_show'),
-    [updateSessionStatus]
-  );
+  const cancelSession = useCallback((sessionId: string) => persistSessionAction(sessionId, 'CANCELLED'), [persistSessionAction]);
+  const startSession = useCallback(() => ({ success: false, message: 'Starting a session is unavailable: the approved lifecycle does not persist IN_PROGRESS.' }), []);
+  const completeSession = useCallback((sessionId: string, therapistNotes?: string) => persistSessionAction(sessionId, 'COMPLETED', therapistNotes), [persistSessionAction]);
+  const markNoShow = useCallback((sessionId: string) => persistSessionAction(sessionId, 'NO_SHOW'), [persistSessionAction]);
 
   // ── Privacy-First: Therapist-Safe Wellness Data ──
   // ONLY exposes treatment-relevant health notes.
   // EXCLUDED: full name, DOB, address, food allergies,
   // dietary restrictions, ID numbers, payment info.
 
-  const getTherapistRelevantWellnessInfo = useCallback(
-    (customerId: string, treatmentId?: string): TherapistSafeWellnessView | null => {
-      // In demo mode, customerId maps to canonical customer
-      if (customerId !== 'usr-cust-01') return null;
-      if (!wellnessProfile?.isComplete) return null;
-
-      const { healthNotes } = wellnessProfile;
-      const treatment = treatmentId ? treatments.find((t) => t.id === treatmentId) : undefined;
-      const category = treatment?.category;
-
-      let relevantMedicalConditions: string[] = [];
-      let mobilityConsiderations = '';
-      let treatmentPreferences: string[] = [];
-      let therapistNotes = '';
-
-      if (!category || category === 'massage' || category === 'body_wrap') {
-        // Massage & Body Treatments: back/lumbar notes, positioning cushions, pressure preferences
-        relevantMedicalConditions = healthNotes.medicalConditions.filter((c) =>
-          c.toLowerCase().includes('lumbar') || c.toLowerCase().includes('tension')
-        );
-        mobilityConsiderations = healthNotes.mobilityConsiderations;
-        treatmentPreferences = healthNotes.treatmentPreferences.filter(
-          (p) => p.toLowerCase().includes('aromatherapy') || p.toLowerCase().includes('compress') || p.toLowerCase().includes('shoulder')
-        );
-        therapistNotes = 'Ensure lower back support cushion during massage. Customer cleared for gentle massage therapies.';
-      } else if (category === 'yoga') {
-        // Yoga: spinal stretch and lumbar mobility
-        relevantMedicalConditions = healthNotes.medicalConditions.filter((c) =>
-          c.toLowerCase().includes('lumbar')
-        );
-        mobilityConsiderations = 'Prefers gentle lower-back stretching; strictly avoid forceful spinal twists.';
-        treatmentPreferences = ['Gentle restorative stretching only', 'Supported bolster positioning'];
-        therapistNotes = 'Customer is cleared for gentle restorative yoga. Avoid unsupported backbends.';
-      } else if (category === 'hydrotherapy' || category === 'herbal_therapy') {
-        // Hydrotherapy & Steam: cardiovascular/hypertension considerations
-        relevantMedicalConditions = healthNotes.medicalConditions.filter((c) =>
-          c.toLowerCase().includes('hypertension')
-        );
-        mobilityConsiderations = '';
-        treatmentPreferences = healthNotes.treatmentPreferences.filter((p) =>
-          p.toLowerCase().includes('herbal') || p.toLowerCase().includes('aromatherapy')
-        );
-        therapistNotes = 'Customer cleared for herbal steam therapy. Moderate temperature recommended.';
-      } else if (category === 'facial') {
-        // Facial: skin and head/neck only, zero lumbar notes
-        relevantMedicalConditions = [];
-        mobilityConsiderations = '';
-        treatmentPreferences = ['Aromatherapy (Lavender & Eucalyptus)', 'Gentle neck & shoulder relaxation'];
-        therapistNotes = 'No facial sensitivities or skin allergies on record.';
-      } else if (category === 'meditation') {
-        // Meditation: posture and breathing only
-        relevantMedicalConditions = [];
-        mobilityConsiderations = 'Prefers supported seated cushion for comfort.';
-        treatmentPreferences = ['Quiet guided practice', 'Low ambient lighting'];
-        therapistNotes = 'Customer prefers gentle mindfulness guidance with breath focus.';
-      }
-
-      return {
-        customerFirstName: 'Eleanor', // First name only — no full PII
-        relevantMedicalConditions,
-        mobilityConsiderations,
-        treatmentPreferences,
-        therapistNotes,
-        contraindications: treatment?.contraindications || [],
-        stressLevel: healthNotes.stressLevel,
-      };
-    },
-    [wellnessProfile, treatments]
-  );
+  const getTherapistRelevantWellnessInfo = useCallback((_customerId: string, _treatmentId?: string): TherapistSafeWellnessView | null => null, []);
 
   // ── Context Value ──────────────────────────
 
@@ -568,6 +331,8 @@ export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     rooms,
     therapists,
     sessions,
+    isLoading,
+    error,
     getTreatmentById,
     getTherapistById,
     getRoomById,
