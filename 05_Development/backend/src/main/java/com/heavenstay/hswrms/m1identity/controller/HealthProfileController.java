@@ -31,7 +31,7 @@ public class HealthProfileController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<HealthProfileResponse>> getMyHealthProfile(
             @AuthenticationPrincipal CustomUserDetails principal) {
         HealthProfileResponse response = healthProfileService.getMyHealthProfile(principal.getUserId());
@@ -39,7 +39,7 @@ public class HealthProfileController {
     }
 
     @PutMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<HealthProfileResponse>> updateMyHealthProfile(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UpdateHealthProfileRequest request) {

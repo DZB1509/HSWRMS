@@ -33,7 +33,7 @@ public class CustomerProfileController {
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> getMyProfile(
             @AuthenticationPrincipal CustomUserDetails principal) {
         CustomerProfileResponse response = customerProfileService.getMyProfile(principal.getUserId());
@@ -41,7 +41,7 @@ public class CustomerProfileController {
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UpdateCustomerProfileRequest request) {

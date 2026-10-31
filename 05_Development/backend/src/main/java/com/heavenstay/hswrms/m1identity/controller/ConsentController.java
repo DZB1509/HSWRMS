@@ -37,7 +37,7 @@ public class ConsentController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<List<ConsentRecordResponse>>> listMyConsents(
             @AuthenticationPrincipal CustomUserDetails principal) {
         List<ConsentRecordResponse> response = consentService.listMyConsents(principal.getUserId());
@@ -45,7 +45,7 @@ public class ConsentController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<ConsentRecordResponse>> grantConsent(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody GrantConsentRequest request) {
@@ -56,7 +56,7 @@ public class ConsentController {
     }
 
     @PostMapping("/{consentType}/revoke")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<ConsentRecordResponse>> revokeConsent(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String consentType) {

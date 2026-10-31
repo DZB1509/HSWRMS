@@ -32,7 +32,7 @@ public class HealthDataDeletionRequestController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<DeletionRequestResponse>> createDeletionRequest(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody CreateDeletionRequestRequest request) {
@@ -44,7 +44,7 @@ public class HealthDataDeletionRequestController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<List<DeletionRequestResponse>>> listDeletionRequests(
             @AuthenticationPrincipal CustomUserDetails principal) {
 
@@ -53,7 +53,7 @@ public class HealthDataDeletionRequestController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<DeletionRequestResponse>> cancelDeletionRequest(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Integer id) {
