@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.m3spa.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 /**
@@ -24,6 +26,7 @@ public class SpaScheduleHistory {
     private Long historyId;
 
     @Column(name = "session_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long sessionId;
 
     @Column(name = "actor_user_id")

@@ -3,6 +3,8 @@ package com.heavenstay.hswrms.m5billing.entity;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -13,6 +15,7 @@ public class PaymentTransactionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "transaction_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long transactionId;
 
     @ManyToOne(fetch = FetchType.LAZY)

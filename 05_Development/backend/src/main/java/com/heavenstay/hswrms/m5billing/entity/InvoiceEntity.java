@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.m5billing.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -11,6 +13,7 @@ public class InvoiceEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "invoice_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long invoiceId;
 
     @OneToOne(fetch = FetchType.LAZY)

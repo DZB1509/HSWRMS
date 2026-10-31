@@ -1,10 +1,18 @@
+# Dedicated SQL Server Profile (Externalized Credentials Only)
+# Activate with: --spring.profiles.active=sqlserver
+# Required environment variables:
+#   HSWRMS_DB_URL      (e.g., jdbc:sqlserver://MYLIFE-MYRULE-1:1433;databaseName=HSWRMS_TEST;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true)
+#   HSWRMS_DB_USERNAME (e.g., hswrms_test_user)
+#   HSWRMS_DB_PASSWORD (supplied securely at runtime; never hardcoded)
+
 spring:
   datasource:
-    url: jdbc:sqlserver://localhost;instanceName=SQLEXPRESS;databaseName=HSWRMS;encrypt=true;trustServerCertificate=true
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    username: sa
-    password: 12345
+    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:}}
     hikari:
+      pool-name: HSWRMS-SqlServerPool
       maximum-pool-size: 10
       minimum-idle: 2
       idle-timeout: 30000
@@ -14,18 +22,29 @@ spring:
       ddl-auto: none
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    generate-ddl: false
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: false
+  sql:
+    init:
+      mode: never
 
 app:
   jwt:
-    secret: defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong
+    secret: ${JWT_SECRET:defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong}
     expiration-ms: 86400000
   cors:
-    allowed-origins: http://localhost:5173,http://localhost:4173
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+  seed:
+    demo-data: ${SEED_DEMO_DATA:false}
+  initializer:
+    m6:
+      enabled: ${APP_INITIALIZER_M6_ENABLED:false}
+    villa-inventory:
+      enabled: ${APP_INITIALIZER_VILLA_INVENTORY_ENABLED:false}
 
 logging:
   level:

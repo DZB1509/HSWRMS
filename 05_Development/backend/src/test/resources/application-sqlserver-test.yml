@@ -17,10 +17,10 @@ spring:
     activate:
       on-profile: sqlserver-test
   datasource:
-    url: jdbc:sqlserver://${SQLSERVER_TEST_HOST:${DB_HOST:localhost}}:${SQLSERVER_TEST_PORT:${DB_PORT:1433}};databaseName=${SQLSERVER_TEST_DB:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${SQLSERVER_TEST_HOST:${DB_HOST:localhost}}:${SQLSERVER_TEST_PORT:${DB_PORT:1433}};databaseName=${SQLSERVER_TEST_DB:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    username: ${SQLSERVER_TEST_USERNAME:${DB_USERNAME:}}
-    password: ${SQLSERVER_TEST_PASSWORD:${DB_PASSWORD:}}
+    username: ${HSWRMS_DB_USERNAME:${SQLSERVER_TEST_USERNAME:${DB_USERNAME:}}}
+    password: ${HSWRMS_DB_PASSWORD:${SQLSERVER_TEST_PASSWORD:${DB_PASSWORD:}}}
     hikari:
       pool-name: HSWRMS-SqlServerTestPool
       connection-timeout: 5000

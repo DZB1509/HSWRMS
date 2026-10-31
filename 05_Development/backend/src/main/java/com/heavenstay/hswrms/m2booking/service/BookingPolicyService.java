@@ -3,7 +3,6 @@ package com.heavenstay.hswrms.m2booking.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +13,7 @@ import java.util.Optional;
 /**
  * Reads the business parameters M2 needs that the SRS delegates to M6 (Admin-configured).
  *
- * <p>Resolution order: {@code dbo.SystemConfiguration.param_value} (M6 owned, read-only here),
+ * <p>Resolution order: {@code dbo.SystemConfiguration.configuration_value} (M6 owned, read-only here),
  * then the {@code app.booking.*} properties / environment variables. There are
  * <b>no hard-coded defaults</b>: when a value is missing the dependent operation is rejected
  * with an explicit "policy not configured" error instead of inventing a number.
@@ -29,6 +28,9 @@ public class BookingPolicyService {
     public static final String KEY_HOLD_MINUTES = "booking_hold_minutes";
     public static final String KEY_CANCELLATION_WINDOW_HOURS = "cancellation_window_hours";
     public static final String KEY_REFUND_PERCENTAGE = "refund_percentage";
+
+    static final String SELECT_ACTIVE_CONFIG_VALUE_SQL =
+            "SELECT configuration_value FROM dbo.SystemConfiguration WHERE configuration_key = ? AND configuration_status = 'ACTIVE'";
 
     private static final Logger log = LoggerFactory.getLogger(BookingPolicyService.class);
 
@@ -101,13 +103,7 @@ public class BookingPolicyService {
         if (jdbcTemplate == null) {
             return null;
         }
-        try {
-            List<String> rows = jdbcTemplate.queryForList(
-                    "SELECT param_value FROM dbo.SystemConfiguration WHERE param_key = ?", String.class, key);
-            return rows.isEmpty() ? null : rows.get(0);
-        } catch (DataAccessException ex) {
-            log.debug("SystemConfiguration lookup for '{}' failed ({}); using property fallback", key, ex.getClass().getSimpleName());
-            return null;
-        }
+        List<String> rows = jdbcTemplate.queryForList(SELECT_ACTIVE_CONFIG_VALUE_SQL, String.class, key);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 }

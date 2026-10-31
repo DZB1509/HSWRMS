@@ -37,7 +37,7 @@ public final class SqlServerTestConfigValidator {
         if (username == null || username.trim().isEmpty() || isUnresolvedPlaceholder(username)) {
             throw new IllegalStateException(
                     "SQL Server test configuration error: Test username is missing, blank, or an unresolved placeholder. " +
-                    "Please configure environment variable SQLSERVER_TEST_USERNAME (or DB_USERNAME) " +
+                    "Please configure environment variable HSWRMS_DB_USERNAME (or SQLSERVER_TEST_USERNAME / DB_USERNAME) " +
                     "with an authorized test account before activating profile 'sqlserver-test'."
             );
         }
@@ -52,7 +52,7 @@ public final class SqlServerTestConfigValidator {
         if (password == null || password.trim().isEmpty() || isUnresolvedPlaceholder(password)) {
             throw new IllegalStateException(
                     "SQL Server test configuration error: Test password is missing, blank, or an unresolved placeholder. " +
-                    "Please configure environment variable SQLSERVER_TEST_PASSWORD (or DB_PASSWORD) " +
+                    "Please configure environment variable HSWRMS_DB_PASSWORD (or SQLSERVER_TEST_PASSWORD / DB_PASSWORD) " +
                     "before activating profile 'sqlserver-test'."
             );
         }

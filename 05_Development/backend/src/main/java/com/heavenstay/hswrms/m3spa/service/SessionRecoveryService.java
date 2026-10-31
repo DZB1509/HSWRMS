@@ -15,6 +15,9 @@ import com.heavenstay.hswrms.m3spa.repository.SpaSessionRepository;
 import com.heavenstay.hswrms.m3spa.repository.TherapistRepository;
 import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
 import com.heavenstay.hswrms.m3spa.service.event.SpaScheduleAcceptedEvent;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -47,6 +51,9 @@ public class SessionRecoveryService {
     private final TreatmentRoomRepository roomRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final CustomerStayPort customerStayPort;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public SessionRecoveryService(SpaSessionRepository sessionRepository,
                                   TherapistRepository therapistRepository,
@@ -73,6 +80,9 @@ public class SessionRecoveryService {
      * If no same-time candidate exists, marks session as RESCHEDULING requiring customer consent.
      */
     public RecoveryResultDto attemptSameTimeRecovery(Long sessionId) {
+        // Candidate discovery reads the session WITHOUT a lock. Pessimistic locks are acquired later in the
+        // same global order used by SpaSessionService.confirmReservation (Therapist -> Room -> Session)
+        // to avoid lock-order inversion deadlocks between concurrent reschedule and recovery.
         SpaSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
 
@@ -127,41 +137,65 @@ public class SessionRecoveryService {
             }
         }
 
-        // 3. Same-time recovery success
+        // 3. Same-time recovery success (lock replacement resources and re-verify conflict-free under lock)
         if (targetTherapist != null && targetRoom != null) {
-            log.info("Same-time recovery successful for session #{}. Preserved interval {}-{}. Assigned therapist #{}, room #{}.",
-                    sessionId, startAt, endAt, targetTherapist.getTherapistId(), targetRoom.getRoomId());
+            Therapist lockedTherapist = therapistRepository.findByIdWithLock(targetTherapist.getTherapistId())
+                    .orElse(null);
+            TreatmentRoom lockedRoom = roomRepository.findByIdWithLock(targetRoom.getRoomId())
+                    .orElse(null);
+            lockAndRefreshSession(session);
+            if (!isStillRecoverable(session, startAt, endAt)) {
+                return concurrentChangeResult(sessionId);
+            }
+            boolean lockedTherapistReady = lockedTherapist != null
+                    && lockedTherapist.getTherapistStatus() == TherapistStatus.ACTIVE
+                    && !sessionRepository.hasOverlappingSession(
+                            lockedTherapist.getTherapistId(), null, startAt, endAt, session.getSpaSessionId());
+            boolean lockedRoomReady = lockedRoom != null
+                    && lockedRoom.getRoomStatus() == TreatmentRoomStatus.AVAILABLE
+                    && !sessionRepository.hasOverlappingSession(
+                            null, lockedRoom.getRoomId(), startAt, endAt, session.getSpaSessionId());
 
-            String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
-            session.setTherapist(targetTherapist);
-            session.setTreatmentRoom(targetRoom);
-            session.setSessionStatus(SpaSessionStatus.SCHEDULED);
-            session.setConfirmationStatus(SpaConfirmationStatus.PENDING);
-            SpaSession saved = sessionRepository.save(session);
+            if (lockedTherapistReady && lockedRoomReady) {
+                log.info("Same-time recovery successful for session #{}. Preserved interval {}-{}. Assigned therapist #{}, room #{}.",
+                        sessionId, startAt, endAt, lockedTherapist.getTherapistId(), lockedRoom.getRoomId());
 
-            publishScheduleEvent(new SpaScheduleAcceptedEvent(
-                    saved, "RECOVERED", prevStatus, "SCHEDULED",
-                    startAt, startAt,
-                    currentTherapist.getTherapistId(), targetTherapist.getTherapistId(),
-                    currentRoom.getRoomId(), targetRoom.getRoomId(),
-                    null, "SYSTEM", "Automated same-time rematching",
-                    resolveCustomerEmail(saved.getRetreatBookingId()),
-                    resolveCustomerName(saved.getRetreatBookingId())
-            ));
+                String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
+                session.setTherapist(lockedTherapist);
+                session.setTreatmentRoom(lockedRoom);
+                session.setSessionStatus(SpaSessionStatus.SCHEDULED);
+                session.setConfirmationStatus(SpaConfirmationStatus.PENDING);
+                session.resetReminderState();
+                SpaSession saved = sessionRepository.save(session);
 
-            return new RecoveryResultDto(
-                    sessionId,
-                    true,
-                    true,
-                    false,
-                    targetTherapist.getTherapistId(),
-                    targetRoom.getRoomId(),
-                    "Same-time recovery succeeded. Preserved original schedule."
-            );
+                publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                        saved, "RECOVERED", prevStatus, "SCHEDULED",
+                        startAt, startAt,
+                        currentTherapist.getTherapistId(), lockedTherapist.getTherapistId(),
+                        currentRoom.getRoomId(), lockedRoom.getRoomId(),
+                        null, "SYSTEM", "Automated same-time rematching",
+                        resolveCustomerEmail(saved.getRetreatBookingId()),
+                        resolveCustomerName(saved.getRetreatBookingId())
+                ));
+
+                return new RecoveryResultDto(
+                        sessionId,
+                        true,
+                        true,
+                        false,
+                        lockedTherapist.getTherapistId(),
+                        lockedRoom.getRoomId(),
+                        "Same-time recovery succeeded. Preserved original schedule."
+                );
+            }
         }
 
         // 4. Same-time recovery impossible: Time-change required
         // System MUST NOT silently commit a new time without customer consent!
+        lockAndRefreshSession(session);
+        if (!isStillRecoverable(session, startAt, endAt)) {
+            return concurrentChangeResult(sessionId);
+        }
         log.info("Same-time recovery unavailable for session #{}. Retaining in RESCHEDULING status awaiting Customer consent.", sessionId);
         String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
         session.setSessionStatus(SpaSessionStatus.RESCHEDULING);
@@ -185,6 +219,42 @@ public class SessionRecoveryService {
                 null,
                 null,
                 "Same-time recovery unavailable. Customer consent required for any schedule modification."
+        );
+    }
+
+    /**
+     * Acquires a PESSIMISTIC_WRITE lock on the session and refreshes its state from the database so decisions
+     * are made on committed data. Falls back to the repository lock query when no EntityManager is available
+     * (plain unit-test construction).
+     */
+    private void lockAndRefreshSession(SpaSession session) {
+        if (entityManager != null && entityManager.contains(session)) {
+            entityManager.refresh(session, LockModeType.PESSIMISTIC_WRITE);
+        } else {
+            sessionRepository.findByIdWithLock(session.getSpaSessionId());
+        }
+    }
+
+    private boolean isStillRecoverable(SpaSession session, LocalDateTime expectedStart, LocalDateTime expectedEnd) {
+        SpaSessionStatus status = session.getSessionStatus();
+        boolean activeStatus = status == null
+                || status == SpaSessionStatus.SCHEDULED
+                || status == SpaSessionStatus.RESCHEDULING;
+        return activeStatus
+                && Objects.equals(expectedStart, session.getScheduledStartAt())
+                && Objects.equals(expectedEnd, session.getScheduledEndAt());
+    }
+
+    private RecoveryResultDto concurrentChangeResult(Long sessionId) {
+        log.warn("Recovery skipped for session #{}: session was modified concurrently (status or interval changed).", sessionId);
+        return new RecoveryResultDto(
+                sessionId,
+                false,
+                false,
+                false,
+                null,
+                null,
+                "Recovery skipped: session was modified concurrently. No changes applied."
         );
     }
 

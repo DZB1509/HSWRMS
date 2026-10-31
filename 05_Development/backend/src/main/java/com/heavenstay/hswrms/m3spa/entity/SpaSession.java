@@ -5,6 +5,8 @@ import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaReminderStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -14,6 +16,7 @@ public class SpaSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "spa_session_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long spaSessionId;
 
     @Column(name = "retreat_booking_id", nullable = false)
@@ -239,6 +242,14 @@ public class SpaSession {
 
     public void setReminderSentAt(LocalDateTime reminderSentAt) {
         this.reminderSentAt = reminderSentAt;
+    }
+
+    public void resetReminderState() {
+        this.reminderStatus = SpaReminderStatus.PENDING;
+        this.reminderClaimedAt = null;
+        this.reminderClaimExpiresAt = null;
+        this.reminderClaimToken = null;
+        this.reminderSentAt = null;
     }
 
     public String getExternalCalendarEventId() {

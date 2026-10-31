@@ -158,7 +158,14 @@ public class SqlServerJdbcSmokeTest {
                     "Expected SQL Server 2019 (Major Version 15), but connected to Major Version " + majorVersion
                             + " (" + productVersion + ")");
 
-            // 5. Execute strictly read-only probe
+            // 5. Execute strictly read-only scalar probe: SELECT 1
+            try (Statement statement = connection.createStatement();
+                 ResultSet rs1 = statement.executeQuery("SELECT 1 AS [probe]")) {
+                assertTrue(rs1.next(), "Simple SELECT 1 query must return a row");
+                assertEquals(1, rs1.getInt("probe"), "SELECT 1 must return integer value 1");
+            }
+
+            // 6. Execute strictly read-only version & database identity probe
             try (Statement statement = connection.createStatement();
                  ResultSet rs = statement.executeQuery("SELECT @@VERSION AS [version], DB_NAME() AS [db_name]")) {
 
@@ -173,12 +180,25 @@ public class SqlServerJdbcSmokeTest {
                 assertTrue(fullVersionStr.contains("Microsoft SQL Server 2019"),
                         "Version string must confirm SQL Server 2019: " + fullVersionStr);
 
-                // 6. Strict validation of actual connected database
+                // 7. Strict validation of actual connected database
                 SqlServerTestConfigValidator.validateActualConnectedDatabase(actualDbName, expectedDbName);
                 assertTrue(actualDbName.equalsIgnoreCase(expectedDbName),
                         "Connected database '" + actualDbName + "' must match expected '" + expectedDbName + "'");
                 assertFalse("HSWRMS".equalsIgnoreCase(actualDbName),
                         "Connected database must NOT be the primary development database 'HSWRMS'");
+            }
+
+            // 8. Execute read-only schema/catalog query against existing HSWRMS_TEST database
+            try (Statement statement = connection.createStatement();
+                 ResultSet rsCatalog = statement.executeQuery(
+                         "SELECT COUNT(*) AS [dbo_table_count], " +
+                         "IS_ROLEMEMBER('db_datareader') AS [is_datareader], " +
+                         "IS_ROLEMEMBER('db_datawriter') AS [is_datawriter], " +
+                         "IS_ROLEMEMBER('db_owner') AS [is_dbowner] " +
+                         "FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_TYPE = 'BASE TABLE'")) {
+                assertTrue(rsCatalog.next(), "Read-only catalog query against INFORMATION_SCHEMA.TABLES must return a row");
+                int dboTableCount = rsCatalog.getInt("dbo_table_count");
+                assertTrue(dboTableCount >= 0, "dbo table count must be non-negative");
             }
         }
     }

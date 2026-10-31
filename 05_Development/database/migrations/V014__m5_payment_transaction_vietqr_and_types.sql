@@ -5,7 +5,15 @@
 --              and update trigger TR_PaymentTransaction_RecalculateFolioPaid.
 -- ============================================================================
 
-USE [HSWRMS];
+-- Database-context-neutral guard: never switch databases implicitly; validate active target context.
+DECLARE @CurrentDb sysname = DB_NAME();
+IF @CurrentDb IN (N'master', N'model', N'msdb', N'tempdb') OR @CurrentDb NOT LIKE N'HSWRMS%'
+BEGIN
+    DECLARE @ErrMsg NVARCHAR(400) = N'Refusing to execute migration in unexpected database context ['
+        + ISNULL(@CurrentDb, N'NULL')
+        + N']. Connect explicitly to the target HSWRMS database (e.g., HSWRMS or HSWRMS_TEST).';
+    THROW 50000, @ErrMsg, 1;
+END;
 GO
 
 SET ANSI_NULLS ON;

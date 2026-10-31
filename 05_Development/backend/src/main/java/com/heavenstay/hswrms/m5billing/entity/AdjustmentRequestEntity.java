@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.m5billing.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -11,6 +13,7 @@ public class AdjustmentRequestEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "adjustment_request_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long adjustmentRequestId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -22,9 +25,11 @@ public class AdjustmentRequestEntity {
     private FolioEntity folio;
 
     @Column(name = "retreat_booking_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long retreatBookingId;
 
     @Column(name = "source_meal_order_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long sourceMealOrderId;
 
     @Column(name = "adjustment_type", nullable = false, length = 30)
@@ -40,12 +45,14 @@ public class AdjustmentRequestEntity {
     private String status = "PENDING_APPROVAL"; // PENDING_APPROVAL, APPROVED, REJECTED
 
     @Column(name = "requested_by_user_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long requestedByUserId;
 
     @Column(name = "requested_at", nullable = false)
     private LocalDateTime requestedAt = LocalDateTime.now();
 
     @Column(name = "approved_by_user_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long approvedByUserId;
 
     @Column(name = "approved_at")

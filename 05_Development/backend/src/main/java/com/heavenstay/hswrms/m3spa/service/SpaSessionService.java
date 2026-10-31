@@ -162,7 +162,7 @@ public class SpaSessionService {
 
         // 6. Handle Customer Reschedule vs. New Booking
         if (excludeSessionId != null) {
-            SpaSession existingSession = sessionRepository.findById(excludeSessionId)
+            SpaSession existingSession = sessionRepository.findByIdWithLock(excludeSessionId)
                     .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", excludeSessionId));
 
             // Verify ownership
@@ -191,6 +191,7 @@ public class SpaSessionService {
             existingSession.setScheduledEndAt(req.getScheduledEndAt());
             existingSession.setSessionStatus(SpaSessionStatus.SCHEDULED);
             existingSession.setConfirmationStatus(SpaConfirmationStatus.PENDING);
+            existingSession.resetReminderState();
             if (req.getCustomerNote() != null) {
                 existingSession.setCustomerNote(req.getCustomerNote());
             }

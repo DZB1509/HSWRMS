@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.m5billing.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -11,6 +13,7 @@ public class CreditNoteEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "credit_note_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long creditNoteId;
 
     @Column(name = "credit_note_number", nullable = false, unique = true, length = 50)
@@ -47,12 +50,14 @@ public class CreditNoteEntity {
     private LocalDateTime issuedAt = LocalDateTime.now();
 
     @Column(name = "issued_by_user_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long issuedByUserId;
 
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
 
     @Column(name = "settled_by_user_id")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long settledByUserId;
 
     @Column(name = "refund_transaction_ref", length = 100)

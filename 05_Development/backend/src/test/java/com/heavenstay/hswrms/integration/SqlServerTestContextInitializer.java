@@ -23,9 +23,9 @@ public class SqlServerTestContextInitializer implements ApplicationContextInitia
             String password = env.getProperty("spring.datasource.password");
             String url = env.getProperty("spring.datasource.url");
 
-            String expectedDb = env.getProperty("hswrms.sqlserver.test.expected-database");
+            String expectedDb = SqlServerTestConfigValidator.extractDatabaseNameFromUrl(url);
             if (expectedDb == null || expectedDb.trim().isEmpty()) {
-                expectedDb = SqlServerTestConfigValidator.extractDatabaseNameFromUrl(url);
+                expectedDb = env.getProperty("hswrms.sqlserver.test.expected-database");
             }
             if (expectedDb == null || expectedDb.trim().isEmpty()) {
                 expectedDb = env.getProperty("SQLSERVER_TEST_DB", SqlServerTestConfigValidator.DEFAULT_TEST_DATABASE);

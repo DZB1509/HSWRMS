@@ -3,9 +3,9 @@
 
 spring:
   datasource:
-    url: jdbc:sqlserver://localhost;instanceName=SQLEXPRESS;databaseName=HSWRMS;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true
-    username: sa
-    password: 123
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:}}
   jpa:
     hibernate:
       ddl-auto: none
