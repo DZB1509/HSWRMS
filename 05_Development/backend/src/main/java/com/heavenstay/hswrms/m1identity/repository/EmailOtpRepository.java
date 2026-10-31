@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -37,5 +38,20 @@ public interface EmailOtpRepository extends JpaRepository<EmailOtp, Integer> {
     Optional<EmailOtp> findLatestUnconsumedOtp(
         @Param("userId") Integer userId,
         @Param("purpose") String purpose
+    );
+
+    /**
+     * Marks every unconsumed OTP for the given user and purpose as consumed
+     * (with consumed_at = now).  Called before issuing a replacement OTP so
+     * that old codes cannot be replayed once a fresh one has been sent.
+     * No schema change: uses the existing consumed/consumed_at columns.
+     */
+    @Modifying
+    @Query("UPDATE EmailOtp o SET o.consumed = true, o.consumedAt = :now " +
+           "WHERE o.user.userId = :userId AND o.purpose = :purpose AND o.consumed = false")
+    int invalidatePreviousOtps(
+        @Param("userId") Integer userId,
+        @Param("purpose") String purpose,
+        @Param("now") Instant now
     );
 }

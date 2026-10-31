@@ -117,7 +117,17 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setAccountStatus("PENDING");
         user.setEmailVerified(false);
-        user = userRepository.save(user); // Force persistence to obtain generated User ID for composite key
+        try {
+            user = userRepository.save(user); // Force persistence to obtain generated User ID for composite key
+        } catch (DataIntegrityViolationException ex) {
+            // A concurrent registration with the same email slipped past the
+            // existsByEmail check and hit the UQ_User_Email constraint at flush time.
+            String msg = ex.getMessage() != null ? ex.getMessage() : "";
+            if (msg.contains("UQ_User_Email")) {
+                throw new ConflictException("EMAIL_EXISTS", "The email address is already registered.");
+            }
+            throw ex;
+        }
 
         // 2. Assign Canonical CUSTOMER Role
         Role role = roleRepository.findByRoleNameIgnoreCase("Customer")
@@ -134,11 +144,13 @@ public class AuthService {
         ConsentRecord tosConsent = new ConsentRecord(user, TOS_CONSENT_TYPE, TOS_POLICY_VERSION);
         consentRecordRepository.save(tosConsent);
 
-        // 5. Generate & Store OTP Securely
+        // 5. Generate & Store OTP Securely — invalidate any prior unconsumed codes
+        // for this user first so old codes cannot be replayed after the new one is sent.
         String rawOtp = String.format("%06d", secureRandom.nextInt(1000000));
         String otpHash = passwordEncoder.encode(rawOtp);
         Instant expiresAt = Instant.now().plus(10, ChronoUnit.MINUTES);
 
+        emailOtpRepository.invalidatePreviousOtps(user.getUserId(), EMAIL_VERIFICATION_PURPOSE, Instant.now());
         EmailOtp emailOtp = new EmailOtp(user, otpHash, "EMAIL_VERIFICATION", expiresAt);
         emailOtpRepository.save(emailOtp);
 
@@ -233,6 +245,7 @@ public class AuthService {
             // and remember the pending Facebook subject in a short-lived
             // server-side map; verifyEmail binds the identity after OTP proof.
             String rawOtp = String.format("%06d", secureRandom.nextInt(1000000));
+            emailOtpRepository.invalidatePreviousOtps(pendingUser.getUserId(), EMAIL_VERIFICATION_PURPOSE, Instant.now());
             EmailOtp emailOtp = new EmailOtp(pendingUser, passwordEncoder.encode(rawOtp),
                     EMAIL_VERIFICATION_PURPOSE,
                     Instant.now().plus(10, ChronoUnit.MINUTES));
@@ -293,6 +306,7 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", String.valueOf(userId)));
         String email = user.getEmail();
         String rawOtp = String.format("%06d", secureRandom.nextInt(1_000_000));
+        emailOtpRepository.invalidatePreviousOtps(userId, EMAIL_VERIFICATION_PURPOSE, Instant.now());
         EmailOtp emailOtp = new EmailOtp(user, passwordEncoder.encode(rawOtp),
                 EMAIL_VERIFICATION_PURPOSE, Instant.now().plus(10, ChronoUnit.MINUTES));
         emailOtpRepository.save(emailOtp);
@@ -506,4 +520,61 @@ public class AuthService {
         }
 
         return new VerifyEmailResponse(user.getUserId(), user.getEmail(), true, user.getAccountStatus());
-    }}
+    }
+
+    @Transactional
+    public void requestPasswordReset(String rawEmail) {
+        if (rawEmail == null || rawEmail.isBlank()) {
+            return;
+        }
+        String email = rawEmail.trim().toLowerCase();
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+                return;
+            }
+            emailOtpRepository.invalidatePreviousOtps(user.getUserId(), "PASSWORD_RESET", Instant.now());
+            String rawOtp = String.format("%06d", secureRandom.nextInt(1000000));
+            EmailOtp otp = new EmailOtp(user, passwordEncoder.encode(rawOtp),
+                    "PASSWORD_RESET", Instant.now().plus(10, ChronoUnit.MINUTES));
+            emailOtpRepository.save(otp);
+            emailDeliveryAdapter.sendVerificationOtp(email, rawOtp);
+        });
+    }
+
+    @Transactional(noRollbackFor = BusinessRuleException.class)
+    public void resetPassword(String rawEmail, String rawOtp, String newPassword) {
+        String email = rawEmail.trim().toLowerCase();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessRuleException("INVALID_RESET_REQUEST", "Invalid password reset request."));
+
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            throw new BusinessRuleException("INVALID_RESET_REQUEST", "Invalid password reset request.");
+        }
+
+        EmailOtp otp = emailOtpRepository.findLatestUnconsumedOtpForUpdate(
+                user.getUserId(), "PASSWORD_RESET", Limit.of(1))
+                .orElseThrow(() -> new BusinessRuleException("OTP_NOT_FOUND", "No pending password reset code found."));
+
+        if (otp.isConsumed()) {
+            throw new BusinessRuleException("OTP_CONSUMED", "This reset code has already been used.");
+        }
+        if (otp.isExpired()) {
+            throw new BusinessRuleException("OTP_EXPIRED", "This reset code has expired.");
+        }
+        if (otp.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
+            throw new BusinessRuleException("OTP_ATTEMPTS_EXCEEDED", "Too many incorrect attempts. Please request a new reset code.");
+        }
+        if (!passwordEncoder.matches(rawOtp.trim(), otp.getOtpHash())) {
+            otp.setAttemptCount(otp.getAttemptCount() + 1);
+            emailOtpRepository.saveAndFlush(otp);
+            throw new BusinessRuleException("OTP_INVALID", "Invalid reset code.");
+        }
+
+        otp.setConsumed(true);
+        otp.setConsumedAt(Instant.now());
+        emailOtpRepository.save(otp);
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+}

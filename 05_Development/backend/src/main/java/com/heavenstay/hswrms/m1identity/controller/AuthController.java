@@ -3,8 +3,10 @@ package com.heavenstay.hswrms.m1identity.controller;
 import com.heavenstay.hswrms.common.api.ApiResponse;
 import com.heavenstay.hswrms.m1identity.dto.LoginRequest;
 import com.heavenstay.hswrms.m1identity.dto.LoginResponse;
+import com.heavenstay.hswrms.m1identity.dto.ForgotPasswordRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.RegisterResponse;
+import com.heavenstay.hswrms.m1identity.dto.ResetPasswordRequest;
 import com.heavenstay.hswrms.m1identity.dto.SsoRegisterRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailRequest;
 import com.heavenstay.hswrms.m1identity.dto.VerifyEmailResponse;
@@ -82,6 +84,18 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.ok("Login successful.", response));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.ok("If the account exists, a reset code has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.ok("Password reset successfully."));
     }
 
     @GetMapping("/me")
