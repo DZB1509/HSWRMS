@@ -19,14 +19,13 @@ export const HealthDataDeletionPage: React.FC = () => {
   const { activeBooking, deletionRequest, submitDeletionRequest, cancelDeletionRequest } = useCustomer();
   const { showToast } = useToast();
 
-  const [reason, setReason] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!acknowledged) return;
 
-    const result = submitDeletionRequest(reason, acknowledged);
+    const result = submitDeletionRequest('', acknowledged);
     showToast(result.message, result.status === 'deferred_active_retreat' ? 'info' : 'success');
   };
 
@@ -184,27 +183,6 @@ export const HealthDataDeletionPage: React.FC = () => {
                 <li>Mobility recommendations and joint/spine tension areas</li>
                 <li>Medical consent agreement history</li>
               </ul>
-            </div>
-
-            {/* Optional Reason */}
-            <div style={{ marginBottom: 'var(--space-5)' }}>
-              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                {t('customer.deletion.reasonLabel', 'Reason for Request (Optional)')}
-              </label>
-              <textarea
-                rows={3}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder={t('customer.deletion.reasonPlaceholder', 'Please share why you wish to remove your health data...')}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: 'var(--text-sm)',
-                  fontFamily: 'inherit',
-                }}
-              />
             </div>
 
             {/* Confirmation Checkbox */}

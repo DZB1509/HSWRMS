@@ -166,3 +166,26 @@ export interface LoginApiSuccess {
 export const loginRequest = (body: LoginRequestBody): Promise<LoginApiSuccess> =>
   apiClient.post<LoginApiSuccess>('/auth/login', body);
 
+// ── Password Reset ─────────────────────────────────────────────────────
+
+export interface ForgotPasswordRequestBody {
+  email: string;
+}
+
+export interface ResetPasswordRequestBody {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface PasswordResetApiSuccess {
+  success: boolean;
+  message: string;
+}
+
+export const forgotPasswordRequest = (body: ForgotPasswordRequestBody): Promise<PasswordResetApiSuccess> =>
+  apiClient.post<PasswordResetApiSuccess>('/auth/forgot-password', body);
+
+export const resetPasswordRequest = (body: ResetPasswordRequestBody): Promise<PasswordResetApiSuccess> =>
+  apiClient.post<PasswordResetApiSuccess>('/auth/reset-password', body);
+
