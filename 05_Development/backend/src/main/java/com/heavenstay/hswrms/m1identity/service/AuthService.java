@@ -129,6 +129,12 @@ public class AuthService {
             throw ex;
         }
 
+        // Serialize OTP issuance for this newly created user. The row now exists,
+        // so the pessimistic lock is acquired before invalidation/insertion.
+        int lockedUserId = user.getUserId();
+        userRepository.findByIdForUpdate(lockedUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", String.valueOf(lockedUserId)));
+
         // 2. Assign Canonical CUSTOMER Role
         Role role = roleRepository.findByRoleNameIgnoreCase("Customer")
                 .orElseThrow(() -> new BusinessRuleException("ROLE_NOT_FOUND", "System configuration error: Customer role is missing."));
@@ -236,6 +242,10 @@ public class AuthService {
             } catch (DataIntegrityViolationException ex) {
                 throw new ConflictException("EMAIL_EXISTS", "The email address is already registered.");
             }
+            // Serialize OTP issuance for this pending user.
+            int lockedPendingUserId = pendingUser.getUserId();
+            userRepository.findByIdForUpdate(lockedPendingUserId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", String.valueOf(lockedPendingUserId)));
             Role pendingRole = roleRepository.findByRoleNameIgnoreCase("Customer")
                     .orElseThrow(() -> new BusinessRuleException("ROLE_NOT_FOUND", "System configuration error: Customer role is missing."));
             userRoleRepository.save(new UserRole(pendingUser, pendingRole));
@@ -302,7 +312,7 @@ public class AuthService {
      */
     @Transactional(noRollbackFor = BusinessRuleException.class)
     public void sendFacebookLinkOtp(Integer userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", String.valueOf(userId)));
         String email = user.getEmail();
         String rawOtp = String.format("%06d", secureRandom.nextInt(1_000_000));
@@ -532,6 +542,8 @@ public class AuthService {
             if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
                 return;
             }
+            userRepository.findByIdForUpdate(user.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", String.valueOf(user.getUserId())));
             emailOtpRepository.invalidatePreviousOtps(user.getUserId(), "PASSWORD_RESET", Instant.now());
             String rawOtp = String.format("%06d", secureRandom.nextInt(1000000));
             EmailOtp otp = new EmailOtp(user, passwordEncoder.encode(rawOtp),
