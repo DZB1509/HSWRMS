@@ -26,10 +26,13 @@ public class SpaTreatmentController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<SpaTreatmentDto>>> listTreatments(
+            @RequestParam(required = false, defaultValue = "false") boolean includeInactive,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Integer userId = userDetails != null ? userDetails.getUserId() : null;
-        List<SpaTreatmentDto> treatments = treatmentService.listActiveTreatments(userId);
+        List<SpaTreatmentDto> treatments = includeInactive
+                ? treatmentService.listAllTreatments(userId)
+                : treatmentService.listActiveTreatments(userId);
         return ResponseEntity.ok(ApiResponse.ok(treatments));
     }
 

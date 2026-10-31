@@ -12,6 +12,8 @@ public interface RetreatPackageRepository extends JpaRepository<RetreatPackage, 
 
     List<RetreatPackage> findByPackageStatus(String packageStatus);
 
+    List<RetreatPackage> findByWellnessGoalContainingIgnoreCase(String wellnessGoal);
+
     List<RetreatPackage> findByPackageStatusAndWellnessGoalContainingIgnoreCase(String packageStatus, String wellnessGoal);
 
     Optional<RetreatPackage> findByPackageName(String packageName);

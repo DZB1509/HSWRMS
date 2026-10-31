@@ -28,8 +28,11 @@ public class RetreatPackageController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<RetreatPackageResponse>>> getAllPackages(
-            @RequestParam(required = false) String wellnessGoal) {
-        List<RetreatPackageResponse> packages = packageService.getAllActivePackages(wellnessGoal);
+            @RequestParam(required = false) String wellnessGoal,
+            @RequestParam(required = false, defaultValue = "false") boolean includeInactive) {
+        List<RetreatPackageResponse> packages = includeInactive
+                ? packageService.getAllPackages(wellnessGoal)
+                : packageService.getAllActivePackages(wellnessGoal);
         return ResponseEntity.ok(ApiResponse.ok("Retreat packages retrieved successfully", packages));
     }
 

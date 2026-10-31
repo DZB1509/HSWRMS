@@ -96,10 +96,29 @@ export const SpaManagementPage: React.FC = () => {
   const fetchSpaDataFromDb = async () => {
     setIsLoadingDb(true);
     try {
+      const authHeaders = getAuthHeaders();
       const [treatmentsRes, pkgsRes, roomsRes] = await Promise.all([
-        fetch('http://localhost:8080/api/v1/spa/treatments').then((r) => (r.ok ? r.json() : null)),
-        fetch('http://localhost:8080/api/v1/retreat-packages').then((r) => (r.ok ? r.json() : null)),
-        fetch('http://localhost:8080/api/v1/treatment-rooms').then((r) => (r.ok ? r.json() : null)),
+        fetch('http://localhost:8080/api/v1/spa-treatments', { headers: authHeaders })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+          .then(async (res) => {
+            if (res?.data && Array.isArray(res.data) && res.data.length > 0) return res;
+            return fetch('http://localhost:8080/api/v1/spa/treatments?includeInactive=true', { headers: authHeaders })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null);
+          }),
+        fetch('http://localhost:8080/api/v1/retreat-packages-inventory', { headers: authHeaders })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+          .then(async (res) => {
+            if (res?.data && Array.isArray(res.data) && res.data.length > 0) return res;
+            return fetch('http://localhost:8080/api/v1/retreat-packages?includeInactive=true', { headers: authHeaders })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null);
+          }),
+        fetch('http://localhost:8080/api/v1/treatment-rooms', { headers: authHeaders })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
       ]);
 
       if (treatmentsRes?.data && Array.isArray(treatmentsRes.data) && treatmentsRes.data.length > 0) {
@@ -124,7 +143,7 @@ export const SpaManagementPage: React.FC = () => {
             contraindications: item.contraindications || matched?.contraindications || '',
             precautions: item.precautions || matched?.precautions || '',
             description: item.description || matched?.description || '',
-            status: (item.treatmentStatus || matched?.status || 'ACTIVE') as SpaStatus,
+            status: (item.treatmentStatus || item.status || matched?.status || 'ACTIVE') as SpaStatus,
             image: matched?.image || 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=800&q=80',
           };
         });
@@ -151,7 +170,7 @@ export const SpaManagementPage: React.FC = () => {
             dietaryPlan: item.dietaryPlan || matched?.dietaryPlan || '',
             extraChargePolicy: item.extraChargePolicy || matched?.extraChargePolicy || '',
             targetGuest: item.targetGuest || matched?.targetGuest || '',
-            status: (item.packageStatus || matched?.status || 'ACTIVE') as SpaStatus,
+            status: (item.packageStatus || item.status || matched?.status || 'ACTIVE') as SpaStatus,
             image: matched?.image || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
             treatmentMappings: matched?.treatmentMappings || [],
             fnbEntitlement: matched?.fnbEntitlement,
@@ -523,6 +542,9 @@ export const SpaManagementPage: React.FC = () => {
 
   // Stats
   const activeTreatmentsCount = treatments.filter((t) => t.status === 'ACTIVE').length;
+  const inactiveTreatmentsCount = treatments.filter((t) => t.status === 'INACTIVE').length;
+  const activePackagesCount = packages.filter((p) => p.status === 'ACTIVE').length;
+  const inactivePackagesCount = packages.filter((p) => p.status === 'INACTIVE').length;
   const avgSpaPrice = Math.round(
     treatments.reduce((sum, t) => sum + t.basePrice, 0) / (treatments.length || 1)
   );
@@ -678,7 +700,7 @@ export const SpaManagementPage: React.FC = () => {
           <div style={{ fontSize: '1.6rem', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>
             {treatments.length}{' '}
             <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#2E7D5A' }}>
-              ({activeTreatmentsCount} Active)
+              ({activeTreatmentsCount} Active{inactiveTreatmentsCount > 0 ? `, ${inactiveTreatmentsCount} Tạm dừng` : ''})
             </span>
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -704,7 +726,7 @@ export const SpaManagementPage: React.FC = () => {
           <div style={{ fontSize: '1.6rem', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>
             {packages.length}{' '}
             <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#9E7A24' }}>
-              (Chiva-Som Model)
+              ({activePackagesCount} Active{inactivePackagesCount > 0 ? `, ${inactivePackagesCount} Tạm dừng` : ''})
             </span>
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>

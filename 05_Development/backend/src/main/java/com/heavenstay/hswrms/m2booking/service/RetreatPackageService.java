@@ -36,6 +36,16 @@ public class RetreatPackageService {
         return packages.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    public List<RetreatPackageResponse> getAllPackages(String wellnessGoal) {
+        List<RetreatPackage> packages;
+        if (wellnessGoal != null && !wellnessGoal.trim().isEmpty()) {
+            packages = packageRepository.findByWellnessGoalContainingIgnoreCase(wellnessGoal.trim());
+        } else {
+            packages = packageRepository.findAll();
+        }
+        return packages.stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
     public RetreatPackageResponse getPackageById(Integer id) {
         RetreatPackage pkg = packageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Retreat package with ID " + id + " not found"));

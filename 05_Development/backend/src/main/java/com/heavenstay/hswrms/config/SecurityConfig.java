@@ -120,10 +120,11 @@ public class SecurityConfig {
 
                         // Public SPA treatment catalog from M3: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/spa/treatments", "/api/v1/spa/treatments/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/spa-treatments/**", "/api/v1/treatment-rooms/**", "/api/v1/spa/treatment-rooms/**", "/api/v1/room-types/**", "/api/v1/qualifications/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/spa-treatments", "/api/v1/spa-treatments/**", "/api/v1/treatment-rooms", "/api/v1/treatment-rooms/**", "/api/v1/spa/treatment-rooms/**", "/api/v1/room-types/**", "/api/v1/qualifications/**").permitAll()
 
                         // Public retreat packages and villa categories catalog from M2: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/retreat-packages", "/api/v1/retreat-packages/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/retreat-packages-inventory", "/api/v1/retreat-packages-inventory/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/villas/**", "/api/v1/villa-categories/**", "/api/v1/resort-zones/**", "/api/v1/villa-functional-areas/**").permitAll()
 
                         // Public F&B menu catalog from M4: GET only

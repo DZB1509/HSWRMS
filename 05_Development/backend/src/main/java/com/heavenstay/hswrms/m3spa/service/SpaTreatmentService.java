@@ -37,6 +37,17 @@ public class SpaTreatmentService {
         }).collect(Collectors.toList());
     }
 
+    public List<SpaTreatmentDto> listAllTreatments(Integer userId) {
+        List<SpaTreatment> treatments = treatmentRepository.findAll();
+        Optional<StayContextDto> stayOpt = userId != null ? customerStayPort.getActiveStayForUser(userId) : Optional.empty();
+        Integer packageId = stayOpt.map(StayContextDto::getPackageId).orElse(null);
+
+        return treatments.stream().map(t -> {
+            boolean isIncluded = packageId != null && customerStayPort.isTreatmentIncludedInPackage(packageId, t.getTreatmentId());
+            return toDto(t, isIncluded);
+        }).collect(Collectors.toList());
+    }
+
     public SpaTreatmentDto getTreatmentById(Integer treatmentId, Integer userId) {
         SpaTreatment treatment = treatmentRepository.findById(treatmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Treatment", "treatmentId", treatmentId));
