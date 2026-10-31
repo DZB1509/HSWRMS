@@ -172,6 +172,7 @@ public class RetreatBookingServiceAuthorizationTest {
         when(customerProfileRepository.findByUserId(10)).thenReturn(Optional.of(profile));
 
         RetreatBooking booking = sampleBooking(1, 555);
+        when(bookingRepository.findByRetreatBookingIdAndCustomerProfileId(1, 555)).thenReturn(Optional.of(booking));
         when(bookingRepository.findById(1)).thenReturn(Optional.of(booking));
 
         // 5a. Read own booking
@@ -192,6 +193,8 @@ public class RetreatBookingServiceAuthorizationTest {
         List<BookingSummaryResponse> list = bookingService.getCustomerBookings(user);
         assertEquals(1, list.size());
         assertEquals(555, list.get(0).getCustomerProfileId());
+        assertEquals(booking.getRetreatBookingId(), list.get(0).getRetreatBookingId(),
+                "Customer booking response must expose the persisted booking primary key");
     }
 
     @Test
@@ -205,13 +208,19 @@ public class RetreatBookingServiceAuthorizationTest {
 
         // Booking belongs to CustomerProfile ID = 999
         RetreatBooking otherBooking = sampleBooking(2, 999);
+        when(bookingRepository.findByRetreatBookingIdAndCustomerProfileId(2, 555)).thenReturn(Optional.empty());
         when(bookingRepository.findById(2)).thenReturn(Optional.of(otherBooking));
 
         // 6a. Viewing detail of another customer's booking is blocked
-        AccessDeniedException exView = assertThrows(AccessDeniedException.class, () ->
+        com.heavenstay.hswrms.common.exception.ResourceNotFoundException exView = assertThrows(com.heavenstay.hswrms.common.exception.ResourceNotFoundException.class, () ->
                 bookingService.getBookingDetail(2, user)
         );
-        assertTrue(exView.getMessage().contains("Access denied: You do not have permission to view booking #2"));
+        assertEquals("Retreat booking not found", exView.getMessage());
+
+        com.heavenstay.hswrms.common.exception.ResourceNotFoundException exMissing = assertThrows(com.heavenstay.hswrms.common.exception.ResourceNotFoundException.class, () ->
+                bookingService.getBookingDetail(404, user)
+        );
+        assertEquals(exMissing.getMessage(), exView.getMessage(), "Foreign and missing booking IDs must have the same response message.");
 
         // 6b. Canceling another customer's booking is blocked
         AccessDeniedException exCancel = assertThrows(AccessDeniedException.class, () ->
@@ -226,6 +235,26 @@ public class RetreatBookingServiceAuthorizationTest {
                 vnPayService.generateDepositUrl(2, "http://localhost/return", null, user)
         );
         assertTrue(exPay.getMessage().contains("Access denied: You do not have permission to generate payment URL for booking #2"));
+    }
+
+    @Test
+    @DisplayName("Foreign and missing Customer booking IDs return the same not-found result")
+    public void customerBookingDetailDoesNotDiscloseExistence() {
+        CustomUserDetails user = createUser(10, "CUSTOMER");
+        CustomerProfile profile = new CustomerProfile();
+        profile.setCustomerProfileId(555);
+        when(customerProfileRepository.findByUserId(10)).thenReturn(Optional.of(profile));
+        when(bookingRepository.findByRetreatBookingIdAndCustomerProfileId(anyInt(), eq(555)))
+                .thenReturn(Optional.empty());
+
+        var foreign = assertThrows(com.heavenstay.hswrms.common.exception.ResourceNotFoundException.class,
+                () -> bookingService.getBookingDetail(2, user));
+        var missing = assertThrows(com.heavenstay.hswrms.common.exception.ResourceNotFoundException.class,
+                () -> bookingService.getBookingDetail(404, user));
+
+        assertEquals("Retreat booking not found", foreign.getMessage());
+        assertEquals(foreign.getMessage(), missing.getMessage());
+        verify(bookingRepository, never()).findById(anyInt());
     }
 
     @Test

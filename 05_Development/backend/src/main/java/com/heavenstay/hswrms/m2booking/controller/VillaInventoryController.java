@@ -10,9 +10,12 @@ import com.heavenstay.hswrms.m2booking.repository.PhysicalVillaRepository;
 import com.heavenstay.hswrms.m2booking.repository.ResortZoneRepository;
 import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
 import com.heavenstay.hswrms.m2booking.repository.VillaFunctionalAreaRepository;
+import com.heavenstay.hswrms.m2booking.service.ReceptionistOperationService;
+import com.heavenstay.hswrms.security.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,15 +39,18 @@ public class VillaInventoryController {
     private final VillaCategoryRepository categoryRepo;
     private final ResortZoneRepository zoneRepo;
     private final VillaFunctionalAreaRepository areaRepo;
+    private final ReceptionistOperationService receptionistService;
 
     public VillaInventoryController(PhysicalVillaRepository villaRepo,
                                     VillaCategoryRepository categoryRepo,
                                     ResortZoneRepository zoneRepo,
-                                    VillaFunctionalAreaRepository areaRepo) {
+                                    VillaFunctionalAreaRepository areaRepo,
+                                    ReceptionistOperationService receptionistService) {
         this.villaRepo = villaRepo;
         this.categoryRepo = categoryRepo;
         this.zoneRepo = zoneRepo;
         this.areaRepo = areaRepo;
+        this.receptionistService = receptionistService;
     }
 
     @GetMapping("/villas")
@@ -69,17 +75,20 @@ public class VillaInventoryController {
 
     // Operational status (S24) is Receptionist work; Admin always allowed. Manager is read-only.
     @PatchMapping("/villas/{villaNumber}/status")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN')")
     public ResponseEntity<ApiResponse<PhysicalVilla>> updateVillaStatus(
             @PathVariable String villaNumber,
-            @RequestBody Map<String, String> payload) {
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         String newStatus = payload.get("status");
         if (newStatus == null || newStatus.isBlank()) {
             throw new IllegalArgumentException("Status field is required");
         }
         PhysicalVilla villa = villaRepo.findByVillaNumber(villaNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("PhysicalVilla", "villaNumber", villaNumber));
-        villa.setVillaStatus(newStatus.toUpperCase());
-        return ResponseEntity.ok(ApiResponse.ok("Villa status updated successfully", villaRepo.save(villa)));
+        receptionistService.updateVillaStatus(villa.getVillaId(), newStatus, payload.get("notes"), userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok("Villa status updated successfully",
+                villaRepo.findById(villa.getVillaId()).orElseThrow()));
     }
 
     @PutMapping("/villas/{villaNumber}")
@@ -132,8 +141,8 @@ public class VillaInventoryController {
         if (payload.containsKey("viewAndOperationalNotes") && payload.get("viewAndOperationalNotes") != null) {
             villa.setViewAndOperationalNotes((String) payload.get("viewAndOperationalNotes"));
         }
-        if (payload.containsKey("villaStatus") && payload.get("villaStatus") != null) {
-            villa.setVillaStatus((String) payload.get("villaStatus"));
+        if (payload.containsKey("villaStatus")) {
+            throw new IllegalArgumentException("Use the operational villa status endpoint to change villaStatus");
         }
         if (payload.containsKey("amenities") && payload.get("amenities") != null) {
             Object am = payload.get("amenities");

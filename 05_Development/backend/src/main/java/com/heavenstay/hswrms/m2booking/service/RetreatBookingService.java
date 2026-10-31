@@ -437,8 +437,18 @@ public class RetreatBookingService {
         if (userDetails == null) {
             throw new AccessDeniedException("Authentication required to view booking.");
         }
+        boolean customer = userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_CUSTOMER"));
+        if (customer) {
+            Integer profileId = resolveCustomerProfileId(userDetails);
+            RetreatBooking ownedBooking = bookingRepository
+                    .findByRetreatBookingIdAndCustomerProfileId(bookingId, profileId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found"));
+            return toSummaryResponse(ownedBooking);
+        }
         RetreatBooking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found"));
         validateBookingAccess(booking, userDetails, "view");
         return toSummaryResponse(booking);
     }

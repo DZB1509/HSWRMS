@@ -376,12 +376,31 @@ public class ReceptionistOperationService {
 
         String targetStatus = newStatus.trim().toUpperCase();
 
+        if (!Set.of(PhysicalVilla.AVAILABLE, PhysicalVilla.OCCUPIED, PhysicalVilla.MAINTENANCE,
+                PhysicalVilla.NEEDS_CLEANING, PhysicalVilla.INACTIVE).contains(targetStatus)) {
+            throw new BusinessRuleException("Unsupported villa status: " + targetStatus);
+        }
         if (bookingRepository.existsByAssignedVilla_VillaIdAndBookingStatus(villaId, "CHECKED_IN")
-                && !"OCCUPIED".equalsIgnoreCase(targetStatus)) {
+                && !PhysicalVilla.OCCUPIED.equals(targetStatus)) {
             throw new BusinessRuleException("Cannot change status of Villa " + villa.getVillaNumber() +
                     " to '" + targetStatus + "' while an active checked-in booking occupies it. Complete check-out first.");
         }
-
+        if (PhysicalVilla.OCCUPIED.equals(targetStatus) && !PhysicalVilla.OCCUPIED.equals(villa.getVillaStatus())) {
+            throw new BusinessRuleException("Villa OCCUPIED status is set only by the check-in workflow.");
+        }
+        String currentStatus = villa.getVillaStatus();
+        boolean allowedTransition = targetStatus.equals(currentStatus)
+                || (PhysicalVilla.NEEDS_CLEANING.equals(currentStatus)
+                    && Set.of(PhysicalVilla.AVAILABLE, PhysicalVilla.MAINTENANCE, PhysicalVilla.INACTIVE).contains(targetStatus))
+                || (PhysicalVilla.MAINTENANCE.equals(currentStatus)
+                    && Set.of(PhysicalVilla.AVAILABLE, PhysicalVilla.INACTIVE).contains(targetStatus))
+                || (PhysicalVilla.AVAILABLE.equals(currentStatus)
+                    && Set.of(PhysicalVilla.MAINTENANCE, PhysicalVilla.INACTIVE).contains(targetStatus))
+                || (PhysicalVilla.INACTIVE.equals(currentStatus)
+                    && PhysicalVilla.AVAILABLE.equals(targetStatus));
+        if (!allowedTransition) {
+            throw new BusinessRuleException("Invalid villa status transition: " + currentStatus + " -> " + targetStatus);
+        }
         villa.setVillaStatus(targetStatus);
         if (notes != null && !notes.trim().isEmpty()) {
             villa.setViewAndOperationalNotes(notes.trim());

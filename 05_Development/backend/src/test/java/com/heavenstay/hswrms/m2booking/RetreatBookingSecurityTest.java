@@ -99,6 +99,26 @@ public class RetreatBookingSecurityTest {
     }
 
     @Test
+    @DisplayName("Villa status endpoint allows receptionist/admin and rejects manager")
+    void villaStatusEndpointUsesReceptionistAdminRolePolicy() throws Exception {
+        mockMvc.perform(patch("/api/v1/villas/NO-SUCH-VILLA/status")
+                        .with(user(createManager(201)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"MAINTENANCE\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/v1/villas/NO-SUCH-VILLA/status")
+                        .with(user(createReceptionist(202)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"MAINTENANCE\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(patch("/api/v1/villas/NO-SUCH-VILLA/status")
+                        .with(user(createAdmin(203)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"MAINTENANCE\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("Security 3. CUSTOMER can access their own booking detail (HTTP 200)")
     public void testCustomerCanAccessOwnBooking() throws Exception {
         CustomUserDetails customer1 = createCustomer(101);
@@ -121,13 +141,14 @@ public class RetreatBookingSecurityTest {
         CustomUserDetails customer1 = createCustomer(101);
 
         when(bookingService.getBookingDetail(eq(2), any(CustomUserDetails.class)))
-                .thenThrow(new AccessDeniedException("Access denied: You do not have permission to view booking #2"));
+                .thenThrow(new com.heavenstay.hswrms.common.exception.ResourceNotFoundException("Retreat booking not found"));
 
         mockMvc.perform(get("/api/v1/customer/bookings/2")
                         .with(user(customer1)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Retreat booking not found"));
     }
 
     @Test
