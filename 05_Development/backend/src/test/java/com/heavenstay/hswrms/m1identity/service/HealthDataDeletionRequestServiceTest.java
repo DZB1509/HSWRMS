@@ -196,4 +196,33 @@ class HealthDataDeletionRequestServiceTest {
         assertNotEquals("COMPLETED", cancelResp.getStatus());
         assertNull(cancelled.getProcessedAt(), "processedAt must remain null — no execution performed");
     }
+    @Test
+    @DisplayName("Customer A cannot cancel Customer B's deletion request; B's request remains unchanged")
+    void cancel_crossCustomer_notFoundAndBUnchanged() {
+        User userB = new User("Bob", "bob@example.com", "enc_pass");
+        userB.setUserId(411);
+        CustomerProfile profileB = new CustomerProfile(userB);
+        profileB.setCustomerProfileId(902);
+        HealthDataDeletionRequest requestB = new HealthDataDeletionRequest(profileB, userB, "HEALTH_DATA");
+        requestB.setDeletionRequestId(2002);
+        requestB.setRequestStatus("PENDING");
+        requestB.setRequestedAt(now);
+        requestB.setUpdatedAt(now);
+
+        when(customerProfileRepository.findByUserId(410)).thenReturn(Optional.of(profile));
+        when(customerProfileRepository.findByUserId(411)).thenReturn(Optional.of(profileB));
+        when(deletionRequestRepository.findByDeletionRequestIdAndCustomerProfileCustomerProfileId(2002, 901)).thenReturn(Optional.empty());
+        when(deletionRequestRepository.findByDeletionRequestIdAndCustomerProfileCustomerProfileId(2002, 902)).thenReturn(Optional.of(requestB));
+
+        assertThrows(ResourceNotFoundException.class, () -> service.cancelDeletionRequest(410, 2002));
+        assertEquals("PENDING", requestB.getRequestStatus(), "Customer B's request must remain unchanged");
+
+        HealthDataDeletionRequest updatedB = new HealthDataDeletionRequest(profileB, userB, "HEALTH_DATA");
+        updatedB.setDeletionRequestId(2002);
+        updatedB.setRequestStatus("CANCELLED");
+        updatedB.setRequestedAt(now);
+        updatedB.setUpdatedAt(now.plusSeconds(1));
+        when(deletionRequestRepository.save(any(HealthDataDeletionRequest.class))).thenReturn(updatedB);
+        assertEquals("CANCELLED", service.cancelDeletionRequest(411, 2002).getStatus());
+    }
 }
