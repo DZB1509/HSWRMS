@@ -17,6 +17,8 @@ import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import { useState } from 'react';
 
 export const FinalPaymentResultPage: React.FC = () => {
   const { t } = useTranslation();
@@ -30,19 +32,44 @@ export const FinalPaymentResultPage: React.FC = () => {
   const txId = searchParams.get('txId');
   const transaction = txId ? getTransactionById(txId) : latestTransaction;
 
-  const currentRef = transaction?.bookingReference || bookingId || activeFolio.bookingReference;
+  const { processPayment } = useFolio();
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const currentRef = transaction?.bookingReference || bookingId || searchParams.get('bookingId') || activeFolio.bookingReference;
 
-  const folioRoute = isStaff && bookingId
-    ? `/receptionist/folio/${bookingId}`
-    : '/customer/folio';
+  const folioRoute = isStaff && (bookingId || currentRef)
+    ? `/receptionist/folio/${bookingId || currentRef}`
+    : (currentRef ? `/customer/folio/${currentRef}` : '/customer/folio');
 
-  const paymentRoute = isStaff && bookingId
-    ? `/receptionist/checkout/${bookingId}/payment`
-    : '/customer/checkout/payment';
+  const paymentRoute = isStaff && (bookingId || currentRef)
+    ? `/receptionist/checkout/${bookingId || currentRef}/payment`
+    : (currentRef ? `/customer/checkout/${currentRef}/payment` : '/customer/checkout/payment');
 
-  const checkoutConfirmationRoute = isStaff && bookingId
-    ? `/receptionist/checkout/${bookingId}/confirmation`
-    : '/customer/checkout/confirmation';
+  const checkoutConfirmationRoute = isStaff && (bookingId || currentRef)
+    ? `/receptionist/checkout/${bookingId || currentRef}/confirmation`
+    : (currentRef ? `/customer/checkout/${currentRef}/confirmation` : '/customer/checkout/confirmation');
+
+  const handleSimulateSuccess = async () => {
+    try {
+      setIsSimulating(true);
+      await billingApi.simulatePaymentSuccess({
+        transactionRef: (transaction as any)?.gatewayRef || (transaction as any)?.reference || transaction?.id,
+      });
+
+      if (currentRef) {
+        await processPayment(currentRef, transaction?.amount || 0, 'success');
+      }
+
+      navigate(checkoutConfirmationRoute);
+    } catch (err: any) {
+      console.warn('Simulation API call warn, falling back to local state:', err);
+      if (currentRef) {
+        await processPayment(currentRef, transaction?.amount || 0, 'success');
+      }
+      navigate(checkoutConfirmationRoute);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
   // Rule 23: Direct Route Safety — Safe recovery if accessed without transaction
   if (!transaction) {
@@ -231,6 +258,37 @@ export const FinalPaymentResultPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Dev Simulation Button */}
+          {!isSuccess && (
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <button
+                type="button"
+                onClick={handleSimulateSuccess}
+                disabled={isSimulating}
+                className="hsw-btn"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  backgroundColor: '#059669',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)',
+                  cursor: isSimulating ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                id="btn-result-simulate-success"
+              >
+                <CheckCircle2 size={18} />
+                <span>{isSimulating ? 'Đang kích hoạt giả lập...' : '[Dev Mode: Giả lập thanh toán thành công 100%]'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

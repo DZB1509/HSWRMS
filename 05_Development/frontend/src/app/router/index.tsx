@@ -161,9 +161,13 @@ export const AppRouter: React.FC = () => {
 
         {/* Module 5: Customer Read-only Folio, Payment, Checkout & Review */}
         <Route path="folio" element={<FolioInvoicePage />} />
+        <Route path="folio/:bookingId" element={<FolioInvoicePage />} />
         <Route path="checkout/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/:bookingId/payment" element={<FinalPaymentPage />} />
         <Route path="checkout/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/:bookingId/payment-result" element={<FinalPaymentResultPage />} />
         <Route path="checkout/confirmation" element={<CheckoutConfirmationPage />} />
+        <Route path="checkout/:bookingId/confirmation" element={<CheckoutConfirmationPage />} />
         <Route path="review/:bookingId" element={<ReviewRatingPage />} />
         
         <Route index element={<Navigate to="/customer/dashboard" replace />} />

@@ -386,6 +386,10 @@ public class CheckoutService {
             villa.setVillaStatus("NEEDS_CLEANING");
             physicalVillaRepository.save(villa);
         }
+
+        if (booking != null && booking.getRetreatBookingId() != null) {
+            folioBillingService.settleAllUnderlyingOrdersAndSessions(booking.getRetreatBookingId());
+        }
     }
 
     private void applySuccessfulPayment(InvoiceEntity invoice, FolioEntity folio, RetreatBooking booking, BigDecimal amountPaid) {

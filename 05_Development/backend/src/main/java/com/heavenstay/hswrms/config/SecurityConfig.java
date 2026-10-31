@@ -135,18 +135,25 @@ public class SecurityConfig {
                         // Public read-only booking calculation from M2: POST only
                         .requestMatchers(HttpMethod.POST, "/api/v1/retreat-packages/calculate").permitAll()
 
-                        // Public VNPay IPN and return callbacks from M2 & M5 (cryptographically verified by HMAC-SHA512 checksum)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay-return").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/verify-return").permitAll()
+                        // Public VNPay IPN, return callbacks and webhooks (cryptographically verified by HMAC-SHA512 checksum)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay-return", "/api/v1/payments/vnpay/verify-return", "/api/v1/m5/payments/vnpay/verify-return").permitAll()
+                        .requestMatchers("/api/v1/commerce/payment/webhook/**", "/api/v1/m5/webhooks/**").permitAll()
 
                         // S42 Final Payment checkout APIs: QR generation, VNPay URL creation, status polling
-                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/vnpay/create-payment-url").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/status/**", "/api/v1/invoices/*/payment-status").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices/*/vietqr", "/api/v1/billing/checkout/vietqr/*", "/api/v1/billing/deposit/*/vietqr", "/api/v1/billing/checkout/deposit/*/vietqr").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/vnpay/create-payment-url", "/api/v1/billing/payments/vnpay/create-payment-url", "/api/v1/m5/payments/vnpay/create-payment-url").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/status/**", "/api/v1/m5/payments/status/**", "/api/v1/invoices/*/payment-status").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices/*/vietqr", "/api/v1/billing/checkout/vietqr/*", "/api/v1/billing/deposit/*/vietqr", "/api/v1/billing/checkout/deposit/*/vietqr", "/api/v1/payments/vietqr/*", "/api/v1/m5/payments/vietqr/*").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/billing/payments/transactions/*/status").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
-
                         // Dev/Sandbox simulation endpoints: strictly restricted to Staff/Admin and isolated in @Profile({"dev", "local", "test"})
-                        .requestMatchers("/api/v1/payments/vnpay/simulate", "/api/v1/payments/simulate-sandbox", "/api/v1/customer/bookings/vnpay/simulate-sandbox-payment").hasAnyRole("RECEPTIONIST", "ADMIN")
+                        .requestMatchers(
+                                "/api/v1/billing/payment/simulate-success",
+                                "/api/v1/billing/payments/simulate-success",
+                                "/api/v1/m5/payments/simulate-success",
+                                "/api/v1/payments/vnpay/simulate",
+                                "/api/v1/m5/payments/vnpay/simulate",
+                                "/api/v1/payments/simulate-sandbox",
+                                "/api/v1/customer/bookings/vnpay/simulate-sandbox-payment"
+                        ).hasAnyRole("RECEPTIONIST", "ADMIN")
 
                         // Receptionist operations from M2: RECEPTIONIST, MANAGER, ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "MANAGER", "ADMIN")

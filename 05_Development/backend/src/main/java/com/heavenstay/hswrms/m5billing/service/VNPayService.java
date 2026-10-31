@@ -40,6 +40,7 @@ public class VNPayService {
     private final PaymentTransactionRepository transactionRepository;
     private final CreditNoteRepository creditNoteRepository;
     private final CheckoutService checkoutService;
+    private final FolioBillingService folioBillingService;
     private final boolean sandboxSimulation;
 
     public VNPayService(VNPayConfig config,
@@ -48,6 +49,7 @@ public class VNPayService {
                         PaymentTransactionRepository transactionRepository,
                         CreditNoteRepository creditNoteRepository,
                         CheckoutService checkoutService,
+                        @org.springframework.context.annotation.Lazy FolioBillingService folioBillingService,
                         @org.springframework.beans.factory.annotation.Value("${app.vnpay.sandbox-simulation:true}") boolean sandboxSimulation) {
         this.config = config;
         this.invoiceRepository = invoiceRepository;
@@ -55,6 +57,7 @@ public class VNPayService {
         this.transactionRepository = transactionRepository;
         this.creditNoteRepository = creditNoteRepository;
         this.checkoutService = checkoutService;
+        this.folioBillingService = folioBillingService;
         this.sandboxSimulation = sandboxSimulation;
     }
 
@@ -126,7 +129,7 @@ public class VNPayService {
             InvoiceEntity byBooking = invoiceRepository.findByRetreatBookingId(req.bookingId())
                     .orElseThrow(() -> new ResourceNotFoundException("Invoice not found for booking ID: " + req.bookingId()));
             InvoiceEntity byInvoice = resolveByInvoiceIdOrFallback(req.invoiceId());
-            if (!Objects.equals(byBooking.getInvoiceId(), byInvoice.getInvoiceId())) {
+            if (!java.util.Objects.equals(byBooking.getInvoiceId(), byInvoice.getInvoiceId())) {
                 throw new BusinessRuleException("TARGET_MISMATCH",
                         "Provided bookingId and invoiceId do not refer to the same invoice.");
             }
@@ -134,7 +137,17 @@ public class VNPayService {
         }
         if (hasBookingId) {
             return invoiceRepository.findByRetreatBookingId(req.bookingId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Invoice not found for booking ID: " + req.bookingId()));
+                    .orElseGet(() -> {
+                        try {
+                            com.heavenstay.hswrms.m5billing.dto.InvoiceResponseDTO gen = folioBillingService.generateConsolidatedInvoice(req.bookingId());
+                            if (gen != null && gen.invoiceId() != null) {
+                                return invoiceRepository.findByIdWithDetails(gen.invoiceId()).orElse(null);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Could not auto-generate invoice for booking {}: {}", req.bookingId(), e.getMessage());
+                        }
+                        throw new ResourceNotFoundException("Invoice not found for booking ID: " + req.bookingId());
+                    });
         }
         if (hasInvoiceId) {
             return resolveByInvoiceIdOrFallback(req.invoiceId());
@@ -143,14 +156,23 @@ public class VNPayService {
     }
 
     private InvoiceEntity resolveByInvoiceIdOrFallback(Long targetId) {
-        Optional<InvoiceEntity> byId = invoiceRepository.findByIdWithDetails(targetId);
+        java.util.Optional<InvoiceEntity> byId = invoiceRepository.findByIdWithDetails(targetId);
         if (byId.isPresent()) {
             return byId.get();
         }
         if (targetId <= Integer.MAX_VALUE) {
-            Optional<InvoiceEntity> byBooking = invoiceRepository.findByRetreatBookingId(targetId.intValue());
+            java.util.Optional<InvoiceEntity> byBooking = invoiceRepository.findByRetreatBookingId(targetId.intValue());
             if (byBooking.isPresent()) {
                 return byBooking.get();
+            }
+            try {
+                com.heavenstay.hswrms.m5billing.dto.InvoiceResponseDTO gen = folioBillingService.generateConsolidatedInvoice(targetId.intValue());
+                if (gen != null && gen.invoiceId() != null) {
+                    return invoiceRepository.findByIdWithDetails(gen.invoiceId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Generated invoice not found"));
+                }
+            } catch (Exception e) {
+                log.warn("Could not auto-generate invoice for target id {}: {}", targetId, e.getMessage());
             }
         }
         throw new ResourceNotFoundException("Invoice not found with ID: " + targetId);
@@ -187,9 +209,10 @@ public class VNPayService {
             String value = p.get(name);
             if (value == null || value.isEmpty()) continue;
             if (hashData.length() > 0) { hashData.append('&'); query.append('&'); }
-            String enc = URLEncoder.encode(value, StandardCharsets.US_ASCII);
-            hashData.append(name).append('=').append(enc);
-            query.append(URLEncoder.encode(name, StandardCharsets.US_ASCII)).append('=').append(enc);
+            String encKey = URLEncoder.encode(name, StandardCharsets.US_ASCII);
+            String encVal = URLEncoder.encode(value, StandardCharsets.US_ASCII);
+            hashData.append(encKey).append('=').append(encVal);
+            query.append(encKey).append('=').append(encVal);
         }
         String secureHash = CheckoutService.hmacSHA512(config.getHashSecret(), hashData.toString());
         return config.getPayUrl() + "?" + query + "&vnp_SecureHash=" + secureHash;

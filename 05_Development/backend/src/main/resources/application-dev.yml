@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:12345678}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
   jpa:
     hibernate:
       ddl-auto: none
@@ -15,6 +15,12 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+app:
+  vnpay:
+    sandbox-simulation: true
+    tmn-code: ${VNPAY_TMN_CODE:CGXZLS0Z}
+    hash-secret: ${VNPAY_HASH_SECRET:XNBCJFAKAZQSGGTIIKNBJQVGRHUCXMQN}
 
 logging:
   level:

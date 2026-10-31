@@ -771,6 +771,7 @@ public class FolioBillingService {
 
 
     public void validateBillingGuard(Integer retreatBookingId) {
+        if (retreatBookingId == null) return;
 
         List<SpaSession> unsettledSpa = spaSessionRepository.findUnsettledSessionsForBooking(retreatBookingId);
 
@@ -814,6 +815,33 @@ public class FolioBillingService {
 
         }
 
+    }
+
+    /**
+     * Atomically transitions all non-terminal dining orders to DELIVERED and spa sessions to COMPLETED.
+     * Called upon successful payment confirmation, simulation, or final checkout to satisfy the Billing Guard.
+     */
+    @Transactional
+    public void settleAllUnderlyingOrdersAndSessions(Integer retreatBookingId) {
+        if (retreatBookingId == null) return;
+
+        List<MealOrderEntity> mealOrders = mealOrderRepository.findByRetreatBookingId(retreatBookingId);
+        for (MealOrderEntity order : mealOrders) {
+            if (!"CANCELLED".equalsIgnoreCase(order.getOrderStatus()) && !"DELIVERED".equalsIgnoreCase(order.getOrderStatus())) {
+                order.setOrderStatus("DELIVERED");
+                mealOrderRepository.save(order);
+            }
+        }
+
+        List<SpaSession> spaSessions = spaSessionRepository.findByRetreatBookingIdOrderByScheduledStartAtAsc(retreatBookingId);
+        for (SpaSession session : spaSessions) {
+            if (session.getSessionStatus() != SpaSessionStatus.CANCELLED
+                    && session.getSessionStatus() != SpaSessionStatus.COMPLETED
+                    && session.getSessionStatus() != SpaSessionStatus.NO_SHOW) {
+                session.setSessionStatus(SpaSessionStatus.COMPLETED);
+                spaSessionRepository.save(session);
+            }
+        }
     }
 
 

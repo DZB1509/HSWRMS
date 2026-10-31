@@ -119,6 +119,16 @@ export const billingApi = {
     );
   },
 
+  simulatePaymentSuccess: async (params: {
+    transactionRef?: string;
+    invoiceId?: number;
+    bookingId?: number;
+    folioId?: number;
+  }): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>('/billing/payment/simulate-success', params);
+    return res.data;
+  },
+
   verifyVnpayReturn: async (queryString: string): Promise<{ success: boolean; message: string }> => {
     const res = await apiClient.get<ApiResponse<unknown>>(`/payments/vnpay/verify-return${queryString}`);
     return { success: res.success, message: res.message };

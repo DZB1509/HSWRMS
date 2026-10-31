@@ -2172,4 +2172,40 @@ public class M5BillingAndCheckoutTests {
         }
         return CheckoutService.hmacSHA512(secret, sb.toString());
     }
+
+    @Test
+    @DisplayName("ENDPOINT TEST: POST /api/v1/payments/vnpay/create-payment-url produces signed VNPay URL")
+    @Transactional
+    public void testCreateVnpayPaymentUrlEndpointSuccess() throws Exception {
+        InvoiceEntity invoice = invoiceRepository.findAll().get(0);
+        invoice.setInvoiceStatus("DRAFT");
+        invoice = invoiceRepository.save(invoice);
+
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk", List.of("RECEPTIONIST"));
+
+        VnpayCreatePaymentRequest req = new VnpayCreatePaymentRequest(
+                invoice.getInvoiceId(),
+                invoice.getFolio().getRetreatBooking().getRetreatBookingId().longValue(),
+                invoice.getFinalAmount(),
+                "HSW INV " + invoice.getInvoiceId(),
+                "127.0.0.1"
+        );
+
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                        .header("Authorization", "Bearer " + receptionistToken)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.paymentUrl").isNotEmpty())
+                .andExpect(jsonPath("$.data.paymentUrl").value(org.hamcrest.Matchers.containsString("vnp_SecureHash")))
+                .andExpect(jsonPath("$.data.paymentStatus").value("PENDING"))
+                .andExpect(jsonPath("$.data.invoiceId").value(invoice.getInvoiceId()));
+
+        List<PaymentTransactionEntity> txs = paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId());
+        assertFalse(txs.isEmpty());
+        PaymentTransactionEntity latest = txs.get(txs.size() - 1);
+        assertEquals("VNPAY", latest.getPaymentMethod());
+        assertEquals("PENDING", latest.getPaymentStatus());
+    }
 }

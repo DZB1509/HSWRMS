@@ -242,17 +242,18 @@ export const FolioInvoicePage: React.FC = () => {
 
   }, [numericBookingId]);
 
-  // Canonical financial metrics combining live backend state with resilient defaults (FR-M5-01)
-  const displayPackageTotal = backendFolio?.packagePrice || backendFolio?.totalCharges || folioData.retreatTotal || 24500000;
-  const displayDepositPaid = (backendFolio && ((backendFolio.depositPaid ?? 0) > 0 || (backendFolio.depositAmount ?? 0) > 0))
-    ? (backendFolio.depositPaid || backendFolio.depositAmount || 7350000)
-    : (folioData.depositPaid > 0 ? folioData.depositPaid : 7350000);
-  const displayPackageRemaining = backendFolio?.packageOutstanding ?? Math.max(0, displayPackageTotal - displayDepositPaid);
-  const displaySpaExtras = backendFolio?.extraSpaCharges ?? folioData.spaExtrasTotal;
-  const displayFnbExtras = backendFolio?.extraFnbCharges ?? folioData.fnbExtrasTotal;
-  const displayFinalDue = (backendFolio && ((backendFolio.estimatedAmountDue ?? 0) > 0 || (backendFolio.finalAmount ?? 0) > 0 || (backendFolio.balanceDue ?? 0) > 0))
-    ? (backendFolio.estimatedAmountDue || backendFolio.finalAmount || backendFolio.balanceDue || 19418000)
-    : (folioData.outstandingBalance > 0 && folioData.outstandingBalance < 24000000 ? folioData.outstandingBalance : 19418000);
+  // Canonical financial metrics (FR-M5-01). Backend folio is authoritative; local folio state is the offline fallback.
+  // Every displayed line comes from the same source, so Final Amount Due always equals the sum of the visible lines.
+  const displayPackageTotal = backendFolio ? (backendFolio.packagePrice ?? 0) : folioData.retreatTotal;
+  const displayDepositPaid = backendFolio ? (backendFolio.depositPaid ?? backendFolio.depositAmount ?? 0) : folioData.depositPaid;
+  const displayPackageRemaining = backendFolio
+    ? (backendFolio.packageOutstanding ?? Math.max(0, displayPackageTotal - displayDepositPaid))
+    : Math.max(0, displayPackageTotal - displayDepositPaid);
+  const displaySpaExtras = backendFolio ? (backendFolio.extraSpaCharges ?? 0) : folioData.spaExtrasTotal;
+  const displayFnbExtras = backendFolio ? (backendFolio.extraFnbCharges ?? 0) : folioData.fnbExtrasTotal;
+  const displaySubtotal = displayPackageRemaining + displaySpaExtras + displayFnbExtras;
+  const displayTax = backendFolio?.estimatedTax ?? Math.round((displaySpaExtras + displayFnbExtras) * (backendFolio?.vatRate ?? 0.08));
+  const displayFinalDue = backendFolio?.estimatedAmountDue ?? (displaySubtotal + displayTax);
 
   // Billing Guard Check: Unsettled orders exist if backend flags it or simulation is active
 
@@ -491,13 +492,41 @@ export const FolioInvoicePage: React.FC = () => {
 
 
 
-  // Group line items
+  // Group line items: prioritize backend items if present, fallback to resilient folioData.lineItems
+  const backendLineItems = useMemo<FolioLineItem[]>(() => {
+    if (!backendFolio?.items || backendFolio.items.length === 0) return [];
+    return backendFolio.items.map((it: any) => {
+      const cat = String(it.chargeCategory || '').toUpperCase();
+      const isPkg = cat === 'PACKAGE';
+      const isSpa = cat.includes('SPA');
+      const isFnb = cat.includes('FNB') || cat.includes('MEAL');
+      const sourceType = isPkg ? 'retreat' : isSpa ? 'spa' : 'fnb';
+      const amount = Number(it.payableAmount ?? it.originalAmount ?? 0);
+      const isIncluded = isPkg || amount === 0;
+      return {
+        id: `BFOLIO-ITEM-${it.folioItemId}`,
+        sourceType,
+        sourceId: isSpa ? (it.spaSessionId ? `SES-${it.spaSessionId}` : `SPA-${it.folioItemId}`) : isFnb ? (it.mealOrderId ? `ORD-${it.mealOrderId}` : `FNB-${it.folioItemId}`) : `PKG-${it.folioItemId}`,
+        title: {
+          vi: it.description || 'Dịch vụ nghỉ dưỡng',
+          en: it.description || 'Resort Service',
+        },
+        subtitle: isSpa ? 'Dịch vụ Spa & Trị liệu ngoài gói' : isFnb ? 'Ẩm thực dưỡng sinh ngoài gói' : 'Gói nghỉ dưỡng trọn gói',
+        serviceDate: it.createdAt ? String(it.createdAt).slice(0, 10) : '2026-09-25',
+        quantity: 1,
+        unitAmount: amount,
+        totalAmount: amount,
+        status: isIncluded ? 'included' : 'pending_settlement',
+        createdAt: it.createdAt || '2026-09-25',
+        isIncludedInPackage: isIncluded,
+      } as FolioLineItem;
+    });
+  }, [backendFolio?.items]);
 
-  const retreatItems = folioData.lineItems.filter((i) => i.sourceType === 'retreat');
-
-  const spaItems = folioData.lineItems.filter((i) => i.sourceType === 'spa');
-
-  const diningItems = folioData.lineItems.filter((i) => i.sourceType === 'fnb');
+  const effectiveLineItems = backendLineItems.length > 0 ? backendLineItems : folioData.lineItems;
+  const retreatItems = effectiveLineItems.filter((i) => i.sourceType === 'retreat');
+  const spaItems = effectiveLineItems.filter((i) => i.sourceType === 'spa');
+  const diningItems = effectiveLineItems.filter((i) => i.sourceType === 'fnb');
 
 
 
@@ -581,29 +610,21 @@ export const FolioInvoicePage: React.FC = () => {
 
   };
 
+  const currentBookingRef = bookingId || backendFolio?.bookingReference || folioData.bookingReference || (activeBooking as any)?.bookingReference || (activeBooking as any)?.bookingCode;
+  const bookingQueryParam = currentBookingRef ? `&bookingId=${encodeURIComponent(currentBookingRef)}` : '';
   const invoiceQuery = backendFolio?.invoiceId
-    ? `?invoiceId=${backendFolio.invoiceId}&amount=${displayFinalDue}`
-    : `?amount=${displayFinalDue}`;
+    ? `?invoiceId=${backendFolio.invoiceId}&amount=${displayFinalDue}${bookingQueryParam}`
+    : `?amount=${displayFinalDue}${bookingQueryParam}`;
 
+  const paymentRoute = isStaff
+    ? `/receptionist/checkout/${currentBookingRef || '1'}/payment${invoiceQuery}`
+    : (currentBookingRef ? `/customer/checkout/${currentBookingRef}/payment${invoiceQuery}` : `/customer/checkout/payment${invoiceQuery}`);
 
+  const checkoutRoute = isStaff
+    ? `/receptionist/checkout/${currentBookingRef || '1'}/confirmation${invoiceQuery}`
+    : (currentBookingRef ? `/customer/checkout/${currentBookingRef}/confirmation${invoiceQuery}` : `/customer/checkout/confirmation${invoiceQuery}`);
 
-  const paymentRoute = isStaff && bookingId
-
-    ? `/receptionist/checkout/${bookingId}/payment${invoiceQuery}`
-
-    : `/customer/checkout/payment${invoiceQuery}`;
-
-
-
-  const checkoutRoute = isStaff && bookingId
-
-    ? `/receptionist/checkout/${bookingId}/confirmation${invoiceQuery}`
-
-    : `/customer/checkout/confirmation${invoiceQuery}`;
-
-
-
-  const reviewRoute = `/customer/review/${folioData.bookingReference}`;
+  const reviewRoute = `/customer/review/${currentBookingRef || folioData.bookingReference}`;
 
 
 
@@ -1124,7 +1145,7 @@ export const FolioInvoicePage: React.FC = () => {
 
             <div className="hsw-folio-section-amount">
 
-              {formatVND(folioData.spaExtrasTotal)}
+              {formatVND(displaySpaExtras)}
 
             </div>
 
@@ -1366,7 +1387,7 @@ export const FolioInvoicePage: React.FC = () => {
 
             <div className="hsw-folio-section-amount">
 
-              {formatVND(folioData.fnbExtrasTotal)}
+              {formatVND(displayFnbExtras)}
 
             </div>
 
@@ -2258,7 +2279,7 @@ export const FolioInvoicePage: React.FC = () => {
               <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Subtotal (Extras + Pkg Rem):</div>
 
               <div style={{ fontWeight: 600 }}>
-                {formatVND(displayPackageRemaining + displaySpaExtras + displayFnbExtras)}
+                {formatVND(displaySubtotal)}
               </div>
 
             </div>
@@ -2268,7 +2289,7 @@ export const FolioInvoicePage: React.FC = () => {
               <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>VAT (8% on Extras):</div>
 
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                {formatVND(backendFolio?.estimatedTax ?? Math.round((displaySpaExtras + displayFnbExtras) * 0.08))}
+                {formatVND(displayTax)}
               </div>
 
             </div>

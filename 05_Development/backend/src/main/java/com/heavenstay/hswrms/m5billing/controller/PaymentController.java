@@ -20,12 +20,14 @@ import java.util.Map;
 public class PaymentController {
 
     private final VNPayService vnPayService;
+    private final com.heavenstay.hswrms.m5billing.service.VietQrService vietQrService;
 
-    public PaymentController(VNPayService vnPayService) {
+    public PaymentController(VNPayService vnPayService, com.heavenstay.hswrms.m5billing.service.VietQrService vietQrService) {
         this.vnPayService = vnPayService;
+        this.vietQrService = vietQrService;
     }
 
-    @PostMapping("/api/v1/payments/vnpay/create-payment-url")
+    @PostMapping({"/api/v1/payments/vnpay/create-payment-url", "/api/v1/billing/payments/vnpay/create-payment-url", "/api/v1/m5/payments/vnpay/create-payment-url"})
     @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canCreateVnpayPayment(#request, authentication)")
     public ResponseEntity<ApiResponse<VnpayPaymentUrlResponse>> createPaymentUrl(
             @RequestBody VnpayCreatePaymentRequest request, HttpServletRequest http) {
@@ -47,7 +49,13 @@ public class PaymentController {
         return ResponseEntity.ok(new ApiResponse<>(ok, ok ? "Payment verified" : "Payment failed or invalid: " + result.get("Message"), result));
     }
 
-    @GetMapping("/api/v1/payments/status/{transactionRef}")
+    @GetMapping({"/api/v1/payments/vietqr/{invoiceId}", "/api/v1/m5/payments/vietqr/{invoiceId}"})
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessInvoice(#invoiceId, authentication)")
+    public ResponseEntity<ApiResponse<com.heavenstay.hswrms.m5billing.dto.VietQrResponseDTO>> generateVietQr(@PathVariable Long invoiceId) {
+        return ResponseEntity.ok(ApiResponse.ok("VietQR generated", vietQrService.generateInvoiceVietQr(invoiceId)));
+    }
+
+    @GetMapping({"/api/v1/payments/status/{transactionRef}", "/api/v1/m5/payments/status/{transactionRef}"})
     @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessTransaction(#transactionRef, authentication)")
     public ResponseEntity<ApiResponse<PaymentResponseDTO>> status(@PathVariable String transactionRef) {
         return ResponseEntity.ok(ApiResponse.ok("Transaction status", vnPayService.getStatusByReference(transactionRef)));

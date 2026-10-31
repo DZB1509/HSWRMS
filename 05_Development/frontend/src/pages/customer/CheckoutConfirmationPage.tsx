@@ -36,12 +36,14 @@ export const CheckoutConfirmationPage: React.FC = () => {
   } = useFolio();
   const { activeBooking } = useCustomer();
 
+  const queryBookingParam = searchParams.get('bookingId') || searchParams.get('bookingRef');
+  const resolvedBookingParam = bookingId || queryBookingParam || activeBooking?.bookingReference || 'HSW-88001';
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
-  const folioData = getFolioForBooking(bookingId);
+  const folioData = getFolioForBooking(resolvedBookingParam);
 
   const numericBookingId = useMemo(() => {
-    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+    return resolveNumericBookingId(resolvedBookingParam, folioData.bookingReference, activeBooking?.id);
+  }, [resolvedBookingParam, folioData.bookingReference, activeBooking?.id]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(() => {
@@ -78,8 +80,13 @@ export const CheckoutConfirmationPage: React.FC = () => {
   const [justCompleted, setJustCompleted] = useState<boolean>(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
-  const alreadyCheckedOut = isStayCheckedOut(folioData.bookingReference) || justCompleted;
-  const existingRecord = getCheckoutRecord(folioData.bookingReference);
+  const alreadyCheckedOut =
+    isStayCheckedOut(folioData.bookingReference) ||
+    (resolvedBookingParam ? isStayCheckedOut(resolvedBookingParam) : false) ||
+    justCompleted;
+  const existingRecord =
+    getCheckoutRecord(folioData.bookingReference) ||
+    (resolvedBookingParam ? getCheckoutRecord(resolvedBookingParam) : undefined);
 
   const handleDownloadPdf = async () => {
     if (!resolvedInvoiceId) {

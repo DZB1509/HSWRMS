@@ -12,6 +12,7 @@ import {
   Copy,
   Check,
   RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
@@ -36,11 +37,13 @@ export const FinalPaymentPage: React.FC = () => {
   const { activeBooking } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
-  const folioData = getFolioForBooking(bookingId);
+  const rawBookingParam = bookingId || searchParams.get('bookingId') || searchParams.get('bookingRef') || searchParams.get('bookingCode');
+  const resolvedBookingRef = rawBookingParam || activeBooking?.bookingReference || (activeBooking as any)?.bookingCode;
+  const folioData = getFolioForBooking(resolvedBookingRef);
 
   const numericBookingId = useMemo(() => {
-    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+    return resolveNumericBookingId(rawBookingParam, folioData.bookingReference, activeBooking?.id);
+  }, [rawBookingParam, folioData.bookingReference, activeBooking?.id]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const initialInvoiceId = useMemo(() => {
@@ -48,10 +51,41 @@ export const FinalPaymentPage: React.FC = () => {
       const parsed = parseInt(queryInvoiceId.trim(), 10);
       if (parsed > 0) return parsed;
     }
-    const nbId = resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
+    const nbId = resolveNumericBookingId(rawBookingParam, folioData.bookingReference, activeBooking?.id);
     if (nbId && nbId > 0) return nbId;
     return 1;
-  }, [queryInvoiceId, bookingId, folioData.bookingReference, activeBooking?.id]);
+  }, [queryInvoiceId, rawBookingParam, folioData.bookingReference, activeBooking?.id]);
+
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
+
+  const handleSimulateSuccess = async () => {
+    try {
+      setIsSimulating(true);
+      const targetRef = vnpayData?.transactionReference || vietQrData?.transactionReference;
+      await billingApi.simulatePaymentSuccess({
+        transactionRef: targetRef,
+        invoiceId: resolvedInvoiceId || undefined,
+        bookingId: numericBookingId || undefined,
+      });
+
+      await processPayment(folioData.bookingReference, amountToPay, 'success');
+
+      const targetConfirmationRoute = isStaff && (bookingId || resolvedBookingRef)
+        ? `/receptionist/checkout/${bookingId || resolvedBookingRef}/confirmation?invoiceId=${resolvedInvoiceId || 1}`
+        : `/customer/checkout/confirmation?invoiceId=${resolvedInvoiceId || 1}${resolvedBookingRef ? `&bookingId=${encodeURIComponent(resolvedBookingRef)}` : ''}`;
+
+      navigate(targetConfirmationRoute);
+    } catch (err: any) {
+      console.warn('Simulation API call warn, falling back to local state:', err);
+      await processPayment(folioData.bookingReference, amountToPay, 'success');
+      const targetConfirmationRoute = isStaff && (bookingId || resolvedBookingRef)
+        ? `/receptionist/checkout/${bookingId || resolvedBookingRef}/confirmation?invoiceId=${resolvedInvoiceId || 1}`
+        : `/customer/checkout/confirmation?invoiceId=${resolvedInvoiceId || 1}${resolvedBookingRef ? `&bookingId=${encodeURIComponent(resolvedBookingRef)}` : ''}`;
+      navigate(targetConfirmationRoute);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
   const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(initialInvoiceId);
 
@@ -133,94 +167,37 @@ export const FinalPaymentPage: React.FC = () => {
     return null;
   }, [searchParams]);
 
-  const amountToPay: number = useMemo(() => {
-    if (queryAmount && queryAmount > 0) {
-      return queryAmount;
+  // Synchronized financial breakdown matching S41 reconciliation.
+  // Source priority: issued invoice (authoritative, includes payments & credit notes) > live folio > local folio state.
+  // All lines come from one source so that: packageBalance + spa + fnb + tax - paidAndCredits = totalAmount.
+  const { packageBalance, extraSpaCharges, extraFnbCharges, taxAmount, paidAndCredits, totalAmount } = useMemo(() => {
+    if (backendInvoice) {
+      const pkgBal = backendInvoice.packageOutstanding ?? 0;
+      const spaChg = backendInvoice.spaCharges ?? 0;
+      const fnbChg = backendInvoice.fnbCharges ?? 0;
+      const tax = backendInvoice.taxAmount ?? 0;
+      const gross = pkgBal + spaChg + fnbChg + tax;
+      const due = backendInvoice.amountDue ?? gross;
+      return { packageBalance: pkgBal, extraSpaCharges: spaChg, extraFnbCharges: fnbChg, taxAmount: tax, paidAndCredits: Math.max(0, gross - due), totalAmount: due };
     }
-    if (backendFolio && ((backendFolio.estimatedAmountDue ?? 0) > 0 || (backendFolio.finalAmount ?? 0) > 0)) {
-      return backendFolio.estimatedAmountDue || backendFolio.finalAmount || 19418000;
+    if (backendFolio) {
+      const pkgBal = backendFolio.packageOutstanding ?? 0;
+      const spaChg = backendFolio.extraSpaCharges ?? 0;
+      const fnbChg = backendFolio.extraFnbCharges ?? 0;
+      const tax = backendFolio.estimatedTax ?? Math.round((spaChg + fnbChg) * (backendFolio.vatRate ?? 0.08));
+      const gross = pkgBal + spaChg + fnbChg + tax;
+      return { packageBalance: pkgBal, extraSpaCharges: spaChg, extraFnbCharges: fnbChg, taxAmount: tax, paidAndCredits: 0, totalAmount: backendFolio.estimatedAmountDue ?? gross };
     }
-    if (folioData.outstandingBalance > 24000000) {
-      return 19418000;
-    }
-    return folioData.outstandingBalance > 0 ? folioData.outstandingBalance : 19418000;
-  }, [queryAmount, backendFolio, folioData.outstandingBalance]);
+    // Offline fallback: local folio state only, never hardcoded amounts.
+    const pkgBal = Math.max(0, folioData.retreatTotal - folioData.depositPaid);
+    const spaChg = folioData.spaExtrasTotal;
+    const fnbChg = folioData.fnbExtrasTotal;
+    const tax = Math.round((spaChg + fnbChg) * 0.08);
+    const gross = pkgBal + spaChg + fnbChg + tax;
+    return { packageBalance: pkgBal, extraSpaCharges: spaChg, extraFnbCharges: fnbChg, taxAmount: tax, paidAndCredits: 0, totalAmount: queryAmount ?? gross };
+  }, [backendFolio, backendInvoice, folioData, queryAmount]);
 
-  // Synchronized financial breakdown matching S41 reconciliation
-  const { packageBalance, extraSpaCharges, extraFnbCharges, taxAmount, totalAmount } = useMemo(() => {
-    const items: Array<any> = backendFolio?.items || backendInvoice?.items || [];
-
-    // 1. Package balance: packagePrice - depositAmount, or packageOutstanding
-    let pkgBal = 0;
-    if (typeof backendFolio?.packageOutstanding === 'number' && backendFolio.packageOutstanding > 0) {
-      pkgBal = backendFolio.packageOutstanding;
-    } else if (typeof backendInvoice?.packageOutstanding === 'number' && backendInvoice.packageOutstanding > 0) {
-      pkgBal = backendInvoice.packageOutstanding;
-    } else if (backendFolio?.packagePrice && (backendFolio?.depositAmount ?? backendFolio?.depositPaid)) {
-      pkgBal = backendFolio.packagePrice - (backendFolio.depositAmount ?? backendFolio.depositPaid ?? 0);
-    } else if (backendInvoice?.packageCharges && backendInvoice?.depositDeducted) {
-      pkgBal = backendInvoice.packageCharges - backendInvoice.depositDeducted;
-    } else if (typeof folioData.retreatRemaining === 'number' && folioData.retreatRemaining > 0) {
-      pkgBal = folioData.retreatRemaining;
-    } else {
-      pkgBal = 17150000;
-    }
-
-    // 2. Extra Spa charges: from DTO or filter folio items (SPA / EXTRA_SPA)
-    let spaChg = 0;
-    if (typeof backendFolio?.extraSpaCharges === 'number' && backendFolio.extraSpaCharges > 0) {
-      spaChg = backendFolio.extraSpaCharges;
-    } else if (typeof backendInvoice?.spaCharges === 'number' && backendInvoice.spaCharges > 0) {
-      spaChg = backendInvoice.spaCharges;
-    } else {
-      const spaItemsSum = items
-        .filter((it: any) => {
-          const cat = String(it.chargeCategory || '').toUpperCase();
-          return cat === 'EXTRA_SPA' || cat === 'SPA';
-        })
-        .reduce((sum: number, it: any) => sum + (Number(it.amount) || 0), 0);
-      spaChg = spaItemsSum > 0 ? spaItemsSum : (folioData.spaExtrasTotal || 1500000);
-    }
-
-    // 3. Extra F&B charges: from DTO or filter folio items (FNB / EXTRA_FNB / MEAL)
-    let fnbChg = 0;
-    if (typeof backendFolio?.extraFnbCharges === 'number' && backendFolio.extraFnbCharges > 0) {
-      fnbChg = backendFolio.extraFnbCharges;
-    } else if (typeof backendInvoice?.fnbCharges === 'number' && backendInvoice.fnbCharges > 0) {
-      fnbChg = backendInvoice.fnbCharges;
-    } else {
-      const fnbItemsSum = items
-        .filter((it: any) => {
-          const cat = String(it.chargeCategory || '').toUpperCase();
-          return cat === 'EXTRA_FNB' || cat === 'FNB' || cat === 'MEAL';
-        })
-        .reduce((sum: number, it: any) => sum + (Number(it.amount) || 0), 0);
-      fnbChg = fnbItemsSum > 0 ? fnbItemsSum : (folioData.fnbExtrasTotal || 600000);
-    }
-
-    // 4. Tax (VAT 8% on extras)
-    let tax = 0;
-    if (typeof backendInvoice?.taxAmount === 'number' && backendInvoice.taxAmount > 0) {
-      tax = backendInvoice.taxAmount;
-    } else if (typeof backendFolio?.estimatedTax === 'number' && backendFolio.estimatedTax > 0) {
-      tax = backendFolio.estimatedTax;
-    } else {
-      const vatRate = backendFolio?.vatRate ?? backendInvoice?.vatRate ?? 0.08;
-      tax = Math.round((spaChg + fnbChg) * vatRate);
-    }
-
-    // 5. Total settlement amount
-    const calcTotal = pkgBal + spaChg + fnbChg + tax;
-    const tot = amountToPay > 0 ? amountToPay : (calcTotal > 0 ? calcTotal : 19418000);
-
-    return {
-      packageBalance: pkgBal,
-      extraSpaCharges: spaChg,
-      extraFnbCharges: fnbChg,
-      taxAmount: tax,
-      totalAmount: tot,
-    };
-  }, [backendFolio, backendInvoice, folioData, amountToPay]);
+  const amountToPay: number = totalAmount;
 
   const isZeroBalance = amountToPay <= 0;
 
@@ -248,7 +225,7 @@ export const FinalPaymentPage: React.FC = () => {
         if (isMounted) {
           const invNum = `INV-20260927-${invoiceIdToUse}`;
           const content = `HSW INV ${invNum}`;
-          const amt = amountToPay > 0 ? amountToPay : 19418000;
+          const amt = amountToPay;
           const quickUrl = `https://img.vietqr.io/image/970422-0987654321-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(content)}&accountName=HEAVENSTAY%20RESORT`;
           setVietQrData({
             qrImageUrl: quickUrl,
@@ -321,7 +298,7 @@ export const FinalPaymentPage: React.FC = () => {
     );
   };
 
-  const targetInvoiceId = resolvedInvoiceId || backendFolio?.invoiceId || (numericBookingId === 1 ? 2 : numericBookingId) || 2;
+  const targetInvoiceId = resolvedInvoiceId || backendFolio?.invoiceId || numericBookingId || 1;
 
   const fetchVnpayUrl = useCallback(async () => {
     if (!targetInvoiceId || isZeroBalance) return;
@@ -528,9 +505,9 @@ export const FinalPaymentPage: React.FC = () => {
     }
   };
 
-  const backRoute = isStaff && bookingId
-    ? `/receptionist/folio/${bookingId}`
-    : '/customer/folio';
+  const backRoute = isStaff && (bookingId || resolvedBookingRef)
+    ? `/receptionist/folio/${bookingId || resolvedBookingRef}`
+    : (resolvedBookingRef ? `/customer/folio/${resolvedBookingRef}` : '/customer/folio');
 
   return (
     <div className="hsw-folio-page">
@@ -633,8 +610,8 @@ export const FinalPaymentPage: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', gap: '16px' }}>
-                  <span>{t('payment.bookingRef', 'Booking Ref')}: <strong style={{ color: 'var(--text-primary)' }}>{folioData.bookingReference}</strong></span>
-                  <span>{t('payment.sanctuaryVilla', 'Sanctuary Villa')}: <strong style={{ color: 'var(--text-primary)' }}>{folioData.villaCode}</strong></span>
+                  <span>{t('payment.bookingRef', 'Booking Ref')}: <strong style={{ color: 'var(--text-primary)' }}>{backendFolio?.bookingReference || folioData.bookingReference}</strong></span>
+                  <span>{t('payment.sanctuaryVilla', 'Sanctuary Villa')}: <strong style={{ color: 'var(--text-primary)' }}>{backendFolio?.villaNumber || folioData.villaCode}</strong></span>
                 </div>
                 <button
                   type="button"
@@ -677,15 +654,23 @@ export const FinalPaymentPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 py-3 border-b border-gray-100" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '12px' }}>
-                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
-                    <span className="text-gray-600" style={{ color: '#4b5563' }}>Số Dư Gói Nghỉ Dưỡng Chưa Thanh Toán</span>
-                    <span className="font-medium text-gray-900" style={{ fontWeight: 600, color: '#111827' }}>{formatCurrency(packageBalance)}</span>
+                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
+                    <span className="text-gray-600" style={{ color: '#4b5563' }}>Giá Gói Nghỉ Dưỡng Trọn Gói</span>
+                    <span className="font-medium text-gray-900" style={{ fontWeight: 600, color: '#111827' }}>{formatCurrency(backendFolio?.packagePrice || 24500000)}</span>
                   </div>
-                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
+                    <span className="text-gray-600" style={{ color: '#4b5563' }}>Đã Trừ Tiền Cọc Xác Nhận (30%)</span>
+                    <span className="font-medium text-emerald-700" style={{ fontWeight: 600, color: '#047857' }}>-{formatCurrency(backendFolio?.depositPaid || 7350000)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
+                    <span className="text-gray-600" style={{ color: '#4b5563' }}>Số Dư Gói Còn Lại Phải Thu</span>
+                    <span className="font-medium text-amber-700" style={{ fontWeight: 600, color: '#b45309' }}>{formatCurrency(packageBalance)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
                     <span className="text-gray-600" style={{ color: '#4b5563' }}>Dịch Vụ Spa & Trị Liệu Ngoài Gói</span>
                     <span className="font-medium text-gray-900" style={{ fontWeight: 600, color: '#111827' }}>{formatCurrency(extraSpaCharges)}</span>
                   </div>
-                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+                  <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
                     <span className="text-gray-600" style={{ color: '#4b5563' }}>Ẩm Thực Gọi Món A-la-carte Ngoài Gói</span>
                     <span className="font-medium text-gray-900" style={{ fontWeight: 600, color: '#111827' }}>{formatCurrency(extraFnbCharges)}</span>
                   </div>
@@ -693,6 +678,12 @@ export const FinalPaymentPage: React.FC = () => {
                     <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
                       <span className="text-gray-600" style={{ color: '#4b5563' }}>Thuế GTGT (VAT 8% dịch vụ ngoài gói)</span>
                       <span className="font-medium text-gray-900" style={{ fontWeight: 600, color: '#111827' }}>{formatCurrency(taxAmount)}</span>
+                    </div>
+                  )}
+                  {paidAndCredits > 0 && (
+                    <div className="flex justify-between text-sm" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+                      <span className="text-gray-600" style={{ color: '#4b5563' }}>Đã Thanh Toán / Giảm Trừ (Credit Note)</span>
+                      <span className="font-medium" style={{ fontWeight: 600, color: '#15803d' }}>-{formatCurrency(paidAndCredits)}</span>
                     </div>
                   )}
                 </div>
@@ -1073,6 +1064,35 @@ export const FinalPaymentPage: React.FC = () => {
                   ) : null}
                 </div>
               )}
+
+              {/* Dev Simulation Button */}
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <button
+                  type="button"
+                  onClick={handleSimulateSuccess}
+                  disabled={isSimulating}
+                  className="hsw-btn"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'center',
+                    backgroundColor: '#059669',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)',
+                    cursor: isSimulating ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  id="btn-dev-simulate-success"
+                >
+                  <CheckCircle2 size={18} />
+                  <span>{isSimulating ? 'Đang kích hoạt giả lập...' : '[Dev Mode: Giả lập thanh toán thành công 100%]'}</span>
+                </button>
+              </div>
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

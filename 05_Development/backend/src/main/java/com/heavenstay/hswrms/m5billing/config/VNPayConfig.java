@@ -17,8 +17,8 @@ public class VNPayConfig {
     private final String ipnUrl;
 
     public VNPayConfig(
-            @Value("${app.vnpay.tmn-code:HEAVENSTAY}") String tmnCode,
-            @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}") String hashSecret,
+            @Value("${app.vnpay.tmn-code:CGXZLS0Z}") String tmnCode,
+            @Value("${app.vnpay.hash-secret:XNBCJFAKAZQSGGTIIKNBJQVGRHUCXMQN}") String hashSecret,
             @Value("${app.vnpay.pay-url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}") String payUrl,
             @Value("${app.vnpay.final-return-url:http://localhost:5173/vnpay-return}") String returnUrl,
             @Value("${app.vnpay.ipn-url:/api/v1/commerce/payment/webhook/vnpay}") String ipnUrl) {
@@ -35,4 +35,3 @@ public class VNPayConfig {
     public String getReturnUrl() { return returnUrl; }
     public String getIpnUrl() { return ipnUrl; }
 }
-
