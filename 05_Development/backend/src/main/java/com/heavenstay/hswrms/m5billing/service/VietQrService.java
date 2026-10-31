@@ -7,6 +7,7 @@ import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m5billing.dto.VietQrResponseDTO;
 import com.heavenstay.hswrms.m5billing.entity.InvoiceEntity;
 import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
+import com.heavenstay.hswrms.m5billing.repository.CreditNoteRepository;
 import com.heavenstay.hswrms.m5billing.repository.InvoiceRepository;
 import com.heavenstay.hswrms.m5billing.repository.PaymentTransactionRepository;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ public class VietQrService {
 
     private final InvoiceRepository invoiceRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final CreditNoteRepository creditNoteRepository;
     private final RetreatBookingRepository bookingRepository;
 
     @Value("${app.vietqr.bank-bin:970422}")
@@ -50,10 +52,12 @@ public class VietQrService {
 
     public VietQrService(InvoiceRepository invoiceRepository,
                           PaymentTransactionRepository paymentTransactionRepository,
-                          RetreatBookingRepository bookingRepository) {
+                          RetreatBookingRepository bookingRepository,
+                          CreditNoteRepository creditNoteRepository) {
         this.invoiceRepository = invoiceRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.bookingRepository = bookingRepository;
+        this.creditNoteRepository = creditNoteRepository;
     }
 
     /**
@@ -72,7 +76,9 @@ public class VietQrService {
         BigDecimal successfulPayments = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(invoiceId);
         if (successfulPayments == null) successfulPayments = BigDecimal.ZERO;
 
-        BigDecimal balanceDue = invoice.getFinalAmount().subtract(successfulPayments);
+        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoice.getInvoiceId());
+        if (creditNotes == null) creditNotes = BigDecimal.ZERO;
+        BigDecimal balanceDue = invoice.getFinalAmount().subtract(successfulPayments).subtract(creditNotes);
         if (balanceDue.compareTo(BigDecimal.ZERO) <= 0 || "PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
             if (!"PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
                 invoice.setInvoiceStatus("PAID");

@@ -28,10 +28,14 @@ import com.heavenstay.hswrms.m5billing.controller.VnpayWebhookController;
 import com.heavenstay.hswrms.m5billing.controller.VNPaySimulationController;
 import com.heavenstay.hswrms.m5billing.config.VNPayConfig;
 import com.heavenstay.hswrms.m5billing.dto.*;
+import com.heavenstay.hswrms.m5billing.entity.AdjustmentRequestEntity;
+import com.heavenstay.hswrms.m5billing.entity.CreditNoteEntity;
 import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
 import com.heavenstay.hswrms.m5billing.entity.FolioItemEntity;
 import com.heavenstay.hswrms.m5billing.entity.InvoiceEntity;
 import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
+import com.heavenstay.hswrms.m5billing.repository.AdjustmentRequestRepository;
+import com.heavenstay.hswrms.m5billing.repository.CreditNoteRepository;
 import com.heavenstay.hswrms.m5billing.repository.FolioItemRepository;
 import com.heavenstay.hswrms.m5billing.repository.FolioRepository;
 import com.heavenstay.hswrms.m5billing.repository.InvoiceRepository;
@@ -134,6 +138,12 @@ public class M5BillingAndCheckoutTests {
 
     @Autowired
     private PaymentTransactionRepository paymentTransactionRepository;
+
+    @Autowired
+    private AdjustmentRequestRepository adjustmentRequestRepository;
+
+    @Autowired
+    private CreditNoteRepository creditNoteRepository;
 
     @Autowired
     private com.heavenstay.hswrms.m3spa.port.BillingPort billingPort;
@@ -580,6 +590,52 @@ public class M5BillingAndCheckoutTests {
 
         PhysicalVilla updatedVilla = villaRepository.findByVillaNumber(checkoutRes.getVillaNumber()).orElseThrow();
         assertEquals("NEEDS_CLEANING", updatedVilla.getVillaStatus());
+    }
+
+    @Test
+    @DisplayName("CREDIT NOTE SETTLEMENT: Balance due correctly subtracts credit notes, allowing full settlement and checkout")
+    void settlementWithCreditNoteAccuratelyDeductsBalanceAndFinalizes() {
+        RetreatBooking booking = bookingRepository.findAll().get(0);
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        List<FolioItemEntity> items = folioItemRepository.findByFolioId(folio.getFolioId());
+        FolioItemEntity fnbItem = items.stream().filter(i -> "FNB".equals(i.getChargeCategory())).findFirst().orElseThrow();
+
+        // Simulate an approved Credit Note for 648,000 VND (600,000 + 48,000 tax)
+        AdjustmentRequestEntity adj = new AdjustmentRequestEntity(
+                fnbItem, folio, booking.getRetreatBookingId().longValue(),
+                fnbItem.getSourceMealOrderId(), "CREDIT_NOTE", new BigDecimal("600000.00"),
+                "Guest complaint F&B item", 1L
+        );
+        adj.setStatus("APPROVED");
+        adj = adjustmentRequestRepository.save(adj);
+
+        CreditNoteEntity cn = new CreditNoteEntity(
+                "CN-TEST-001", invoice, fnbItem, adj,
+                new BigDecimal("600000.00"), new BigDecimal("48000.00"),
+                new BigDecimal("648000.00"), 1L, "CREDIT_APPLIED", BigDecimal.ZERO
+        );
+        creditNoteRepository.save(cn);
+
+        // Net payable should be 19,418,000 - 648,000 = 18,770,000 VND
+        BigDecimal expectedDue = invoice.getFinalAmount().subtract(new BigDecimal("648000.00"));
+
+        // 1. Process payment for the exact net payable amount
+        PaymentRequestDTO payReq = new PaymentRequestDTO("VNPAY", expectedDue, "TXN-CN-TEST-999");
+        PaymentResponseDTO payRes = checkoutService.processPayment(invoice.getInvoiceId(), payReq, true);
+        assertEquals("SUCCESSFUL", payRes.getPaymentStatus());
+
+        // 2. Verify invoice and folio are marked PAID
+        InvoiceEntity paidInvoice = invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow();
+        assertEquals("PAID", paidInvoice.getInvoiceStatus());
+        FolioEntity paidFolio = folioRepository.findById(folio.getFolioId()).orElseThrow();
+        assertEquals("PAID", paidFolio.getFolioStatus());
+
+        // 3. Finalize checkout succeeds without UNPAID_CHARGES_REMAIN exception
+        FinalizeCheckoutResponseDTO checkoutRes = checkoutService.finalizeCheckout(invoice.getInvoiceId());
+        assertEquals("COMPLETED", checkoutRes.getBookingStatus());
+        assertEquals("CLOSED", checkoutRes.getFolioStatus());
+        assertEquals("PAID", checkoutRes.getInvoiceStatus());
     }
 
     @Test

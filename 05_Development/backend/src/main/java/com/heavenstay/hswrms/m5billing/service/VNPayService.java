@@ -9,6 +9,7 @@ import com.heavenstay.hswrms.m5billing.dto.VnpayPaymentUrlResponse;
 import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
 import com.heavenstay.hswrms.m5billing.entity.InvoiceEntity;
 import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
+import com.heavenstay.hswrms.m5billing.repository.CreditNoteRepository;
 import com.heavenstay.hswrms.m5billing.repository.FolioRepository;
 import com.heavenstay.hswrms.m5billing.repository.InvoiceRepository;
 import com.heavenstay.hswrms.m5billing.repository.PaymentTransactionRepository;
@@ -37,6 +38,7 @@ public class VNPayService {
     private final InvoiceRepository invoiceRepository;
     private final FolioRepository folioRepository;
     private final PaymentTransactionRepository transactionRepository;
+    private final CreditNoteRepository creditNoteRepository;
     private final CheckoutService checkoutService;
     private final boolean sandboxSimulation;
 
@@ -44,12 +46,14 @@ public class VNPayService {
                         InvoiceRepository invoiceRepository,
                         FolioRepository folioRepository,
                         PaymentTransactionRepository transactionRepository,
+                        CreditNoteRepository creditNoteRepository,
                         CheckoutService checkoutService,
                         @org.springframework.beans.factory.annotation.Value("${app.vnpay.sandbox-simulation:true}") boolean sandboxSimulation) {
         this.config = config;
         this.invoiceRepository = invoiceRepository;
         this.folioRepository = folioRepository;
         this.transactionRepository = transactionRepository;
+        this.creditNoteRepository = creditNoteRepository;
         this.checkoutService = checkoutService;
         this.sandboxSimulation = sandboxSimulation;
     }
@@ -67,7 +71,10 @@ public class VNPayService {
         }
 
         BigDecimal paid = transactionRepository.sumSuccessfulPaymentsForInvoice(invoice.getInvoiceId());
-        BigDecimal due = invoice.getFinalAmount().subtract(paid == null ? BigDecimal.ZERO : paid);
+        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoice.getInvoiceId());
+        BigDecimal due = invoice.getFinalAmount()
+                .subtract(paid == null ? BigDecimal.ZERO : paid)
+                .subtract(creditNotes == null ? BigDecimal.ZERO : creditNotes);
         if (due.compareTo(BigDecimal.ZERO) <= 0 || "PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
             if (!"PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
                 invoice.setInvoiceStatus("PAID");

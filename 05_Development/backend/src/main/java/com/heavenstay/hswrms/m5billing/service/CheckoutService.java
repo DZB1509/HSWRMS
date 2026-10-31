@@ -13,6 +13,7 @@ import com.heavenstay.hswrms.m5billing.dto.VietQrResponseDTO;
 import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
 import com.heavenstay.hswrms.m5billing.entity.InvoiceEntity;
 import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
+import com.heavenstay.hswrms.m5billing.repository.CreditNoteRepository;
 import com.heavenstay.hswrms.m5billing.repository.FolioRepository;
 import com.heavenstay.hswrms.m5billing.repository.InvoiceRepository;
 import com.heavenstay.hswrms.m5billing.repository.PaymentTransactionRepository;
@@ -39,6 +40,7 @@ public class CheckoutService {
     private final InvoiceRepository invoiceRepository;
     private final FolioRepository folioRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final CreditNoteRepository creditNoteRepository;
     private final RetreatBookingRepository bookingRepository;
     private final PhysicalVillaRepository physicalVillaRepository;
     private final FolioBillingService folioBillingService;
@@ -65,6 +67,7 @@ public class CheckoutService {
                            PhysicalVillaRepository physicalVillaRepository,
                            FolioBillingService folioBillingService,
                            AuditLogService auditLogService,
+                            CreditNoteRepository creditNoteRepository,
                            VietQrService vietQrService,
                            @Value("${app.vnpay.mock-auto-confirm:false}") boolean mockAutoConfirm) {
         this.invoiceRepository = invoiceRepository;
@@ -74,6 +77,7 @@ public class CheckoutService {
         this.physicalVillaRepository = physicalVillaRepository;
         this.folioBillingService = folioBillingService;
         this.auditLogService = auditLogService;
+        this.creditNoteRepository = creditNoteRepository;
         this.vietQrService = vietQrService;
         this.mockAutoConfirm = mockAutoConfirm;
     }
@@ -118,7 +122,10 @@ public class CheckoutService {
         BigDecimal successfulPayments = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(invoiceId);
         if (successfulPayments == null) successfulPayments = BigDecimal.ZERO;
 
-        BigDecimal amountDue = invoice.getFinalAmount().subtract(successfulPayments);
+        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoiceId);
+        if (creditNotes == null) creditNotes = BigDecimal.ZERO;
+
+        BigDecimal amountDue = invoice.getFinalAmount().subtract(successfulPayments).subtract(creditNotes);
         if (amountDue.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessRuleException("NO_BALANCE_DUE", "Invoice has zero balance due. Proceed directly to checkout.");
         }
@@ -232,7 +239,10 @@ public class CheckoutService {
         BigDecimal successfulPayments = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(invoiceId);
         if (successfulPayments == null) successfulPayments = BigDecimal.ZERO;
 
-        BigDecimal remainingBalance = invoice.getFinalAmount().subtract(successfulPayments);
+        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoiceId);
+        if (creditNotes == null) creditNotes = BigDecimal.ZERO;
+
+        BigDecimal remainingBalance = invoice.getFinalAmount().subtract(successfulPayments).subtract(creditNotes);
         if (remainingBalance.compareTo(BigDecimal.ZERO) < 0) remainingBalance = BigDecimal.ZERO;
 
         boolean isBookingCompleted = "COMPLETED".equalsIgnoreCase(booking.getBookingStatus());
@@ -316,7 +326,10 @@ public class CheckoutService {
                 InvoiceEntity invoice = tx.getInvoice();
                 BigDecimal existingPaid = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(invoice.getInvoiceId());
                 if (existingPaid == null) existingPaid = BigDecimal.ZERO;
-                if ("PAID".equalsIgnoreCase(invoice.getInvoiceStatus()) || existingPaid.compareTo(invoice.getFinalAmount()) >= 0) {
+                BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoice.getInvoiceId());
+                if (creditNotes == null) creditNotes = BigDecimal.ZERO;
+                BigDecimal netPayable = invoice.getFinalAmount().subtract(creditNotes);
+                if ("PAID".equalsIgnoreCase(invoice.getInvoiceStatus()) || existingPaid.compareTo(netPayable) >= 0) {
                     tx.setPaymentStatus("FAILED");
                     paymentTransactionRepository.save(tx);
                     auditLogService.record("PAYMENT_OVER_SETTLEMENT_BLOCKED",
@@ -385,7 +398,10 @@ public class CheckoutService {
         BigDecimal totalPaid = deposits.add(allInvoicePayments);
         folio.setTotalPaid(totalPaid);
 
-        if (allInvoicePayments.compareTo(invoice.getFinalAmount()) >= 0) {
+        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoice.getInvoiceId());
+        if (creditNotes == null) creditNotes = BigDecimal.ZERO;
+
+        if (allInvoicePayments.add(creditNotes).compareTo(invoice.getFinalAmount()) >= 0) {
             invoice.setInvoiceStatus("PAID");
             folio.setFolioStatus("PAID");
         } else {
