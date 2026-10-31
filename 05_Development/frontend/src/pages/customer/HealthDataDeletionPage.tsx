@@ -16,22 +16,44 @@ import {
 
 export const HealthDataDeletionPage: React.FC = () => {
   const { t } = useTranslation();
-  const { activeBooking, deletionRequest, submitDeletionRequest, cancelDeletionRequest } = useCustomer();
+  const {
+    activeBooking,
+    deletionRequest,
+    submitDeletionRequest,
+    cancelDeletionRequest,
+  } = useCustomer();
   const { showToast } = useToast();
 
   const [acknowledged, setAcknowledged] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!acknowledged) return;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-    const result = submitDeletionRequest('', acknowledged);
-    showToast(result.message, result.status === 'deferred_active_retreat' ? 'info' : 'success');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!acknowledged || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const result = await submitDeletionRequest('', acknowledged);
+      showToast(result.message, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not submit deletion request.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleCancel = () => {
-    cancelDeletionRequest();
-    showToast('Deletion request has been cancelled.', 'info');
+  const handleCancel = async (id: string) => {
+    if (cancellingId) return;
+    setCancellingId(id);
+    try {
+      await cancelDeletionRequest(id);
+      showToast('Deletion request has been cancelled.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not cancel deletion request.', 'error');
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   return (
@@ -151,7 +173,7 @@ export const HealthDataDeletionPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-              <Button variant="secondary" size="sm" onClick={handleCancel}>
+              <Button variant="secondary" size="sm" onClick={() => handleCancel(deletionRequest.id)} disabled={cancellingId === deletionRequest.id} isLoading={cancellingId === deletionRequest.id}>
                 {t('customer.deletion.cancelBtn', 'Withdraw Request')}
               </Button>
               <Link to="/customer/health-profile">

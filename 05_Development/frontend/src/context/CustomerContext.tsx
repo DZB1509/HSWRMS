@@ -12,11 +12,11 @@ import type {
 import {
   INITIAL_CUSTOMER_PROFILE,
   INITIAL_WELLNESS_PROFILE,
-  INITIAL_DELETION_REQUEST,
 } from '../data/mockCustomer';
 import { useAuth } from '../hooks/useAuth';
 import { getMyProfile } from '../api/customer/customerProfileApi';
 import { getCustomerBookings, createCustomerBooking } from '../api/booking/retreatBookingApi';
+import { listMyDeletionRequests, createMyDeletionRequest, cancelMyDeletionRequest } from '../api/health/deletionRequestApi';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
@@ -59,14 +59,9 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [bookings, setBookings] = useState<RetreatBooking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState<boolean>(false);
 
-  const [deletionRequest, setDeletionRequest] = useState<HealthDataDeletionRequest | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.DELETION);
-      return saved ? JSON.parse(saved) : INITIAL_DELETION_REQUEST;
-    } catch {
-      return INITIAL_DELETION_REQUEST;
-    }
-  });
+  const [deletionRequest, setDeletionRequest] = useState<HealthDataDeletionRequest | null>(null);
+  const [isDeletionLoading, setIsDeletionLoading] = useState(false);
+  const [deletionError, setDeletionError] = useState<string | null>(null);
 
   // Save to localStorage on changes
   const [serverProfile, setServerProfile] = useState<CustomerProfile | null>(null);
@@ -216,18 +211,6 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [wellnessProfile]);
 
-  useEffect(() => {
-    try {
-      if (deletionRequest) {
-        localStorage.setItem(STORAGE_KEYS.DELETION, JSON.stringify(deletionRequest));
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.DELETION);
-      }
-    } catch {
-      // Ignore
-    }
-  }, [deletionRequest]);
-
   const updateProfile = (updated: Partial<CustomerProfile>) => {
     setStoredProfile((prev) => ({ ...prev, ...updated }));
   };
@@ -242,50 +225,60 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const activeBooking = bookings.find((b) => b.status === 'upcoming' || b.status === 'in_stay') || null;
 
-  const submitDeletionRequest = (
-    reason: string,
+  const mapDeletionRequest = (data: { deletionRequestId: number; requestType: string; status: string; requestedByUserId: number; createdAt: string }): HealthDataDeletionRequest => ({
+    id: String(data.deletionRequestId),
+    customerId: String(data.requestedByUserId),
+    requestedAt: data.createdAt,
+    status: data.status as DeletionRequestStatus,
+    targetDataTypes: [],
+    acknowledgedPolicy: true,
+  });
+
+  const refreshDeletionRequests = useCallback(async () => {
+    if (!currentUser || currentUser.role !== 'customer') {
+      setDeletionRequest(null);
+      setDeletionError(null);
+      return;
+    }
+    setIsDeletionLoading(true);
+    setDeletionError(null);
+    try {
+      const response = await listMyDeletionRequests();
+      const first = response.data && response.data.length > 0 ? response.data[0] : null;
+      setDeletionRequest(first ? mapDeletionRequest(first) : null);
+    } catch (error) {
+      setDeletionRequest(null);
+      setDeletionError(error instanceof Error ? error.message : 'Could not load deletion requests.');
+    } finally {
+      setIsDeletionLoading(false);
+    }
+  }, [currentUser, mapDeletionRequest]);
+
+  useEffect(() => {
+    void refreshDeletionRequests();
+  }, [refreshDeletionRequests]);
+
+  const submitDeletionRequest = useCallback(async (
+    _reason: string,
     acknowledged: boolean
-  ): { success: boolean; status: DeletionRequestStatus; message: string } => {
-    const hasActiveRetreat = bookings.some(
-      (b) => b.status === 'upcoming' || b.status === 'in_stay'
-    );
-
-    const status: DeletionRequestStatus = hasActiveRetreat ? 'deferred_active_retreat' : 'pending';
-
-    const newRequest: HealthDataDeletionRequest = {
-      id: 'HDR-' + Date.now(),
-      customerId: profile.id,
-      requestedAt: new Date().toISOString(),
-      status,
-      targetDataTypes: [
-        'Treatment Health Notes',
-        'Therapist Session Observations',
-        'Allergy & Dietary Sensitivities',
-        'Wellness Consent Form',
-      ],
-      activeRetreatNotice: hasActiveRetreat
-        ? 'Active/Upcoming retreat in progress. Health data deletion will be queued and safely finalized once stay check-out is complete.'
-        : undefined,
-      reason,
-      acknowledgedPolicy: acknowledged,
-    };
-
-    setDeletionRequest(newRequest);
-
+  ): Promise<{ success: boolean; status: DeletionRequestStatus; message: string }> => {
+    if (!acknowledged) {
+      throw new Error('Acknowledgement is required before submitting a deletion request.');
+    }
+    const response = await createMyDeletionRequest({ requestType: 'HEALTH_DATA' });
+    const mapped = mapDeletionRequest(response.data);
+    setDeletionRequest(mapped);
     return {
       success: true,
-      status,
-      message: hasActiveRetreat
-        ? 'Deletion request deferred: active retreat in progress. Data retained until retreat completion per Article 17(3) GDPR / Vietnam PDPD.'
-        : 'Health data deletion request submitted successfully. Processing within 30 days.',
+      status: mapped.status,
+      message: response.message || 'Health data deletion request successfully submitted for review.',
     };
-  };
+  }, [mapDeletionRequest]);
 
-  const cancelDeletionRequest = (): boolean => {
-    if (!deletionRequest) return false;
-    setDeletionRequest(null);
-    return true;
-  };
+  const cancelDeletionRequest = useCallback(async (id: string): Promise<void> => {
+    await cancelMyDeletionRequest(Number(id));
+    await refreshDeletionRequests();
+  }, [refreshDeletionRequests]);
 
   const createBooking = (
     bookingData: Omit<RetreatBooking, 'id' | 'bookingReference' | 'createdAt'>
@@ -354,6 +347,9 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         wellnessProfile,
         updateWellnessProfile,
         deletionRequest,
+        isDeletionLoading,
+        deletionError,
+        refreshDeletionRequests,
         submitDeletionRequest,
         cancelDeletionRequest,
         bookings,

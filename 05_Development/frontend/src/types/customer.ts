@@ -148,8 +148,11 @@ export interface CustomerContextType {
   wellnessProfile: WellnessProfile;
   updateWellnessProfile: (updated: Partial<WellnessProfile>) => void;
   deletionRequest: HealthDataDeletionRequest | null;
-  submitDeletionRequest: (reason: string, acknowledged: boolean) => { success: boolean; status: DeletionRequestStatus; message: string };
-  cancelDeletionRequest: () => void;
+  isDeletionLoading: boolean;
+  deletionError: string | null;
+  refreshDeletionRequests: () => Promise<void>;
+  submitDeletionRequest: (reason: string, acknowledged: boolean) => Promise<{ success: boolean; status: DeletionRequestStatus; message: string }>;
+  cancelDeletionRequest: (id: string) => Promise<void>;
   bookings: RetreatBooking[];
   activeBooking: RetreatBooking | null;
   createBooking: (bookingData: Omit<RetreatBooking, 'id' | 'bookingReference' | 'createdAt'>) => RetreatBooking;
