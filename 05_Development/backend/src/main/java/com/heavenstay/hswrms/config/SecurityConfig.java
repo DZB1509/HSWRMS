@@ -58,20 +58,6 @@ public class SecurityConfig {
 
     /**
      * Dedicated chain for the Google OAuth2/OIDC handshake.
-     *
-     * <p>Kept separate from the main stateless JWT chain because Spring Security's
-     * OAuth login needs a short-lived HTTP session to store the {@code state}/{@code nonce}
-     * for the duration of the redirect to Google and back (an explicitly accepted
-     * exception for the handshake only). All regular API authentication continues
-     * to run through {@link JwtAuthenticationFilter} on the stateless chain below.</p>
-     *
-     * <ul>
-     *   <li>{@code GET /api/v1/auth/sso/google} — authorization start.</li>
-     *   <li>{@code GET /api/v1/auth/sso/callback/google} — OAuth callback; the success
-     *       handler issues a one-time ticket and redirects to the SPA.</li>
-     *   <li>{@code POST /api/v1/auth/sso/tickets/exchange|resolve} — public ticket
-     *       endpoints (the ticket itself is the credential).</li>
-     * </ul>
      */
     @Bean
     @Order(1)
@@ -85,10 +71,6 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint -> endpoint.baseUri("/api/v1/auth/sso"))
                         .redirectionEndpoint(endpoint -> endpoint.baseUri("/api/v1/auth/sso/callback/*"))
-                        // TEMPORARY: logs granted scopes + returned field names (never
-                        // values) during SSO userinfo loading to diagnose provider-side
-                        // missing-email responses. Behavior is identical to Spring's
-                        // default user services. See SsoUserInfoDiagnosticsService.
                         .userInfoEndpoint(endpoint -> endpoint.userService(ssoUserInfoDiagnosticsService))
                         .successHandler(ssoOAuth2SuccessHandler)
                         .failureHandler(ssoOAuth2FailureHandler))
@@ -111,12 +93,12 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/health").permitAll()
-                                                // Public authentication endpoints from M1
+                        // Public authentication endpoints from M1
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register/sso").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/verify-email").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/auth/dev/**").permitAll()
+                        .requestMatchers("/api/v1/auth/dev/**", "/api/v1/auth/dev-token").permitAll()
 
                         // Public package catalog from M1: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/packages", "/api/v1/packages/**").permitAll()
@@ -135,8 +117,18 @@ public class SecurityConfig {
                         // Public read-only booking calculation from M2: POST only
                         .requestMatchers(HttpMethod.POST, "/api/v1/retreat-packages/calculate").permitAll()
 
-                        // Public VNPay IPN and return callbacks from M2: with cryptographic HMAC-SHA512 verification in service
-                        .requestMatchers("/api/v1/payments/**").permitAll()
+                        // Public VNPay IPN and return callbacks from M2 & M5 (cryptographically verified by HMAC-SHA512 checksum)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay-return").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/verify-return").permitAll()
+
+                        // S42 Final Payment checkout APIs: QR generation, VNPay URL creation, status polling
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/vnpay/create-payment-url").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/status/**", "/api/v1/invoices/*/payment-status").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices/*/vietqr", "/api/v1/billing/checkout/vietqr/*", "/api/v1/billing/deposit/*/vietqr", "/api/v1/billing/checkout/deposit/*/vietqr").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/payments/transactions/*/status").permitAll()
+
+                        // Dev/Sandbox simulation endpoints: strictly restricted to Staff/Admin and isolated in @Profile({"dev", "local", "test"})
+                        .requestMatchers("/api/v1/payments/vnpay/simulate", "/api/v1/payments/simulate-sandbox", "/api/v1/customer/bookings/vnpay/simulate-sandbox-payment").hasAnyRole("RECEPTIONIST", "ADMIN")
 
                         // Receptionist operations from M2: RECEPTIONIST, MANAGER, ADMIN
                         .requestMatchers("/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "MANAGER", "ADMIN")
@@ -159,8 +151,8 @@ public class SecurityConfig {
                         // Module 4: F&B Customer ordering operations: CUSTOMER, RECEPTIONIST, MANAGER, ADMIN
                         .requestMatchers("/api/v1/fnb/customer/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
 
-                        // Module 5: VNPay commerce IPN/webhook is authenticated by HMAC-SHA512 checksum, not by JWT
-                        .requestMatchers("/api/v1/commerce/payment/webhook/vnpay").permitAll()
+                        // Module 5: Payment webhooks (VNPay & VietQR) authenticated by HMAC-SHA512 checksum / secret, not by JWT
+                        .requestMatchers("/api/v1/commerce/payment/webhook/**").permitAll()
 
                         // Module 5: Management Analytics restricted to MANAGER and ADMIN
                         .requestMatchers("/api/v1/analytics/**").hasAnyRole("MANAGER", "ADMIN")
