@@ -29,7 +29,13 @@ public class SpaDispatchOutboxEntity {
     private String channel; // "CALENDAR" or "EMAIL"
 
     @Column(name = "status", nullable = false, length = 30)
-    private String status = "PENDING"; // "PENDING", "SENT", "FAILED"
+    private String status = "PENDING"; // "PENDING", "PROCESSING", "SENT", "FAILED"
+
+    @Column(name = "claimed_at")
+    private LocalDateTime claimedAt;
+
+    @Column(name = "claimed_by", length = 100)
+    private String claimedBy;
 
     @Column(name = "retry_count", nullable = false)
     private int retryCount = 0;
@@ -211,6 +217,22 @@ public class SpaDispatchOutboxEntity {
 
     public void setProcessedAt(LocalDateTime processedAt) {
         this.processedAt = processedAt;
+    }
+
+    public LocalDateTime getClaimedAt() {
+        return claimedAt;
+    }
+
+    public void setClaimedAt(LocalDateTime claimedAt) {
+        this.claimedAt = claimedAt;
+    }
+
+    public String getClaimedBy() {
+        return claimedBy;
+    }
+
+    public void setClaimedBy(String claimedBy) {
+        this.claimedBy = claimedBy;
     }
 }
 

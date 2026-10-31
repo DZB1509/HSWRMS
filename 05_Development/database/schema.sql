@@ -696,24 +696,6 @@ CREATE TABLE dbo.VillaCategory (
 
         CONSTRAINT DF_VillaCategory_Status DEFAULT ('ACTIVE'),
 
-    bedroom_count           INT NOT NULL
-
-        CONSTRAINT DF_VillaCategory_BedroomCount DEFAULT (1),
-
-    bedroom_description     NVARCHAR(100) NULL,
-
-    area_description        NVARCHAR(50) NULL,
-
-    has_private_pool        BIT NOT NULL
-
-        CONSTRAINT DF_VillaCategory_HasPrivatePool DEFAULT (0),
-
-    pool_description        NVARCHAR(100) NULL,
-
-    features_and_amenities  NVARCHAR(500) NULL,
-
-    eligible_packages       NVARCHAR(250) NULL,
-
 
 
     CONSTRAINT UQ_VillaCategory_Name UNIQUE (category_name),
@@ -795,24 +777,6 @@ CREATE TABLE dbo.PhysicalVilla (
     villa_status        VARCHAR(30) NOT NULL
 
         CONSTRAINT DF_PhysicalVilla_Status DEFAULT ('AVAILABLE'),
-
-    zone_name                   NVARCHAR(100) NULL,
-
-    bedroom_info                NVARCHAR(100) NULL,
-
-    max_occupancy               INT NOT NULL
-
-        CONSTRAINT DF_PhysicalVilla_MaxOccupancy DEFAULT (3),
-
-    area_sqm                    DECIMAL(10,2) NULL,
-
-    has_private_pool            BIT NOT NULL
-
-        CONSTRAINT DF_PhysicalVilla_HasPrivatePool DEFAULT (0),
-
-    pool_info                   NVARCHAR(100) NULL,
-
-    view_and_operational_notes  NVARCHAR(500) NULL,
 
 
 
@@ -2088,7 +2052,7 @@ CREATE TABLE dbo.PaymentTransaction (
 
     CONSTRAINT CK_Payment_Type
 
-        CHECK (payment_type IN ('DEPOSIT','FINAL')),
+        CHECK (payment_type IN ('DEPOSIT','FINAL','FINAL_PAYMENT')),
 
     CONSTRAINT CK_Payment_Status
 
@@ -2104,7 +2068,7 @@ CREATE TABLE dbo.PaymentTransaction (
 
             OR
 
-            (payment_type = 'FINAL' AND retreat_booking_id IS NULL AND invoice_id IS NOT NULL)
+            (payment_type IN ('FINAL','FINAL_PAYMENT') AND retreat_booking_id IS NULL AND invoice_id IS NOT NULL)
 
         )
 
@@ -2466,7 +2430,7 @@ BEGIN
 
           AND pt.payment_status = 'SUCCESSFUL'
 
-          AND pt.payment_type = 'FINAL'
+          AND pt.payment_type IN ('FINAL','FINAL_PAYMENT')
 
     ) x;
 
@@ -2882,7 +2846,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE dbo.SpaScheduleHistory (
         history_id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SpaScheduleHistory PRIMARY KEY,
-        session_id              BIGINT NOT NULL,
+        session_id              INT NOT NULL,
         actor_user_id           INT NULL,
         actor_role              VARCHAR(30) NULL,
         change_type             VARCHAR(50) NOT NULL,
@@ -2920,7 +2884,7 @@ BEGIN
     CREATE TABLE dbo.SpaDispatchOutbox (
         outbox_id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SpaDispatchOutbox PRIMARY KEY,
         history_id             BIGINT NULL,
-        session_id             BIGINT NOT NULL,
+        session_id             INT NOT NULL,
         channel                VARCHAR(30) NOT NULL,
         status                 VARCHAR(30) NOT NULL CONSTRAINT DF_SpaDispatchOutbox_status DEFAULT ('PENDING'),
         retry_count            INT NOT NULL CONSTRAINT DF_SpaDispatchOutbox_retry_count DEFAULT (0),
@@ -2932,13 +2896,15 @@ BEGIN
         external_calendar_id   VARCHAR(255) NULL,
         last_error             NVARCHAR(1000) NULL,
         idempotency_key        VARCHAR(150) NOT NULL,
+        claimed_at             DATETIME2(0) NULL,
+        claimed_by             VARCHAR(100) NULL,
         created_at             DATETIME2(0) NOT NULL CONSTRAINT DF_SpaDispatchOutbox_created_at DEFAULT (SYSUTCDATETIME()),
         processed_at           DATETIME2(0) NULL,
 
         CONSTRAINT UQ_SpaDispatchOutbox_IdempotencyKey UNIQUE (idempotency_key),
         CONSTRAINT FK_SpaDispatchOutbox_SpaSession FOREIGN KEY (session_id)
             REFERENCES dbo.SpaSession (spa_session_id),
-        CONSTRAINT CK_SpaDispatchOutbox_Status CHECK (status IN ('PENDING', 'SENT', 'FAILED')),
+        CONSTRAINT CK_SpaDispatchOutbox_Status CHECK (status IN ('PENDING', 'PROCESSING', 'SENT', 'FAILED')),
         CONSTRAINT CK_SpaDispatchOutbox_Channel CHECK (channel IN ('CALENDAR', 'EMAIL'))
     );
 END;
@@ -2959,6 +2925,15 @@ IF NOT EXISTS (
 )
 BEGIN
     CREATE INDEX IX_SpaDispatchOutbox_session_id ON dbo.SpaDispatchOutbox (session_id);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.SpaDispatchOutbox') AND name = N'IX_SpaDispatchOutbox_claim'
+)
+BEGIN
+    CREATE INDEX IX_SpaDispatchOutbox_claim ON dbo.SpaDispatchOutbox (status, retry_count, claimed_at);
 END;
 GO
 
