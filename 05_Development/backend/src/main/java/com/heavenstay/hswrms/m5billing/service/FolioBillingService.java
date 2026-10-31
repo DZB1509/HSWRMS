@@ -1046,7 +1046,7 @@ public class FolioBillingService {
 
         dto.setRetreatBookingId(booking.getRetreatBookingId());
 
-        dto.setBookingReference("HSW-" + (88000 + booking.getRetreatBookingId()));
+        dto.setBookingReference("HSW-BK-" + booking.getRetreatBookingId());
 
 
 

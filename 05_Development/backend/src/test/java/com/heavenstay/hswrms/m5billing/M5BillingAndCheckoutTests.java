@@ -1,12 +1,16 @@
 package com.heavenstay.hswrms.m5billing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m1identity.entity.User;
+import com.heavenstay.hswrms.m1identity.entity.CustomerProfile;
 import com.heavenstay.hswrms.m1identity.repository.CustomerProfileRepository;
 import com.heavenstay.hswrms.m1identity.repository.UserRepository;
+import com.heavenstay.hswrms.m1identity.entity.UserAccount;
+import com.heavenstay.hswrms.m1identity.repository.UserAccountRepository;
 import com.heavenstay.hswrms.m2booking.entity.PhysicalVilla;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.repository.PhysicalVillaRepository;
@@ -41,6 +45,8 @@ import com.heavenstay.hswrms.m5billing.repository.FolioRepository;
 import com.heavenstay.hswrms.m5billing.repository.InvoiceRepository;
 import com.heavenstay.hswrms.m5billing.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m5billing.service.*;
+import com.heavenstay.hswrms.m5billing.security.BillingAccessEvaluator;
+import com.heavenstay.hswrms.security.CustomUserDetails;
 import com.heavenstay.hswrms.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,9 +55,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -63,6 +72,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -79,13 +89,16 @@ public class M5BillingAndCheckoutTests {
     @Autowired
     private MockMvc mockMvc;
 
+    @SpyBean
+    private UserAccountRepository userAccountRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    @Autowired
+    @SpyBean
     private FolioBillingService folioBillingService;
 
     @Autowired
@@ -127,6 +140,13 @@ public class M5BillingAndCheckoutTests {
     @Autowired
     private UserRepository userRepository;
 
+    @org.junit.jupiter.api.BeforeEach
+    void configureExistingTokenTestPrincipals() {
+        UserAccount active = new UserAccount();
+        active.setAccountStatus(UserAccount.ACTIVE);
+        org.mockito.Mockito.doReturn(Optional.of(active)).when(userAccountRepository).findById(anyInt());
+    }
+
     @Autowired
     private FolioRepository folioRepository;
 
@@ -140,6 +160,9 @@ public class M5BillingAndCheckoutTests {
     private PaymentTransactionRepository paymentTransactionRepository;
 
     @Autowired
+    private BillingAccessEvaluator billingAccessEvaluator;
+
+    @Autowired
     private AdjustmentRequestRepository adjustmentRequestRepository;
 
     @Autowired
@@ -150,6 +173,33 @@ public class M5BillingAndCheckoutTests {
 
     @Autowired
     private VNPayConfig vnPayConfig;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Test
+    @DisplayName("Shared payment transaction schema includes the nullable M5 invoice target")
+    void sharedPaymentTransactionSchemaIncludesInvoiceTargetColumn() {
+        assertDoesNotThrow(() -> jdbcTemplate.queryForList(
+                "SELECT invoice_id FROM dbo.PaymentTransaction WHERE 1 = 0"));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Folio response preserves persisted booking, folio, and invoice relationships")
+    void folioResponseUsesPersistedBookingFolioInvoiceRelationships() {
+        RetreatBooking booking = bookingRepository.findAll().get(0);
+        FolioEntity persistedFolio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId())
+                .orElseThrow();
+        InvoiceEntity persistedInvoice = invoiceRepository.findByFolioId(persistedFolio.getFolioId()).orElse(null);
+
+        FolioResponseDTO response = folioBillingService.getFolioByBookingId(booking.getRetreatBookingId());
+
+        assertEquals(booking.getRetreatBookingId().longValue(), response.getRetreatBookingId());
+        assertEquals(persistedFolio.getFolioId(), response.getFolioId());
+        assertEquals(persistedInvoice == null ? null : persistedInvoice.getInvoiceId(), response.getInvoiceId());
+        assertEquals("HSW-BK-" + booking.getRetreatBookingId(), response.getBookingReference());
+    }
 
     @Test
     @DisplayName("INVARIANT 3: Billing Guard blocks checkout & invoice when unsettled SCHEDULED spa session exists")
@@ -361,6 +411,104 @@ public class M5BillingAndCheckoutTests {
         fresh.setDepositAmount(BigDecimal.ZERO);
         fresh.setTotalEstimatedAmount(existing.getTotalEstimatedAmount());
         return bookingRepository.save(fresh);
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Cross-customer booking, folio and invoice reads are isolated; checkout authorization guard is read-only")
+    void crossCustomerBookingFolioInvoiceReadAuthorization() throws Exception {
+        RetreatBooking bookingA = bookingRepository.findAll().get(0);
+        Integer userIdA = customerProfileRepository.findByIdWithUser(bookingA.getCustomerProfileId())
+                .map(profile -> profile.getUser().getUserId()).orElseThrow();
+        FolioEntity folioA = folioRepository.findByRetreatBookingId(bookingA.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoiceA = invoiceRepository.findByFolioId(folioA.getFolioId()).orElseThrow();
+
+        User userB = new User("Synthetic Test Customer B", "authz-customer-b@test.invalid", "not-a-login-secret");
+        userB.setAccountStatus("ACTIVE");
+        userB.setEmailVerified(true);
+        userB = userRepository.save(userB);
+        CustomerProfile profileB = customerProfileRepository.save(new CustomerProfile(userB));
+
+        RetreatBooking bookingB = new RetreatBooking();
+        bookingB.setCustomerProfileId(profileB.getCustomerProfileId());
+        bookingB.setRetreatPackage(bookingA.getRetreatPackage());
+        bookingB.setRequestedVillaCategory(bookingA.getRequestedVillaCategory());
+        bookingB.setCheckInDate(LocalDate.now().plusDays(40));
+        bookingB.setCheckOutDate(LocalDate.now().plusDays(42));
+        bookingB.setBookingStatus("PENDING");
+        bookingB.setDepositAmount(BigDecimal.ZERO);
+        bookingB.setTotalEstimatedAmount(bookingA.getTotalEstimatedAmount());
+        bookingB.setSpecialRequest("Synthetic authorization test fixture only");
+        bookingB = bookingRepository.save(bookingB);
+
+        FolioEntity folioB = folioRepository.save(new FolioEntity(bookingB));
+        InvoiceEntity invoiceB = invoiceRepository.save(new InvoiceEntity(
+                folioB, "INV-AUTHZ-" + bookingB.getRetreatBookingId(), BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, "DRAFT"));
+
+        String tokenA = jwtTokenProvider.generateToken(userIdA, "customer-a@test.invalid", "Synthetic A", List.of("CUSTOMER"));
+        String tokenB = jwtTokenProvider.generateToken(userB.getUserId(), userB.getEmail(), userB.getFullName(), List.of("CUSTOMER"));
+
+        mockMvc.perform(get("/api/v1/customer/bookings/{id}", bookingA.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.retreatBookingId").value(bookingA.getRetreatBookingId()));
+        mockMvc.perform(get("/api/v1/customer/bookings/{id}", bookingB.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Retreat booking not found"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+        mockMvc.perform(get("/api/v1/customer/bookings/{id}", bookingB.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/customer/bookings/{id}", bookingA.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Retreat booking not found"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/billing/folios/{bookingId}", bookingA.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.retreatBookingId").value(bookingA.getRetreatBookingId()));
+        mockMvc.perform(get("/api/v1/billing/folios/{bookingId}", bookingB.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data").doesNotExist());
+        mockMvc.perform(get("/api/v1/billing/folios/{bookingId}", bookingB.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/billing/folios/{bookingId}", bookingA.getRetreatBookingId())
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/billing/invoices/{invoiceId}", invoiceA.getInvoiceId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.invoiceId").value(invoiceA.getInvoiceId()));
+        mockMvc.perform(get("/api/v1/billing/invoices/{invoiceId}", invoiceB.getInvoiceId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data").doesNotExist());
+        mockMvc.perform(get("/api/v1/billing/invoices/{invoiceId}", invoiceB.getInvoiceId())
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/billing/invoices/{invoiceId}", invoiceA.getInvoiceId())
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data").doesNotExist());
+
+        CustomUserDetails customerADetails = new CustomUserDetails(userIdA, "customer-a@test.invalid", "", "Synthetic A", true, List.of("CUSTOMER"));
+        CustomUserDetails customerBDetails = new CustomUserDetails(userB.getUserId(), userB.getEmail(), "", userB.getFullName(), true, List.of("CUSTOMER"));
+        var authA = new UsernamePasswordAuthenticationToken(customerADetails, "N/A", customerADetails.getAuthorities());
+        var authB = new UsernamePasswordAuthenticationToken(customerBDetails, "N/A", customerBDetails.getAuthorities());
+        assertFalse(billingAccessEvaluator.canFinalizeCheckout(invoiceB.getInvoiceId(), authA));
+        assertFalse(billingAccessEvaluator.canFinalizeCheckout(invoiceA.getInvoiceId(), authB));
+        assertTrue(billingAccessEvaluator.canFinalizeCheckout(invoiceA.getInvoiceId(), authA));
+        assertTrue(billingAccessEvaluator.canFinalizeCheckout(invoiceB.getInvoiceId(), authB));
+        assertEquals("DRAFT", invoiceRepository.findById(invoiceA.getInvoiceId()).orElseThrow().getInvoiceStatus());
+        assertEquals("DRAFT", invoiceRepository.findById(invoiceB.getInvoiceId()).orElseThrow().getInvoiceStatus());
     }
 
     @Test
@@ -596,6 +744,42 @@ public class M5BillingAndCheckoutTests {
     }
 
     @Test
+    @DisplayName("Gateway settlement rolls back when unresolved service obligations block checkout")
+    void gatewaySettlementRechecksBillingGuardAndRollsBack() {
+        RetreatBooking booking = bookingRepository.findAll().get(0);
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        String ref = "TXN-GUARD-" + UUID.randomUUID();
+        PaymentTransactionEntity tx = paymentTransactionRepository.save(new PaymentTransactionEntity(
+                null, invoice, "FINAL", "VNPAY", ref, invoice.getFinalAmount(), "PENDING"));
+        org.mockito.Mockito.doThrow(new BusinessRuleException("UNSETTLED_SERVICE_ORDERS"))
+                .when(folioBillingService).validateBillingGuard(booking.getRetreatBookingId());
+
+        assertThrows(BusinessRuleException.class, () -> checkoutService.confirmGatewayPayment(ref, true));
+
+        assertEquals("PENDING", paymentTransactionRepository.findById(tx.getTransactionId()).orElseThrow().getPaymentStatus());
+        assertEquals("CHECKED_IN", bookingRepository.findById(booking.getRetreatBookingId()).orElseThrow().getBookingStatus());
+        assertNotEquals("CLOSED", folioRepository.findById(folio.getFolioId()).orElseThrow().getFolioStatus());
+    }
+
+    @Test
+    @DisplayName("Gateway settlement closes a fully paid stay once and duplicate callbacks are idempotent")
+    void gatewaySettlementClosesStayAndDuplicateCallbackIsIdempotent() {
+        RetreatBooking booking = bookingRepository.findAll().get(0);
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        String ref = "TXN-CLOSE-" + UUID.randomUUID();
+        paymentTransactionRepository.save(new PaymentTransactionEntity(
+                null, invoice, "FINAL", "VNPAY", ref, invoice.getFinalAmount(), "PENDING"));
+
+        assertTrue(checkoutService.confirmGatewayPayment(ref, true));
+        assertTrue(checkoutService.confirmGatewayPayment(ref, true));
+        assertEquals("COMPLETED", bookingRepository.findById(booking.getRetreatBookingId()).orElseThrow().getBookingStatus());
+        assertEquals("CLOSED", folioRepository.findById(folio.getFolioId()).orElseThrow().getFolioStatus());
+        assertEquals("PAID", invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow().getInvoiceStatus());
+    }
+
+    @Test
     @DisplayName("CREDIT NOTE SETTLEMENT: Balance due correctly subtracts credit notes, allowing full settlement and checkout")
     void settlementWithCreditNoteAccuratelyDeductsBalanceAndFinalizes() {
         RetreatBooking booking = bookingRepository.findAll().get(0);
@@ -780,6 +964,9 @@ public class M5BillingAndCheckoutTests {
         mockMvc.perform(get("/api/v1/billing/folios/1"))
                 .andExpect(status().isUnauthorized());
 
+        mockMvc.perform(post("/api/v1/billing/invoices/1/finalize-checkout"))
+                .andExpect(status().isUnauthorized());
+
         mockMvc.perform(get("/api/v1/analytics/revenue"))
                 .andExpect(status().isUnauthorized());
     }
@@ -796,14 +983,85 @@ public class M5BillingAndCheckoutTests {
     }
 
     @Test
-    @DisplayName("SECURITY RBAC: Customer role cannot trigger finalize-checkout (HTTP 403)")
-    void customerCannotFinalizeCheckout() throws Exception {
-        String customerToken = jwtTokenProvider.generateToken(1, "eleanor@heavenstay.resort", "Eleanor Vance",
+    @DisplayName("SECURITY RBAC: Customer cannot finalize another customer's invoice")
+    void customerCannotFinalizeAnotherCustomersCheckout() throws Exception {
+        RetreatBooking booking = bookingRepository.findByIdWithDetails(
+                bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        String initialFolioStatus = folio.getFolioStatus();
+        String strangerToken = jwtTokenProvider.generateToken(888, "stranger@heavenstay.resort", "Stranger Guest",
                 List.of("CUSTOMER"));
 
-        mockMvc.perform(post("/api/v1/billing/invoices/1/finalize-checkout")
-                .header("Authorization", "Bearer " + customerToken))
+        mockMvc.perform(post("/api/v1/billing/invoices/{invoiceId}/finalize-checkout", invoice.getInvoiceId())
+                .header("Authorization", "Bearer " + strangerToken))
                 .andExpect(status().isForbidden());
+
+        assertEquals("CHECKED_IN", bookingRepository.findById(booking.getRetreatBookingId()).orElseThrow().getBookingStatus());
+        assertEquals(initialFolioStatus, folioRepository.findById(folio.getFolioId()).orElseThrow().getFolioStatus());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("SECURITY RBAC: Owner customer can finalize own eligible stay idempotently")
+    void customerCanFinalizeOwnEligibleCheckoutIdempotently() throws Exception {
+        RetreatBooking booking = bookingRepository.findByIdWithDetails(
+                bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        Integer ownerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        checkoutService.processPayment(invoice.getInvoiceId(),
+                new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-CUSTOMER-CHECKOUT-OWN"), true);
+
+        String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Stay Owner",
+                List.of("CUSTOMER"));
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{invoiceId}/finalize-checkout", invoice.getInvoiceId())
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{invoiceId}/finalize-checkout", invoice.getInvoiceId())
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertEquals("COMPLETED", bookingRepository.findById(booking.getRetreatBookingId()).orElseThrow().getBookingStatus());
+        assertEquals("CLOSED", folioRepository.findById(folio.getFolioId()).orElseThrow().getFolioStatus());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("SECURITY RBAC: Non-customer, non-staff role cannot finalize checkout")
+    void therapistCannotFinalizeCheckout() throws Exception {
+        String therapistToken = jwtTokenProvider.generateToken(98, "therapist@heavenstay.resort", "Therapist",
+                List.of("THERAPIST"));
+        mockMvc.perform(post("/api/v1/billing/invoices/1/finalize-checkout")
+                        .header("Authorization", "Bearer " + therapistToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("CHECKOUT: Outstanding balance blocks owner customer without partial closure")
+    void customerCheckoutOutstandingBalanceDoesNotPartiallyCloseStay() throws Exception {
+        RetreatBooking booking = bookingRepository.findByIdWithDetails(
+                bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        Integer ownerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        String initialFolioStatus = folio.getFolioStatus();
+        String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Stay Owner",
+                List.of("CUSTOMER"));
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{invoiceId}/finalize-checkout", invoice.getInvoiceId())
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isBadRequest());
+
+        assertEquals("CHECKED_IN", bookingRepository.findById(booking.getRetreatBookingId()).orElseThrow().getBookingStatus());
+        assertEquals(initialFolioStatus, folioRepository.findById(folio.getFolioId()).orElseThrow().getFolioStatus());
     }
 
     @Test
@@ -815,6 +1073,25 @@ public class M5BillingAndCheckoutTests {
         mockMvc.perform(get("/api/v1/billing/folios/1")
                 .header("Authorization", "Bearer " + receptionistToken))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("SECURITY RBAC: Receptionist checkout permission remains intact")
+    void receptionistCanFinalizeEligibleCheckout() throws Exception {
+        RetreatBooking booking = bookingRepository.findByIdWithDetails(
+                bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        checkoutService.processPayment(invoice.getInvoiceId(),
+                new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-STAFF-CHECKOUT"), true);
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{invoiceId}/finalize-checkout", invoice.getInvoiceId())
+                        .header("Authorization", "Bearer " + receptionistToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     @Test
@@ -2026,49 +2303,45 @@ public class M5BillingAndCheckoutTests {
     }
 
     @Test
-    @DisplayName("P2-IR-02 BILLING: VietQR invoice fallback by bookingId uses canonical invoice.getInvoiceId() for payment sum, txnRef, and response")
+    @DisplayName("P2-IR-02 BILLING: Invoice VietQR requires an existing invoice ID and never treats a booking ID as an invoice")
     @Transactional
-    public void testP2IR02VietQrFallbackUsesCanonicalInvoiceId() throws Exception {
-        // Advance booking ID sequence so that freshBookingForFallback.retreatBookingId != fallbackInvoice.invoiceId
+    public void testP2IR02VietQrRequiresExactInvoiceId() throws Exception {
         createFreshBookingWithoutInvoice();
-        RetreatBooking freshBookingForFallback = createFreshBookingWithoutInvoice();
-        Integer ownerUserId = customerProfileRepository.findByIdWithUser(freshBookingForFallback.getCustomerProfileId())
+        RetreatBooking booking = createFreshBookingWithoutInvoice();
+        Integer ownerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
                 .map(cp -> cp.getUser().getUserId()).orElseThrow();
 
-        InvoiceResponseDTO generated = folioBillingService.generateConsolidatedInvoice(freshBookingForFallback.getRetreatBookingId());
-        InvoiceEntity fallbackInvoice = invoiceRepository.findById(generated.invoiceId()).orElseThrow();
-        Long canonicalInvoiceId = fallbackInvoice.getInvoiceId();
-        Long bookingIdAsPathParam = freshBookingForFallback.getRetreatBookingId().longValue();
+        InvoiceResponseDTO generated = folioBillingService.generateConsolidatedInvoice(booking.getRetreatBookingId());
+        Long invoiceId = generated.invoiceId();
+        Long bookingIdAsPathParam = booking.getRetreatBookingId().longValue();
 
-        assertNotEquals(canonicalInvoiceId, bookingIdAsPathParam,
-                "Precondition: bookingId and canonical invoiceId must be distinct");
+        assertNotEquals(invoiceId, bookingIdAsPathParam,
+                "Precondition: bookingId and invoiceId must be distinct");
         assertFalse(invoiceRepository.existsById(bookingIdAsPathParam),
-                "Precondition: no invoice with PK == bookingIdAsPathParam should exist so fallback is exercised");
-
-        // Record a partial SUCCESSFUL payment of 1,000,000 VND against canonicalInvoiceId
-        BigDecimal partialPaid = new BigDecimal("1000000.00");
-        checkoutService.processPayment(canonicalInvoiceId,
-                new PaymentRequestDTO("CASH", partialPaid, "TXN-PARTIAL-CANONICAL"), true);
-        BigDecimal expectedRemaining = fallbackInvoice.getFinalAmount().subtract(partialPaid);
+                "Precondition: booking ID is not an invoice ID");
 
         String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Owner Guest",
                 List.of("CUSTOMER"));
 
-        // Call GET /api/v1/billing/invoices/{bookingId}/vietqr using bookingId via fallback
         mockMvc.perform(get("/api/v1/billing/invoices/" + bookingIdAsPathParam + "/vietqr")
                         .header("Authorization", "Bearer " + ownerToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.invoiceId").value(canonicalInvoiceId))
-                .andExpect(jsonPath("$.data.amount").value(expectedRemaining.doubleValue()))
-                .andExpect(jsonPath("$.data.transactionReference").value(
-                        org.hamcrest.Matchers.startsWith("HSW_INV_" + canonicalInvoiceId + "_")));
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/billing/invoices/not-a-number/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isBadRequest());
+
+        String staffToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
+        mockMvc.perform(get("/api/v1/billing/invoices/999999999/vietqr")
+                        .header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("P2-IR-03 BILLING: Repeated GET VietQR calls reuse valid PENDING transaction and supersede stale PENDING when amount changes")
+    @DisplayName("P2-IR-03 BILLING: Invoice VietQR generation is read-only and does not create payment or settlement state")
     @Transactional
-    public void testP2IR03VietQrIdempotencyReusesValidPendingAndSupersedesStale() throws Exception {
+    public void testP2IR03InvoiceVietQrDoesNotMutateBillingOrServiceState() throws Exception {
         RetreatBooking booking = bookingRepository
                 .findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
         Integer ownerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
@@ -2079,53 +2352,44 @@ public class M5BillingAndCheckoutTests {
         String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Owner Guest",
                 List.of("CUSTOMER"));
 
-        // 1. Call GET /api/v1/billing/invoices/{invoiceId}/vietqr twice with unchanged balance due
+        String invoiceStatusBefore = invoice.getInvoiceStatus();
+        List<String> transactionsBefore = paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId()).stream()
+                .map(tx -> tx.getTransactionReference() + ":" + tx.getPaymentStatus())
+                .sorted()
+                .toList();
+        List<String> mealStatusesBefore = mealOrderRepository.findByRetreatBookingId(booking.getRetreatBookingId()).stream()
+                .map(order -> order.getOrderStatus())
+                .sorted()
+                .toList();
+        List<String> spaStatusesBefore = spaSessionRepository.findByRetreatBookingIdOrderByScheduledStartAtAsc(booking.getRetreatBookingId()).stream()
+                .map(session -> String.valueOf(session.getSessionStatus()))
+                .sorted()
+                .toList();
+
         String res1 = mockMvc.perform(get("/api/v1/billing/invoices/" + invoice.getInvoiceId() + "/vietqr")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        String txnRef1 = objectMapper.readTree(res1).path("data").path("transactionReference").asText();
+        JsonNode qr1 = objectMapper.readTree(res1).path("data");
+        assertTrue(qr1.path("qrPayload").isTextual());
+        assertTrue(qr1.path("transactionReference").isMissingNode() || qr1.path("transactionReference").isNull());
 
         String res2 = mockMvc.perform(get("/api/v1/billing/invoices/" + invoice.getInvoiceId() + "/vietqr")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        String txnRef2 = objectMapper.readTree(res2).path("data").path("transactionReference").asText();
+        JsonNode qr2 = objectMapper.readTree(res2).path("data");
+        assertTrue(qr2.path("transactionReference").isMissingNode() || qr2.path("transactionReference").isNull());
+        assertEquals(transactionsBefore, paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId()).stream()
+                .map(tx -> tx.getTransactionReference() + ":" + tx.getPaymentStatus()).sorted().toList());
+        assertEquals(invoiceStatusBefore,
+                invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow().getInvoiceStatus());
+        assertEquals(mealStatusesBefore, mealOrderRepository.findByRetreatBookingId(booking.getRetreatBookingId()).stream()
+                .map(order -> order.getOrderStatus()).sorted().toList());
+        assertEquals(spaStatusesBefore, spaSessionRepository.findByRetreatBookingIdOrderByScheduledStartAtAsc(booking.getRetreatBookingId()).stream()
+                .map(session -> String.valueOf(session.getSessionStatus())).sorted().toList());
 
-        assertEquals(txnRef1, txnRef2, "Repeated GET VietQR with same balance due must reuse existing PENDING transactionReference");
-
-        List<PaymentTransactionEntity> pendingAfterRepeat = paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId())
-                .stream()
-                .filter(tx -> "PENDING".equalsIgnoreCase(tx.getPaymentStatus())
-                        && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(tx.getPaymentMethod()))
-                .toList();
-        assertEquals(1, pendingAfterRepeat.size(), "Exactly one PENDING VIETQR_BANK_TRANSFER transaction must exist for invoice");
-
-        // 2. Record a partial payment so balanceDue changes, then call GET VietQR again
-        checkoutService.processPayment(invoice.getInvoiceId(),
-                new PaymentRequestDTO("CASH", new BigDecimal("500000.00"), "TXN-PARTIAL-IDEMP"), true);
-
-        String res3 = mockMvc.perform(get("/api/v1/billing/invoices/" + invoice.getInvoiceId() + "/vietqr")
-                        .header("Authorization", "Bearer " + ownerToken))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        String txnRef3 = objectMapper.readTree(res3).path("data").path("transactionReference").asText();
-
-        assertNotEquals(txnRef1, txnRef3, "When balance due changes, a new PENDING transactionReference must be issued");
-        PaymentTransactionEntity oldTx = paymentTransactionRepository.findByTransactionReference(txnRef1).orElseThrow();
-        assertEquals("FAILED", oldTx.getPaymentStatus(), "Stale PENDING transaction with outdated amount must be marked FAILED");
-        PaymentTransactionEntity cashTx = paymentTransactionRepository.findByTransactionReference("TXN-PARTIAL-IDEMP").orElseThrow();
-        assertEquals("SUCCESSFUL", cashTx.getPaymentStatus(), "SUCCESSFUL transactions must never be modified or cancelled");
-
-        List<PaymentTransactionEntity> activePendingAfterChange = paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId())
-                .stream()
-                .filter(tx -> "PENDING".equalsIgnoreCase(tx.getPaymentStatus())
-                        && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(tx.getPaymentMethod()))
-                .toList();
-        assertEquals(1, activePendingAfterChange.size(), "Still only one active PENDING VIETQR_BANK_TRANSFER transaction must exist");
-        assertEquals(txnRef3, activePendingAfterChange.get(0).getTransactionReference());
-
-        // 3. Call GET /api/v1/billing/deposit/{bookingId}/vietqr twice on a PENDING booking
+        // Deposit QR behavior is a separate M2 flow and is not changed by invoice QR generation.
         RetreatBooking pendingDepositBooking = createFreshBookingWithoutInvoice();
         pendingDepositBooking.setBookingStatus("PENDING");
         pendingDepositBooking.setDepositAmount(new BigDecimal("4500000.00"));

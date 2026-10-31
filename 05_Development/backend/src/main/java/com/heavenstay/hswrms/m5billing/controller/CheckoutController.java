@@ -66,7 +66,7 @@ public class CheckoutController {
     }
 
     @PostMapping("/invoices/{invoiceId}/finalize-checkout")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN')")
+    @PreAuthorize("@billingAccess.canFinalizeCheckout(#invoiceId, authentication)")
     public ResponseEntity<ApiResponse<FinalizeCheckoutResponseDTO>> finalizeCheckout(
             @PathVariable("invoiceId") Long invoiceId) {
         FinalizeCheckoutResponseDTO response = checkoutService.finalizeCheckout(invoiceId);

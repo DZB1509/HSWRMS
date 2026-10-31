@@ -6,12 +6,12 @@
  *    (INT IDENTITY in SQL Server, Integer in Java entities, number in TypeScript DTOs).
  * 2. Booking reference codes (such as "HSW-88192", "HSW-84920", "HSW-BK-2026-0881")
  *    are display references.
- * 3. For prototype / demo resilience, known default reference codes ("HSW-88192", "HSW-88001")
- *    map to primary test booking ID 1 so frontend navigation never breaks.
+ * 3. A display reference is never converted to a database ID without matching
+ *    it to a booking returned by the authenticated customer booking API.
  */
 export function resolveNumericBookingId(
   paramBookingId?: string | number | null,
-  bookingReference?: string | null,
+  _bookingReference?: string | null,
   activeBookingId?: string | number | null
 ): number | null {
   // 1. Explicit numeric parameter check
@@ -32,11 +32,30 @@ export function resolveNumericBookingId(
     if (val > 0) return val;
   }
 
-  // 3. Known Demo Reference code mappings (Eleanor Vance / Active Stay)
-  const candidate = (paramBookingId || bookingReference || '').toString().trim().toUpperCase();
-  if (candidate === 'HSW-88192' || candidate === 'HSW-88001' || candidate === 'BK-01') {
-    return 1;
-  }
-
   return null;
+}
+
+export interface CustomerBookingIdentity {
+  id: string | number;
+  bookingReference: string;
+  status?: string;
+}
+
+/** Resolve only IDs present in the authenticated Customer's server booking list. */
+export function resolveCustomerBookingId(
+  requested: string | number | null | undefined,
+  bookings: CustomerBookingIdentity[],
+  selectedId?: string | number | null
+): number | null {
+  const eligible = bookings.filter(booking => booking.status?.toLowerCase() !== 'cancelled');
+  const requestedText = requested == null ? '' : String(requested).trim();
+  const selectedText = selectedId == null ? '' : String(selectedId).trim();
+  const match = requestedText
+    ? eligible.find(booking => String(booking.id) === requestedText || booking.bookingReference === requestedText)
+    : selectedText
+      ? eligible.find(booking => String(booking.id) === selectedText)
+      : eligible.length === 1 ? eligible[0] : undefined;
+  if (!match) return null;
+  const id = Number(match.id);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }

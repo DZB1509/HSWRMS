@@ -63,10 +63,26 @@ public class BillingAccessEvaluator {
         if (userId == null || !hasAnyAuthority(authentication, "ROLE_CUSTOMER")) {
             return false;
         }
-        if (invoiceRepository.existsById(invoiceId)) {
-            return invoiceRepository.existsByIdAndCustomerUserId(invoiceId, userId);
+        return invoiceRepository.existsByIdAndCustomerUserId(invoiceId, userId);
+    }
+
+    /**
+     * Checkout finalization accepts only a real persisted invoice owned by the
+     * authenticated customer. Unlike read/payment compatibility routes, it
+     * must never interpret an invoice path ID as a booking ID.
+     */
+    @Transactional(readOnly = true)
+    public boolean canFinalizeCheckout(Long invoiceId, Authentication authentication) {
+        if (invoiceId == null || authentication == null) {
+            return false;
         }
-        return bookingRepository.existsByIdAndCustomerUserId(invoiceId, userId);
+        if (isStaff(authentication)) {
+            return true;
+        }
+        Long userId = customerUserId(authentication);
+        return userId != null
+                && hasAnyAuthority(authentication, "ROLE_CUSTOMER")
+                && invoiceRepository.existsByIdAndCustomerUserId(invoiceId, userId);
     }
 
     @Transactional(readOnly = true)

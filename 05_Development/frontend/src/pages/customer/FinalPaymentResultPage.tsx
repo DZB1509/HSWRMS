@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +17,8 @@ import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import type { PaymentTransaction } from '../../types/folio';
 
 export const FinalPaymentResultPage: React.FC = () => {
   const { t } = useTranslation();
@@ -24,11 +26,24 @@ export const FinalPaymentResultPage: React.FC = () => {
   const navigate = useNavigate();
   const { bookingId } = useParams<{ bookingId?: string }>();
   const { role } = useAuth();
-  const { getTransactionById, latestTransaction, activeFolio } = useFolio();
+  const { latestTransaction, activeFolio } = useFolio();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
   const txId = searchParams.get('txId');
-  const transaction = txId ? getTransactionById(txId) : latestTransaction;
+  const [serverTransaction, setServerTransaction] = useState<PaymentTransaction | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(Boolean(txId));
+  useEffect(() => {
+    let active = true;
+    if (!txId) { setIsLoadingStatus(false); return; }
+    billingApi.getTransactionStatus(txId).then(tx => {
+      if (!active) return;
+      const status = tx.paymentStatus === 'SUCCESSFUL' ? 'success' : tx.paymentStatus === 'FAILED' ? 'failed' : tx.paymentStatus === 'CANCELLED' ? 'cancelled' : 'pending';
+      setServerTransaction({ id: tx.transactionReference, bookingReference: bookingId || activeFolio.bookingReference, amount: tx.amountPaid, provider: tx.paymentMethod, status, createdAt: tx.transactionDate, gatewayRef: tx.transactionReference, failureReason: tx.paymentStatus === 'FAILED' ? tx.message : undefined });
+      setIsLoadingStatus(false);
+    }).catch(() => { if (active) setIsLoadingStatus(false); });
+    return () => { active = false; };
+  }, [txId, bookingId, activeFolio.bookingReference]);
+  const transaction = txId ? serverTransaction : latestTransaction;
 
   const currentRef = transaction?.bookingReference || bookingId || activeFolio.bookingReference;
 
@@ -45,6 +60,9 @@ export const FinalPaymentResultPage: React.FC = () => {
     : '/customer/checkout/confirmation';
 
   // Rule 23: Direct Route Safety — Safe recovery if accessed without transaction
+  if (isLoadingStatus) {
+    return <div className="hsw-folio-page"><Container size="narrow"><div className="hsw-result-card" role="status">Checking payment status with the server…</div></Container></div>;
+  }
   if (!transaction) {
     return (
       <div className="hsw-folio-page">

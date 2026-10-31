@@ -63,10 +63,9 @@ public class VietQrService {
     /**
      * Generates a dynamic VietQR for an Invoice balance settlement (Module 5).
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public VietQrResponseDTO generateInvoiceVietQr(Long invoiceId) {
         InvoiceEntity invoice = invoiceRepository.findByIdWithDetails(invoiceId)
-                .or(() -> (invoiceId != null && invoiceId <= Integer.MAX_VALUE) ? invoiceRepository.findByRetreatBookingId(invoiceId.intValue()) : java.util.Optional.empty())
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
 
         if ("CANCELLED".equalsIgnoreCase(invoice.getInvoiceStatus())) {
@@ -82,56 +81,11 @@ public class VietQrService {
         if (creditNotes == null) creditNotes = BigDecimal.ZERO;
         BigDecimal balanceDue = invoice.getFinalAmount().subtract(successfulPayments).subtract(creditNotes);
         if (balanceDue.compareTo(BigDecimal.ZERO) <= 0 || "PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
-            if (!"PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
-                invoice.setInvoiceStatus("PAID");
-                invoiceRepository.save(invoice);
-            }
             throw new BusinessRuleException("INVOICE_ALREADY_PAID", "Invoice is already paid in full.");
-        }
-
-        if (!"ISSUED".equalsIgnoreCase(invoice.getInvoiceStatus())) {
-            invoice.setInvoiceStatus("ISSUED");
-            invoiceRepository.save(invoice);
         }
 
         String invoiceNum = invoice.getInvoiceNumber() != null ? invoice.getInvoiceNumber() : String.valueOf(canonicalInvoiceId);
         String transferContent = sanitizeContent("HSW INV " + invoiceNum);
-
-        PaymentTransactionEntity reusableTx = null;
-        for (PaymentTransactionEntity existing : paymentTransactionRepository.findByInvoiceId(canonicalInvoiceId)) {
-            if ("PENDING".equalsIgnoreCase(existing.getPaymentStatus())
-                    && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(existing.getPaymentMethod())
-                    && "FINAL".equalsIgnoreCase(existing.getPaymentType())) {
-                if (reusableTx == null
-                        && existing.getAmountPaid() != null
-                        && existing.getAmountPaid().compareTo(balanceDue) == 0
-                        && existing.getTransactionReference() != null
-                        && existing.getTransactionReference().startsWith("HSW_INV_" + canonicalInvoiceId + "_")) {
-                    reusableTx = existing;
-                } else {
-                    existing.setPaymentStatus("FAILED");
-                    paymentTransactionRepository.save(existing);
-                }
-            }
-        }
-
-        String txnRef;
-        if (reusableTx != null) {
-            txnRef = reusableTx.getTransactionReference();
-        } else {
-            txnRef = "HSW_INV_" + canonicalInvoiceId + "_" + System.currentTimeMillis();
-            PaymentTransactionEntity transaction = new PaymentTransactionEntity(
-                    null,
-                    invoice,
-                    "FINAL",
-                    "VIETQR_BANK_TRANSFER",
-                    txnRef,
-                    balanceDue,
-                    "PENDING"
-            );
-            transaction.setTransactionDate(LocalDateTime.now());
-            paymentTransactionRepository.save(transaction);
-        }
 
         // Build EMVCo Payload
         String emvCoPayload = buildEmvCoPayload(bankBin, accountNumber, balanceDue, transferContent);
@@ -150,14 +104,14 @@ public class VietQrService {
         response.setAmount(balanceDue);
         response.setTransferContent(transferContent);
         response.setContent(transferContent);
-        response.setTransactionReference(txnRef);
+        response.setTransactionReference(null);
         response.setInvoiceId(canonicalInvoiceId);
         response.setBookingId(invoice.getFolio() != null && invoice.getFolio().getRetreatBooking() != null
                 ? invoice.getFolio().getRetreatBooking().getRetreatBookingId() : null);
         response.setInvoiceNumber(invoice.getInvoiceNumber());
         response.setPaymentType("FINAL");
-        response.setPaymentStatus("PENDING");
-        response.setMessage("Dynamic VietQR generated successfully for invoice settlement.");
+        response.setPaymentStatus(null);
+        response.setMessage("Invoice payment QR generated; payment is not confirmed by QR generation.");
 
         return response;
     }

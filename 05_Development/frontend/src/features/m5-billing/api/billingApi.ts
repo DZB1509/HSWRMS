@@ -33,7 +33,7 @@ const API_BASE_URL: string =
 
 export const billingApi = {
   // Folio & Charges
-  getFolio: async (bookingId: number | string = 1): Promise<FolioResponse> => {
+  getFolio: async (bookingId: number | string): Promise<FolioResponse> => {
     const res = await apiClient.get<ApiResponse<FolioResponse>>(`/billing/folios/${bookingId}`);
     return res.data;
   },
@@ -44,12 +44,12 @@ export const billingApi = {
   },
 
   // Invoice
-  generateInvoice: async (bookingId: number | string = 1): Promise<InvoiceResponse> => {
+  generateInvoice: async (bookingId: number | string): Promise<InvoiceResponse> => {
     const res = await apiClient.post<ApiResponse<InvoiceResponse>>(`/billing/folios/${bookingId}/invoice`);
     return res.data;
   },
 
-  getInvoice: async (invoiceId: number | string = 1): Promise<InvoiceResponse> => {
+  getInvoice: async (invoiceId: number | string): Promise<InvoiceResponse> => {
     const res = await apiClient.get<ApiResponse<InvoiceResponse>>(`/billing/invoices/${invoiceId}`);
     return res.data;
   },

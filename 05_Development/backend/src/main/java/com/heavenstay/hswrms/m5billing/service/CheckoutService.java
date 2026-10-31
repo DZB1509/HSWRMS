@@ -51,7 +51,7 @@ public class CheckoutService {
     @Value("${app.vnpay.tmn-code:HEAVENSTAY}")
     private String vnpayTmnCode;
 
-    @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}")
+    @Value("${app.vnpay.hash-secret:}")
     private String vnpayHashSecret;
 
     @Value("${app.vnpay.pay-url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}")
@@ -225,6 +225,14 @@ public class CheckoutService {
             booking = bookingRepository.findByIdForUpdate(booking.getRetreatBookingId()).orElse(booking);
         }
 
+        // A delivered service charge may have committed just before checkout acquired
+        // the folio lock. Refresh a draft invoice from the now-serialized folio items
+        // before calculating its remaining balance, or checkout could use a stale
+        // draft total and close the stay without collecting the new charge.
+        if (booking != null && booking.getRetreatBookingId() != null) {
+            folioBillingService.generateConsolidatedInvoice(booking.getRetreatBookingId());
+        }
+
         // Re-fetch invoice with latest items and amounts inside the locked transaction
         invoice = invoiceRepository.findByIdWithDetails(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
@@ -348,6 +356,7 @@ public class CheckoutService {
                 RetreatBooking booking = folio.getRetreatBooking();
                 applySuccessfulPayment(invoice, folio, booking, tx.getAmountPaid());
                 if ("PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
+                    folioBillingService.validateBillingGuard(booking.getRetreatBookingId());
                     closeStayAndReleaseVilla(invoice, folio, booking);
                 }
             } else if (tx.getRetreatBooking() != null) {

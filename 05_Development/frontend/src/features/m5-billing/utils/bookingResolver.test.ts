@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveNumericBookingId } from './bookingResolver.ts';
+import { resolveCustomerBookingId, resolveNumericBookingId } from './bookingResolver.ts';
 
 describe('bookingResolver', () => {
   it('resolves explicit positive integer number', () => {
@@ -15,19 +15,12 @@ describe('bookingResolver', () => {
     assert.strictEqual(resolveNumericBookingId('1'), 1);
   });
 
-  it('maps known demo reference codes to booking ID 1 and fails closed (returns null) for unknown reference strings without guessing IDs', () => {
-    // Explicitly verify reference code HSW-88192 maps to known demo booking 1 (and never guesses 192)
-    assert.notStrictEqual(resolveNumericBookingId('HSW-88192'), 192);
-    assert.strictEqual(resolveNumericBookingId('HSW-88192'), 1);
-    assert.strictEqual(resolveNumericBookingId('HSW-88001'), 1);
-    assert.strictEqual(resolveNumericBookingId('BK-01'), 1);
-    assert.strictEqual(resolveNumericBookingId(null, 'HSW-88192'), 1);
-
-    // Arbitrary or unverified reference formats must fail closed (return null)
+  it('does not infer an ID from any booking reference', () => {
+    assert.strictEqual(resolveNumericBookingId('HSW-88192'), null);
     assert.strictEqual(resolveNumericBookingId('HSW-84920'), null);
     assert.strictEqual(resolveNumericBookingId('HSW-15'), null);
     assert.strictEqual(resolveNumericBookingId('HSW-BK-2026-0881'), null);
-    assert.strictEqual(resolveNumericBookingId(null, 'HSW-84920'), null);
+    assert.strictEqual(resolveNumericBookingId(null, 'HSW-88192'), null);
   });
 
   it('falls back to activeBookingId only when activeBookingId is numeric', () => {
@@ -52,5 +45,32 @@ describe('bookingResolver', () => {
     assert.strictEqual(resolveNumericBookingId(null), null);
     assert.strictEqual(resolveNumericBookingId(undefined), null);
     assert.strictEqual(resolveNumericBookingId(), null);
+  });
+});
+
+describe('resolveCustomerBookingId', () => {
+  const bookings = [
+    { id: 27, bookingReference: 'HSW-BK-27', status: 'in_stay' },
+    { id: 34, bookingReference: 'HSW-BK-34', status: 'upcoming' },
+  ];
+
+  it('resolves a persisted ID or reference from the server booking response', () => {
+    assert.strictEqual(resolveCustomerBookingId('HSW-BK-27', bookings), 27);
+    assert.strictEqual(resolveCustomerBookingId('34', bookings), 34);
+  });
+
+  it('returns no booking for empty or multiple eligible bookings without explicit selection', () => {
+    assert.strictEqual(resolveCustomerBookingId(undefined, [], null), null);
+    assert.strictEqual(resolveCustomerBookingId(undefined, bookings, null), null);
+  });
+
+  it('selects the only eligible booking and ignores cancelled bookings', () => {
+    assert.strictEqual(resolveCustomerBookingId(undefined, [bookings[0]], null), 27);
+    assert.strictEqual(resolveCustomerBookingId(undefined, [{ id: 99, bookingReference: 'cancelled', status: 'cancelled' }], null), null);
+  });
+
+  it('rejects references and IDs not present in the authenticated Customer booking list', () => {
+    assert.strictEqual(resolveCustomerBookingId('HSW-BK-999', bookings), null);
+    assert.strictEqual(resolveCustomerBookingId('999', bookings), null);
   });
 });
