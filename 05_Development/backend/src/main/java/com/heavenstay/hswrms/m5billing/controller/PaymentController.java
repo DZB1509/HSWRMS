@@ -7,6 +7,7 @@ import com.heavenstay.hswrms.m5billing.dto.VnpayPaymentUrlResponse;
 import com.heavenstay.hswrms.m5billing.service.VNPayService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -25,6 +26,7 @@ public class PaymentController {
     }
 
     @PostMapping("/api/v1/payments/vnpay/create-payment-url")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canCreateVnpayPayment(#request, authentication)")
     public ResponseEntity<ApiResponse<VnpayPaymentUrlResponse>> createPaymentUrl(
             @RequestBody VnpayCreatePaymentRequest request, HttpServletRequest http) {
         String clientIp = http.getHeader("X-Forwarded-For");
@@ -46,11 +48,13 @@ public class PaymentController {
     }
 
     @GetMapping("/api/v1/payments/status/{transactionRef}")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessTransaction(#transactionRef, authentication)")
     public ResponseEntity<ApiResponse<PaymentResponseDTO>> status(@PathVariable String transactionRef) {
         return ResponseEntity.ok(ApiResponse.ok("Transaction status", vnPayService.getStatusByReference(transactionRef)));
     }
 
     @GetMapping("/api/v1/invoices/{invoiceId}/payment-status")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessInvoice(#invoiceId, authentication)")
     public ResponseEntity<ApiResponse<Map<String, Object>>> invoicePaymentStatus(@PathVariable Long invoiceId) {
         return ResponseEntity.ok(ApiResponse.ok("Invoice payment status", vnPayService.getInvoicePaymentStatus(invoiceId)));
     }

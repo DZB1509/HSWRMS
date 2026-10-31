@@ -79,6 +79,10 @@ public class ReviewService {
 
     @Transactional(readOnly = true)
     public CustomerReviewResponseDTO getReviewByBookingId(Long bookingId, Long authenticatedUserId) {
+        if (authenticatedUserId != null && !bookingRepository.existsByIdAndCustomerUserId(bookingId, authenticatedUserId)) {
+            throw new AccessDeniedException("Access denied: You can only view a review for your own stay.");
+        }
+
         CustomerReviewEntity review = reviewRepository.findByRetreatBookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("No review found for booking ID: " + bookingId));
 

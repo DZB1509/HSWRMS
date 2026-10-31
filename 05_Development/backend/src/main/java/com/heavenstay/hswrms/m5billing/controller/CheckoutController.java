@@ -42,6 +42,7 @@ public class CheckoutController {
     }
 
     @GetMapping({"/invoices/{invoiceId}/vietqr", "/checkout/vietqr/{invoiceId}"})
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessInvoice(#invoiceId, authentication)")
     public ResponseEntity<ApiResponse<VietQrResponseDTO>> getInvoiceVietQr(
             @PathVariable("invoiceId") Long invoiceId) {
         VietQrResponseDTO response = vietQrService.generateInvoiceVietQr(invoiceId);
@@ -49,6 +50,7 @@ public class CheckoutController {
     }
 
     @GetMapping({"/deposit/{bookingId}/vietqr", "/checkout/deposit/{bookingId}/vietqr"})
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessBooking(#bookingId, authentication)")
     public ResponseEntity<ApiResponse<VietQrResponseDTO>> getDepositVietQr(
             @PathVariable("bookingId") Integer bookingId) {
         VietQrResponseDTO response = vietQrService.generateDepositVietQr(bookingId);
@@ -56,6 +58,7 @@ public class CheckoutController {
     }
 
     @GetMapping("/payments/transactions/{transactionReference}/status")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN') or @billingAccess.canAccessTransaction(#transactionReference, authentication)")
     public ResponseEntity<ApiResponse<PaymentResponseDTO>> getTransactionStatus(
             @PathVariable("transactionReference") String transactionReference) {
         PaymentResponseDTO response = checkoutService.getTransactionStatus(transactionReference);

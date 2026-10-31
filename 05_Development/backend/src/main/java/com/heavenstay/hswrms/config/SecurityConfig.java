@@ -7,7 +7,10 @@ import com.heavenstay.hswrms.m1identity.sso.SsoUserInfoDiagnosticsService;
 import com.heavenstay.hswrms.security.JwtAuthenticationFilter;
 import com.heavenstay.hswrms.security.RestAccessDeniedHandler;
 import com.heavenstay.hswrms.security.RestAuthenticationEntryPoint;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -38,6 +41,12 @@ public class SecurityConfig {
 
     @Value("${app.sso.frontend-base-url:http://localhost:5173}")
     private String ssoFrontendBaseUrl;
+
+    @Value("${app.auth.dev-token-enabled:false}")
+    private boolean devTokenEnabled;
+
+    @Autowired(required = false)
+    private Environment environment;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -84,6 +93,8 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        boolean allowDevTokenEndpoint = devTokenEnabled && environment != null
+                && environment.acceptsProfiles(Profiles.of("dev", "local", "test"));
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
@@ -91,14 +102,18 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
-                .authorizeHttpRequests(authorize -> authorize
+                .authorizeHttpRequests(authorize -> {
+                    if (allowDevTokenEndpoint) {
+                        authorize.requestMatchers("/api/v1/auth/dev/**", "/api/v1/auth/dev-token").permitAll();
+                    }
+                    authorize
                         .requestMatchers("/api/v1/health").permitAll()
                         // Public authentication endpoints from M1
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register/sso").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/verify-email").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/auth/dev/**", "/api/v1/auth/dev-token").permitAll()
+                        // Dev token endpoint is conditionally registered above only when profile + app.auth.dev-token-enabled=true
 
                         // Public package catalog from M1: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/packages", "/api/v1/packages/**").permitAll()
@@ -122,16 +137,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/verify-return").permitAll()
 
                         // S42 Final Payment checkout APIs: QR generation, VNPay URL creation, status polling
-                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/vnpay/create-payment-url").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/status/**", "/api/v1/invoices/*/payment-status").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices/*/vietqr", "/api/v1/billing/checkout/vietqr/*", "/api/v1/billing/deposit/*/vietqr", "/api/v1/billing/checkout/deposit/*/vietqr").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/payments/transactions/*/status").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/vnpay/create-payment-url").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/status/**", "/api/v1/invoices/*/payment-status").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices/*/vietqr", "/api/v1/billing/checkout/vietqr/*", "/api/v1/billing/deposit/*/vietqr", "/api/v1/billing/checkout/deposit/*/vietqr").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/billing/payments/transactions/*/status").hasAnyRole("CUSTOMER", "RECEPTIONIST", "ADMIN")
 
                         // Dev/Sandbox simulation endpoints: strictly restricted to Staff/Admin and isolated in @Profile({"dev", "local", "test"})
                         .requestMatchers("/api/v1/payments/vnpay/simulate", "/api/v1/payments/simulate-sandbox", "/api/v1/customer/bookings/vnpay/simulate-sandbox-payment").hasAnyRole("RECEPTIONIST", "ADMIN")
 
                         // Receptionist operations from M2: RECEPTIONIST, MANAGER, ADMIN
-                        .requestMatchers("/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "MANAGER", "ADMIN")
+                        .requestMatchers("/api/v1/receptionist/**").hasAnyRole("RECEPTIONIST", "ADMIN")
 
                         // Customer retreat booking detail lookup: accessible to CUSTOMER (for own booking) and RECEPTIONIST, MANAGER, ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/v1/customer/bookings/*").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
@@ -168,7 +184,8 @@ public class SecurityConfig {
 
                         // Public F&B package plans from M4: GET only
                         .requestMatchers(HttpMethod.GET, "/api/v1/fnb/packages", "/api/v1/fnb/packages/*").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().authenticated();
+                }
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

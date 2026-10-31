@@ -456,7 +456,8 @@ public class M5BillingAndCheckoutTests {
 
         long invoiceCountBefore = invoiceRepository.count();
 
-        InvoiceResponseDTO generatedInvoice = folioBillingService.generateConsolidatedInvoice(freshBooking.getRetreatBookingId());
+        InvoiceResponseDTO generatedInvoice = folioBillingService
+                .generateConsolidatedInvoice(freshBooking.getRetreatBookingId());
 
         assertNotNull(generatedInvoice);
         assertNotNull(generatedInvoice.invoiceId());
@@ -480,10 +481,11 @@ public class M5BillingAndCheckoutTests {
         mealOrderRepository.save(readyOrder);
 
         long invoiceCountBefore = invoiceRepository.count();
-        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk", List.of("RECEPTIONIST"));
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
 
         mockMvc.perform(post("/api/v1/billing/folios/" + freshBooking.getRetreatBookingId() + "/invoice")
-                        .header("Authorization", "Bearer " + receptionistToken))
+                .header("Authorization", "Bearer " + receptionistToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("UNSETTLED_SERVICE_ORDERS"))
                 .andExpect(jsonPath("$.message").value(containsString("READY")));
@@ -507,10 +509,11 @@ public class M5BillingAndCheckoutTests {
         mealOrderRepository.save(deliveredOrder);
 
         long invoiceCountBefore = invoiceRepository.count();
-        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk", List.of("RECEPTIONIST"));
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
 
         mockMvc.perform(post("/api/v1/billing/folios/" + freshBooking.getRetreatBookingId() + "/invoice")
-                        .header("Authorization", "Bearer " + receptionistToken))
+                .header("Authorization", "Bearer " + receptionistToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.invoiceNumber").isNotEmpty())
                 .andExpect(jsonPath("$.data.invoiceStatus").value("DRAFT"));
@@ -599,22 +602,21 @@ public class M5BillingAndCheckoutTests {
         FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
         List<FolioItemEntity> items = folioItemRepository.findByFolioId(folio.getFolioId());
-        FolioItemEntity fnbItem = items.stream().filter(i -> "FNB".equals(i.getChargeCategory())).findFirst().orElseThrow();
+        FolioItemEntity fnbItem = items.stream().filter(i -> "FNB".equals(i.getChargeCategory())).findFirst()
+                .orElseThrow();
 
         // Simulate an approved Credit Note for 648,000 VND (600,000 + 48,000 tax)
         AdjustmentRequestEntity adj = new AdjustmentRequestEntity(
                 fnbItem, folio, booking.getRetreatBookingId().longValue(),
                 fnbItem.getSourceMealOrderId(), "CREDIT_NOTE", new BigDecimal("600000.00"),
-                "Guest complaint F&B item", 1L
-        );
+                "Guest complaint F&B item", 1L);
         adj.setStatus("APPROVED");
         adj = adjustmentRequestRepository.save(adj);
 
         CreditNoteEntity cn = new CreditNoteEntity(
                 "CN-TEST-001", invoice, fnbItem, adj,
                 new BigDecimal("600000.00"), new BigDecimal("48000.00"),
-                new BigDecimal("648000.00"), 1L, "CREDIT_APPLIED", BigDecimal.ZERO
-        );
+                new BigDecimal("648000.00"), 1L, "CREDIT_APPLIED", BigDecimal.ZERO);
         creditNoteRepository.save(cn);
 
         // Net payable should be 19,418,000 - 648,000 = 18,770,000 VND
@@ -669,7 +671,8 @@ public class M5BillingAndCheckoutTests {
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
 
         // Settle the invoice
-        checkoutService.processPayment(invoice.getInvoiceId(), new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-ZERO-BAL"), true);
+        checkoutService.processPayment(invoice.getInvoiceId(),
+                new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-ZERO-BAL"), true);
 
         // When balance due is 0, finalize completes directly
         FinalizeCheckoutResponseDTO response = checkoutService.finalizeCheckout(invoice.getInvoiceId());
@@ -681,14 +684,16 @@ public class M5BillingAndCheckoutTests {
     @Test
     @DisplayName("INVARIANT 5: Review eligibility requires COMPLETED booking, checks ownership, and blocks duplicates")
     void reviewEligibilityAndDuplicateGuard() {
-        RetreatBooking booking = bookingRepository.findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        RetreatBooking booking = bookingRepository
+                .findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
         Long customerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
                 .map(cp -> cp.getUser().getUserId().longValue()).orElseThrow();
 
-        // 1. Before checkout completion, booking is CHECKED_IN: review must be blocked with STAY_NOT_COMPLETED
+        // 1. Before checkout completion, booking is CHECKED_IN: review must be blocked
+        // with STAY_NOT_COMPLETED
         CustomerReviewRequestDTO reviewReq = new CustomerReviewRequestDTO(
-                booking.getRetreatBookingId().longValue(), 5, "Exquisite sanctuary experience, attentive holistic care."
-        );
+                booking.getRetreatBookingId().longValue(), 5,
+                "Exquisite sanctuary experience, attentive holistic care.");
         reviewReq.setRoomRating(5);
         reviewReq.setSpaRating(5);
         reviewReq.setDiningRating(4);
@@ -701,7 +706,8 @@ public class M5BillingAndCheckoutTests {
         // 2. Now complete checkout
         FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
-        checkoutService.processPayment(invoice.getInvoiceId(), new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-CASH-1"), true);
+        checkoutService.processPayment(invoice.getInvoiceId(),
+                new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-CASH-1"), true);
         checkoutService.finalizeCheckout(invoice.getInvoiceId());
 
         // 3. Review from another customer must be rejected with AccessDeniedException
@@ -717,7 +723,8 @@ public class M5BillingAndCheckoutTests {
         assertEquals(5, submitted.getSpaRating());
         assertEquals(4, submitted.getDiningRating());
 
-        // 5. Duplicate review submission must be rejected with ALREADY_REVIEWED (HTTP 409)
+        // 5. Duplicate review submission must be rejected with ALREADY_REVIEWED (HTTP
+        // 409)
         ConflictException ex2 = assertThrows(ConflictException.class, () -> {
             reviewService.submitReview(reviewReq, customerUserId);
         });
@@ -747,11 +754,13 @@ public class M5BillingAndCheckoutTests {
         assertFalse(rev.getCategoryBreakdown().isEmpty());
         assertFalse(rev.getDailySeries().isEmpty());
 
-        OccupancyAnalyticsDTO occ = analyticsService.getOccupancyAnalytics(LocalDate.now().minusDays(7), LocalDate.now().plusDays(7));
+        OccupancyAnalyticsDTO occ = analyticsService.getOccupancyAnalytics(LocalDate.now().minusDays(7),
+                LocalDate.now().plusDays(7));
         assertTrue(occ.getTotalVillas() > 0);
         assertFalse(occ.getVillaDetails().isEmpty());
 
-        TherapistUtilizationDTO th = analyticsService.getTherapistUtilization(LocalDate.now().minusDays(14), LocalDate.now());
+        TherapistUtilizationDTO th = analyticsService.getTherapistUtilization(LocalDate.now().minusDays(14),
+                LocalDate.now());
         assertTrue(th.getTotalTherapists() > 0);
 
         // Excel Exports with 2-sheet structure
@@ -778,30 +787,33 @@ public class M5BillingAndCheckoutTests {
     @Test
     @DisplayName("SECURITY RBAC: Customer role cannot access Manager/Admin Analytics (HTTP 403)")
     void customerCannotAccessAnalytics() throws Exception {
-        String customerToken = jwtTokenProvider.generateToken(1, "eleanor@heavenstay.resort", "Eleanor Vance", List.of("CUSTOMER"));
+        String customerToken = jwtTokenProvider.generateToken(1, "eleanor@heavenstay.resort", "Eleanor Vance",
+                List.of("CUSTOMER"));
 
         mockMvc.perform(get("/api/v1/analytics/revenue")
-                        .header("Authorization", "Bearer " + customerToken))
+                .header("Authorization", "Bearer " + customerToken))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("SECURITY RBAC: Customer role cannot trigger finalize-checkout (HTTP 403)")
     void customerCannotFinalizeCheckout() throws Exception {
-        String customerToken = jwtTokenProvider.generateToken(1, "eleanor@heavenstay.resort", "Eleanor Vance", List.of("CUSTOMER"));
+        String customerToken = jwtTokenProvider.generateToken(1, "eleanor@heavenstay.resort", "Eleanor Vance",
+                List.of("CUSTOMER"));
 
         mockMvc.perform(post("/api/v1/billing/invoices/1/finalize-checkout")
-                        .header("Authorization", "Bearer " + customerToken))
+                .header("Authorization", "Bearer " + customerToken))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("SECURITY RBAC: Receptionist can access Billing & finalize-checkout")
     void receptionistCanAccessBilling() throws Exception {
-        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk", List.of("RECEPTIONIST"));
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
 
         mockMvc.perform(get("/api/v1/billing/folios/1")
-                        .header("Authorization", "Bearer " + receptionistToken))
+                .header("Authorization", "Bearer " + receptionistToken))
                 .andExpect(status().isOk());
     }
 
@@ -809,10 +821,11 @@ public class M5BillingAndCheckoutTests {
     @DisplayName("SECURITY RBAC: Customer cannot view another customer's folio (HTTP 403)")
     void customerCannotViewAnotherCustomerFolio() throws Exception {
         // User ID 888 has no bookings
-        String customerToken = jwtTokenProvider.generateToken(888, "stranger@heavenstay.resort", "Stranger Guest", List.of("CUSTOMER"));
+        String customerToken = jwtTokenProvider.generateToken(888, "stranger@heavenstay.resort", "Stranger Guest",
+                List.of("CUSTOMER"));
 
         mockMvc.perform(get("/api/v1/billing/folios/1")
-                        .header("Authorization", "Bearer " + customerToken))
+                .header("Authorization", "Bearer " + customerToken))
                 .andExpect(status().isForbidden());
     }
 
@@ -821,9 +834,9 @@ public class M5BillingAndCheckoutTests {
     void vnpayWebhookPublicAndValidatesChecksum() throws Exception {
         // Without proper hash, returns 400 with checksum error
         mockMvc.perform(get("/api/v1/commerce/payment/webhook/vnpay")
-                        .param("vnp_TxnRef", "TXN-TEST")
-                        .param("vnp_Amount", "100000000")
-                        .param("vnp_SecureHash", "invalid-hash"))
+                .param("vnp_TxnRef", "TXN-TEST")
+                .param("vnp_Amount", "100000000")
+                .param("vnp_SecureHash", "invalid-hash"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.RspCode").value("97"));
     }
@@ -844,10 +857,11 @@ public class M5BillingAndCheckoutTests {
         // Generate HMAC-SHA512
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : params.entrySet()) {
-            if (sb.length() > 0) sb.append("&");
+            if (sb.length() > 0)
+                sb.append("&");
             sb.append(URLEncoder.encode(entry.getKey(), StandardCharsets.US_ASCII))
-              .append("=")
-              .append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
+                    .append("=")
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
         }
 
         Mac mac = Mac.getInstance("HmacSHA512");
@@ -862,20 +876,20 @@ public class M5BillingAndCheckoutTests {
 
         // First callback
         mockMvc.perform(get("/api/v1/commerce/payment/webhook/vnpay")
-                        .param("vnp_TxnRef", txnRef)
-                        .param("vnp_Amount", amount)
-                        .param("vnp_ResponseCode", responseCode)
-                        .param("vnp_SecureHash", validHash))
+                .param("vnp_TxnRef", txnRef)
+                .param("vnp_Amount", amount)
+                .param("vnp_ResponseCode", responseCode)
+                .param("vnp_SecureHash", validHash))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.RspCode").value("00"))
                 .andExpect(jsonPath("$.Message").value("Confirm Success"));
 
         // Second callback (idempotent - already successful)
         mockMvc.perform(get("/api/v1/commerce/payment/webhook/vnpay")
-                        .param("vnp_TxnRef", txnRef)
-                        .param("vnp_Amount", amount)
-                        .param("vnp_ResponseCode", responseCode)
-                        .param("vnp_SecureHash", validHash))
+                .param("vnp_TxnRef", txnRef)
+                .param("vnp_Amount", amount)
+                .param("vnp_ResponseCode", responseCode)
+                .param("vnp_SecureHash", validHash))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.RspCode").value("00"))
                 .andExpect(jsonPath("$.Message").value("Confirm Success"));
@@ -1104,7 +1118,8 @@ public class M5BillingAndCheckoutTests {
         FinalizeCheckoutResponseDTO firstRes = checkoutService.finalizeCheckout(invoice.getInvoiceId());
         assertEquals("COMPLETED", firstRes.getBookingStatus());
 
-        // Repeated checkout call must be idempotent without throwing exception or mutating state
+        // Repeated checkout call must be idempotent without throwing exception or
+        // mutating state
         FinalizeCheckoutResponseDTO secondRes = checkoutService.finalizeCheckout(invoice.getInvoiceId());
         assertNotNull(secondRes);
         assertEquals("COMPLETED", secondRes.getBookingStatus());
@@ -1142,7 +1157,8 @@ public class M5BillingAndCheckoutTests {
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
 
         // Invoice has positive finalAmount (19.4M VND) and ZERO successful payments
-        // Even if an attacker/bug set invoice status to 'PAID', the strict balance check must block it
+        // Even if an attacker/bug set invoice status to 'PAID', the strict balance
+        // check must block it
         invoice.setInvoiceStatus("PAID");
         invoiceRepository.save(invoice);
 
@@ -1203,7 +1219,8 @@ public class M5BillingAndCheckoutTests {
         FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
 
-        // Mutate to contradictory state: stay marked COMPLETED and Folio CLOSED, but invoice is DRAFT/ISSUED
+        // Mutate to contradictory state: stay marked COMPLETED and Folio CLOSED, but
+        // invoice is DRAFT/ISSUED
         booking.setBookingStatus("COMPLETED");
         bookingRepository.save(booking);
         folio.setFolioStatus("CLOSED");
@@ -1226,7 +1243,8 @@ public class M5BillingAndCheckoutTests {
         FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
 
-        // Stay marked COMPLETED, Folio CLOSED, Invoice status set to PAID, but NO successful payments recorded
+        // Stay marked COMPLETED, Folio CLOSED, Invoice status set to PAID, but NO
+        // successful payments recorded
         booking.setBookingStatus("COMPLETED");
         bookingRepository.save(booking);
         folio.setFolioStatus("CLOSED");
@@ -1259,7 +1277,8 @@ public class M5BillingAndCheckoutTests {
         java.util.concurrent.CountDownLatch readyLatch = new java.util.concurrent.CountDownLatch(threadCount);
         java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
         java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.atomic.AtomicInteger duplicateErrorCount = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger duplicateErrorCount = new java.util.concurrent.atomic.AtomicInteger(
+                0);
         java.util.List<Throwable> unexpectedErrors = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         for (int i = 0; i < threadCount; i++) {
@@ -1298,7 +1317,8 @@ public class M5BillingAndCheckoutTests {
         assertEquals(1, successCount.get(), "Exactly one charge request must succeed");
         assertEquals(1, duplicateErrorCount.get(), "Exactly one charge request must be rejected with DUPLICATE_CHARGE");
 
-        // Verify in DB that exactly one FolioItemEntity was persisted for this meal order
+        // Verify in DB that exactly one FolioItemEntity was persisted for this meal
+        // order
         long countInDb = folioItemRepository.findAll().stream()
                 .filter(item -> savedOrder.getMealOrderId().equals(item.getSourceMealOrderId()))
                 .count();
@@ -1330,8 +1350,7 @@ public class M5BillingAndCheckoutTests {
                 now.plusHours(2),
                 now.plusHours(3),
                 BookingSource.CUSTOMER,
-                "Need extra back relief"
-        );
+                "Need extra back relief");
         session.setSessionStatus(SpaSessionStatus.COMPLETED); // Completed so billing guard allows invoice generation
         session = spaSessionRepository.save(session);
 
@@ -1340,19 +1359,20 @@ public class M5BillingAndCheckoutTests {
                 session.getSpaSessionId(),
                 booking.getRetreatBookingId(),
                 extraPrice,
-                "Extra Spa: " + treatment.getTreatmentName()
-        );
+                "Extra Spa: " + treatment.getTreatmentName());
 
         // Verify Folio has the new SPA charge
         assertTrue(folioItemRepository.existsBySourceSpaSessionId(session.getSpaSessionId()),
                 "FolioItem for extra spa session must exist");
 
         FolioResponseDTO folio = folioBillingService.getFolioByBookingId(booking.getRetreatBookingId());
-        assertTrue(folio.getItems().stream().anyMatch(i ->
-                "SPA".equals(i.getChargeCategory()) && extraPrice.compareTo(i.getAmount()) == 0),
+        assertTrue(
+                folio.getItems().stream()
+                        .anyMatch(i -> "SPA".equals(i.getChargeCategory()) && extraPrice.compareTo(i.getAmount()) == 0),
                 "Folio items must contain the extra spa charge");
 
-        // Verify consolidated invoice reflects the updated total spa charges (initial + extra)
+        // Verify consolidated invoice reflects the updated total spa charges (initial +
+        // extra)
         InvoiceResponseDTO invoice = folioBillingService.generateConsolidatedInvoice(booking.getRetreatBookingId());
         BigDecimal expectedTotalSpa = initialSpaCharges.add(extraPrice);
         assertEquals(0, expectedTotalSpa.compareTo(invoice.spaCharges()),
@@ -1378,8 +1398,7 @@ public class M5BillingAndCheckoutTests {
                 now.plusHours(2),
                 now.plusHours(3),
                 BookingSource.CUSTOMER,
-                "Extra session for idempotency check"
-        );
+                "Extra session for idempotency check");
         session.setSessionStatus(SpaSessionStatus.COMPLETED);
         SpaSession savedSession = spaSessionRepository.save(session);
         final Long sessionId = savedSession.getSpaSessionId();
@@ -1391,12 +1410,11 @@ public class M5BillingAndCheckoutTests {
                 sessionId,
                 booking.getRetreatBookingId(),
                 extraPrice,
-                "Extra Spa: " + treatment.getTreatmentName()
-        );
+                "Extra Spa: " + treatment.getTreatmentName());
 
         long countAfterFirst = folioItemRepository.findByFolioId(
-                folioBillingService.getFolioByBookingId(booking.getRetreatBookingId()).getFolioId()
-        ).stream().filter(i -> sessionId.equals(i.getSourceSpaSessionId())).count();
+                folioBillingService.getFolioByBookingId(booking.getRetreatBookingId()).getFolioId()).stream()
+                .filter(i -> sessionId.equals(i.getSourceSpaSessionId())).count();
         assertEquals(1, countAfterFirst, "Exactly one FolioItem must exist after first call");
 
         // Second duplicate charge posting (e.g. retry / repeated call)
@@ -1404,12 +1422,11 @@ public class M5BillingAndCheckoutTests {
                 sessionId,
                 booking.getRetreatBookingId(),
                 extraPrice,
-                "Extra Spa: " + treatment.getTreatmentName()
-        );
+                "Extra Spa: " + treatment.getTreatmentName());
 
         long countAfterSecond = folioItemRepository.findByFolioId(
-                folioBillingService.getFolioByBookingId(booking.getRetreatBookingId()).getFolioId()
-        ).stream().filter(i -> sessionId.equals(i.getSourceSpaSessionId())).count();
+                folioBillingService.getFolioByBookingId(booking.getRetreatBookingId()).getFolioId()).stream()
+                .filter(i -> sessionId.equals(i.getSourceSpaSessionId())).count();
         assertEquals(1, countAfterSecond, "Still exactly one FolioItem must exist after duplicate retry call");
     }
 
@@ -1432,8 +1449,7 @@ public class M5BillingAndCheckoutTests {
                 now.plusHours(1),
                 now.plusHours(2),
                 BookingSource.CUSTOMER,
-                "Direct duplicate test"
-        );
+                "Direct duplicate test");
         session.setSessionStatus(SpaSessionStatus.COMPLETED);
         session = spaSessionRepository.save(session);
 
@@ -1447,8 +1463,8 @@ public class M5BillingAndCheckoutTests {
         folioBillingService.postFolioCharge(req);
 
         // Second direct post for same spa session must throw DUPLICATE_CHARGE
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
-                folioBillingService.postFolioCharge(req));
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> folioBillingService.postFolioCharge(req));
         assertEquals("DUPLICATE_CHARGE", ex.getErrorCode());
     }
 
@@ -1474,8 +1490,7 @@ public class M5BillingAndCheckoutTests {
                 now.plusHours(1),
                 now.plusHours(2),
                 BookingSource.CUSTOMER,
-                "Mismatch session"
-        );
+                "Mismatch session");
         session.setSessionStatus(SpaSessionStatus.COMPLETED);
         session = spaSessionRepository.save(session);
 
@@ -1487,8 +1502,8 @@ public class M5BillingAndCheckoutTests {
         reqMismatch.setAmount(new BigDecimal("500000.00"));
         reqMismatch.setSourceSpaSessionId(session.getSpaSessionId());
 
-        BusinessRuleException exMismatch = assertThrows(BusinessRuleException.class, () ->
-                folioBillingService.postFolioCharge(reqMismatch));
+        BusinessRuleException exMismatch = assertThrows(BusinessRuleException.class,
+                () -> folioBillingService.postFolioCharge(reqMismatch));
         assertEquals("BOOKING_MISMATCH", exMismatch.getErrorCode());
 
         // Cancelled session -> INVALID_SERVICE_STATE
@@ -1501,8 +1516,7 @@ public class M5BillingAndCheckoutTests {
                 now.plusHours(3),
                 now.plusHours(4),
                 BookingSource.CUSTOMER,
-                "Cancelled session"
-        );
+                "Cancelled session");
         cancelledSession.setSessionStatus(SpaSessionStatus.CANCELLED);
         cancelledSession = spaSessionRepository.save(cancelledSession);
 
@@ -1513,8 +1527,8 @@ public class M5BillingAndCheckoutTests {
         reqCancelled.setAmount(new BigDecimal("500000.00"));
         reqCancelled.setSourceSpaSessionId(cancelledSession.getSpaSessionId());
 
-        BusinessRuleException exCancelled = assertThrows(BusinessRuleException.class, () ->
-                folioBillingService.postFolioCharge(reqCancelled));
+        BusinessRuleException exCancelled = assertThrows(BusinessRuleException.class,
+                () -> folioBillingService.postFolioCharge(reqCancelled));
         assertEquals("INVALID_SERVICE_STATE", exCancelled.getErrorCode());
     }
 
@@ -1523,14 +1537,14 @@ public class M5BillingAndCheckoutTests {
     @Transactional
     void m3BillingAdapterInvalidBookingAndSessionGracefullyHandled() {
         // Non-existent booking ID -> gracefully skipped
-        assertDoesNotThrow(() ->
-                billingPort.recordExtraSpaCharge(12345L, 999999, new BigDecimal("300000.00"), "Invalid Booking"));
+        assertDoesNotThrow(
+                () -> billingPort.recordExtraSpaCharge(12345L, 999999, new BigDecimal("300000.00"), "Invalid Booking"));
         assertFalse(folioItemRepository.existsBySourceSpaSessionId(12345L));
 
         // Non-existent spa session ID on existing booking -> caught and logged
         RetreatBooking booking = bookingRepository.findAll().get(0);
-        assertDoesNotThrow(() ->
-                billingPort.recordExtraSpaCharge(99999999L, booking.getRetreatBookingId(), new BigDecimal("300000.00"), "Invalid Session"));
+        assertDoesNotThrow(() -> billingPort.recordExtraSpaCharge(99999999L, booking.getRetreatBookingId(),
+                new BigDecimal("300000.00"), "Invalid Session"));
         assertFalse(folioItemRepository.existsBySourceSpaSessionId(99999999L));
     }
 
@@ -1549,7 +1563,8 @@ public class M5BillingAndCheckoutTests {
         paymentTransactionRepository.save(tx);
 
         // Tamper amount by adding 100,000 VND (* 100 for VNPay unit)
-        long tamperedVnpAmount = expectedAmount.add(new BigDecimal("100000.00")).multiply(BigDecimal.valueOf(100)).longValue();
+        long tamperedVnpAmount = expectedAmount.add(new BigDecimal("100000.00")).multiply(BigDecimal.valueOf(100))
+                .longValue();
 
         Map<String, String> params = new HashMap<>();
         params.put("vnp_Version", "2.1.0");
@@ -1573,7 +1588,8 @@ public class M5BillingAndCheckoutTests {
                 .andExpect(jsonPath("$.RspCode").value("04"))
                 .andExpect(jsonPath("$.Message").value("Invalid Amount"));
 
-        PaymentTransactionEntity reloadedTx = paymentTransactionRepository.findByTransactionReference(txnRef).orElseThrow();
+        PaymentTransactionEntity reloadedTx = paymentTransactionRepository.findByTransactionReference(txnRef)
+                .orElseThrow();
         assertEquals("PENDING", reloadedTx.getPaymentStatus(), "Transaction must remain PENDING on amount mismatch");
 
         InvoiceEntity reloadedInvoice = invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow();
@@ -1618,8 +1634,10 @@ public class M5BillingAndCheckoutTests {
                 .andExpect(jsonPath("$.RspCode").value("00"))
                 .andExpect(jsonPath("$.Message").value("Confirm Success"));
 
-        PaymentTransactionEntity reloadedTx = paymentTransactionRepository.findByTransactionReference(txnRef).orElseThrow();
-        assertEquals("FAILED", reloadedTx.getPaymentStatus(), "Transaction must transition to FAILED when customer cancelled");
+        PaymentTransactionEntity reloadedTx = paymentTransactionRepository.findByTransactionReference(txnRef)
+                .orElseThrow();
+        assertEquals("FAILED", reloadedTx.getPaymentStatus(),
+                "Transaction must transition to FAILED when customer cancelled");
 
         InvoiceEntity reloadedInvoice = invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow();
         assertEquals("ISSUED", reloadedInvoice.getInvoiceStatus(), "Invoice must remain ISSUED (not settled)");
@@ -1629,8 +1647,8 @@ public class M5BillingAndCheckoutTests {
     @DisplayName("SECURITY ISOLATION: Simulation endpoints are locked to dev/test profiles and forbidden to untrusted callers")
     public void testSimulationDisabledInProduction() throws Exception {
         // 1. Verify class-level @Profile isolation does NOT include production profiles
-        org.springframework.context.annotation.Profile profileAnn =
-                VNPaySimulationController.class.getAnnotation(org.springframework.context.annotation.Profile.class);
+        org.springframework.context.annotation.Profile profileAnn = VNPaySimulationController.class
+                .getAnnotation(org.springframework.context.annotation.Profile.class);
         assertNotNull(profileAnn, "VNPaySimulationController must be annotated with @Profile");
         List<String> allowedProfiles = Arrays.asList(profileAnn.value());
         assertTrue(allowedProfiles.contains("dev") && allowedProfiles.contains("test"));
@@ -1638,24 +1656,501 @@ public class M5BillingAndCheckoutTests {
                 "Simulation controller must never be active in production profiles");
 
         // 2. Verify class-level @PreAuthorize requires receptionist or admin
-        org.springframework.security.access.prepost.PreAuthorize preAuth =
-                VNPaySimulationController.class.getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class);
+        org.springframework.security.access.prepost.PreAuthorize preAuth = VNPaySimulationController.class
+                .getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class);
         assertNotNull(preAuth, "VNPaySimulationController must have @PreAuthorize");
         assertTrue(preAuth.value().contains("RECEPTIONIST") || preAuth.value().contains("ADMIN"));
 
-        // 3. Unauthenticated request to simulate endpoint must be rejected (HTTP 401 Unauthorized)
+        // 3. Unauthenticated request to simulate endpoint must be rejected (HTTP 401
+        // Unauthorized)
         mockMvc.perform(post("/api/v1/payments/vnpay/simulate")
-                        .param("transactionRef", "HSW_TEST_SIM")
-                        .param("outcome", "SUCCESS"))
+                .param("transactionRef", "HSW_TEST_SIM")
+                .param("outcome", "SUCCESS"))
                 .andExpect(status().isUnauthorized());
 
-        // 4. Authenticated request with CUSTOMER role must be rejected (HTTP 403 Forbidden)
-        String customerToken = jwtTokenProvider.generateToken(7, "customer@heavenstay.resort", "Customer User", List.of("CUSTOMER"));
+        // 4. Authenticated request with CUSTOMER role must be rejected (HTTP 403
+        // Forbidden)
+        String customerToken = jwtTokenProvider.generateToken(7, "customer@heavenstay.resort", "Customer User",
+                List.of("CUSTOMER"));
         mockMvc.perform(post("/api/v1/payments/vnpay/simulate")
-                        .header("Authorization", "Bearer " + customerToken)
-                        .param("transactionRef", "HSW_TEST_SIM")
-                        .param("outcome", "SUCCESS"))
+                .header("Authorization", "Bearer " + customerToken)
+                .param("transactionRef", "HSW_TEST_SIM")
+                .param("outcome", "SUCCESS"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("P0-02 SECURITY: Unauthenticated users cannot initiate S42 payment, generate VietQR, or poll payment status (HTTP 401)")
+    @Transactional
+    public void testP002UnauthenticatedS42EndpointsRejected() throws Exception {
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"invoiceId\":1}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/payments/status/DEP-HSW-88192-2026"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/invoices/1/payment-status"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/billing/invoices/1/vietqr"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/billing/checkout/vietqr/1"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/billing/deposit/1/vietqr"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/billing/checkout/deposit/1/vietqr"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/billing/payments/transactions/DEP-HSW-88192-2026/status"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("P0-02 SECURITY: Customer A can access own S42 payment/VietQR/status endpoints, Customer B is denied (HTTP 403), and Staff/Admin are permitted")
+    @Transactional
+    public void testP002S42OwnershipAndStaffAuthorization() throws Exception {
+        RetreatBooking bookingA = bookingRepository
+                .findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        Integer userIdA = customerProfileRepository.findByIdWithUser(bookingA.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+        FolioEntity folioA = folioRepository.findByRetreatBookingId(bookingA.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoiceA = invoiceRepository.findByFolioId(folioA.getFolioId()).orElseThrow();
+
+        String customerAToken = jwtTokenProvider.generateToken(userIdA, "owner@heavenstay.resort", "Owner Guest",
+                List.of("CUSTOMER"));
+        String customerBToken = jwtTokenProvider.generateToken(888, "stranger@heavenstay.resort", "Stranger Guest",
+                List.of("CUSTOMER"));
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
+        String adminToken = jwtTokenProvider.generateToken(98, "admin@heavenstay.resort", "System Admin",
+                List.of("ADMIN"));
+
+        // 1. Customer B cannot initiate VNPay payment for Customer A's invoice or
+        // booking (HTTP 403)
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                .header("Authorization", "Bearer " + customerBToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"invoiceId\":" + invoiceA.getInvoiceId() + "}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                .header("Authorization", "Bearer " + customerBToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bookingId\":" + bookingA.getRetreatBookingId() + "}"))
+                .andExpect(status().isForbidden());
+
+        // 2. Customer B cannot retrieve Customer A's invoice payment status,
+        // deposit/invoice VietQR, or transaction status (HTTP 403)
+        mockMvc.perform(get("/api/v1/invoices/" + invoiceA.getInvoiceId() + "/payment-status")
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/billing/invoices/" + invoiceA.getInvoiceId() + "/vietqr")
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/billing/checkout/vietqr/" + invoiceA.getInvoiceId())
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/billing/deposit/" + bookingA.getRetreatBookingId() + "/vietqr")
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/billing/checkout/deposit/" + bookingA.getRetreatBookingId() + "/vietqr")
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/payments/status/DEP-HSW-88192-2026")
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/billing/payments/transactions/DEP-HSW-88192-2026/status")
+                .header("Authorization", "Bearer " + customerBToken))
+                .andExpect(status().isForbidden());
+
+        // 3. Authorized Customer A CAN access their own payment initiation, VietQR, and
+        // status endpoints (HTTP 200)
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                .header("Authorization", "Bearer " + customerAToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"invoiceId\":" + invoiceA.getInvoiceId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.paymentUrl").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/invoices/" + invoiceA.getInvoiceId() + "/payment-status")
+                .header("Authorization", "Bearer " + customerAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/billing/invoices/" + invoiceA.getInvoiceId() + "/vietqr")
+                .header("Authorization", "Bearer " + customerAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        RetreatBooking freshBookingA = createFreshBookingWithoutInvoice();
+        freshBookingA.setBookingStatus("PENDING");
+        freshBookingA.setDepositAmount(new BigDecimal("5000000.00"));
+        freshBookingA = bookingRepository.save(freshBookingA);
+        mockMvc.perform(get("/api/v1/billing/deposit/" + freshBookingA.getRetreatBookingId() + "/vietqr")
+                .header("Authorization", "Bearer " + customerAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/payments/status/DEP-HSW-88192-2026")
+                .header("Authorization", "Bearer " + customerAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/billing/payments/transactions/DEP-HSW-88192-2026/status")
+                .header("Authorization", "Bearer " + customerAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // 4. Receptionist and Admin can access S42 payment status and VietQR endpoints
+        // (HTTP 200)
+        mockMvc.perform(get("/api/v1/invoices/" + invoiceA.getInvoiceId() + "/payment-status")
+                .header("Authorization", "Bearer " + receptionistToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/billing/invoices/" + invoiceA.getInvoiceId() + "/vietqr")
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("P0-02 SECURITY: Signed return verification and VietQR webhook remain publicly reachable and enforce signature/secret & txnRef validation")
+    @Transactional
+    public void testP002CallbacksAndVerifyReturnSecurity() throws Exception {
+        // 1. /api/v1/payments/vnpay/verify-return rejects invalid signature without JWT
+        mockMvc.perform(get("/api/v1/payments/vnpay/verify-return")
+                .param("vnp_TxnRef", "HSW_NONEXISTENT_TXN")
+                .param("vnp_Amount", "50000000")
+                .param("vnp_ResponseCode", "00")
+                .param("vnp_SecureHash", "forged-signature"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.RspCode").value("97"));
+
+        // 2. /api/v1/payments/vnpay/verify-return with valid HMAC but unknown
+        // transaction reference returns RspCode 01
+        Map<String, String> unknownParams = new HashMap<>();
+        unknownParams.put("vnp_TxnRef", "HSW_UNKNOWN_REF_999");
+        unknownParams.put("vnp_Amount", "50000000");
+        unknownParams.put("vnp_ResponseCode", "00");
+        unknownParams.put("vnp_TransactionStatus", "00");
+        String validHashForUnknown = generateVnpayHash(unknownParams, vnPayConfig.getHashSecret());
+        unknownParams.put("vnp_SecureHash", validHashForUnknown);
+
+        var verifyReq = get("/api/v1/payments/vnpay/verify-return");
+        unknownParams.forEach(verifyReq::param);
+        mockMvc.perform(verifyReq)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.RspCode").value("01"));
+
+        // 3. VietQR webhook without X-Webhook-Secret or with wrong secret is rejected
+        // with 401 code 97
+        mockMvc.perform(post("/api/v1/commerce/payment/webhook/vietqr")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"transactionReference\":\"DEP-HSW-88192-2026\",\"status\":\"PAID\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("97"));
+    }
+
+    @Test
+    @DisplayName("P1-02 SECURITY: Customer review lookup enforces booking ownership, prevents existence leakage, and preserves staff access")
+    @Transactional
+    public void testP102CustomerReviewOwnershipEnforcement() throws Exception {
+        RetreatBooking booking = bookingRepository
+                .findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        Integer ownerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+
+        // Complete stay and submit review for owner
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+        checkoutService.processPayment(invoice.getInvoiceId(),
+                new PaymentRequestDTO("CASH", invoice.getFinalAmount(), "TXN-REV-OWN"), true);
+        checkoutService.finalizeCheckout(invoice.getInvoiceId());
+
+        CustomerReviewRequestDTO reviewReq = new CustomerReviewRequestDTO(
+                booking.getRetreatBookingId().longValue(), 5, "Private guest review for ownership verification.");
+        reviewReq.setRoomRating(5);
+        reviewReq.setSpaRating(5);
+        reviewReq.setDiningRating(5);
+        reviewService.submitReview(reviewReq, ownerUserId.longValue());
+
+        String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Owner Guest",
+                List.of("CUSTOMER"));
+        String otherCustomerToken = jwtTokenProvider.generateToken(888, "stranger@heavenstay.resort", "Stranger Guest",
+                List.of("CUSTOMER"));
+        String receptionistToken = jwtTokenProvider.generateToken(99, "receptionist@heavenstay.resort", "Front Desk",
+                List.of("RECEPTIONIST"));
+        String adminToken = jwtTokenProvider.generateToken(98, "admin@heavenstay.resort", "System Admin",
+                List.of("ADMIN"));
+
+        // 0. Unauthenticated request must be rejected with HTTP 401 Unauthorized
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/" + booking.getRetreatBookingId()))
+                .andExpect(status().isUnauthorized());
+
+        // 1. Owner customer can retrieve their own booking review (HTTP 200)
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/" + booking.getRetreatBookingId())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.retreatBookingId").value(booking.getRetreatBookingId()))
+                .andExpect(jsonPath("$.data.overallRating").value(5));
+
+        // 2. Another customer cannot retrieve owner's booking review (HTTP 403
+        // Forbidden)
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/" + booking.getRetreatBookingId())
+                .header("Authorization", "Bearer " + otherCustomerToken))
+                .andExpect(status().isForbidden());
+
+        // 3. Customer requesting a non-existent booking ID receives HTTP 403 Forbidden
+        // (does not leak whether booking exists)
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/999999")
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isForbidden());
+
+        // 4. Direct service-level call with non-owner customer userId throws
+        // AccessDeniedException
+        assertThrows(AccessDeniedException.class,
+                () -> reviewService.getReviewByBookingId(booking.getRetreatBookingId().longValue(), 888L));
+
+        // 5. Receptionist and Admin can retrieve customer reviews (HTTP 200) and get
+        // 404 when no review exists
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/" + booking.getRetreatBookingId())
+                .header("Authorization", "Bearer " + receptionistToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.overallRating").value(5));
+
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/" + booking.getRetreatBookingId())
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.overallRating").value(5));
+
+        mockMvc.perform(get("/api/v1/customer/reviews/booking/999999")
+                .header("Authorization", "Bearer " + receptionistToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("P1-IR-01 SECURITY: Mixed bookingId/invoiceId payload cannot use Customer A's un-invoiced booking to access or mutate Customer B's invoice")
+    @Transactional
+    public void testP1IR01MixedBookingAndInvoiceIdBypassBlocked() throws Exception {
+        // Customer B is the seeded customer who owns an invoiced booking where bookingId != invoiceId
+        RetreatBooking seededBookingB = bookingRepository
+                .findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        Integer userIdB = customerProfileRepository.findByIdWithUser(seededBookingB.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+
+        // Create Customer A with a fresh booking that has NO invoice
+        User userA = new User("Customer A", "customera.p1ir01@heavenstay.resort", "hashed-pw");
+        userA.setAccountStatus("ACTIVE");
+        userA.setEmailVerified(true);
+        userA = userRepository.save(userA);
+        com.heavenstay.hswrms.m1identity.entity.CustomerProfile profileA =
+                new com.heavenstay.hswrms.m1identity.entity.CustomerProfile(userA);
+        profileA = customerProfileRepository.save(profileA);
+
+        RetreatBooking bookingAWithoutInvoice = new RetreatBooking();
+        bookingAWithoutInvoice.setCustomerProfileId(profileA.getCustomerProfileId());
+        bookingAWithoutInvoice.setRetreatPackage(seededBookingB.getRetreatPackage());
+        bookingAWithoutInvoice.setRequestedVillaCategory(seededBookingB.getRequestedVillaCategory());
+        bookingAWithoutInvoice.setAssignedVilla(seededBookingB.getAssignedVilla());
+        bookingAWithoutInvoice.setCheckInDate(LocalDate.now().minusDays(2));
+        bookingAWithoutInvoice.setCheckOutDate(LocalDate.now().plusDays(1));
+        bookingAWithoutInvoice.setBookingStatus("CHECKED_IN");
+        bookingAWithoutInvoice.setDepositAmount(BigDecimal.ZERO);
+        bookingAWithoutInvoice.setTotalEstimatedAmount(seededBookingB.getTotalEstimatedAmount());
+        bookingAWithoutInvoice = bookingRepository.save(bookingAWithoutInvoice);
+
+        // Create a second booking for Customer B and generate an invoice so that bookingB2.retreatBookingId != invoiceB2.invoiceId
+        // and no invoice in DB has PK == bookingB2.retreatBookingId
+        RetreatBooking bookingB2 = createFreshBookingWithoutInvoice();
+        InvoiceResponseDTO generatedInvB2 = folioBillingService.generateConsolidatedInvoice(bookingB2.getRetreatBookingId());
+        InvoiceEntity invoiceB2 = invoiceRepository.findById(generatedInvB2.invoiceId()).orElseThrow();
+        assertEquals("DRAFT", invoiceB2.getInvoiceStatus());
+        assertNotEquals(bookingB2.getRetreatBookingId().longValue(), invoiceB2.getInvoiceId(),
+                "Test precondition: bookingB2 ID must differ from invoiceB2 ID");
+        assertFalse(invoiceRepository.existsById(bookingB2.getRetreatBookingId().longValue()),
+                "Test precondition: no invoice PK may equal bookingB2.retreatBookingId");
+
+        int txCountBefore = paymentTransactionRepository.findByInvoiceId(invoiceB2.getInvoiceId()).size();
+
+        String customerAToken = jwtTokenProvider.generateToken(userA.getUserId(), userA.getEmail(), userA.getFullName(),
+                List.of("CUSTOMER"));
+        String customerBToken = jwtTokenProvider.generateToken(userIdB, "ownerb@heavenstay.resort", "Customer B",
+                List.of("CUSTOMER"));
+
+        // 1. Attack vector: Customer A sends own un-invoiced bookingId + Customer B's bookingId inside invoiceId field -> HTTP 403 Forbidden
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                        .header("Authorization", "Bearer " + customerAToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookingId\":" + bookingAWithoutInvoice.getRetreatBookingId()
+                                + ",\"invoiceId\":" + bookingB2.getRetreatBookingId() + "}"))
+                .andExpect(status().isForbidden());
+
+        // 2. Attack vector: Customer A sends own un-invoiced bookingId + Customer B's actual invoiceId -> HTTP 403 Forbidden
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                        .header("Authorization", "Bearer " + customerAToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookingId\":" + bookingAWithoutInvoice.getRetreatBookingId()
+                                + ",\"invoiceId\":" + invoiceB2.getInvoiceId() + "}"))
+                .andExpect(status().isForbidden());
+
+        // 3. Verify Customer B's invoice was NOT modified (remains DRAFT) and ZERO transactions were created on it
+        InvoiceEntity reloadedInvoiceB2 = invoiceRepository.findById(invoiceB2.getInvoiceId()).orElseThrow();
+        assertEquals("DRAFT", reloadedInvoiceB2.getInvoiceStatus(),
+                "Customer B's invoice status must remain untouched after rejected cross-customer payment request");
+        assertEquals(txCountBefore, paymentTransactionRepository.findByInvoiceId(invoiceB2.getInvoiceId()).size(),
+                "No PaymentTransaction may be created on Customer B's invoice when authorization fails");
+
+        // 4. Legitimate Customer B requests (by invoiceId, by bookingId, and by matching bookingId+invoiceId) continue to succeed (HTTP 200)
+        mockMvc.perform(post("/api/v1/payments/vnpay/create-payment-url")
+                        .header("Authorization", "Bearer " + customerBToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookingId\":" + bookingB2.getRetreatBookingId()
+                                + ",\"invoiceId\":" + invoiceB2.getInvoiceId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.invoiceId").value(invoiceB2.getInvoiceId()));
+    }
+
+    @Test
+    @DisplayName("P2-IR-02 BILLING: VietQR invoice fallback by bookingId uses canonical invoice.getInvoiceId() for payment sum, txnRef, and response")
+    @Transactional
+    public void testP2IR02VietQrFallbackUsesCanonicalInvoiceId() throws Exception {
+        // Advance booking ID sequence so that freshBookingForFallback.retreatBookingId != fallbackInvoice.invoiceId
+        createFreshBookingWithoutInvoice();
+        RetreatBooking freshBookingForFallback = createFreshBookingWithoutInvoice();
+        Integer ownerUserId = customerProfileRepository.findByIdWithUser(freshBookingForFallback.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+
+        InvoiceResponseDTO generated = folioBillingService.generateConsolidatedInvoice(freshBookingForFallback.getRetreatBookingId());
+        InvoiceEntity fallbackInvoice = invoiceRepository.findById(generated.invoiceId()).orElseThrow();
+        Long canonicalInvoiceId = fallbackInvoice.getInvoiceId();
+        Long bookingIdAsPathParam = freshBookingForFallback.getRetreatBookingId().longValue();
+
+        assertNotEquals(canonicalInvoiceId, bookingIdAsPathParam,
+                "Precondition: bookingId and canonical invoiceId must be distinct");
+        assertFalse(invoiceRepository.existsById(bookingIdAsPathParam),
+                "Precondition: no invoice with PK == bookingIdAsPathParam should exist so fallback is exercised");
+
+        // Record a partial SUCCESSFUL payment of 1,000,000 VND against canonicalInvoiceId
+        BigDecimal partialPaid = new BigDecimal("1000000.00");
+        checkoutService.processPayment(canonicalInvoiceId,
+                new PaymentRequestDTO("CASH", partialPaid, "TXN-PARTIAL-CANONICAL"), true);
+        BigDecimal expectedRemaining = fallbackInvoice.getFinalAmount().subtract(partialPaid);
+
+        String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Owner Guest",
+                List.of("CUSTOMER"));
+
+        // Call GET /api/v1/billing/invoices/{bookingId}/vietqr using bookingId via fallback
+        mockMvc.perform(get("/api/v1/billing/invoices/" + bookingIdAsPathParam + "/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.invoiceId").value(canonicalInvoiceId))
+                .andExpect(jsonPath("$.data.amount").value(expectedRemaining.doubleValue()))
+                .andExpect(jsonPath("$.data.transactionReference").value(
+                        org.hamcrest.Matchers.startsWith("HSW_INV_" + canonicalInvoiceId + "_")));
+    }
+
+    @Test
+    @DisplayName("P2-IR-03 BILLING: Repeated GET VietQR calls reuse valid PENDING transaction and supersede stale PENDING when amount changes")
+    @Transactional
+    public void testP2IR03VietQrIdempotencyReusesValidPendingAndSupersedesStale() throws Exception {
+        RetreatBooking booking = bookingRepository
+                .findByIdWithDetails(bookingRepository.findAll().get(0).getRetreatBookingId()).orElseThrow();
+        Integer ownerUserId = customerProfileRepository.findByIdWithUser(booking.getCustomerProfileId())
+                .map(cp -> cp.getUser().getUserId()).orElseThrow();
+        FolioEntity folio = folioRepository.findByRetreatBookingId(booking.getRetreatBookingId()).orElseThrow();
+        InvoiceEntity invoice = invoiceRepository.findByFolioId(folio.getFolioId()).orElseThrow();
+
+        String ownerToken = jwtTokenProvider.generateToken(ownerUserId, "owner@heavenstay.resort", "Owner Guest",
+                List.of("CUSTOMER"));
+
+        // 1. Call GET /api/v1/billing/invoices/{invoiceId}/vietqr twice with unchanged balance due
+        String res1 = mockMvc.perform(get("/api/v1/billing/invoices/" + invoice.getInvoiceId() + "/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String txnRef1 = objectMapper.readTree(res1).path("data").path("transactionReference").asText();
+
+        String res2 = mockMvc.perform(get("/api/v1/billing/invoices/" + invoice.getInvoiceId() + "/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String txnRef2 = objectMapper.readTree(res2).path("data").path("transactionReference").asText();
+
+        assertEquals(txnRef1, txnRef2, "Repeated GET VietQR with same balance due must reuse existing PENDING transactionReference");
+
+        List<PaymentTransactionEntity> pendingAfterRepeat = paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId())
+                .stream()
+                .filter(tx -> "PENDING".equalsIgnoreCase(tx.getPaymentStatus())
+                        && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(tx.getPaymentMethod()))
+                .toList();
+        assertEquals(1, pendingAfterRepeat.size(), "Exactly one PENDING VIETQR_BANK_TRANSFER transaction must exist for invoice");
+
+        // 2. Record a partial payment so balanceDue changes, then call GET VietQR again
+        checkoutService.processPayment(invoice.getInvoiceId(),
+                new PaymentRequestDTO("CASH", new BigDecimal("500000.00"), "TXN-PARTIAL-IDEMP"), true);
+
+        String res3 = mockMvc.perform(get("/api/v1/billing/invoices/" + invoice.getInvoiceId() + "/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String txnRef3 = objectMapper.readTree(res3).path("data").path("transactionReference").asText();
+
+        assertNotEquals(txnRef1, txnRef3, "When balance due changes, a new PENDING transactionReference must be issued");
+        PaymentTransactionEntity oldTx = paymentTransactionRepository.findByTransactionReference(txnRef1).orElseThrow();
+        assertEquals("FAILED", oldTx.getPaymentStatus(), "Stale PENDING transaction with outdated amount must be marked FAILED");
+        PaymentTransactionEntity cashTx = paymentTransactionRepository.findByTransactionReference("TXN-PARTIAL-IDEMP").orElseThrow();
+        assertEquals("SUCCESSFUL", cashTx.getPaymentStatus(), "SUCCESSFUL transactions must never be modified or cancelled");
+
+        List<PaymentTransactionEntity> activePendingAfterChange = paymentTransactionRepository.findByInvoiceId(invoice.getInvoiceId())
+                .stream()
+                .filter(tx -> "PENDING".equalsIgnoreCase(tx.getPaymentStatus())
+                        && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(tx.getPaymentMethod()))
+                .toList();
+        assertEquals(1, activePendingAfterChange.size(), "Still only one active PENDING VIETQR_BANK_TRANSFER transaction must exist");
+        assertEquals(txnRef3, activePendingAfterChange.get(0).getTransactionReference());
+
+        // 3. Call GET /api/v1/billing/deposit/{bookingId}/vietqr twice on a PENDING booking
+        RetreatBooking pendingDepositBooking = createFreshBookingWithoutInvoice();
+        pendingDepositBooking.setBookingStatus("PENDING");
+        pendingDepositBooking.setDepositAmount(new BigDecimal("4500000.00"));
+        pendingDepositBooking = bookingRepository.save(pendingDepositBooking);
+
+        String depRes1 = mockMvc.perform(get("/api/v1/billing/deposit/" + pendingDepositBooking.getRetreatBookingId() + "/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String depRef1 = objectMapper.readTree(depRes1).path("data").path("transactionReference").asText();
+
+        String depRes2 = mockMvc.perform(get("/api/v1/billing/deposit/" + pendingDepositBooking.getRetreatBookingId() + "/vietqr")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String depRef2 = objectMapper.readTree(depRes2).path("data").path("transactionReference").asText();
+
+        assertEquals(depRef1, depRef2, "Repeated GET deposit VietQR must reuse existing PENDING deposit transactionReference");
+        long depositPendingCount = paymentTransactionRepository.findByRetreatBookingId(pendingDepositBooking.getRetreatBookingId())
+                .stream()
+                .filter(tx -> "PENDING".equalsIgnoreCase(tx.getPaymentStatus())
+                        && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(tx.getPaymentMethod())
+                        && "DEPOSIT".equalsIgnoreCase(tx.getPaymentType()))
+                .count();
+        assertEquals(1L, depositPendingCount, "Exactly one PENDING VIETQR_BANK_TRANSFER deposit transaction must exist");
     }
 
     private String generateVnpayHash(Map<String, String> params, String secret) {
@@ -1668,10 +2163,11 @@ public class M5BillingAndCheckoutTests {
             }
             String fieldValue = params.get(fieldName);
             if (fieldValue != null && !fieldValue.isEmpty()) {
-                if (sb.length() > 0) sb.append('&');
+                if (sb.length() > 0)
+                    sb.append('&');
                 sb.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII))
-                  .append('=')
-                  .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
+                        .append('=')
+                        .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
             }
         }
         return CheckoutService.hmacSHA512(secret, sb.toString());

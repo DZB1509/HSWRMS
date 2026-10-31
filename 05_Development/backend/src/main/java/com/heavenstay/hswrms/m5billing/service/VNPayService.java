@@ -120,20 +120,40 @@ public class VNPayService {
     }
 
     private InvoiceEntity resolveInvoice(VnpayCreatePaymentRequest req) {
-        if (req.bookingId() != null && req.bookingId() > 0) {
-            java.util.Optional<InvoiceEntity> byBooking = invoiceRepository.findByRetreatBookingId(req.bookingId());
-            if (byBooking.isPresent()) return byBooking.get();
-        }
-        if (req.invoiceId() != null && req.invoiceId() > 0) {
-            java.util.Optional<InvoiceEntity> byId = invoiceRepository.findByIdWithDetails(req.invoiceId());
-            if (byId.isPresent()) return byId.get();
-            if (req.invoiceId() <= Integer.MAX_VALUE) {
-                java.util.Optional<InvoiceEntity> byBooking = invoiceRepository.findByRetreatBookingId(req.invoiceId().intValue());
-                if (byBooking.isPresent()) return byBooking.get();
+        boolean hasBookingId = req.bookingId() != null && req.bookingId() > 0;
+        boolean hasInvoiceId = req.invoiceId() != null && req.invoiceId() > 0;
+        if (hasBookingId && hasInvoiceId) {
+            InvoiceEntity byBooking = invoiceRepository.findByRetreatBookingId(req.bookingId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Invoice not found for booking ID: " + req.bookingId()));
+            InvoiceEntity byInvoice = resolveByInvoiceIdOrFallback(req.invoiceId());
+            if (!Objects.equals(byBooking.getInvoiceId(), byInvoice.getInvoiceId())) {
+                throw new BusinessRuleException("TARGET_MISMATCH",
+                        "Provided bookingId and invoiceId do not refer to the same invoice.");
             }
-            throw new ResourceNotFoundException("Invoice not found with ID: " + req.invoiceId());
+            return byInvoice;
+        }
+        if (hasBookingId) {
+            return invoiceRepository.findByRetreatBookingId(req.bookingId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Invoice not found for booking ID: " + req.bookingId()));
+        }
+        if (hasInvoiceId) {
+            return resolveByInvoiceIdOrFallback(req.invoiceId());
         }
         throw new BusinessRuleException("MISSING_TARGET", "invoiceId or bookingId is required.");
+    }
+
+    private InvoiceEntity resolveByInvoiceIdOrFallback(Long targetId) {
+        Optional<InvoiceEntity> byId = invoiceRepository.findByIdWithDetails(targetId);
+        if (byId.isPresent()) {
+            return byId.get();
+        }
+        if (targetId <= Integer.MAX_VALUE) {
+            Optional<InvoiceEntity> byBooking = invoiceRepository.findByRetreatBookingId(targetId.intValue());
+            if (byBooking.isPresent()) {
+                return byBooking.get();
+            }
+        }
+        throw new ResourceNotFoundException("Invoice not found with ID: " + targetId);
     }
 
     String buildSignedUrl(String txnRef, BigDecimal amount, String orderInfo, String ip) {

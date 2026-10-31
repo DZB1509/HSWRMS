@@ -117,12 +117,20 @@ public class VnpayWebhookController {
         // Match by invoice number if formatted as "HSW INV <invNum>"
         if (upper.contains("HSW INV")) {
             String invNum = upper.substring(upper.indexOf("HSW INV") + 7).trim();
+            String fallbackRef = null;
             for (PaymentTransactionEntity tx : paymentTransactionRepository.findAll()) {
                 if (tx.getInvoice() != null && tx.getInvoice().getInvoiceNumber() != null
                         && invNum.startsWith(tx.getInvoice().getInvoiceNumber().toUpperCase())) {
-                    return tx.getTransactionReference();
+                    if ("PENDING".equalsIgnoreCase(tx.getPaymentStatus())
+                            && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(tx.getPaymentMethod())) {
+                        return tx.getTransactionReference();
+                    }
+                    if (fallbackRef == null) {
+                        fallbackRef = tx.getTransactionReference();
+                    }
                 }
             }
+            return fallbackRef;
         }
         return null;
     }

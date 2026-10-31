@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -58,6 +59,10 @@ public class RetreatBookingSecurityTest {
 
     private CustomUserDetails createManager(Integer userId) {
         return new CustomUserDetails(userId, "manager" + userId + "@heavenstay.com", "", "Manager " + userId, true, List.of("MANAGER"));
+    }
+
+    private CustomUserDetails createAdmin(Integer userId) {
+        return new CustomUserDetails(userId, "admin" + userId + "@heavenstay.com", "", "Admin " + userId, true, List.of("ADMIN"));
     }
 
     private BookingSummaryResponse sampleBookingResponse(Integer bookingId, Integer customerProfileId) {
@@ -279,5 +284,86 @@ public class RetreatBookingSecurityTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
+    @Test
+    @DisplayName("P2-05: MANAGER can access permitted GET receptionist endpoints (arrivals, villas, bookings)")
+    public void testManagerCanAccessPermittedReceptionistGetEndpoints() throws Exception {
+        CustomUserDetails manager = createManager(301);
+        when(receptionistService.getDailyArrivals(any())).thenReturn(Collections.emptyList());
+        when(receptionistService.getAllVillas(any(), any())).thenReturn(Collections.emptyList());
+        when(receptionistService.getBookings(any(), any(), any(), any())).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/v1/receptionist/arrivals").with(user(manager)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/receptionist/villas").with(user(manager)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/receptionist/bookings").with(user(manager)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("P2-05: MANAGER is denied receptionist POST/PATCH write operations (HTTP 403 Forbidden)")
+    public void testManagerDeniedReceptionistWriteOperations() throws Exception {
+        CustomUserDetails manager = createManager(301);
+
+        mockMvc.perform(post("/api/v1/receptionist/walk-in")
+                        .with(user(manager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/receptionist/check-in/1/residence")
+                        .with(user(manager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/receptionist/check-in/1/assign-villa")
+                        .with(user(manager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/receptionist/villas/1/status")
+                        .with(user(manager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newStatus\":\"AVAILABLE\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/receptionist/bookings/1/cancel")
+                        .with(user(manager)))
+                .andExpect(status().isForbidden());
+
+        verify(receptionistService, never()).createWalkInBooking(any(), any());
+        verify(receptionistService, never()).recordResidenceInfo(anyInt(), any(), any());
+        verify(receptionistService, never()).assignVillaAndCheckIn(anyInt(), any(), any(), any());
+        verify(receptionistService, never()).updateVillaStatus(anyInt(), any(), any(), any());
+        verify(receptionistService, never()).cancelBooking(anyInt(), any());
+    }
+
+    @Test
+    @DisplayName("P2-05: RECEPTIONIST and ADMIN can perform permitted receptionist operational writes")
+    public void testReceptionistAndAdminCanPerformReceptionistWrites() throws Exception {
+        CustomUserDetails receptionist = createReceptionist(201);
+        CustomUserDetails admin = createAdmin(1);
+        BookingSummaryResponse cancelled = sampleBookingResponse(1, 101);
+        cancelled.setBookingStatus("CANCELLED");
+
+        when(receptionistService.cancelBooking(eq(1), any())).thenReturn(cancelled);
+
+        mockMvc.perform(post("/api/v1/receptionist/bookings/1/cancel")
+                        .with(user(receptionist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/v1/receptionist/bookings/1/cancel")
+                        .with(user(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        verify(receptionistService, times(2)).cancelBooking(eq(1), any());
     }
 }

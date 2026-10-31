@@ -73,10 +73,12 @@ public class VietQrService {
             throw new BusinessRuleException("INVOICE_CANCELLED", "Cannot generate QR for a cancelled invoice.");
         }
 
-        BigDecimal successfulPayments = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(invoiceId);
+        Long canonicalInvoiceId = invoice.getInvoiceId();
+
+        BigDecimal successfulPayments = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(canonicalInvoiceId);
         if (successfulPayments == null) successfulPayments = BigDecimal.ZERO;
 
-        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(invoice.getInvoiceId());
+        BigDecimal creditNotes = creditNoteRepository.sumFinalCreditAmountByInvoiceId(canonicalInvoiceId);
         if (creditNotes == null) creditNotes = BigDecimal.ZERO;
         BigDecimal balanceDue = invoice.getFinalAmount().subtract(successfulPayments).subtract(creditNotes);
         if (balanceDue.compareTo(BigDecimal.ZERO) <= 0 || "PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
@@ -92,28 +94,50 @@ public class VietQrService {
             invoiceRepository.save(invoice);
         }
 
-        String invoiceNum = invoice.getInvoiceNumber() != null ? invoice.getInvoiceNumber() : String.valueOf(invoiceId);
+        String invoiceNum = invoice.getInvoiceNumber() != null ? invoice.getInvoiceNumber() : String.valueOf(canonicalInvoiceId);
         String transferContent = sanitizeContent("HSW INV " + invoiceNum);
-        String txnRef = "HSW_INV_" + invoiceId + "_" + System.currentTimeMillis();
+
+        PaymentTransactionEntity reusableTx = null;
+        for (PaymentTransactionEntity existing : paymentTransactionRepository.findByInvoiceId(canonicalInvoiceId)) {
+            if ("PENDING".equalsIgnoreCase(existing.getPaymentStatus())
+                    && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(existing.getPaymentMethod())
+                    && "FINAL".equalsIgnoreCase(existing.getPaymentType())) {
+                if (reusableTx == null
+                        && existing.getAmountPaid() != null
+                        && existing.getAmountPaid().compareTo(balanceDue) == 0
+                        && existing.getTransactionReference() != null
+                        && existing.getTransactionReference().startsWith("HSW_INV_" + canonicalInvoiceId + "_")) {
+                    reusableTx = existing;
+                } else {
+                    existing.setPaymentStatus("FAILED");
+                    paymentTransactionRepository.save(existing);
+                }
+            }
+        }
+
+        String txnRef;
+        if (reusableTx != null) {
+            txnRef = reusableTx.getTransactionReference();
+        } else {
+            txnRef = "HSW_INV_" + canonicalInvoiceId + "_" + System.currentTimeMillis();
+            PaymentTransactionEntity transaction = new PaymentTransactionEntity(
+                    null,
+                    invoice,
+                    "FINAL",
+                    "VIETQR_BANK_TRANSFER",
+                    txnRef,
+                    balanceDue,
+                    "PENDING"
+            );
+            transaction.setTransactionDate(LocalDateTime.now());
+            paymentTransactionRepository.save(transaction);
+        }
 
         // Build EMVCo Payload
         String emvCoPayload = buildEmvCoPayload(bankBin, accountNumber, balanceDue, transferContent);
 
         // Build Dynamic VietQR Image URL
         String qrImageUrl = buildQrImageUrl(bankBin, accountNumber, template, balanceDue, transferContent, accountName);
-
-        // Persist PENDING Payment Transaction record in database
-        PaymentTransactionEntity transaction = new PaymentTransactionEntity(
-                null,
-                invoice,
-                "FINAL",
-                "VIETQR_BANK_TRANSFER",
-                txnRef,
-                balanceDue,
-                "PENDING"
-        );
-        transaction.setTransactionDate(LocalDateTime.now());
-        paymentTransactionRepository.save(transaction);
 
         VietQrResponseDTO response = new VietQrResponseDTO();
         response.setQrImageUrl(qrImageUrl);
@@ -127,7 +151,7 @@ public class VietQrService {
         response.setTransferContent(transferContent);
         response.setContent(transferContent);
         response.setTransactionReference(txnRef);
-        response.setInvoiceId(invoiceId);
+        response.setInvoiceId(canonicalInvoiceId);
         response.setBookingId(invoice.getFolio() != null && invoice.getFolio().getRetreatBooking() != null
                 ? invoice.getFolio().getRetreatBooking().getRetreatBookingId() : null);
         response.setInvoiceNumber(invoice.getInvoiceNumber());
@@ -157,22 +181,45 @@ public class VietQrService {
         }
 
         String transferContent = sanitizeContent("HSW DEP " + bookingId);
-        String txnRef = "HSW_DEP_" + bookingId + "_" + System.currentTimeMillis();
+
+        PaymentTransactionEntity reusableTx = null;
+        for (PaymentTransactionEntity existing : paymentTransactionRepository.findByRetreatBookingId(bookingId)) {
+            if ("PENDING".equalsIgnoreCase(existing.getPaymentStatus())
+                    && "VIETQR_BANK_TRANSFER".equalsIgnoreCase(existing.getPaymentMethod())
+                    && "DEPOSIT".equalsIgnoreCase(existing.getPaymentType())) {
+                if (reusableTx == null
+                        && existing.getAmountPaid() != null
+                        && existing.getAmountPaid().compareTo(depositAmount) == 0
+                        && existing.getTransactionReference() != null
+                        && existing.getTransactionReference().startsWith("HSW_DEP_" + bookingId + "_")) {
+                    reusableTx = existing;
+                } else {
+                    existing.setPaymentStatus("FAILED");
+                    paymentTransactionRepository.save(existing);
+                }
+            }
+        }
+
+        String txnRef;
+        if (reusableTx != null) {
+            txnRef = reusableTx.getTransactionReference();
+        } else {
+            txnRef = "HSW_DEP_" + bookingId + "_" + System.currentTimeMillis();
+            PaymentTransactionEntity transaction = new PaymentTransactionEntity(
+                    booking,
+                    null,
+                    "DEPOSIT",
+                    "VIETQR_BANK_TRANSFER",
+                    txnRef,
+                    depositAmount,
+                    "PENDING"
+            );
+            transaction.setTransactionDate(LocalDateTime.now());
+            paymentTransactionRepository.save(transaction);
+        }
 
         String emvCoPayload = buildEmvCoPayload(bankBin, accountNumber, depositAmount, transferContent);
         String qrImageUrl = buildQrImageUrl(bankBin, accountNumber, template, depositAmount, transferContent, accountName);
-
-        PaymentTransactionEntity transaction = new PaymentTransactionEntity(
-                booking,
-                null,
-                "DEPOSIT",
-                "VIETQR_BANK_TRANSFER",
-                txnRef,
-                depositAmount,
-                "PENDING"
-        );
-        transaction.setTransactionDate(LocalDateTime.now());
-        paymentTransactionRepository.save(transaction);
 
         VietQrResponseDTO response = new VietQrResponseDTO();
         response.setQrImageUrl(qrImageUrl);

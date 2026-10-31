@@ -52,6 +52,8 @@ spring:
           from: ${MAIL_FROM:${MAIL_USERNAME:noreply@heavenstay.com}}
 
 app:
+  auth:
+    dev-token-enabled: ${APP_AUTH_DEV_TOKEN_ENABLED:false}
   jwt:
     secret: ${JWT_SECRET:defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong}
     expiration-ms: 86400000

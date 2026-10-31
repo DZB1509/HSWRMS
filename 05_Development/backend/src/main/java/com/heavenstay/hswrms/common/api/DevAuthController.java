@@ -1,6 +1,8 @@
 package com.heavenstay.hswrms.common.api;
 
 import com.heavenstay.hswrms.security.JwtTokenProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Profile({"dev", "local", "test"})
+@ConditionalOnProperty(name = "app.auth.dev-token-enabled", havingValue = "true", matchIfMissing = false)
 public class DevAuthController {
 
     private final JwtTokenProvider tokenProvider;
