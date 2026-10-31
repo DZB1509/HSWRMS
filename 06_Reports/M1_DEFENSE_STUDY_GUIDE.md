@@ -1,7 +1,7 @@
 # HSWRMS M1 — Defense Study Guide
 
 **Branch:** `feature/hswrms-m1-m6-integration`  
-**Final integration HEAD used for this guide:** `efb9b5f` (after M1 finalization commits)  
+**Final integration HEAD used for this guide:** `13a4d91b86bf63bdf47e6e2e9131366f0eaeca5d` (after M1 finalization commits)  
 **Scope:** M1 Authentication, Account Settings, Sensitive Health Profile, Consent, Health-Data Deletion Request  
 **Purpose:** Train the developer to open the real codebase and trace every M1 request from browser URL/button through frontend, backend, and database.
 
