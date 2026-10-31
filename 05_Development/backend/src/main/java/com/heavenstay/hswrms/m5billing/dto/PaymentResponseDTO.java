@@ -14,6 +14,10 @@ public class PaymentResponseDTO {
     private BigDecimal amountPaid;
     private String paymentStatus;
     private LocalDateTime transactionDate;
+    private String paymentUrl;
+    private String qrImageUrl;
+    private String qrPayload;
+    private String transferContent;
     private String message;
 
     public PaymentResponseDTO() {}
@@ -92,6 +96,38 @@ public class PaymentResponseDTO {
 
     public void setTransactionDate(LocalDateTime transactionDate) {
         this.transactionDate = transactionDate;
+    }
+
+    public String getPaymentUrl() {
+        return paymentUrl;
+    }
+
+    public void setPaymentUrl(String paymentUrl) {
+        this.paymentUrl = paymentUrl;
+    }
+
+    public String getQrImageUrl() {
+        return qrImageUrl;
+    }
+
+    public void setQrImageUrl(String qrImageUrl) {
+        this.qrImageUrl = qrImageUrl;
+    }
+
+    public String getQrPayload() {
+        return qrPayload;
+    }
+
+    public void setQrPayload(String qrPayload) {
+        this.qrPayload = qrPayload;
+    }
+
+    public String getTransferContent() {
+        return transferContent;
+    }
+
+    public void setTransferContent(String transferContent) {
+        this.transferContent = transferContent;
     }
 
     public String getMessage() {

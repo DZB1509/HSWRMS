@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,16 +76,6 @@ public class RetreatBookingController {
         Map<String, String> data = new HashMap<>();
         data.put("paymentUrl", paymentUrl);
         return ResponseEntity.ok(ApiResponse.ok("VNPay payment URL generated successfully", data));
-    }
-
-    @PostMapping("/vnpay/simulate-sandbox-payment")
-    public ResponseEntity<ApiResponse<Map<String, String>>> simulateSandboxPayment(
-            @RequestParam String txnRef,
-            @RequestParam BigDecimal amount,
-            @RequestParam(defaultValue = "00") String responseCode) {
-        Map<String, String> signedParams = vnPayDepositService.createSignedCallbackParams(txnRef, amount, responseCode);
-        Map<String, String> result = vnPayDepositService.processIpn(signedParams);
-        return ResponseEntity.ok(ApiResponse.ok("Sandbox payment simulation completed", result));
     }
 
     @PostMapping("/{id}/cancel")

@@ -7,13 +7,14 @@ import java.math.BigDecimal;
 
 public class PaymentRequestDTO {
 
-    @NotBlank(message = "paymentMethod is mandatory (CASH, VNPAY, CARD)")
+    @NotBlank(message = "paymentMethod is mandatory (CASH, VNPAY, CARD, VIETQR_BANK_TRANSFER)")
     private String paymentMethod;
 
     @NotNull(message = "amount is mandatory")
     @DecimalMin(value = "0.01", message = "amount must be greater than 0")
     private BigDecimal amount;
 
+    private String paymentType; // FINAL, FINAL_PAYMENT, DEPOSIT
     private String transactionReference;
     private String idempotencyKey;
     private String cardLast4;
@@ -40,6 +41,14 @@ public class PaymentRequestDTO {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public String getPaymentType() {
+        return paymentType;
+    }
+
+    public void setPaymentType(String paymentType) {
+        this.paymentType = paymentType;
     }
 
     public String getTransactionReference() {

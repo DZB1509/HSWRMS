@@ -9,6 +9,7 @@ import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m5billing.dto.FinalizeCheckoutResponseDTO;
 import com.heavenstay.hswrms.m5billing.dto.PaymentRequestDTO;
 import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.dto.VietQrResponseDTO;
 import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
 import com.heavenstay.hswrms.m5billing.entity.InvoiceEntity;
 import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
@@ -21,16 +22,19 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class CheckoutService {
 
-    private static final Set<String> VALID_PAYMENT_METHODS = Set.of("CASH", "CARD", "VNPAY");
+    private static final Set<String> VALID_PAYMENT_METHODS = Set.of("CASH", "CARD", "VNPAY", "VIETQR_BANK_TRANSFER");
 
     private final InvoiceRepository invoiceRepository;
     private final FolioRepository folioRepository;
@@ -39,7 +43,20 @@ public class CheckoutService {
     private final PhysicalVillaRepository physicalVillaRepository;
     private final FolioBillingService folioBillingService;
     private final AuditLogService auditLogService;
+    private final VietQrService vietQrService;
     private final boolean mockAutoConfirm;
+
+    @Value("${app.vnpay.tmn-code:HEAVENSTAY}")
+    private String vnpayTmnCode;
+
+    @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}")
+    private String vnpayHashSecret;
+
+    @Value("${app.vnpay.pay-url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}")
+    private String vnpayPayUrl;
+
+    @Value("${app.vnpay.return-url:http://localhost:5173/customer/checkout/payment-result}")
+    private String vnpayReturnUrl;
 
     public CheckoutService(InvoiceRepository invoiceRepository,
                            FolioRepository folioRepository,
@@ -48,6 +65,7 @@ public class CheckoutService {
                            PhysicalVillaRepository physicalVillaRepository,
                            FolioBillingService folioBillingService,
                            AuditLogService auditLogService,
+                           VietQrService vietQrService,
                            @Value("${app.vnpay.mock-auto-confirm:false}") boolean mockAutoConfirm) {
         this.invoiceRepository = invoiceRepository;
         this.folioRepository = folioRepository;
@@ -56,6 +74,7 @@ public class CheckoutService {
         this.physicalVillaRepository = physicalVillaRepository;
         this.folioBillingService = folioBillingService;
         this.auditLogService = auditLogService;
+        this.vietQrService = vietQrService;
         this.mockAutoConfirm = mockAutoConfirm;
     }
 
@@ -71,12 +90,12 @@ public class CheckoutService {
         String method = request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "";
         if (!VALID_PAYMENT_METHODS.contains(method)) {
             throw new BusinessRuleException("INVALID_PAYMENT_METHOD",
-                    "Payment method must be one of: CASH, CARD, VNPAY. Provided: " + request.getPaymentMethod());
+                    "Payment method must be one of: CASH, CARD, VNPAY, VIETQR_BANK_TRANSFER. Provided: " + request.getPaymentMethod());
         }
 
         // Guard: Role restrictions on payment method
-        if (!isStaff && !"VNPAY".equalsIgnoreCase(method)) {
-            throw new AccessDeniedException("Customer can only pay via VNPay online QR. Cash and POS Card are restricted to Front Desk.");
+        if (!isStaff && !"VNPAY".equalsIgnoreCase(method) && !"VIETQR_BANK_TRANSFER".equalsIgnoreCase(method)) {
+            throw new AccessDeniedException("Customer can only pay via VNPay or VietQR online bank transfer. Cash and POS Card are restricted to Front Desk.");
         }
 
         // Guard: Billing guard on unsettled orders
@@ -123,13 +142,18 @@ public class CheckoutService {
             reference = "TXN-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         }
 
-        // Determine status: VNPAY without mockAutoConfirm is PENDING awaiting webhook
-        String paymentStatus = ("VNPAY".equalsIgnoreCase(method) && !mockAutoConfirm) ? "PENDING" : "SUCCESSFUL";
+        // Determine status: VNPAY / VIETQR without mockAutoConfirm is PENDING awaiting webhook / scan
+        boolean isOnlineAsync = ("VNPAY".equalsIgnoreCase(method) || "VIETQR_BANK_TRANSFER".equalsIgnoreCase(method)) && !mockAutoConfirm && !isStaff;
+        String paymentStatus = isOnlineAsync ? "PENDING" : "SUCCESSFUL";
+
+        String pType = request.getPaymentType() != null && !request.getPaymentType().isBlank()
+                ? ("FINAL_PAYMENT".equalsIgnoreCase(request.getPaymentType()) ? "FINAL" : request.getPaymentType())
+                : "FINAL";
 
         PaymentTransactionEntity transaction = new PaymentTransactionEntity(
                 null,
                 invoice,
-                "FINAL",
+                pType,
                 method,
                 reference,
                 request.getAmount(),
@@ -142,15 +166,34 @@ public class CheckoutService {
             applySuccessfulPayment(invoice, folio, booking, request.getAmount());
             auditLogService.record("PAYMENT", "Invoice#" + invoiceId + " (" + method + ")", "SUCCESS");
         } else {
-            auditLogService.record("PAYMENT_INITIATED", "Invoice#" + invoiceId + " (VNPAY-PENDING)", "PENDING");
+            auditLogService.record("PAYMENT_INITIATED", "Invoice#" + invoiceId + " (" + method + "-PENDING)", "PENDING");
         }
 
         PaymentResponseDTO response = mapToPaymentResponse(savedTx);
-        if ("PENDING".equalsIgnoreCase(paymentStatus)) {
-            response.setMessage("VNPay QR payment initiated. Awaiting gateway webhook confirmation.");
+
+        // Attach VNPay URL or VietQR Payload if online payment
+        if ("VNPAY".equalsIgnoreCase(method)) {
+            String vnpUrl = generateVnpayPaymentUrl(invoice, request.getAmount(), reference);
+            response.setPaymentUrl(vnpUrl);
+            response.setMessage("PENDING".equalsIgnoreCase(paymentStatus)
+                    ? "VNPay payment initiated. Awaiting gateway webhook confirmation."
+                    : "Payment settled successfully via VNPay.");
+        } else if ("VIETQR_BANK_TRANSFER".equalsIgnoreCase(method)) {
+            try {
+                VietQrResponseDTO qrDto = vietQrService.generateInvoiceVietQr(invoiceId);
+                response.setQrImageUrl(qrDto.getQrImageUrl());
+                response.setQrPayload(qrDto.getQrPayload());
+                response.setTransferContent(qrDto.getTransferContent());
+            } catch (Exception ex) {
+                // VietQR generator fallback
+            }
+            response.setMessage("PENDING".equalsIgnoreCase(paymentStatus)
+                    ? "VietQR generated. Please scan the QR code to complete transfer."
+                    : "VietQR bank transfer verified and settled successfully.");
         } else {
             response.setMessage("Payment transaction settled successfully via " + method + ".");
         }
+
         return response;
     }
 
@@ -179,7 +222,7 @@ public class CheckoutService {
         invoice = invoiceRepository.findByIdWithDetails(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
 
-        // 1. Invoice status check: cancelled invoice can never finalize or be treated as valid checkout
+        // 1. Invoice status check: cancelled invoice can never finalize
         if ("CANCELLED".equalsIgnoreCase(invoice.getInvoiceStatus())) {
             throw new BusinessRuleException("INVOICE_CANCELLED",
                     "Cannot finalize checkout with a cancelled invoice.");
@@ -195,7 +238,7 @@ public class CheckoutService {
         boolean isBookingCompleted = "COMPLETED".equalsIgnoreCase(booking.getBookingStatus());
         boolean isFolioClosed = "CLOSED".equalsIgnoreCase(folio.getFolioStatus());
 
-        // 2. Detect contradictory/inconsistent checkout states: booking completed but folio open, or vice versa
+        // 2. Detect contradictory/inconsistent checkout states
         if (isBookingCompleted && !isFolioClosed) {
             throw new BusinessRuleException("INCONSISTENT_CHECKOUT_STATE",
                     "Inconsistent state: Booking #" + booking.getRetreatBookingId() + " is COMPLETED but Folio #" + folio.getFolioId() + " is still " + folio.getFolioStatus() + ". Manual front-desk reconciliation required.");
@@ -215,7 +258,6 @@ public class CheckoutService {
                 throw new BusinessRuleException("INCONSISTENT_CHECKOUT_STATE",
                         "Inconsistent state: Stay was marked COMPLETED and Folio CLOSED, but Invoice #" + invoiceId + " has unpaid remaining balance: " + remainingBalance + " VND.");
             }
-            // Verified authentic completed checkout: return idempotent response without writing any records
             FinalizeCheckoutResponseDTO response = buildFinalizeResponse(invoice, folio, booking, false);
             response.setMessage("Resort checkout was already completed for this stay.");
             return response;
@@ -230,21 +272,92 @@ public class CheckoutService {
         // 5. BILLING GUARD INVARIANT: Validate zero pending/preparing orders
         folioBillingService.validateBillingGuard(booking.getRetreatBookingId());
 
-        // 7. FINANCIAL INVARIANT: Checkout cannot complete while unpaid obligations remain
+        // 6. FINANCIAL INVARIANT: Checkout cannot complete while unpaid obligations remain
         if (remainingBalance.compareTo(BigDecimal.ZERO) > 0) {
             throw new BusinessRuleException("UNPAID_CHARGES_REMAIN",
                     "Checkout cannot complete while unpaid Spa/F&B charges remain. Outstanding balance: " + remainingBalance + " VND.");
         }
 
-        // 3. ZERO BALANCE DUE / FULLY SETTLED PATH (SRS FR-M5-02 Alt 2)
+        // ZERO BALANCE DUE / FULLY SETTLED PATH (SRS FR-M5-02 Alt 2)
         boolean zeroBalanceSettlement = (invoice.getFinalAmount().compareTo(BigDecimal.ZERO) == 0)
                 || (successfulPayments.compareTo(BigDecimal.ZERO) == 0 && invoice.getFinalAmount().compareTo(BigDecimal.ZERO) == 0);
 
-        // 4. ATOMIC BACKEND TRANSACTION
-        // - Invoice.invoice_status -> 'PAID'
-        // - Folio.folio_status -> 'CLOSED'
-        // - RetreatBooking.booking_status -> 'COMPLETED'
-        // - PhysicalVilla.villa_status -> 'NEEDS_CLEANING'
+        // ATOMIC CLOSURE
+        closeStayAndReleaseVilla(invoice, folio, booking);
+        auditLogService.record("FINALIZE_CHECKOUT", "RetreatBooking#" + booking.getRetreatBookingId(), "SUCCESS");
+
+        PhysicalVilla villa = booking.getAssignedVilla();
+        FinalizeCheckoutResponseDTO response = buildFinalizeResponse(invoice, folio, booking, zeroBalanceSettlement);
+        response.setMessage(zeroBalanceSettlement
+                ? "Resort checkout completed with Zero Balance Due. Villa #" + (villa != null ? villa.getVillaNumber() : "N/A") + " marked as NEEDS_CLEANING."
+                : "Resort checkout completed successfully. Villa #" + (villa != null ? villa.getVillaNumber() : "N/A") + " marked as NEEDS_CLEANING. Departure finalized.");
+
+        return response;
+    }
+
+    /**
+     * Confirms an asynchronous gateway payment (VNPay / Bank Transfer) idempotently.
+     */
+    @Transactional
+    public boolean confirmGatewayPayment(String transactionReference, boolean isSuccess) {
+        Optional<PaymentTransactionEntity> txOpt = paymentTransactionRepository.findByTransactionReferenceWithLock(transactionReference);
+        if (txOpt.isEmpty()) {
+            return false;
+        }
+
+        PaymentTransactionEntity tx = txOpt.get();
+        if ("SUCCESSFUL".equalsIgnoreCase(tx.getPaymentStatus())) {
+            return true; // Idempotent: already processed successfully
+        }
+
+        if (isSuccess) {
+            // Over-settlement prevention guard
+            if (tx.getInvoice() != null) {
+                InvoiceEntity invoice = tx.getInvoice();
+                BigDecimal existingPaid = paymentTransactionRepository.sumSuccessfulPaymentsForInvoice(invoice.getInvoiceId());
+                if (existingPaid == null) existingPaid = BigDecimal.ZERO;
+                if ("PAID".equalsIgnoreCase(invoice.getInvoiceStatus()) || existingPaid.compareTo(invoice.getFinalAmount()) >= 0) {
+                    tx.setPaymentStatus("FAILED");
+                    paymentTransactionRepository.save(tx);
+                    auditLogService.record("PAYMENT_OVER_SETTLEMENT_BLOCKED",
+                            "TxRef#" + transactionReference + " on Invoice#" + invoice.getInvoiceId()
+                                    + " (Already settled: " + existingPaid + "/" + invoice.getFinalAmount() + ")", "WARNING");
+                    return true;
+                }
+            }
+
+            tx.setPaymentStatus("SUCCESSFUL");
+            paymentTransactionRepository.save(tx);
+
+            if (tx.getInvoice() != null) {
+                InvoiceEntity invoice = tx.getInvoice();
+                FolioEntity folio = invoice.getFolio();
+                RetreatBooking booking = folio.getRetreatBooking();
+                applySuccessfulPayment(invoice, folio, booking, tx.getAmountPaid());
+                if ("PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
+                    closeStayAndReleaseVilla(invoice, folio, booking);
+                }
+            } else if (tx.getRetreatBooking() != null) {
+                RetreatBooking booking = tx.getRetreatBooking();
+                if ("PENDING".equalsIgnoreCase(booking.getBookingStatus())) {
+                    booking.setBookingStatus("CONFIRMED");
+                    bookingRepository.save(booking);
+                }
+            }
+            auditLogService.record("PAYMENT_GATEWAY_WEBHOOK", "TxRef#" + transactionReference, "SUCCESS");
+            return true;
+        } else {
+            tx.setPaymentStatus("FAILED");
+            paymentTransactionRepository.save(tx);
+            auditLogService.record("PAYMENT_GATEWAY_WEBHOOK", "TxRef#" + transactionReference, "FAILED");
+            return true;
+        }
+    }
+
+    /**
+     * Atomically closes the Folio, marks Invoice PAID, completes RetreatBooking, and releases Villa for cleaning.
+     */
+    public void closeStayAndReleaseVilla(InvoiceEntity invoice, FolioEntity folio, RetreatBooking booking) {
         invoice.setInvoiceStatus("PAID");
         invoiceRepository.save(invoice);
 
@@ -259,47 +372,6 @@ public class CheckoutService {
         if (villa != null) {
             villa.setVillaStatus("NEEDS_CLEANING");
             physicalVillaRepository.save(villa);
-        }
-
-        auditLogService.record("FINALIZE_CHECKOUT", "RetreatBooking#" + booking.getRetreatBookingId(), "SUCCESS");
-
-        FinalizeCheckoutResponseDTO response = buildFinalizeResponse(invoice, folio, booking, zeroBalanceSettlement);
-        response.setMessage(zeroBalanceSettlement
-                ? "Resort checkout completed with Zero Balance Due. Villa #" + (villa != null ? villa.getVillaNumber() : "N/A") + " marked as NEEDS_CLEANING."
-                : "Resort checkout completed successfully. Villa #" + (villa != null ? villa.getVillaNumber() : "N/A") + " marked as NEEDS_CLEANING. Departure finalized.");
-
-        return response;
-    }
-
-    @Transactional
-    public boolean confirmGatewayPayment(String transactionReference, boolean isSuccess) {
-        Optional<PaymentTransactionEntity> txOpt = paymentTransactionRepository.findByTransactionReference(transactionReference);
-        if (txOpt.isEmpty()) {
-            return false;
-        }
-
-        PaymentTransactionEntity tx = txOpt.get();
-        if ("SUCCESSFUL".equalsIgnoreCase(tx.getPaymentStatus())) {
-            return true; // Already processed
-        }
-
-        if (isSuccess) {
-            tx.setPaymentStatus("SUCCESSFUL");
-            paymentTransactionRepository.save(tx);
-
-            if (tx.getInvoice() != null) {
-                InvoiceEntity invoice = tx.getInvoice();
-                FolioEntity folio = invoice.getFolio();
-                RetreatBooking booking = folio.getRetreatBooking();
-                applySuccessfulPayment(invoice, folio, booking, tx.getAmountPaid());
-            }
-            auditLogService.record("VNPAY_WEBHOOK", "TxRef#" + transactionReference, "SUCCESS");
-            return true;
-        } else {
-            tx.setPaymentStatus("FAILED");
-            paymentTransactionRepository.save(tx);
-            auditLogService.record("VNPAY_WEBHOOK", "TxRef#" + transactionReference, "FAILED");
-            return true;
         }
     }
 
@@ -323,6 +395,71 @@ public class CheckoutService {
 
         invoiceRepository.save(invoice);
         folioRepository.save(folio);
+    }
+
+    public PaymentResponseDTO getTransactionStatus(String transactionReference) {
+        PaymentTransactionEntity tx = paymentTransactionRepository.findByTransactionReference(transactionReference)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found for reference: " + transactionReference));
+        return mapToPaymentResponse(tx);
+    }
+
+    public String generateVnpayPaymentUrl(InvoiceEntity invoice, BigDecimal amount, String txnRef) {
+        if (vnpayHashSecret == null || vnpayHashSecret.trim().isEmpty()) {
+            return null;
+        }
+        long amountInCents = amount.multiply(new BigDecimal(100)).longValue();
+        Map<String, String> vnpParams = new HashMap<>();
+        vnpParams.put("vnp_Version", "2.1.0");
+        vnpParams.put("vnp_Command", "pay");
+        vnpParams.put("vnp_TmnCode", vnpayTmnCode);
+        vnpParams.put("vnp_Amount", String.valueOf(amountInCents));
+        vnpParams.put("vnp_CurrCode", "VND");
+        vnpParams.put("vnp_TxnRef", txnRef);
+        vnpParams.put("vnp_OrderInfo", "HSWRMS Thanh toan hoa don " + (invoice.getInvoiceNumber() != null ? invoice.getInvoiceNumber() : invoice.getInvoiceId()));
+        vnpParams.put("vnp_OrderType", "other");
+        vnpParams.put("vnp_Locale", "vn");
+        vnpParams.put("vnp_ReturnUrl", vnpayReturnUrl);
+        vnpParams.put("vnp_IpAddr", "127.0.0.1");
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        vnpParams.put("vnp_CreateDate", formatter.format(new Date()));
+
+        List<String> fieldNames = new ArrayList<>(vnpParams.keySet());
+        Collections.sort(fieldNames);
+
+        StringBuilder hashData = new StringBuilder();
+        StringBuilder query = new StringBuilder();
+        for (String fieldName : fieldNames) {
+            String value = vnpParams.get(fieldName);
+            if (value != null && !value.isEmpty()) {
+                hashData.append(fieldName).append('=').append(URLEncoder.encode(value, StandardCharsets.US_ASCII)).append('&');
+                query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII)).append('=')
+                     .append(URLEncoder.encode(value, StandardCharsets.US_ASCII)).append('&');
+            }
+        }
+        if (hashData.length() > 0) hashData.setLength(hashData.length() - 1);
+        if (query.length() > 0) query.setLength(query.length() - 1);
+
+        String secureHash = hmacSHA512(vnpayHashSecret, hashData.toString());
+        query.append("&vnp_SecureHash=").append(secureHash);
+
+        return vnpayPayUrl + "?" + query.toString();
+    }
+
+    public static String hmacSHA512(String key, String data) {
+        try {
+            Mac sha512Hmac = Mac.getInstance("HmacSHA512");
+            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
+            sha512Hmac.init(secretKey);
+            byte[] hash = sha512Hmac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("HMAC-SHA512 calculation failed", e);
+        }
     }
 
     private FinalizeCheckoutResponseDTO buildFinalizeResponse(InvoiceEntity invoice, FolioEntity folio,

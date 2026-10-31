@@ -1,7 +1,9 @@
 package com.heavenstay.hswrms.m5billing.repository;
 
 import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +18,10 @@ import java.util.Optional;
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransactionEntity, Long> {
 
     Optional<PaymentTransactionEntity> findByTransactionReference(String transactionReference);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT pt FROM PaymentTransactionEntity pt WHERE pt.transactionReference = :ref")
+    Optional<PaymentTransactionEntity> findByTransactionReferenceWithLock(@Param("ref") String ref);
 
     @Query("SELECT pt FROM PaymentTransactionEntity pt WHERE pt.invoice.invoiceId = :invoiceId")
     List<PaymentTransactionEntity> findByInvoiceId(@Param("invoiceId") Long invoiceId);

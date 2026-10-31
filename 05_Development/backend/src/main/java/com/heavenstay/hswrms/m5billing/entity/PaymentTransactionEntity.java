@@ -24,10 +24,10 @@ public class PaymentTransactionEntity {
     private InvoiceEntity invoice;
 
     @Column(name = "payment_type", nullable = false, length = 20)
-    private String paymentType; // DEPOSIT, FINAL
+    private String paymentType; // DEPOSIT, FINAL, FINAL_PAYMENT
 
     @Column(name = "payment_method", nullable = false, length = 30)
-    private String paymentMethod; // CASH, VNPAY, CARD
+    private String paymentMethod; // CASH, VNPAY, CARD, VIETQR_BANK_TRANSFER
 
     @Column(name = "transaction_reference", length = 150, unique = true)
     private String transactionReference;
@@ -65,14 +65,14 @@ public class PaymentTransactionEntity {
                 throw new BusinessRuleException("INVALID_PAYMENT_TARGET",
                         "DEPOSIT payment must target retreat_booking_id and not invoice_id.");
             }
-        } else if ("FINAL".equalsIgnoreCase(paymentType)) {
+        } else if ("FINAL".equalsIgnoreCase(paymentType) || "FINAL_PAYMENT".equalsIgnoreCase(paymentType)) {
             if (invoice == null || retreatBooking != null) {
                 throw new BusinessRuleException("INVALID_PAYMENT_TARGET",
-                        "FINAL payment must target invoice_id and not retreat_booking_id.");
+                        "FINAL / FINAL_PAYMENT payment must target invoice_id and not retreat_booking_id.");
             }
         } else {
             throw new BusinessRuleException("INVALID_PAYMENT_TYPE",
-                    "Payment type must be DEPOSIT or FINAL.");
+                    "Payment type must be DEPOSIT, FINAL, or FINAL_PAYMENT.");
         }
     }
 

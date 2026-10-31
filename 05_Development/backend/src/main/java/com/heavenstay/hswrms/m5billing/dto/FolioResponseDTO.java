@@ -18,12 +18,18 @@ public class FolioResponseDTO {
     private String folioStatus;
     private LocalDateTime closedAt;
 
-    // Invoice preview (same maths as the generated invoice: BF-05 / Data Rule 21)
+    // Invoice calculation & breakdown (FR-M5-01 / BF-05 / Data Rule 21)
+    private BigDecimal packagePrice = BigDecimal.ZERO;
     private BigDecimal depositPaid = BigDecimal.ZERO;
+    private BigDecimal depositAmount = BigDecimal.ZERO;
     private BigDecimal packageOutstanding = BigDecimal.ZERO;
+    private BigDecimal extraSpaCharges = BigDecimal.ZERO;
+    private BigDecimal extraFnbCharges = BigDecimal.ZERO;
+    private BigDecimal subtotal = BigDecimal.ZERO;
     private BigDecimal vatRate = BigDecimal.ZERO;
     private BigDecimal estimatedTax = BigDecimal.ZERO;
     private BigDecimal estimatedAmountDue = BigDecimal.ZERO;
+    private BigDecimal finalAmount = BigDecimal.ZERO;
     private Long invoiceId;
     private String invoiceStatus;
 
@@ -151,12 +157,30 @@ public class FolioResponseDTO {
         this.items = items;
     }
 
+    public BigDecimal getPackagePrice() {
+        return packagePrice;
+    }
+
+    public void setPackagePrice(BigDecimal packagePrice) {
+        this.packagePrice = packagePrice;
+    }
+
     public BigDecimal getDepositPaid() {
         return depositPaid;
     }
 
     public void setDepositPaid(BigDecimal depositPaid) {
         this.depositPaid = depositPaid;
+        this.depositAmount = depositPaid;
+    }
+
+    public BigDecimal getDepositAmount() {
+        return depositAmount;
+    }
+
+    public void setDepositAmount(BigDecimal depositAmount) {
+        this.depositAmount = depositAmount;
+        this.depositPaid = depositAmount;
     }
 
     public BigDecimal getPackageOutstanding() {
@@ -165,6 +189,30 @@ public class FolioResponseDTO {
 
     public void setPackageOutstanding(BigDecimal packageOutstanding) {
         this.packageOutstanding = packageOutstanding;
+    }
+
+    public BigDecimal getExtraSpaCharges() {
+        return extraSpaCharges;
+    }
+
+    public void setExtraSpaCharges(BigDecimal extraSpaCharges) {
+        this.extraSpaCharges = extraSpaCharges;
+    }
+
+    public BigDecimal getExtraFnbCharges() {
+        return extraFnbCharges;
+    }
+
+    public void setExtraFnbCharges(BigDecimal extraFnbCharges) {
+        this.extraFnbCharges = extraFnbCharges;
+    }
+
+    public BigDecimal getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(BigDecimal subtotal) {
+        this.subtotal = subtotal;
     }
 
     public BigDecimal getVatRate() {
@@ -189,6 +237,16 @@ public class FolioResponseDTO {
 
     public void setEstimatedAmountDue(BigDecimal estimatedAmountDue) {
         this.estimatedAmountDue = estimatedAmountDue;
+        this.finalAmount = estimatedAmountDue;
+    }
+
+    public BigDecimal getFinalAmount() {
+        return finalAmount;
+    }
+
+    public void setFinalAmount(BigDecimal finalAmount) {
+        this.finalAmount = finalAmount;
+        this.estimatedAmountDue = finalAmount;
     }
 
     public Long getInvoiceId() {

@@ -25,6 +25,8 @@ import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
 import com.heavenstay.hswrms.m5billing.controller.VnpayWebhookController;
+import com.heavenstay.hswrms.m5billing.controller.VNPaySimulationController;
+import com.heavenstay.hswrms.m5billing.config.VNPayConfig;
 import com.heavenstay.hswrms.m5billing.dto.*;
 import com.heavenstay.hswrms.m5billing.entity.FolioEntity;
 import com.heavenstay.hswrms.m5billing.entity.FolioItemEntity;
@@ -135,6 +137,9 @@ public class M5BillingAndCheckoutTests {
 
     @Autowired
     private com.heavenstay.hswrms.m3spa.port.BillingPort billingPort;
+
+    @Autowired
+    private VNPayConfig vnPayConfig;
 
     @Test
     @DisplayName("INVARIANT 3: Billing Guard blocks checkout & invoice when unsettled SCHEDULED spa session exists")
@@ -1472,6 +1477,147 @@ public class M5BillingAndCheckoutTests {
                 billingPort.recordExtraSpaCharge(99999999L, booking.getRetreatBookingId(), new BigDecimal("300000.00"), "Invalid Session"));
         assertFalse(folioItemRepository.existsBySourceSpaSessionId(99999999L));
     }
+
+    @Test
+    @DisplayName("VNPAY IPN GUARD: Amount mismatch returns RspCode 04 and leaves invoice unmodified")
+    @Transactional
+    public void testVnpayAmountMismatch() throws Exception {
+        InvoiceEntity invoice = invoiceRepository.findAll().get(0);
+        invoice.setInvoiceStatus("ISSUED");
+        invoice = invoiceRepository.save(invoice);
+
+        String txnRef = "HSW_TEST_MISMATCH_" + System.currentTimeMillis();
+        BigDecimal expectedAmount = new BigDecimal("500000.00");
+        PaymentTransactionEntity tx = new PaymentTransactionEntity(
+                null, invoice, "FINAL_PAYMENT", "VNPAY", txnRef, expectedAmount, "PENDING");
+        paymentTransactionRepository.save(tx);
+
+        // Tamper amount by adding 100,000 VND (* 100 for VNPay unit)
+        long tamperedVnpAmount = expectedAmount.add(new BigDecimal("100000.00")).multiply(BigDecimal.valueOf(100)).longValue();
+
+        Map<String, String> params = new HashMap<>();
+        params.put("vnp_Version", "2.1.0");
+        params.put("vnp_Command", "pay");
+        params.put("vnp_TmnCode", vnPayConfig.getTmnCode());
+        params.put("vnp_Amount", String.valueOf(tamperedVnpAmount));
+        params.put("vnp_CurrCode", "VND");
+        params.put("vnp_TxnRef", txnRef);
+        params.put("vnp_OrderInfo", "HSW Test Mismatch");
+        params.put("vnp_ResponseCode", "00");
+        params.put("vnp_TransactionStatus", "00");
+
+        String secureHash = generateVnpayHash(params, vnPayConfig.getHashSecret());
+        params.put("vnp_SecureHash", secureHash);
+
+        var requestBuilder = get("/api/v1/commerce/payment/webhook/vnpay");
+        params.forEach(requestBuilder::param);
+
+        mockMvc.perform(requestBuilder)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.RspCode").value("04"))
+                .andExpect(jsonPath("$.Message").value("Invalid Amount"));
+
+        PaymentTransactionEntity reloadedTx = paymentTransactionRepository.findByTransactionReference(txnRef).orElseThrow();
+        assertEquals("PENDING", reloadedTx.getPaymentStatus(), "Transaction must remain PENDING on amount mismatch");
+
+        InvoiceEntity reloadedInvoice = invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow();
+        assertEquals("ISSUED", reloadedInvoice.getInvoiceStatus(), "Invoice must not be settled on amount mismatch");
+    }
+
+    @Test
+    @DisplayName("VNPAY IPN GUARD: Cancelled callback (vnp_ResponseCode=24) marks tx FAILED while invoice remains ISSUED")
+    @Transactional
+    public void testVnpayCancelledCallback() throws Exception {
+        InvoiceEntity invoice = invoiceRepository.findAll().get(0);
+        invoice.setInvoiceStatus("ISSUED");
+        invoice = invoiceRepository.save(invoice);
+
+        String txnRef = "HSW_TEST_CANCEL_" + System.currentTimeMillis();
+        BigDecimal amount = new BigDecimal("750000.00");
+        PaymentTransactionEntity tx = new PaymentTransactionEntity(
+                null, invoice, "FINAL_PAYMENT", "VNPAY", txnRef, amount, "PENDING");
+        paymentTransactionRepository.save(tx);
+
+        long vnpAmount = amount.multiply(BigDecimal.valueOf(100)).longValue();
+
+        Map<String, String> params = new HashMap<>();
+        params.put("vnp_Version", "2.1.0");
+        params.put("vnp_Command", "pay");
+        params.put("vnp_TmnCode", vnPayConfig.getTmnCode());
+        params.put("vnp_Amount", String.valueOf(vnpAmount));
+        params.put("vnp_CurrCode", "VND");
+        params.put("vnp_TxnRef", txnRef);
+        params.put("vnp_OrderInfo", "HSW Test Cancelled");
+        params.put("vnp_ResponseCode", "24"); // Customer cancelled
+        params.put("vnp_TransactionStatus", "02");
+
+        String secureHash = generateVnpayHash(params, vnPayConfig.getHashSecret());
+        params.put("vnp_SecureHash", secureHash);
+
+        var requestBuilder = get("/api/v1/commerce/payment/webhook/vnpay");
+        params.forEach(requestBuilder::param);
+
+        mockMvc.perform(requestBuilder)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.RspCode").value("00"))
+                .andExpect(jsonPath("$.Message").value("Confirm Success"));
+
+        PaymentTransactionEntity reloadedTx = paymentTransactionRepository.findByTransactionReference(txnRef).orElseThrow();
+        assertEquals("FAILED", reloadedTx.getPaymentStatus(), "Transaction must transition to FAILED when customer cancelled");
+
+        InvoiceEntity reloadedInvoice = invoiceRepository.findById(invoice.getInvoiceId()).orElseThrow();
+        assertEquals("ISSUED", reloadedInvoice.getInvoiceStatus(), "Invoice must remain ISSUED (not settled)");
+    }
+
+    @Test
+    @DisplayName("SECURITY ISOLATION: Simulation endpoints are locked to dev/test profiles and forbidden to untrusted callers")
+    public void testSimulationDisabledInProduction() throws Exception {
+        // 1. Verify class-level @Profile isolation does NOT include production profiles
+        org.springframework.context.annotation.Profile profileAnn =
+                VNPaySimulationController.class.getAnnotation(org.springframework.context.annotation.Profile.class);
+        assertNotNull(profileAnn, "VNPaySimulationController must be annotated with @Profile");
+        List<String> allowedProfiles = Arrays.asList(profileAnn.value());
+        assertTrue(allowedProfiles.contains("dev") && allowedProfiles.contains("test"));
+        assertFalse(allowedProfiles.contains("prod") || allowedProfiles.contains("production"),
+                "Simulation controller must never be active in production profiles");
+
+        // 2. Verify class-level @PreAuthorize requires receptionist or admin
+        org.springframework.security.access.prepost.PreAuthorize preAuth =
+                VNPaySimulationController.class.getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class);
+        assertNotNull(preAuth, "VNPaySimulationController must have @PreAuthorize");
+        assertTrue(preAuth.value().contains("RECEPTIONIST") || preAuth.value().contains("ADMIN"));
+
+        // 3. Unauthenticated request to simulate endpoint must be rejected (HTTP 401 Unauthorized)
+        mockMvc.perform(post("/api/v1/payments/vnpay/simulate")
+                        .param("transactionRef", "HSW_TEST_SIM")
+                        .param("outcome", "SUCCESS"))
+                .andExpect(status().isUnauthorized());
+
+        // 4. Authenticated request with CUSTOMER role must be rejected (HTTP 403 Forbidden)
+        String customerToken = jwtTokenProvider.generateToken(7, "customer@heavenstay.resort", "Customer User", List.of("CUSTOMER"));
+        mockMvc.perform(post("/api/v1/payments/vnpay/simulate")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .param("transactionRef", "HSW_TEST_SIM")
+                        .param("outcome", "SUCCESS"))
+                .andExpect(status().isForbidden());
+    }
+
+    private String generateVnpayHash(Map<String, String> params, String secret) {
+        List<String> fieldNames = new ArrayList<>(params.keySet());
+        Collections.sort(fieldNames);
+        StringBuilder sb = new StringBuilder();
+        for (String fieldName : fieldNames) {
+            if ("vnp_SecureHash".equals(fieldName) || "vnp_SecureHashType".equals(fieldName)) {
+                continue;
+            }
+            String fieldValue = params.get(fieldName);
+            if (fieldValue != null && !fieldValue.isEmpty()) {
+                if (sb.length() > 0) sb.append('&');
+                sb.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII))
+                  .append('=')
+                  .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
+            }
+        }
+        return CheckoutService.hmacSHA512(secret, sb.toString());
+    }
 }
-
-

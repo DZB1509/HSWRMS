@@ -1,9 +1,13 @@
 package com.heavenstay.hswrms.m5billing.controller;
 
+import com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity;
+import com.heavenstay.hswrms.m5billing.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m5billing.service.CheckoutService;
+import com.heavenstay.hswrms.m5billing.service.VNPayService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,55 +24,107 @@ public class VnpayWebhookController {
     private static final Logger log = LoggerFactory.getLogger(VnpayWebhookController.class);
 
     private final CheckoutService checkoutService;
+    private final VNPayService vnPayService;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final String hashSecret;
+    private final String vietQrWebhookSecret;
 
     public VnpayWebhookController(CheckoutService checkoutService,
-                                  @Value("${app.vnpay.hash-secret:}") String hashSecret) {
+                                  VNPayService vnPayService,
+                                  PaymentTransactionRepository paymentTransactionRepository,
+                                  @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}") String hashSecret,
+                                  @Value("${app.vietqr.webhook-secret:SECRET_VIETQR_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}") String vietQrWebhookSecret) {
         this.checkoutService = checkoutService;
+        this.vnPayService = vnPayService;
+        this.paymentTransactionRepository = paymentTransactionRepository;
         this.hashSecret = hashSecret != null ? hashSecret.trim() : "";
+        this.vietQrWebhookSecret = vietQrWebhookSecret != null ? vietQrWebhookSecret.trim() : "";
     }
 
+    /**
+     * VNPay IPN Webhook callback endpoint.
+     * Verifies cryptographic HMAC-SHA512 checksum and performs idempotent settlement.
+     */
     @RequestMapping(value = "/vnpay", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<Map<String, String>> handleVnpayWebhook(@RequestParam Map<String, String> params) {
-        Map<String, String> response = new HashMap<>();
+        Map<String, String> response = vnPayService.processCallback(params);
+        if ("97".equals(response.get("RspCode"))) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
 
-        if (hashSecret.isEmpty()) {
-            log.warn("VNPay webhook received but hash-secret is empty. Rejecting (fail-closed).");
-            response.put("RspCode", "97");
-            response.put("Message", "Invalid Checksum (Configuration Missing)");
+    /**
+     * VietQR / Bank Transfer IPN Webhook endpoint.
+     * Receives bank transaction notifications (PayOS, SePay, Casso, or Open API).
+     */
+    @PostMapping(value = {"/vietqr", "/bank-transfer"})
+    public ResponseEntity<Map<String, Object>> handleVietQrWebhook(
+            @RequestHeader(value = "X-Webhook-Secret", required = false) String headerSecret,
+            @RequestBody Map<String, Object> payload) {
+        Map<String, Object> response = new HashMap<>();
+
+        // Mandatory webhook authentication
+        if (vietQrWebhookSecret == null || vietQrWebhookSecret.isBlank() || headerSecret == null || !vietQrWebhookSecret.equals(headerSecret)) {
+            response.put("success", false);
+            response.put("code", "97");
+            response.put("message", "Unauthorized: invalid or missing webhook secret");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        String txnRef = (String) payload.get("transactionReference");
+        String content = (String) payload.get("content");
+
+        if ((txnRef == null || txnRef.isBlank()) && content != null) {
+            // Attempt auto-discovery by parsing transfer content, e.g. "HSW INV <invoiceNumber>"
+            txnRef = resolveTxnRefFromContent(content);
+        }
+
+        if (txnRef == null || txnRef.isBlank()) {
+            response.put("success", false);
+            response.put("code", "01");
+            response.put("message", "Unable to match transaction reference from payload or content");
             return ResponseEntity.badRequest().body(response);
         }
 
-        String secureHash = params.get("vnp_SecureHash");
-        if (secureHash == null || secureHash.isBlank()) {
-            response.put("RspCode", "97");
-            response.put("Message", "Missing Secure Hash");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        // Verify checksum
-        boolean signatureValid = verifyChecksum(params, secureHash, hashSecret);
-        if (!signatureValid) {
-            log.warn("VNPay signature mismatch for txnRef: {}", params.get("vnp_TxnRef"));
-            response.put("RspCode", "97");
-            response.put("Message", "Invalid Checksum");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        String txnRef = params.get("vnp_TxnRef");
-        String responseCode = params.get("vnp_ResponseCode");
-        boolean isSuccess = "00".equals(responseCode);
+        String statusStr = (String) payload.getOrDefault("status", "SUCCESSFUL");
+        boolean isSuccess = "SUCCESSFUL".equalsIgnoreCase(statusStr) || "SUCCESS".equalsIgnoreCase(statusStr) || "00".equals(statusStr);
 
         boolean updated = checkoutService.confirmGatewayPayment(txnRef, isSuccess);
         if (!updated) {
-            response.put("RspCode", "01");
-            response.put("Message", "Order Not Found");
+            response.put("success", false);
+            response.put("code", "01");
+            response.put("message", "Transaction reference not found in database: " + txnRef);
             return ResponseEntity.ok(response);
         }
 
-        response.put("RspCode", "00");
-        response.put("Message", "Confirm Success");
+        response.put("success", true);
+        response.put("code", "00");
+        response.put("message", "VietQR transaction settled successfully");
+        response.put("transactionReference", txnRef);
         return ResponseEntity.ok(response);
+    }
+
+    private String resolveTxnRefFromContent(String content) {
+        String upper = content.toUpperCase();
+        if (upper.contains("HSW_INV_") || upper.contains("HSW_DEP_")) {
+            for (String part : upper.split("\\s+")) {
+                if (part.startsWith("HSW_INV_") || part.startsWith("HSW_DEP_")) {
+                    return part;
+                }
+            }
+        }
+        // Match by invoice number if formatted as "HSW INV <invNum>"
+        if (upper.contains("HSW INV")) {
+            String invNum = upper.substring(upper.indexOf("HSW INV") + 7).trim();
+            for (PaymentTransactionEntity tx : paymentTransactionRepository.findAll()) {
+                if (tx.getInvoice() != null && tx.getInvoice().getInvoiceNumber() != null
+                        && invNum.startsWith(tx.getInvoice().getInvoiceNumber().toUpperCase())) {
+                    return tx.getTransactionReference();
+                }
+            }
+        }
+        return null;
     }
 
     public static boolean verifyChecksum(Map<String, String> params, String secureHash, String secret) {

@@ -1090,11 +1090,19 @@ public class FolioBillingService {
 
         dto.setPackageOutstanding(calc.packageOutstanding());
 
+        dto.setPackagePrice(calc.packageCharges());
+        dto.setDepositPaid(calc.depositPaid());
+        dto.setDepositAmount(calc.depositPaid());
+        dto.setPackageOutstanding(calc.packageOutstanding());
+        dto.setExtraSpaCharges(calc.spaCharges());
+        dto.setExtraFnbCharges(calc.fnbCharges());
+        dto.setSubtotal(calc.subtotal());
         dto.setVatRate(calc.vatRate());
 
         dto.setEstimatedTax(calc.tax());
 
         dto.setEstimatedAmountDue(calc.finalAmount());
+        dto.setFinalAmount(calc.finalAmount());
 
 
 

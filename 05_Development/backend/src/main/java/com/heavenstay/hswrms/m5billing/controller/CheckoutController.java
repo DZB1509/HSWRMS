@@ -4,8 +4,10 @@ import com.heavenstay.hswrms.common.api.ApiResponse;
 import com.heavenstay.hswrms.m5billing.dto.FinalizeCheckoutResponseDTO;
 import com.heavenstay.hswrms.m5billing.dto.PaymentRequestDTO;
 import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.dto.VietQrResponseDTO;
 import com.heavenstay.hswrms.m5billing.security.BillingAccessEvaluator;
 import com.heavenstay.hswrms.m5billing.service.CheckoutService;
+import com.heavenstay.hswrms.m5billing.service.VietQrService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,10 +19,14 @@ import org.springframework.web.bind.annotation.*;
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
+    private final VietQrService vietQrService;
     private final BillingAccessEvaluator billingAccess;
 
-    public CheckoutController(CheckoutService checkoutService, BillingAccessEvaluator billingAccess) {
+    public CheckoutController(CheckoutService checkoutService,
+                              VietQrService vietQrService,
+                              BillingAccessEvaluator billingAccess) {
         this.checkoutService = checkoutService;
+        this.vietQrService = vietQrService;
         this.billingAccess = billingAccess;
     }
 
@@ -33,6 +39,27 @@ public class CheckoutController {
         boolean isStaff = billingAccess.isStaff(authentication);
         PaymentResponseDTO response = checkoutService.processPayment(invoiceId, request, isStaff);
         return ResponseEntity.ok(ApiResponse.ok("Payment processed successfully", response));
+    }
+
+    @GetMapping({"/invoices/{invoiceId}/vietqr", "/checkout/vietqr/{invoiceId}"})
+    public ResponseEntity<ApiResponse<VietQrResponseDTO>> getInvoiceVietQr(
+            @PathVariable("invoiceId") Long invoiceId) {
+        VietQrResponseDTO response = vietQrService.generateInvoiceVietQr(invoiceId);
+        return ResponseEntity.ok(ApiResponse.ok("Dynamic VietQR generated successfully", response));
+    }
+
+    @GetMapping({"/deposit/{bookingId}/vietqr", "/checkout/deposit/{bookingId}/vietqr"})
+    public ResponseEntity<ApiResponse<VietQrResponseDTO>> getDepositVietQr(
+            @PathVariable("bookingId") Integer bookingId) {
+        VietQrResponseDTO response = vietQrService.generateDepositVietQr(bookingId);
+        return ResponseEntity.ok(ApiResponse.ok("Dynamic VietQR for deposit generated successfully", response));
+    }
+
+    @GetMapping("/payments/transactions/{transactionReference}/status")
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> getTransactionStatus(
+            @PathVariable("transactionReference") String transactionReference) {
+        PaymentResponseDTO response = checkoutService.getTransactionStatus(transactionReference);
+        return ResponseEntity.ok(ApiResponse.ok("Payment transaction status retrieved", response));
     }
 
     @PostMapping("/invoices/{invoiceId}/finalize-checkout")
