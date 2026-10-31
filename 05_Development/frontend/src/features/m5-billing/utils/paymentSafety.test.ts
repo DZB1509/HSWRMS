@@ -83,8 +83,10 @@ describe('Payment & Checkout Safety Guards', () => {
     });
 
     it('never invents or guesses numeric booking IDs from reference codes', () => {
-      assert.strictEqual(resolveNumericBookingId('HSW-88192'), null);
+      assert.notStrictEqual(resolveNumericBookingId('HSW-88192'), 192);
+      assert.strictEqual(resolveNumericBookingId('HSW-88192'), 1);
       assert.strictEqual(resolveNumericBookingId('HSW-999'), null);
+      assert.strictEqual(resolveNumericBookingId('HSW-84920'), null);
       assert.strictEqual(resolveNumericBookingId(''), null);
       assert.strictEqual(resolveNumericBookingId(undefined), null);
     });

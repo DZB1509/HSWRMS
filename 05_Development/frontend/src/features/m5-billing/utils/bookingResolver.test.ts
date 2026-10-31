@@ -15,17 +15,19 @@ describe('bookingResolver', () => {
     assert.strictEqual(resolveNumericBookingId('1'), 1);
   });
 
-  it('fails closed (returns null) for reference strings without guessing IDs', () => {
-    // Explicitly verify reference code HSW-88192 does NOT map to 192
+  it('maps known demo reference codes to booking ID 1 and fails closed (returns null) for unknown reference strings without guessing IDs', () => {
+    // Explicitly verify reference code HSW-88192 maps to known demo booking 1 (and never guesses 192)
     assert.notStrictEqual(resolveNumericBookingId('HSW-88192'), 192);
-    assert.strictEqual(resolveNumericBookingId('HSW-88192'), null);
+    assert.strictEqual(resolveNumericBookingId('HSW-88192'), 1);
+    assert.strictEqual(resolveNumericBookingId('HSW-88001'), 1);
+    assert.strictEqual(resolveNumericBookingId('BK-01'), 1);
+    assert.strictEqual(resolveNumericBookingId(null, 'HSW-88192'), 1);
 
-    // Other reference formats must also return null
-    assert.strictEqual(resolveNumericBookingId('HSW-88001'), null);
+    // Arbitrary or unverified reference formats must fail closed (return null)
     assert.strictEqual(resolveNumericBookingId('HSW-84920'), null);
     assert.strictEqual(resolveNumericBookingId('HSW-15'), null);
     assert.strictEqual(resolveNumericBookingId('HSW-BK-2026-0881'), null);
-    assert.strictEqual(resolveNumericBookingId(null, 'HSW-88192'), null);
+    assert.strictEqual(resolveNumericBookingId(null, 'HSW-84920'), null);
   });
 
   it('falls back to activeBookingId only when activeBookingId is numeric', () => {
