@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -88,6 +89,11 @@ class AuthServiceSsoFacebookTest {
     private SsoRejectedException completeFacebookRegistration() {
         when(ssoTicketService.consume("ticket-fb-1", SsoTicketPurpose.REGISTRATION)).thenReturn(facebookTicket);
         when(userRepository.existsByEmail("jane@example.com")).thenReturn(false);
+        when(userRepository.findByIdForUpdate(anyInt())).thenAnswer(inv -> {
+            User u = new User();
+            u.setUserId(inv.getArgument(0));
+            return Optional.of(u);
+        });
         when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "enc_" + inv.getArgument(0));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
@@ -289,7 +295,7 @@ class AuthServiceSsoFacebookTest {
         User user = new User();
         user.setUserId(410);
         user.setEmail("jane@example.com");
-        when(userRepository.findById(410)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForUpdate(410)).thenReturn(Optional.of(user));
         when(passwordEncoder.encode(anyString())).thenReturn("enc_otp");
 
         authService.sendFacebookLinkOtp(410);
