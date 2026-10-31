@@ -6,6 +6,9 @@ import type {
   InvoiceResponse,
   PaymentRequest,
   PaymentResponse,
+  VietQrResponse,
+  VnpayPaymentUrlResponse,
+  InvoicePaymentStatus,
   FinalizeCheckoutResponse,
   CustomerReviewRequest,
   CustomerReviewResponse,
@@ -79,6 +82,50 @@ export const billingApi = {
   // Payments & Checkout
   payInvoice: async (invoiceId: number | string, data: PaymentRequest): Promise<PaymentResponse> => {
     const res = await apiClient.post<ApiResponse<PaymentResponse>>(`/billing/invoices/${invoiceId}/pay`, data);
+    return res.data;
+  },
+
+  getInvoiceVietQr: async (invoiceId: number | string): Promise<VietQrResponse> => {
+    const res = await apiClient.get<ApiResponse<VietQrResponse>>(`/billing/invoices/${invoiceId}/vietqr`);
+    return res.data;
+  },
+
+  getDepositVietQr: async (bookingId: number | string): Promise<VietQrResponse> => {
+    const res = await apiClient.get<ApiResponse<VietQrResponse>>(`/billing/deposit/${bookingId}/vietqr`);
+    return res.data;
+  },
+
+  createVnpayPaymentUrl: async (invoiceId: number, amount?: number, bookingId?: number): Promise<VnpayPaymentUrlResponse> => {
+    const cleanInvoiceId = (typeof invoiceId === 'number' && !isNaN(invoiceId) && invoiceId > 0) ? invoiceId : undefined;
+    const cleanBookingId = (typeof bookingId === 'number' && !isNaN(bookingId) && bookingId > 0) ? bookingId : undefined;
+    const cleanAmount = (typeof amount === 'number' && !isNaN(amount) && amount > 0) ? amount : undefined;
+
+    const res = await apiClient.post<ApiResponse<VnpayPaymentUrlResponse>>('/payments/vnpay/create-payment-url', {
+      invoiceId: cleanInvoiceId,
+      bookingId: cleanBookingId,
+      amount: cleanAmount,
+    });
+    return res.data;
+  },
+
+  getInvoicePaymentStatus: async (invoiceId: number): Promise<InvoicePaymentStatus> => {
+    const res = await apiClient.get<ApiResponse<InvoicePaymentStatus>>(`/invoices/${invoiceId}/payment-status`);
+    return res.data;
+  },
+
+  simulateVnpay: async (transactionRef: string, outcome: 'SUCCESS' | 'FAILED' | 'CANCELLED'): Promise<void> => {
+    await apiClient.post<ApiResponse<unknown>>(
+      `/payments/vnpay/simulate?transactionRef=${encodeURIComponent(transactionRef)}&outcome=${outcome}`
+    );
+  },
+
+  verifyVnpayReturn: async (queryString: string): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.get<ApiResponse<unknown>>(`/payments/vnpay/verify-return${queryString}`);
+    return { success: res.success, message: res.message };
+  },
+
+  getTransactionStatus: async (reference: string): Promise<PaymentResponse> => {
+    const res = await apiClient.get<ApiResponse<PaymentResponse>>(`/billing/payments/transactions/${reference}/status`);
     return res.data;
   },
 

@@ -57,8 +57,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       defaultHeading: 'Dịch Vụ Khách & Hóa Đơn',
       items: [
         { labelKey: 'operations.sidebar.manualExtraSpa', defaultLabel: 'Đặt Thêm Spa Thủ Công', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
-        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Hóa Đơn Tạm Tính (Folio)', path: '/receptionist/folio/HSW-88192', icon: Receipt },
-        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Thanh Toán Cuối & Check-out', path: '/receptionist/checkout/HSW-88192/payment', icon: UserCheck }
+        { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Hồ Sơ Chi Tiêu & Hóa Đơn', path: '/receptionist/folio/1', icon: Receipt },
+        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Thanh Toán Cuối & Check-out', path: '/receptionist/checkout/1/payment?invoiceId=2', icon: UserCheck }
       ]
     }
   ],

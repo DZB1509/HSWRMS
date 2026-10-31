@@ -561,6 +561,26 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [reviews]
   );
 
+  const resetFolioSettlement = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.SETTLED_BOOKINGS);
+      localStorage.removeItem(STORAGE_KEYS.SETTLED_SPA);
+      localStorage.removeItem(STORAGE_KEYS.SETTLED_DINING);
+      localStorage.removeItem(STORAGE_KEYS.CHECKOUT_RECORDS);
+      localStorage.removeItem(STORAGE_KEYS.REVIEWS);
+      localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
+    } catch {
+      // ignore
+    }
+    setSettledBookings({});
+    setSettledSpaSessions({});
+    setSettledDiningOrders({});
+    setCheckoutRecords({});
+    setReviews({});
+    setTransactions([]);
+    setLatestTransaction(null);
+  }, []);
+
   // ── Manager Analytical Aggregators (Rule 6: Privacy Safe) ──
   const getRevenueAnalytics = useCallback(() => {
     // 1. Retreat Revenue (confirmed bookings + deposits + settled balances)
@@ -696,6 +716,7 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         getRevenueAnalytics,
         getOccupancyAnalytics,
         getTherapistUtilizationAnalytics,
+        resetFolioSettlement,
       }}
     >
       {children}

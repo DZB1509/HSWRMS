@@ -69,6 +69,7 @@ import { MealOrderDetailPage } from '../../pages/fb/MealOrderDetailPage';
 import { FolioInvoicePage } from '../../pages/customer/FolioInvoicePage';
 import { FinalPaymentPage } from '../../pages/customer/FinalPaymentPage';
 import { FinalPaymentResultPage } from '../../pages/customer/FinalPaymentResultPage';
+import { VnpayReturnPage } from '../../pages/customer/VnpayReturnPage';
 import { CheckoutConfirmationPage } from '../../pages/customer/CheckoutConfirmationPage';
 import { ReviewRatingPage } from '../../pages/customer/ReviewRatingPage';
 import { RevenueDashboardPage } from '../../pages/manager/RevenueDashboardPage';
@@ -107,6 +108,7 @@ export const AppRouter: React.FC = () => {
           ==================================================================== */}
       <Route element={<AuthLayout />}>
         {/* Screen #5: Login */}
+        <Route path="/vnpay-return" element={<VnpayReturnPage />} />
         <Route path="/login" element={<LoginPage />} />
         {/* Screen #3: Register */}
         <Route path="/register" element={<RegisterPage />} />

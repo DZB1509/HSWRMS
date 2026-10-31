@@ -137,6 +137,7 @@ export interface FolioContextType {
     reviewData: Omit<CustomerStayReview, 'id' | 'submittedAt'>
   ) => { success: boolean; message: string };
   getReviewForBooking: (bookingRef: string) => CustomerStayReview | undefined;
+  resetFolioSettlement?: () => void;
   // Manager analytical aggregators
   getRevenueAnalytics: () => {
     totalRevenue: number;
