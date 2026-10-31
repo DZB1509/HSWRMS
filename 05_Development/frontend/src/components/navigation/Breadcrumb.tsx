@@ -77,7 +77,6 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
     if (s === 'master-data') return t('operations:sidebar.masterDataManagement', 'Quản Lý Dữ Liệu Gốc');
     if (s === 'security') return t('operations:sidebar.securityGovernance', 'Bảo Mật & Quản Trị Quy Định');
     if (s === 'parameters' || s === 'business-params') return t('operations:sidebar.businessParameters', 'Tham Số Nghiệp Vụ');
-    if (s === 'flags' || s === 'feature-flags') return t('operations:sidebar.featureFlags', 'Cờ Tính Năng');
     if (s === 'permissions') return t('operations:sidebar.permissionMatrix', 'Ma Trận Phân Quyền (RBAC)');
     if (s === 'delegation') return t('operations:sidebar.managerDelegation', 'Ủy Quyền Cho Quản Lý');
     if (s === 'audit-log') return t('operations:sidebar.sensitiveDataAuditLog', 'Nhật Ký Kiểm Toán Dữ Liệu Nhạy Cảm');

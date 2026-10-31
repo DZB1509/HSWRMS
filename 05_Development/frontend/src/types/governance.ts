@@ -21,21 +21,6 @@ export interface BusinessParameter {
   lastUpdatedBy: string;
 }
 
-export type FeatureFlagScope = 'global' | 'customer' | 'operations' | 'compliance';
-
-export interface FeatureFlag {
-  key: string;
-  nameKey: string;
-  defaultName: string;
-  descriptionKey: string;
-  defaultDescription: string;
-  enabled: boolean;
-  scope: FeatureFlagScope;
-  impactLevel: 'low' | 'medium' | 'high';
-  lastChangedAt: string;
-  lastChangedBy: string;
-}
-
 export type CapabilityKey =
   // Experience & Customer
   | 'book_retreat_package'
@@ -73,7 +58,6 @@ export type CapabilityKey =
   // Governance & Administration
   | 'export_police_residence_declaration'
   | 'configure_business_parameters'
-  | 'manage_feature_flags'
   | 'view_permission_matrix'
   | 'delegate_admin_rights'
   | 'view_sensitive_data_audit_log'

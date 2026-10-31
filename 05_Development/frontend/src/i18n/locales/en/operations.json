@@ -33,7 +33,6 @@
     "masterDataManagement": "Master Data Management",
     "securityGovernance": "Security & Governance",
     "businessParameters": "Business Parameters",
-    "featureFlags": "Feature Flags",
     "permissionMatrix": "Permission Matrix",
     "managerDelegation": "Manager Delegation",
     "sensitiveDataAuditLog": "Sensitive Data Audit Log",
@@ -42,7 +41,6 @@
     "admin": "Admin",
     "delegatedAdministration": "Delegated Administration",
     "businessParametersDelegated": "Business Parameters (Delegated)",
-    "featureFlagsDelegated": "Feature Flags (Delegated)",
     "bookingHistory": "Booking History"
   },
   "payment": {
@@ -599,8 +597,6 @@
     "bannerNotice": "Configuration parameters and permission rules in this prototype are managed in client state for operational demonstration. In production, authorization policies and immutable audit trails are enforced by server-side policy engines.",
     "kpiParams": "Business Parameters",
     "kpiParamsSub": "Operational thresholds configured",
-    "kpiFlags": "Feature Flags",
-    "kpiFlagsSub": "Optional modules currently active",
     "kpiDelegations": "Manager Delegations",
     "kpiDelegationsSub": "Active scoped delegations to Manager",
     "kpiAudit": "Audit Trail Activity",
@@ -608,7 +604,6 @@
     "navTitle": "Administrative Functions & Governance Modules",
     "screensScope": "Official Administrator Scope: Screens 10–12 & 50–54, 56",
     "descParams": "Configure cancellation windows, refund rates, deposit percentages, and dietary cutoff rules.",
-    "descFlags": "Safely toggle modular services including extra dining, extra spa, and statutory export routines.",
     "descMatrix": "Inspect cross-role capability assignments and enforce immutable privacy & least-privilege boundaries.",
     "descDelegation": "Grant strictly scoped, time-bounded administrative capabilities to Resort Operations Manager (Sarah Jenkins).",
     "descAudit": "Review chronological metadata of access events involving health, identity, and financial records.",
@@ -641,24 +636,6 @@
     "allowedRange": "Allowed Range",
     "lastUpdated": "Updated",
     "resetTitle": "Reset to system default"
-  },
-  "flags": {
-    "pageTitle": "Modular Feature Flags & Operational Toggles",
-    "systemScope": "System Modules",
-    "pageSubtitle": "Safely activate or deactivate supported customer self-service modules and automated regulatory compliance export routines.",
-    "safetyTitle": "Safety & Privacy Boundaries are Non-Toggleable",
-    "safetyDesc": "Core security invariants (such as RBAC data minimization, 2D therapist+room booking validations, and folio settlement checks) are essential architecture controls and are deliberately excluded from feature flag toggles.",
-    "modularTitle": "Configurable Functional Modules",
-    "activeCount": "Active",
-    "highImpact": "High Impact",
-    "scope": "Scope",
-    "lastModified": "Modified",
-    "immutableTitle": "Immutable Core Controls (Protected Architecture)",
-    "alwaysEnforced": "ALWAYS ENFORCED",
-    "confirmTitle": "Confirm High-Impact Feature Change",
-    "confirmPrompt": "You are about to change the operational state of:",
-    "confirmAuditNote": "This state transition will take effect immediately in the prototype and append a timestamped event to the Sensitive Governance Audit Log.",
-    "applyToggle": "Apply State Transition"
   },
   "matrix": {
     "pageTitle": "Role-Based Access Control (RBAC) Permission Matrix",
@@ -793,24 +770,6 @@
         "desc": "Scheduled local time for nightly generation of the temporary residence report required by Vietnam Law on Residence 2020."
       }
     },
-    "flags": {
-      "extraSpaOnline": {
-        "name": "Customer Online Extra Spa Booking",
-        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
-      },
-      "extraFnbOnline": {
-        "name": "Customer In-Villa Dining A-la-carte Ordering",
-        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
-      },
-      "residenceExport": {
-        "name": "Nightly Police Residence Declaration Batch",
-        "desc": "Automatically compiles daily customer check-in identification records at scheduled export time (statutory temporary residence declaration duty remains mandatory)."
-      },
-      "reviewInvites": {
-        "name": "Automated Post-Checkout Review Invitations",
-        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
-      }
-    },
     "permissions": {
       "categories": {
         "experience": "Customer Retreat Experience",
@@ -904,10 +863,6 @@
         "name": "Configure System Business Parameters",
         "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
       },
-      "manageFlags": {
-        "name": "Manage Modular Feature Flags",
-        "desc": "Toggle optional customer self-service modules and automated compliance routines."
-      },
       "viewMatrix": {
         "name": "Inspect System RBAC Permission Matrix",
         "desc": "Review cross-role functional capability allocations and security boundary definitions."
@@ -945,7 +900,6 @@
         "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
         "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
         "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
-        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
         "parameterUpdated": "Successfully updated business parameter value.",
         "permissionUpdated": "Successfully updated permission matrix capability.",
         "delegationCreated": "Successfully created limited delegation record for Manager.",

@@ -59,9 +59,7 @@ describe('M6 Admin Dashboard API & Partial Failure Resilience', () => {
         loadStaffAccounts: async () => []
       });
 
-      assert.equal(summary.featureFlags.status, 'unavailable');
       assert.equal(summary.systemOverviewWidgets.status, 'unavailable');
-      assert.match(summary.featureFlags.error || '', /chưa hỗ trợ/i);
       assert.match(summary.systemOverviewWidgets.error || '', /chưa được hợp nhất/i);
     });
   });

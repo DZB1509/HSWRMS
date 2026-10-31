@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Role } from '../types/auth';
 import type {
   BusinessParameter,
-  FeatureFlag,
   PermissionRule,
   AdminDelegation,
   AuditEvent,
@@ -11,7 +10,6 @@ import type {
 } from '../types/governance';
 import {
   INITIAL_BUSINESS_PARAMETERS,
-  INITIAL_FEATURE_FLAGS,
   PERMISSION_RULES,
   INITIAL_DELEGATIONS,
   INITIAL_AUDIT_EVENTS,
@@ -23,8 +21,6 @@ export interface GovernanceContextType {
   parameters: BusinessParameter[];
   updateParameter: (key: string, value: number | string) => { success: boolean; error?: string };
   resetParameterToDefault: (key: string) => void;
-  featureFlags: FeatureFlag[];
-  toggleFeatureFlag: (key: string) => void;
   permissionRules: PermissionRule[];
   updatePermissionGrant: (
     capability: CapabilityKey,
@@ -54,7 +50,6 @@ export interface GovernanceContextType {
 
 const STORAGE_KEYS = {
   PARAMETERS: 'hswrms_business_parameters',
-  FEATURE_FLAGS: 'hswrms_feature_flags',
   PERMISSION_RULES: 'hswrms_permission_rules',
   DELEGATIONS: 'hswrms_admin_delegations',
   AUDIT_EVENTS: 'hswrms_audit_events',
@@ -89,9 +84,6 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [parameters, setParametersState] = useState<BusinessParameter[]>(() =>
     getStoredJson(STORAGE_KEYS.PARAMETERS, INITIAL_BUSINESS_PARAMETERS)
   );
-  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlag[]>(() =>
-    getStoredJson(STORAGE_KEYS.FEATURE_FLAGS, INITIAL_FEATURE_FLAGS)
-  );
   const [permissionRules, setPermissionRulesState] = useState<PermissionRule[]>(() =>
     getStoredJson(STORAGE_KEYS.PERMISSION_RULES, PERMISSION_RULES)
   );
@@ -114,14 +106,6 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  const setFeatureFlags = (updater: React.SetStateAction<FeatureFlag[]>) => {
-    setFeatureFlagsState((prev) => {
-      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
-      persistJson(STORAGE_KEYS.FEATURE_FLAGS, next);
-      window.dispatchEvent(new CustomEvent('hswrms_governance_updated', { detail: { type: 'flags' } }));
-      return next;
-    });
-  };
 
   const setPermissionRules = (updater: React.SetStateAction<PermissionRule[]>) => {
     setPermissionRulesState((prev) => {
@@ -153,7 +137,6 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const refreshGovernanceData = () => {
     setParametersState(getStoredJson(STORAGE_KEYS.PARAMETERS, INITIAL_BUSINESS_PARAMETERS));
-    setFeatureFlagsState(getStoredJson(STORAGE_KEYS.FEATURE_FLAGS, INITIAL_FEATURE_FLAGS));
     setPermissionRulesState(getStoredJson(STORAGE_KEYS.PERMISSION_RULES, PERMISSION_RULES));
     setDelegationsState(getStoredJson(STORAGE_KEYS.DELEGATIONS, INITIAL_DELEGATIONS));
     setAuditEventsState(getStoredJson(STORAGE_KEYS.AUDIT_EVENTS, INITIAL_AUDIT_EVENTS));
@@ -170,8 +153,6 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           setDelegationsState(JSON.parse(e.newValue));
         } else if (e.key === STORAGE_KEYS.AUDIT_EVENTS) {
           setAuditEventsState(JSON.parse(e.newValue));
-        } else if (e.key === STORAGE_KEYS.FEATURE_FLAGS) {
-          setFeatureFlagsState(JSON.parse(e.newValue));
         } else if (e.key === STORAGE_KEYS.PERMISSION_RULES) {
           setPermissionRulesState(JSON.parse(e.newValue));
         }
@@ -280,42 +261,6 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const target = parameters.find((p) => p.key === key);
     if (!target) return;
     updateParameter(key, target.defaultValue);
-  };
-
-  // Toggle feature flag
-  const toggleFeatureFlag = (key: string) => {
-    const flag = featureFlags.find((f) => f.key === key);
-    if (!flag) return;
-
-    const nextState = !flag.enabled;
-    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    const updater = currentUser?.name ? `${currentUser.name} (${role || 'Admin'})` : 'Alexander Wright (Admin)';
-
-    setFeatureFlags((prev) =>
-      prev.map((f) =>
-        f.key === key
-          ? {
-              ...f,
-              enabled: nextState,
-              lastChangedAt: nowStr,
-              lastChangedBy: updater
-            }
-          : f
-      )
-    );
-
-    // Append metadata audit event
-    logAuditEvent({
-      actorId: currentUser?.id || 'usr-adm-01',
-      actorName: currentUser?.name || 'Alexander Wright',
-      actorRole: role || 'admin',
-      action: 'TOGGLE',
-      dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: key,
-      result: 'SUCCESS',
-      detailsKey: 'governance.audit.details.featureFlagToggled',
-      detailsFallback: `Toggled feature flag ${flag.defaultName} to ${nextState ? 'ENABLED' : 'DISABLED'}`
-    });
   };
 
   // Update permission matrix grant (constrained editing)
@@ -530,8 +475,6 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         parameters,
         updateParameter,
         resetParameterToDefault,
-        featureFlags,
-        toggleFeatureFlag,
         permissionRules,
         updatePermissionGrant,
         delegations,
