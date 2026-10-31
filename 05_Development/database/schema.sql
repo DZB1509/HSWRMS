@@ -1382,6 +1382,18 @@ CREATE TABLE dbo.SpaSession (
 
     customer_note       NVARCHAR(1000) NULL,
 
+    reminder_status     VARCHAR(20) NULL,
+
+    reminder_claimed_at DATETIME2(0) NULL,
+
+    reminder_claim_expires_at DATETIME2(0) NULL,
+
+    reminder_claim_token VARCHAR(64) NULL,
+
+    reminder_sent_at    DATETIME2(0) NULL,
+
+    external_calendar_event_id VARCHAR(255) NULL,
+
     created_at          DATETIME2(0) NOT NULL
 
         CONSTRAINT DF_SpaSession_CreatedAt DEFAULT (SYSUTCDATETIME()),

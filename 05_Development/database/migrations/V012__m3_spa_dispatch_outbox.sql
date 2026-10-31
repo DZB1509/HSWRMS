@@ -11,7 +11,7 @@ BEGIN
     CREATE TABLE dbo.SpaDispatchOutbox (
         outbox_id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SpaDispatchOutbox PRIMARY KEY,
         history_id             BIGINT NULL,
-        session_id             BIGINT NOT NULL,
+        session_id             INT NOT NULL,
         channel                VARCHAR(30) NOT NULL,
         status                 VARCHAR(30) NOT NULL CONSTRAINT DF_SpaDispatchOutbox_status DEFAULT ('PENDING'),
         retry_count            INT NOT NULL CONSTRAINT DF_SpaDispatchOutbox_retry_count DEFAULT (0),

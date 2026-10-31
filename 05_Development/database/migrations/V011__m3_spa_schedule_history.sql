@@ -9,7 +9,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE dbo.SpaScheduleHistory (
         history_id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SpaScheduleHistory PRIMARY KEY,
-        session_id              BIGINT NOT NULL,
+        session_id              INT NOT NULL,
         actor_user_id           INT NULL,
         actor_role              VARCHAR(30) NULL,
         change_type             VARCHAR(50) NOT NULL,
