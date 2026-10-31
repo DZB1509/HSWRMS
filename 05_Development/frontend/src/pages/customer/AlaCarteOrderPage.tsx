@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
+import { useAuth } from '../../app/providers/AuthProvider';
 import type { DietaryMenuItem, LocalizedString } from '../../types/dining';
 import { AlertCircle, Minus, Plus, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -16,10 +17,10 @@ interface CartItem {
   notes: string;
 }
 
-export const AlaCarteOrderPage: React.FC = () => {
+const AlaCarteOrderPageForIdentity: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const { menuItems, getDietaryProjection, createAlaCarteOrder } = useDining();
-  const { activeBooking } = useCustomer();
+  const { activeBooking, profile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -29,11 +30,13 @@ export const AlaCarteOrderPage: React.FC = () => {
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
 
-  const customerId = 'usr-cust-01';
+  const customerId = profile?.id ?? '';
   const dietaryInfo = getDietaryProjection(customerId);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('IN_VILLA');
   const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState('');
@@ -77,8 +80,9 @@ export const AlaCarteOrderPage: React.FC = () => {
     );
   };
 
-  const handleSubmit = () => {
-    if (!activeBooking || cart.length === 0) return;
+  const handleSubmit = async () => {
+    if (!activeBooking || cart.length === 0 || isSubmitting) return;
+    setSubmitError(null); setIsSubmitting(true);
 
     const locationLabel = diningLocation === 'IN_VILLA'
       ? `In-Villa (${activeBooking.villaNumber || 'Villa'})`
@@ -91,7 +95,8 @@ export const AlaCarteOrderPage: React.FC = () => {
       activeBooking.villaNumber
     );
 
-    createAlaCarteOrder({
+    try {
+    await createAlaCarteOrder({
       bookingId: activeBooking.id,
       customerId,
       location: locationLabel,
@@ -107,6 +112,9 @@ export const AlaCarteOrderPage: React.FC = () => {
 
     setOrderSuccess(true);
     setCart([]);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'The server did not confirm the order.');
+    } finally { setIsSubmitting(false); }
   };
 
 
@@ -419,14 +427,21 @@ export const AlaCarteOrderPage: React.FC = () => {
                 className="hsw-btn hsw-btn-primary"
                 style={{ width: '100%', marginTop: 'var(--space-3)' }}
                 onClick={handleSubmit}
+                disabled={isSubmitting}
                 id="btn-submit-alacarte-order"
               >
                 {t('dining.extra.submit', 'Confirm & Send Order')}
               </button>
+              {submitError && <p role="alert" style={{ color: 'var(--danger)' }}>{submitError}</p>}
             </div>
           )}
         </aside>
       </div>
     </div>
   );
+};
+
+export const AlaCarteOrderPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  return <AlaCarteOrderPageForIdentity key={currentUser?.id ?? 'anonymous'} />;
 };

@@ -5,7 +5,8 @@ import { OperationalPageHeader } from '../../components/operations/OperationalPa
 import { OperationalPagination } from '../../components/operations/OperationalPagination';
 import { useNavigate } from 'react-router-dom';
 import { Search, AlertTriangle, Sparkles, ChevronRight, RotateCcw, ChevronDown, ChevronUp, UtensilsCrossed, CheckCircle, Boxes } from 'lucide-react';
-import { MENU_ITEM_RECIPES } from '../../data/mockDining';
+import { fnbApi } from '../../features/m4-fnb/api/fnbApi';
+import type { RecipeLineResponse } from '../../features/m4-fnb/types/fnbDto';
 import { AmanoiServiceLocationBadge } from '../../components/dining/ServiceLocationBadge';
 import { parseDiningNotes, getLocalDateString } from '../../utils/diningServiceHelper';
 
@@ -27,6 +28,7 @@ export const MealPrepListPage: React.FC = () => {
     lastInventorySyncTime,
     inventorySyncStatus,
     refreshMenu,
+    error,
   } = useDining();
   const navigate = useNavigate();
 
@@ -45,6 +47,8 @@ export const MealPrepListPage: React.FC = () => {
   const [ingredientSearch, setIngredientSearch] = useState('');
 
   const [expandedRowRecipeId, setExpandedRowRecipeId] = useState<string | null>(null);
+  const [recipesByMenuItem, setRecipesByMenuItem] = useState<Record<string, RecipeLineResponse[]>>({});
+  const [recipeError, setRecipeError] = useState<string | null>(null);
 
   const formatDietaryNote = (note: string) => {
     const normalized = note.toLowerCase().replace(/[\s-]+/g, '_');
@@ -116,12 +120,7 @@ export const MealPrepListPage: React.FC = () => {
         const matchesDishName =
           (dish.name.vi && dish.name.vi.toLowerCase().includes(q)) ||
           (dish.name.en && dish.name.en.toLowerCase().includes(q));
-        const recipes = MENU_ITEM_RECIPES[line.menuItemId] || [];
-        const matchesIngredient = recipes.some((r) =>
-          (r.name.vi && r.name.vi.toLowerCase().includes(q)) ||
-          (r.name.en && r.name.en.toLowerCase().includes(q))
-        );
-        return matchesDishName || matchesIngredient;
+        return matchesDishName;
       });
 
     return matchesType && matchesStatus && matchesLocation && matchesDietary && matchesSearch;
@@ -140,7 +139,7 @@ export const MealPrepListPage: React.FC = () => {
     type: 'retreat_meal' | 'a_la_carte',
     newStatus: 'pending' | 'preparing' | 'ready' | 'delivered'
   ) => {
-    updateFulfillmentStatus(id, type, newStatus);
+    void updateFulfillmentStatus(id, type, newStatus).catch(() => undefined);
   };
 
   const handleClearFilters = () => {
@@ -282,6 +281,8 @@ export const MealPrepListPage: React.FC = () => {
 
   return (
     <div className="hsw-page-container" id="screen-39-meal-prep-list">
+      {error && <div role="alert" className="hsw-gov-banner">{error}</div>}
+      {recipeError && <div role="alert" className="hsw-gov-banner">{recipeError}</div>}
       <OperationalPageHeader
         title={t('fnb.prepList.title', 'Daily Meal Prep Queue')}
         subtitle={t('fnb.prepList.subtitle', 'Manage kitchen fulfillment schedule and dietary adaptations for resort customers.')}
@@ -785,7 +786,8 @@ export const MealPrepListPage: React.FC = () => {
                     <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '13px' }}>
                       {item.items.map((lineItem, idx) => {
                         const menuItem = menuItems.find((m) => m.id === lineItem.menuItemId || String(m.backendId) === String(lineItem.menuItemId) || (m.backendId && String(m.backendId) === lineItem.menuItemId.replace(/\D/g, '')));
-                        const recipes = MENU_ITEM_RECIPES[lineItem.menuItemId] || (menuItem ? MENU_ITEM_RECIPES[menuItem.id] : []) || [];
+                        const backendMenuItemId = menuItem?.backendId;
+                        const recipes = recipesByMenuItem[lineItem.menuItemId] || [];
                         const isExpanded = expandedRowRecipeId === `${item.id}-${lineItem.menuItemId}`;
 
                         return (
@@ -797,14 +799,22 @@ export const MealPrepListPage: React.FC = () => {
                                   renderInventoryBadge(lineItem.inventoryStatus, lineItem.inventoryMessage)
                                 )}
                               </span>
-                              {recipes.length > 0 && (
+                              {backendMenuItemId && (
                                 <button
                                   type="button"
                                   className="hsw-btn hsw-btn-tertiary hsw-btn-sm"
                                   style={{ height: '18px', padding: '0 5px', fontSize: '10px', gap: '2px' }}
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
                                     setExpandedRowRecipeId(isExpanded ? null : `${item.id}-${lineItem.menuItemId}`);
+                                    if (!isExpanded && !recipesByMenuItem[lineItem.menuItemId]) {
+                                      try {
+                                        const recipe = await fnbApi.getRecipe(backendMenuItemId);
+                                        setRecipesByMenuItem(prev => ({ ...prev, [lineItem.menuItemId]: recipe }));
+                                      } catch {
+                                        setRecipeError('Recipe details are unavailable from the server.');
+                                      }
+                                    }
                                   }}
                                   title="Xem định lượng nguyên liệu món này"
                                 >
@@ -828,13 +838,12 @@ export const MealPrepListPage: React.FC = () => {
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <div style={{ fontWeight: 600, color: 'var(--accent-forest)', marginBottom: '3px' }}>
-                                  Định lượng {lineItem.quantity} suất (và quy đổi 100 suất):
+                                  Ingredient quantities for {lineItem.quantity} servings:
                                 </div>
                                 <ul style={{ margin: 0, paddingLeft: '12px', lineHeight: 1.35 }}>
                                   {recipes.map((r) => (
                                     <li key={r.ingredientId}>
-                                      {localize(r.name)}: <strong>{r.quantityPerServing * lineItem.quantity} {r.unit}</strong>{' '}
-                                      <span style={{ color: 'var(--text-tertiary)' }}>(100 suất: {(r.quantityPerServing * 100).toLocaleString()} {r.unit})</span>
+                                      {r.ingredientName}: <strong>{r.requiredQuantity * lineItem.quantity} {r.unitOfMeasure}</strong>
                                     </li>
                                   ))}
                                 </ul>

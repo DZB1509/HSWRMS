@@ -6,6 +6,7 @@ import { isItemDietaryCompatible } from '../../utils/dietaryFilter';
 import type { MealPeriod, LocalizedString } from '../../types/dining';
 import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
@@ -15,10 +16,10 @@ import {
   type DiningServiceLocation,
 } from '../../utils/diningServiceHelper';
 
-export const DailyMealSelectionPage: React.FC = () => {
+const DailyMealSelectionPageForIdentity: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
-  const { menuItems, getDietaryProjection, saveMealSelection, getMealSelection } = useDining();
-  const { activeBooking, wellnessProfile } = useCustomer();
+  const { menuItems, saveMealSelection, getMealSelection } = useDining();
+  const { activeBooking, wellnessProfile, profile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -28,15 +29,13 @@ export const DailyMealSelectionPage: React.FC = () => {
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
 
-  const customerId = 'usr-cust-01';
-  const dietaryInfo = getDietaryProjection(customerId);
-
   const dietaryRestrictions = wellnessProfile?.dietaryProfile?.dietaryRestrictions?.length
     ? wellnessProfile.dietaryProfile.dietaryRestrictions
-    : dietaryInfo.dietaryRestrictions;
+    : [];
   const allergies = wellnessProfile?.dietaryProfile?.allergies?.length
     ? wellnessProfile.dietaryProfile.allergies
-    : dietaryInfo.allergies;
+    : [];
+  const customerId = profile?.id ?? '';
 
   const [activeDate, setActiveDate] = useState<string>('');
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
@@ -45,6 +44,8 @@ export const DailyMealSelectionPage: React.FC = () => {
   const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
 
   const todayStr = React.useMemo(() => {
@@ -135,8 +136,9 @@ export const DailyMealSelectionPage: React.FC = () => {
 
   const selectedEntries = Object.entries(selectedItems).filter(([_, qty]) => qty > 0);
 
-  const handleSave = () => {
-    if (!activeBooking || selectedEntries.length === 0) return;
+  const handleSave = async () => {
+    if (!activeBooking || selectedEntries.length === 0 || isSaving) return;
+    setSaveError(null); setIsSaving(true);
     const finalNotes = buildAmanoiDiningNotes(
       diningLocation,
       selectedWellnessTags,
@@ -152,7 +154,8 @@ export const DailyMealSelectionPage: React.FC = () => {
     const menuItemIds = selectedEntries.map(([mId]) => mId);
     const totalPortions = selectedEntries.reduce((sum, [_, qty]) => sum + qty, 0);
 
-    saveMealSelection({
+    try {
+    await saveMealSelection({
       bookingId: activeBooking.id,
       customerId,
       date: activeDate,
@@ -164,6 +167,9 @@ export const DailyMealSelectionPage: React.FC = () => {
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3500);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'The server did not confirm the meal selection.');
+    } finally { setIsSaving(false); }
   };
 
 
@@ -669,7 +675,7 @@ export const DailyMealSelectionPage: React.FC = () => {
                   <button
                     type="button"
                     className="hsw-btn hsw-btn-primary"
-                    disabled={selectedEntries.length === 0 || activeDate < todayStr}
+                    disabled={selectedEntries.length === 0 || activeDate < todayStr || isSaving}
                     onClick={handleSave}
                     id="btn-save-meal-selection"
                   >
@@ -702,6 +708,7 @@ export const DailyMealSelectionPage: React.FC = () => {
                       {t('dining.select.saveSuccess', 'Meal selection saved successfully for this period.')}
                     </span>
                   )}
+                  {saveError && <span role="alert" style={{ color: 'var(--danger)' }}>{saveError}</span>}
                 </div>
               </div>
             </>
@@ -710,4 +717,9 @@ export const DailyMealSelectionPage: React.FC = () => {
       </div>
     </div>
   );
+};
+
+export const DailyMealSelectionPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  return <DailyMealSelectionPageForIdentity key={currentUser?.id ?? 'anonymous'} />;
 };

@@ -117,18 +117,16 @@ export interface DiningContextType {
   
   // Retreat Meals
   mealSelections: DailyMealSelection[];
-  saveMealSelection: (selection: Omit<DailyMealSelection, 'id' | 'status'>) => void;
+  saveMealSelection: (selection: Omit<DailyMealSelection, 'id' | 'status'>) => Promise<void>;
   getMealSelection: (bookingId: string, date: string, period: MealPeriod) => DailyMealSelection | undefined;
   
   // A-la-carte
   alaCarteOrders: AlaCarteOrder[];
-  createAlaCarteOrder: (order: Omit<AlaCarteOrder, 'id' | 'createdAt' | 'status' | 'chargeType' | 'folioPostingStatus'>) => AlaCarteOrder;
+  createAlaCarteOrder: (order: Omit<AlaCarteOrder, 'id' | 'createdAt' | 'status' | 'chargeType' | 'folioPostingStatus'>) => Promise<AlaCarteOrder>;
   
   // Operational Methods
   getDietaryProjection: (customerId: string) => FnbDietaryProjection;
-  updateMealSelectionStatus: (id: string, status: FnbFulfillmentStatus) => void;
-  updateAlaCarteOrderStatus: (id: string, status: FnbFulfillmentStatus) => void;
-  updateFulfillmentStatus: (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => void;
+  updateFulfillmentStatus: (id: string, type: 'retreat_meal' | 'a_la_carte', status: FnbFulfillmentStatus) => Promise<void>;
   getDailyPrepList: (date: string) => MealPrepEntry[];
   getActiveKitchenQueue: (date?: string) => MealPrepEntry[];
   getOrderById?: (id: string) => MealPrepEntry | undefined;
