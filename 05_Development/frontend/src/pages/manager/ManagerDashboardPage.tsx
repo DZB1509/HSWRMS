@@ -74,7 +74,6 @@ export const ManagerDashboardPage: React.FC = () => {
               {activeManagerDelegation.capabilities.map((c) => {
                 const rule = permissionRules.find((r) => r.capability === c);
                 const linkPath = c === 'configure_business_parameters' ? '/admin/business-params'
-                  : c === 'manage_feature_flags' ? '/admin/feature-flags'
                   : '/manager/system-overview';
 
                 return (

@@ -39,7 +39,6 @@
     "masterDataManagement": "Quản Lý Dữ Liệu Gốc",
     "securityGovernance": "Bảo Mật & Phân Quyền",
     "businessParameters": "Tham Số Nghiệp Vụ",
-    "featureFlags": "Cờ Tính Năng",
     "permissionMatrix": "Ma Trận Phân Quyền",
     "managerDelegation": "Ủy Quyền Quản Lý",
     "sensitiveDataAuditLog": "Nhật Ký Truy Cập Dữ Liệu Nhạy Cảm",
@@ -48,7 +47,6 @@
     "admin": "Quản Trị",
     "delegatedAdministration": "Ủy Quyền Hành Chính",
     "businessParametersDelegated": "Tham Số Vận Hành (Được Ủy Quyền)",
-    "featureFlagsDelegated": "Cờ Tính Năng (Được Ủy Quyền)",
     "bookingHistory": "Lịch sử đặt phòng"
   },
   "payment": {
@@ -599,8 +597,6 @@
     "bannerNotice": "Các tham số cấu hình và quy tắc phân quyền trong bản thử nghiệm này được quản lý ở trạng thái giao diện nhằm phục vụ đánh giá quy trình. Trong môi trường thực tế, chính sách xác thực và lưu vết bất biến được thực thi bởi máy chủ ứng dụng.",
     "kpiParams": "Tham Số Vận Hành",
     "kpiParamsSub": "Định mức vận hành đang áp dụng",
-    "kpiFlags": "Cờ Tính Năng",
-    "kpiFlagsSub": "Mô-đun tùy chọn đang kích hoạt",
     "kpiDelegations": "Ủy Quyền Quản Lý",
     "kpiDelegationsSub": "Ủy quyền giới hạn đang hiệu lực cho Quản lý",
     "kpiAudit": "Nhật Ký Kiểm Toán",
@@ -608,7 +604,6 @@
     "navTitle": "Chức Năng Quản Trị & Mô-đun Điều Hành",
     "screensScope": "Phạm vi quản trị viên chính thức: Màn hình 10–12 & 50–54, 56",
     "descParams": "Cấu hình hạn chót hủy phòng, tỷ lệ hoàn cọc, tỷ lệ đặt cọc bắt buộc và thời hạn chọn thực đơn.",
-    "descFlags": "Bật/tắt an toàn các mô-đun tùy chọn như gọi món tại biệt thự, đặt thêm spa trực tuyến và kết xuất khai báo.",
     "descMatrix": "Kiểm tra phân bổ quyền hạn theo vai trò và thực thi các giới hạn bảo mật bất biến theo chuẩn tối thiểu hóa dữ liệu.",
     "descDelegation": "Cấp phát quyền hạn vận hành giới hạn, có thời hạn cho Quản lý Khu nghỉ dưỡng (Sarah Jenkins).",
     "descAudit": "Xem xét siêu dữ liệu ghi nhận lượt truy cập hồ sơ sức khỏe, thông tin cư trú và giao dịch tài chính.",
@@ -641,24 +636,6 @@
     "allowedRange": "Phạm vi cho phép",
     "lastUpdated": "Cập nhật lúc",
     "resetTitle": "Khôi phục về giá trị mặc định"
-  },
-  "flags": {
-    "pageTitle": "Cờ Tính Năng Mô-đun & Khóa Vận Hành",
-    "systemScope": "Mô-đun Hệ Thống",
-    "pageSubtitle": "Bật hoặc tắt an toàn các chức năng tự phục vụ của khách hàng và quy trình kết xuất báo cáo cư trú tự động theo quy định pháp luật.",
-    "safetyTitle": "Các Giới Hạn An Toàn & Bảo Mật Không Thể Tắt",
-    "safetyDesc": "Các cơ chế kiểm soát an ninh thiết yếu (như phân quyền tối thiểu hóa dữ liệu, xác thực tài nguyên spa kép, chặn thanh toán khi trả phòng) là bảo đảm kiến trúc bắt buộc và không xuất hiện dưới dạng cờ tính năng.",
-    "modularTitle": "Các Tính Năng Cấu Hình Được",
-    "activeCount": "Đang hoạt động",
-    "highImpact": "Tác Động Cao",
-    "scope": "Phạm vi",
-    "lastModified": "Sửa đổi lần cuối",
-    "immutableTitle": "Kiểm Soát Cốt Lõi Bất Biến (Kiến Trúc Được Bảo Vệ)",
-    "alwaysEnforced": "LUÔN THỰC THI",
-    "confirmTitle": "Xác Nhận Thay Đổi Cờ Tính Năng Tác Động Cao",
-    "confirmPrompt": "Bạn chuẩn bị thay đổi trạng thái hoạt động của mô-đun:",
-    "confirmAuditNote": "Thay đổi này sẽ có hiệu lực ngay lập tức trong phiên thử nghiệm và lưu vết sự kiện vào Nhật Ký Kiểm Toán An Ninh.",
-    "applyToggle": "Áp Dụng Thay Đổi Trạng Thái"
   },
   "matrix": {
     "pageTitle": "Ma Trận Phân Quyền Kiểm Soát Truy Cập Dựa Trên Vai Trò (RBAC)",
@@ -793,24 +770,6 @@
         "desc": "Thời gian tự động tạo báo cáo khai báo tạm trú định kỳ hàng đêm theo Luật Cư trú 2020."
       }
     },
-    "flags": {
-      "extraSpaOnline": {
-        "name": "Khách Đặt Thêm Spa Trực Tuyến",
-        "desc": "Cho phép khách đang lưu trú tự đặt thêm liệu trình spa ngoài gói qua cổng thông tin cá nhân."
-      },
-      "extraFnbOnline": {
-        "name": "Khách Gọi Món Ẩm Thực Tại Biệt Thự",
-        "desc": "Cho phép khách gọi món dinh dưỡng gọi món và thức uống dưỡng sinh tính vào hóa đơn biệt thự."
-      },
-      "residenceExport": {
-        "name": "Tự Động Kết Xuất Báo Cáo Tạm Trú Ban Đêm",
-        "desc": "Tự động biên dịch hồ sơ định danh nhận phòng hàng ngày của khách hàng vào giờ xuất dữ liệu đã lên lịch (nghĩa vụ khai báo tạm trú theo luật vẫn luôn có hiệu lực)."
-      },
-      "reviewInvites": {
-        "name": "Tự Động Gửi Lời Mời Đánh Giá Sau Trả Phòng",
-        "desc": "Tự động gửi lời mời đánh giá trải nghiệm nghỉ dưỡng sau khi khách thanh toán và hoàn tất trả phòng."
-      }
-    },
     "permissions": {
       "categories": {
         "experience": "Trải Nghiệm Khách Nghỉ Dưỡng",
@@ -904,10 +863,6 @@
         "name": "Cấu Hình Tham Số Vận Hành Hệ Thống",
         "desc": "Điều chỉnh tỷ lệ cọc, thời hạn hủy phòng, tỷ lệ hoàn trả và giờ chốt thực đơn ăn uống."
       },
-      "manageFlags": {
-        "name": "Cấu Hình Quy Trình Tự Động Hóa",
-        "desc": "Kích hoạt và quản lý các quy trình vận hành tự động và báo cáo của hệ thống."
-      },
       "viewMatrix": {
         "name": "Xem Ma Trận Phân Quyền Vai Trò (RBAC)",
         "desc": "Kiểm tra phân định năng lực theo vai trò và các ranh giới bảo mật bất biến."
@@ -945,7 +900,6 @@
         "folioSettlementRecorded": "Ghi nhận mã giao dịch thanh toán VNPay cho quyết toán hóa đơn trả phòng.",
         "delegationGranted": "Cấp quyền ủy quyền cấu hình tham số tạm thời cho Quản lý Sarah Jenkins.",
         "residenceBatchExported": "Tạo gói kết xuất khai báo tạm trú theo Luật Cư trú (24 hồ sơ khách lưu trú).",
-        "featureFlagToggled": "Cập nhật cấu hình tham số vận hành trên phạm vi toàn hệ thống.",
         "parameterUpdated": "Đã cập nhật giá trị tham số vận hành nghiệp vụ thành công.",
         "permissionUpdated": "Đã cập nhật quyền hạn trong ma trận phân quyền thành công.",
         "delegationCreated": "Đã tạo ủy quyền giới hạn mới cho Quản lý.",

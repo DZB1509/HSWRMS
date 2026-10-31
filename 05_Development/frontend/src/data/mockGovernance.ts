@@ -1,6 +1,5 @@
 import type {
   BusinessParameter,
-  FeatureFlag,
   PermissionRule,
   AdminDelegation,
   AuditEvent,
@@ -85,57 +84,6 @@ export const INITIAL_BUSINESS_PARAMETERS: BusinessParameter[] = [
     unit: 'giờ địa phương',
     lastUpdatedAt: '2026-09-25 14:30',
     lastUpdatedBy: 'Alexander Wright (Quản trị viên)'
-  }
-];
-
-export const INITIAL_FEATURE_FLAGS: FeatureFlag[] = [
-  {
-    key: 'enable_online_extra_spa_booking',
-    nameKey: 'governance.flags.extraSpaOnline.name',
-    defaultName: 'Khách Đặt Spa Bổ Sung Trực Tuyến',
-    descriptionKey: 'governance.flags.extraSpaOnline.desc',
-    defaultDescription: 'Cho phép khách đang lưu trú đặt thêm buổi spa trực tiếp từ cổng thông tin.',
-    enabled: true,
-    scope: 'customer',
-    impactLevel: 'medium',
-    lastChangedAt: '2026-09-26 10:15',
-    lastChangedBy: 'Alexander Wright (Quản trị viên)'
-  },
-  {
-    key: 'enable_online_extra_fnb_order',
-    nameKey: 'governance.flags.extraFnbOnline.name',
-    defaultName: 'Khách Đặt Món Dinh Dưỡng Tại Biệt Thự',
-    descriptionKey: 'governance.flags.extraFnbOnline.desc',
-    defaultDescription: 'Cho phép khách gọi thêm món ăn dưỡng sinh thanh toán vào hóa đơn biệt thự (UC19).',
-    enabled: true,
-    scope: 'customer',
-    impactLevel: 'medium',
-    lastChangedAt: '2026-09-26 10:15',
-    lastChangedBy: 'Alexander Wright (Quản trị viên)'
-  },
-  {
-    key: 'enable_vietnam_residence_auto_export',
-    nameKey: 'governance.flags.residenceExport.name',
-    defaultName: 'Tự Động Kết Xuất Báo Cáo Tạm Trú Ban Đêm',
-    descriptionKey: 'governance.flags.residenceExport.desc',
-    defaultDescription: 'Tự động tổng hợp hồ sơ check-in hàng ngày xuất báo cáo cư trú theo quy định.',
-    enabled: true,
-    scope: 'compliance',
-    impactLevel: 'high',
-    lastChangedAt: '2026-09-25 15:00',
-    lastChangedBy: 'Alexander Wright (Quản trị viên)'
-  },
-  {
-    key: 'enable_post_checkout_review_invitations',
-    nameKey: 'governance.flags.reviewInvites.name',
-    defaultName: 'Tự Động Mời Đánh Giá Sau Check-out',
-    descriptionKey: 'governance.flags.reviewInvites.desc',
-    defaultDescription: 'Gửi lời mời đánh giá trải nghiệm nghỉ dưỡng sau khi hoàn tất thanh toán và trả phòng (UC23).',
-    enabled: true,
-    scope: 'customer',
-    impactLevel: 'low',
-    lastChangedAt: '2026-09-24 09:00',
-    lastChangedBy: 'Alexander Wright (Quản trị viên)'
   }
 ];
 
@@ -543,25 +491,6 @@ export const PERMISSION_RULES: PermissionRule[] = [
     isDelegableToManager: true
   },
   {
-    capability: 'manage_feature_flags',
-    categoryKey: 'governance.permissions.categories.governance',
-    defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
-    nameKey: 'governance.permissions.manageFlags.name',
-    defaultName: 'Cấu Hình Quy Trình Vận Hành Tự Động',
-    descriptionKey: 'governance.permissions.manageFlags.desc',
-    defaultDescription: 'Bật tắt các mô-đun tùy chọn và quy trình tự động hóa tuân thủ.',
-    grants: {
-      customer: 'denied',
-      receptionist: 'denied',
-      therapist: 'denied',
-      fb_staff: 'denied',
-      manager: 'denied',
-      admin: 'granted'
-    },
-    isImmutableBoundary: false,
-    isDelegableToManager: false
-  },
-  {
     capability: 'view_permission_matrix',
     categoryKey: 'governance.permissions.categories.governance',
     defaultCategory: 'Quản Trị Hệ Thống & Tuân Thủ',
@@ -939,19 +868,6 @@ export const INITIAL_AUDIT_EVENTS: AuditEvent[] = [
     result: 'SUCCESS',
     detailsKey: 'governance.audit.details.residenceBatchExported',
     detailsFallback: 'Đã tạo gói dữ liệu xuất tuân thủ Luật Cư trú (24 bản ghi khách đang lưu trú).'
-  },
-  {
-    id: 'AUD-89097',
-    timestamp: '2026-09-26 10:15:30',
-    actorId: 'usr-adm-01',
-    actorName: 'Alexander Wright',
-    actorRole: 'admin',
-    action: 'TOGGLE',
-    dataCategory: 'SECURITY_GOVERNANCE',
-    targetRef: 'enable_online_extra_spa_booking',
-    result: 'SUCCESS',
-    detailsKey: 'governance.audit.details.featureFlagToggled',
-    detailsFallback: 'Cập nhật cấu hình tham số vận hành sang BẬT trên phạm vi toàn hệ thống.'
   }
 ];
 

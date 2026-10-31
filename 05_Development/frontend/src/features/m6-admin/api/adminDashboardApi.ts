@@ -29,7 +29,6 @@ export interface AdminDashboardData {
   staffAccounts: DashboardMetric<{ activeCount: number; totalCount: number }>;
 
   // Explicitly deferred / unavailable backend metrics
-  featureFlags: DashboardMetric<{ enabledCount: number; totalCount: number }>;
   systemOverviewWidgets: DashboardMetric<unknown>;
 }
 
@@ -207,15 +206,7 @@ export const adminDashboardApi = {
       };
     }
 
-    // 5. Feature Flags: No backend endpoint exists (Prototype-only client state)
-    const featureFlags: DashboardMetric<{ enabledCount: number; totalCount: number }> = {
-      value: null,
-      status: 'unavailable',
-      error: 'Backend chưa hỗ trợ API Feature Flags (Prototype state)',
-      sourceEndpoint: undefined
-    };
-
-    // 6. System Overview Widgets: Backend DashboardController not ported to current worktree
+    // 5. System Overview Widgets: Backend DashboardController not ported to current worktree
     const systemOverviewWidgets: DashboardMetric<unknown> = {
       value: null,
       status: 'unavailable',
@@ -228,7 +219,6 @@ export const adminDashboardApi = {
       managerDelegations,
       auditActivity,
       staffAccounts,
-      featureFlags,
       systemOverviewWidgets
     };
   }

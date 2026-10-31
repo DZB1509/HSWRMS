@@ -14,8 +14,7 @@ import {
   ArrowRight,
   Info,
   RefreshCw,
-  AlertCircle,
-  ToggleLeft
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -134,7 +133,7 @@ export const AdminDashboardPage: React.FC = () => {
             {t('operations.adminDashboard.bannerTitle', 'Tích Hợp Dữ Liệu Thời Gian Thực & Tính Minh Bạch Kiến Trúc')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px', fontSize: '12px', color: '#1e3a8a', lineHeight: 1.4 }}>
-            {t('operations.adminDashboard.bannerNotice', 'Các chỉ số Tham Số Nghiệp Vụ, Ủy Quyền, Nhật Ký Kiểm Toán và Nhân Viên được tải trực tiếp từ các API Backend đã xác minh. Các tính năng chưa có API server (như Feature Flags và System Overview Widgets) được đánh dấu minh bạch là chế độ nguyên mẫu để tránh ngộ nhận.')}
+            {t('operations.adminDashboard.bannerNotice', 'Các chỉ số Tham Số Nghiệp Vụ, Ủy Quyền, Nhật Ký Kiểm Toán và Nhân Viên được tải trực tiếp từ các API Backend đã xác minh. Các widget giám sát bổ sung (như System Overview Widgets) được đánh dấu minh bạch là chế độ nguyên mẫu để tránh ngộ nhận.')}
           </span>
         </div>
       </div>
@@ -245,24 +244,6 @@ export const AdminDashboardPage: React.FC = () => {
             )}
           </span>
         </div>
-
-        {/* KPI 5: Feature Flags (Unintegrated / Prototype) */}
-        <div className="hsw-gov-kpi" style={{ borderStyle: 'dashed' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span className="hsw-gov-kpi-label">
-              {t('operations.adminDashboard.kpiFlags', 'Feature Flags')}
-            </span>
-            <span style={{ fontSize: '9px', fontWeight: 700, backgroundColor: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: '4px' }}>
-              PROTOTYPE
-            </span>
-          </div>
-          <span className="hsw-gov-kpi-val" style={{ color: '#6b7280' }}>
-            4 / 6
-          </span>
-          <span className="hsw-gov-kpi-sub" style={{ color: '#9ca3af' }}>
-            Chưa có API Backend (Chế độ mô phỏng)
-          </span>
-        </div>
       </div>
 
       {/* Governance Navigation Tiles */}
@@ -308,16 +289,6 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="hsw-quicknav-tile-content">
               <h4>{t('operations.sidebar.businessParameters', 'Business Parameters')}</h4>
               <p>{t('operations.adminDashboard.descParams', 'Cấu hình thời hạn hủy, tỷ lệ hoàn cọc, tỷ lệ đặt cọc và hạn giờ chốt thực đơn (Màn hình 50).')}</p>
-            </div>
-          </Link>
-
-          <Link to="/admin/feature-flags" className="hsw-quicknav-tile">
-            <div className="hsw-quicknav-tile-icon">
-              <ToggleLeft size={20} />
-            </div>
-            <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.featureFlags', 'Feature Flags')}</h4>
-              <p>{t('operations.adminDashboard.descFlags', 'Bật/tắt các phân hệ dịch vụ tùy chọn bao gồm gọi món thêm, spa phụ và xuất báo cáo (Prototype).')}</p>
             </div>
           </Link>
 

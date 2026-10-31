@@ -83,7 +83,7 @@ The following URL namespaces are reserved for future module phases:
 | **M3** | `/api/v1/spa/**`<br>`/api/v1/therapist/**` | Spa treatment catalog, scheduling candidate engine, atomic reservation, confirmation responses, therapist daily schedules, session completion. |
 | **M4** | `/api/v1/meals/**`<br>`/api/v1/kitchen/**` | Dietary menu queries, daily meal selections, extra a-la-carte orders, ingredient batch tracking, recipe usage, kitchen prep queue. |
 | **M5** | `/api/v1/folios/**`<br>`/api/v1/invoices/**`<br>`/api/v1/payments/**`<br>`/api/v1/reports/**` | Stay folio consolidation, formal invoice issuance, VNPay callback handling, guarded checkout finalization, customer reviews, revenue/occupancy analytics. |
-| **M6** | `/api/v1/admin/**` | Staff account CRUD, master data management, system configuration parameters, feature flags, permission matrix, admin delegation, audit log. |
+| **M6** | `/api/v1/admin/**` | Staff account CRUD, master data management, system configuration parameters, permission matrix, admin delegation, audit log. |
 
 ---
 
