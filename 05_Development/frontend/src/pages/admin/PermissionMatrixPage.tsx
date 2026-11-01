@@ -10,7 +10,7 @@ import {
   AlertCircle,
   Eye,
   RotateCcw,
-  ShieldAlert,
+  ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -24,6 +24,7 @@ import {
   computePendingChanges,
   MODULE_DESCRIPTIONS,
   ACTION_NAMES,
+  getPermissionSpecification,
   type MatrixViewDto,
   type MatrixRowDto,
   type MatrixDiffEntryDto,
@@ -53,6 +54,7 @@ export const PermissionMatrixPage: React.FC = () => {
   // Preview state
   const [previewDiff, setPreviewDiff] = useState<MatrixDiffEntryDto[] | null>(null);
   const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Inspector state
@@ -195,6 +197,36 @@ export const PermissionMatrixPage: React.FC = () => {
     }
   };
 
+  // Apply changes handler (persists changes to backend database via PUT)
+  const handleApply = async () => {
+    if (!canPreview) {
+      const msg = 'Bạn không có quyền thực hiện lưu thay đổi ma trận (Yêu cầu quyền S51:G).';
+      showToast(msg, 'error');
+      return;
+    }
+
+    if (pendingChanges.length === 0) {
+      showToast('Không có thay đổi nào để lưu.', 'info');
+      return;
+    }
+
+    setIsSaving(true);
+    setPreviewError(null);
+
+    try {
+      const diff = await permissionMatrixApi.applyChanges(pendingChanges);
+      showToast(`Đã lưu thành công ${diff.length} thay đổi quyền vào hệ thống.`, 'success');
+      setPreviewDiff(null);
+      await loadMatrix();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu thay đổi ma trận lên máy chủ';
+      setPreviewError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Reset drafts back to original backend state
   const handleReset = () => {
     if (!matrix) return;
@@ -226,10 +258,10 @@ export const PermissionMatrixPage: React.FC = () => {
                 letterSpacing: '0.06em',
                 padding: '3px 8px',
                 borderRadius: 'var(--radius-pill)',
-                backgroundColor: 'var(--accent-sand)',
-                color: 'var(--text-primary)'
+                backgroundColor: 'var(--accent-forest)',
+                color: '#ffffff'
               }}>
-                Phân Hệ S51 (Chỉ Đọc & Preview)
+                Phân Hệ S51 (RBAC Management)
               </span>
             </div>
             <p className="hsw-gov-subtitle">
@@ -242,7 +274,7 @@ export const PermissionMatrixPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={loadMatrix}
-              disabled={loading}
+              disabled={loading || isSaving}
               icon={<RefreshCw size={14} className={loading ? 'hsw-spin' : ''} />}
             >
               {t('common.actions.refresh', 'Làm Mới')}
@@ -330,19 +362,29 @@ export const PermissionMatrixPage: React.FC = () => {
             )}
 
             <Button
-              variant="primary"
+              variant="secondary"
               size="sm"
-              disabled={pendingChanges.length === 0 || isPreviewing || !canPreview}
+              disabled={pendingChanges.length === 0 || isPreviewing || isSaving || !canPreview}
               onClick={handlePreview}
               icon={<Eye size={14} className={isPreviewing ? 'hsw-spin' : ''} />}
             >
-              {isPreviewing ? 'Đang kiểm tra...' : 'Xem Trước Thay Đổi (Preview)'}
+              {isPreviewing ? 'Đang kiểm tra...' : 'Xem Trước (Preview)'}
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={pendingChanges.length === 0 || isPreviewing || isSaving || !canPreview}
+              onClick={handleApply}
+              icon={<Check size={14} className={isSaving ? 'hsw-spin' : ''} />}
+            >
+              {isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi'}
             </Button>
 
             <Button
               variant="tertiary"
               size="sm"
-              disabled={pendingChanges.length === 0 || isPreviewing}
+              disabled={pendingChanges.length === 0 || isPreviewing || isSaving}
               onClick={handleReset}
               icon={<RotateCcw size={13} />}
               title="Đặt lại các ô về giá trị hiện hành trên máy chủ"
@@ -353,7 +395,7 @@ export const PermissionMatrixPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Preview Diff Panel (Read-Only) */}
+      {/* Preview Diff Panel */}
       {previewDiff && previewDiff.length > 0 && (
         <div
           className="hsw-gov-card"
@@ -378,7 +420,7 @@ export const PermissionMatrixPage: React.FC = () => {
                 backgroundColor: '#dcf4f2',
                 color: '#0e7490',
               }}>
-                Chỉ Đọc — Chưa Lưu Vào DB
+                Đã Xác Thực Với Máy Chủ
               </span>
             </div>
 
@@ -408,53 +450,72 @@ export const PermissionMatrixPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {previewDiff.map((diff, idx) => (
-                  <tr key={`${diff.role}-${diff.module}-${diff.action}-${idx}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '6px 12px', fontWeight: 600 }}>{diff.role}</td>
-                    <td style={{ padding: '6px 12px' }}>
-                      <code>{diff.module}</code> ({MODULE_DESCRIPTIONS[diff.module]?.name || diff.module})
-                    </td>
-                    <td style={{ padding: '6px 12px' }}>
-                      <code>{diff.action}</code> ({ACTION_NAMES[diff.action]?.label || diff.action})
-                    </td>
-                    <td style={{ padding: '6px 12px' }}>
-                      <span className={`hsw-perm-badge ${diff.from ? 'granted' : 'denied'}`}>
-                        {diff.from ? <Check size={11} /> : <Minus size={11} />}
-                        {diff.from ? 'Được Cấp' : 'Bị Từ Chối'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '6px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      <ArrowRight size={14} />
-                    </td>
-                    <td style={{ padding: '6px 12px' }}>
-                      <span className={`hsw-perm-badge ${diff.to ? 'granted' : 'denied'}`} style={{ fontWeight: 700 }}>
-                        {diff.to ? <Check size={11} /> : <Minus size={11} />}
-                        {diff.to ? 'Được Cấp' : 'Bị Từ Chối'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {previewDiff.map((diff, idx) => {
+                  const spec = getPermissionSpecification(`${diff.module}:${diff.action}`);
+                  return (
+                    <tr key={`${diff.role}-${diff.module}-${diff.action}-${idx}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '6px 12px', fontWeight: 600 }}>{diff.role}</td>
+                      <td style={{ padding: '6px 12px' }}>
+                        <code>{diff.module}:{diff.action}</code>
+                        <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
+                          {spec.title}
+                        </span>
+                      </td>
+                      <td style={{ padding: '6px 12px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          {ACTION_NAMES[diff.action]?.label || diff.action}
+                        </span>
+                      </td>
+                      <td style={{ padding: '6px 12px' }}>
+                        <span className={`hsw-perm-badge ${diff.from ? 'granted' : 'denied'}`}>
+                          {diff.from ? <Check size={11} /> : <Minus size={11} />}
+                          {diff.from ? 'Được Cấp' : 'Bị Từ Chối'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '6px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        <ArrowRight size={14} />
+                      </td>
+                      <td style={{ padding: '6px 12px' }}>
+                        <span className={`hsw-perm-badge ${diff.to ? 'granted' : 'denied'}`} style={{ fontWeight: 700 }}>
+                          {diff.to ? <Check size={11} /> : <Minus size={11} />}
+                          {diff.to ? 'Được Cấp' : 'Bị Từ Chối'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          {/* Phase 5.3 Invariant: Save is deliberately disabled */}
+          {/* Persist Changes Actions */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)', paddingTop: 'var(--space-2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--accent-terracotta)' }}>
-              <ShieldAlert size={14} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+              <ShieldCheck size={16} style={{ color: 'var(--accent-forest)' }} />
               <span>
-                <strong>Khóa an toàn Phase 5.3:</strong> Thao tác ghi trực tiếp (PUT) được DEFER. Nút lưu bên dưới bị vô hiệu hóa cho đến khi hoàn tất kiểm tra an toàn quản trị.
+                Máy chủ đã xác thực <strong>{previewDiff.length}</strong> thay đổi hợp lệ, không vi phạm an ninh hoặc quy định tối thiểu hóa dữ liệu (Nghị định 13/2023/NĐ-CP).
               </span>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={true}
-              title="Thao tác lưu quyền bị khóa trong Phase 5.3"
-            >
-              Lưu Thay Đổi (PUT - Đang Khóa)
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPreviewDiff(null)}
+                disabled={isSaving}
+              >
+                Đóng
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={isSaving || !canPreview}
+                onClick={handleApply}
+                icon={<Check size={14} className={isSaving ? 'hsw-spin' : ''} />}
+              >
+                {isSaving ? 'Đang lưu vào hệ thống...' : 'Xác Nhận & Lưu Vào Cơ Sở Dữ Liệu'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -499,8 +560,12 @@ export const PermissionMatrixPage: React.FC = () => {
             <tbody>
               {filteredRows.map((row) => {
                 const rowKey = `${row.module}:${row.action}`;
-                const meta = MODULE_DESCRIPTIONS[row.module];
+                const spec = getPermissionSpecification(rowKey);
                 const actionMeta = ACTION_NAMES[row.action];
+
+                const riskColor = spec.risk === 'HIGH' ? '#dc2626' : spec.risk === 'MEDIUM' ? '#d97706' : '#15803d';
+                const riskBg = spec.risk === 'HIGH' ? '#fef2f2' : spec.risk === 'MEDIUM' ? '#fffbeb' : '#f0fdf4';
+                const riskBorder = spec.risk === 'HIGH' ? '#fecaca' : spec.risk === 'MEDIUM' ? '#fde68a' : '#bbf7d0';
 
                 return (
                   <tr key={row.permissionId}>
@@ -512,10 +577,25 @@ export const PermissionMatrixPage: React.FC = () => {
                               {row.module}:{row.action}
                             </code>
                             <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-xs)' }}>
-                              {meta?.name || row.module}
+                              {spec.title}
                             </span>
                             <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                               ({actionMeta?.label || row.action})
+                            </span>
+
+                            <span
+                              style={{
+                                fontSize: '9px',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                padding: '1px 5px',
+                                borderRadius: 'var(--radius-pill)',
+                                backgroundColor: riskBg,
+                                color: riskColor,
+                                border: `1px solid ${riskBorder}`,
+                              }}
+                            >
+                              {spec.risk === 'HIGH' ? 'Rủi ro cao' : spec.risk === 'MEDIUM' ? 'Rủi ro vừa' : 'An toàn'}
                             </span>
 
                             {row.adminOnly && (
@@ -540,18 +620,22 @@ export const PermissionMatrixPage: React.FC = () => {
                                 backgroundColor: '#eaf3ed',
                                 color: 'var(--accent-forest)',
                               }}>
-                                Có thể ủy quyền
+                                Có thể ủy quyền (S52)
                               </span>
                             )}
                           </div>
 
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.3 }}>
-                            {meta?.desc || 'Không có mô tả chi tiết.'}
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '3px', lineHeight: 1.35 }}>
+                            <strong>Phạm vi:</strong> {spec.scope}
                           </div>
 
-                          {meta?.compliance && (
-                            <div style={{ fontSize: '10px', color: 'var(--accent-terracotta)', fontWeight: 500, marginTop: '2px' }}>
-                              Pháp lý: {meta.compliance}
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            <strong>Ảnh hưởng:</strong> {spec.impact}
+                          </div>
+
+                          {spec.compliance && (
+                            <div style={{ fontSize: '10px', color: 'var(--accent-terracotta)', fontWeight: 600, marginTop: '2px' }}>
+                              ⚖️ Pháp lý: {spec.compliance}
                             </div>
                           )}
                         </div>
@@ -618,55 +702,93 @@ export const PermissionMatrixPage: React.FC = () => {
       )}
 
       {/* Selected Cell Inspector Drawer / Card */}
-      {selectedCellInfo && (
-        <div className="hsw-gov-card" style={{ marginTop: 'var(--space-4)', backgroundColor: '#faf9f6' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-                {selectedCellInfo.isLocked ? (
-                  <Lock size={16} style={{ color: 'var(--accent-terracotta)' }} />
-                ) : (
-                  <Shield size={16} style={{ color: 'var(--accent-forest)' }} />
-                )}
-                <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 600 }}>
-                  {MODULE_DESCRIPTIONS[selectedCellInfo.row.module]?.name || selectedCellInfo.row.module} ({selectedCellInfo.row.module}:{selectedCellInfo.row.action}) ↔ Vai trò: {selectedCellInfo.roleName}
-                </h4>
-                <span className={`hsw-perm-badge ${selectedCellInfo.isGranted ? 'granted' : 'denied'}`}>
-                  {selectedCellInfo.isGranted ? 'Được Cấp Quyền' : 'Bị Từ Chối'}
-                </span>
-                {selectedCellInfo.isLocked && (
-                  <span style={{ fontSize: '10px', color: 'var(--accent-terracotta)', fontWeight: 600 }}>
-                    [Ranh Giới Bất Biến]
+      {selectedCellInfo && (() => {
+        const rowKey = `${selectedCellInfo.row.module}:${selectedCellInfo.row.action}`;
+        const spec = getPermissionSpecification(rowKey);
+        const riskColor = spec.risk === 'HIGH' ? '#dc2626' : spec.risk === 'MEDIUM' ? '#d97706' : '#15803d';
+        const riskBg = spec.risk === 'HIGH' ? '#fef2f2' : spec.risk === 'MEDIUM' ? '#fffbeb' : '#f0fdf4';
+        const riskBorder = spec.risk === 'HIGH' ? '#fecaca' : spec.risk === 'MEDIUM' ? '#fde68a' : '#bbf7d0';
+
+        return (
+          <div className="hsw-gov-card" style={{ marginTop: 'var(--space-4)', backgroundColor: '#faf9f6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)', flexWrap: 'wrap' }}>
+                  {selectedCellInfo.isLocked ? (
+                    <Lock size={16} style={{ color: 'var(--accent-terracotta)' }} />
+                  ) : (
+                    <Shield size={16} style={{ color: 'var(--accent-forest)' }} />
+                  )}
+                  <code style={{ fontSize: '11px', fontWeight: 700, backgroundColor: '#f2f0ea', padding: '2px 6px', borderRadius: '3px' }}>
+                    {rowKey}
+                  </code>
+                  <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {spec.title} ↔ Vai trò: {selectedCellInfo.roleName}
+                  </h4>
+                  <span className={`hsw-perm-badge ${selectedCellInfo.isGranted ? 'granted' : 'denied'}`}>
+                    {selectedCellInfo.isGranted ? 'Được Cấp Quyền' : 'Bị Từ Chối'}
                   </span>
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      padding: '2px 6px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: riskBg,
+                      color: riskColor,
+                      border: `1px solid ${riskBorder}`,
+                    }}
+                  >
+                    {spec.risk === 'HIGH' ? '🔴 Rủi ro cao' : spec.risk === 'MEDIUM' ? '🟡 Rủi ro vừa' : '🟢 An toàn'}
+                  </span>
+                  {selectedCellInfo.isLocked && (
+                    <span style={{ fontSize: '10px', color: 'var(--accent-terracotta)', fontWeight: 600 }}>
+                      [Ranh Giới Bất Biến]
+                    </span>
+                  )}
+                </div>
+
+                {selectedCellInfo.lockReason && (
+                  <p style={{ margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-xs)', color: 'var(--accent-terracotta)', fontWeight: 500 }}>
+                    {selectedCellInfo.lockReason}
+                  </p>
                 )}
+
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 'var(--space-2)', lineHeight: 1.4 }}>
+                  <div><strong>Phạm vi tác vụ:</strong> {spec.scope}</div>
+                  <div style={{ marginTop: '2px' }}><strong>Hệ quả vận hành:</strong> {spec.impact}</div>
+                  {spec.compliance && (
+                    <div style={{ marginTop: '2px', color: 'var(--accent-terracotta)', fontWeight: 600 }}>
+                      ⚖️ Căn cứ pháp lý: {spec.compliance}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <span>
+                    Admin-Only: <strong>{selectedCellInfo.row.adminOnly ? 'Đúng' : 'Không'}</strong>
+                  </span>
+                  <span>
+                    Ủy quyền cho Quản lý (S52): <strong>{selectedCellInfo.row.delegable ? 'Cho phép' : 'Không'}</strong>
+                  </span>
+                  <span>
+                    Nhóm nghiệp vụ: <strong>{spec.domain}</strong>
+                  </span>
+                </div>
               </div>
 
-              {selectedCellInfo.lockReason && (
-                <p style={{ margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-xs)', color: 'var(--accent-terracotta)', fontWeight: 500 }}>
-                  {selectedCellInfo.lockReason}
-                </p>
-              )}
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: 'var(--text-muted)' }}>
-                <span>
-                  Admin-Only: <strong>{selectedCellInfo.row.adminOnly ? 'Đúng' : 'Không'}</strong>
-                </span>
-                <span>
-                  Ủy quyền cho Quản lý (S52): <strong>{selectedCellInfo.row.delegable ? 'Cho phép' : 'Không'}</strong>
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCellInfo(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}
+              >
+                Đóng
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setSelectedCellInfo(null)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}
-            >
-              Đóng
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

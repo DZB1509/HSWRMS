@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Eye,
   Lock,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/common/Toast';
@@ -26,8 +25,8 @@ import {
   type DelegablePermissionViewDto,
 } from '../../features/m6-admin/api/delegationApi';
 import {
-  MODULE_DESCRIPTIONS,
   ACTION_NAMES,
+  getPermissionSpecification,
 } from '../../features/m6-admin/api/permissionMatrixApi';
 
 export const AdminDelegationPage: React.FC = () => {
@@ -185,30 +184,110 @@ export const AdminDelegationPage: React.FC = () => {
     return filteredDelegations.slice(start, start + pageSize);
   }, [filteredDelegations, currentPage, pageSize]);
 
-  // Permission label helper
+  // Group delegable permissions into distinct business domains
+  const delegableGroups = useMemo(() => {
+    const groups: {
+      key: string;
+      title: string;
+      icon: string;
+      desc: string;
+      permissions: DelegablePermissionViewDto[];
+    }[] = [
+      {
+        key: 'S12',
+        title: 'Quản Trị Danh Mục Dịch Vụ & Hạng Biệt Thự (Screen S12)',
+        icon: '🏨',
+        desc: 'Ủy quyền quản lý toàn bộ danh mục sản phẩm kinh doanh: bảng giá, hạng biệt thự, gói kỳ nghỉ dưỡng và liệu trình Spa.',
+        permissions: [],
+      },
+      {
+        key: 'S50',
+        title: 'Quy Tắc & Tham Số Nghiệp Vụ Vận Hành (Screen S50)',
+        icon: '⚙️',
+        desc: 'Ủy quyền điều chỉnh các quy định tài chính và thời hạn vận hành: tỷ lệ đặt cọc bắt buộc, khung giờ hủy phòng và thời hạn hoàn tiền.',
+        permissions: [],
+      },
+      {
+        key: 'AUDIT_ANALYTICS',
+        title: 'Giám Sát Kiểm Toán & Tiện Ích Điều Hành Nâng Cao (Screen S53, S55)',
+        icon: '🛡️',
+        desc: 'Ủy quyền truy vết nhật ký kiểm toán thao tác nhân viên và mở khóa các widget phân tích thống kê chuyên sâu trên bảng điều hành S55.',
+        permissions: [],
+      },
+      {
+        key: 'RESIDENCE',
+        title: 'Báo Cáo Cư Trú & Tuân Thủ Pháp Lý (RESIDENCE_REPORT)',
+        icon: '📋',
+        desc: 'Ủy quyền kết xuất báo cáo danh sách khách lưu trú kèm giấy tờ định danh (CCCD/Hộ chiếu) để nộp cơ quan Công an.',
+        permissions: [],
+      },
+      {
+        key: 'OTHER',
+        title: 'Quyền Nghiệp Vụ Khác Được Phép Ủy Quyền',
+        icon: '✨',
+        desc: 'Các quyền nghiệp vụ khác được cấu hình cho phép ủy quyền trong hệ thống.',
+        permissions: [],
+      },
+    ];
+
+    delegablePermissions.forEach((p) => {
+      if (p.module === 'S12') {
+        groups[0].permissions.push(p);
+      } else if (p.module === 'S50') {
+        groups[1].permissions.push(p);
+      } else if (p.module === 'S53' || p.module === 'S55_ADMIN_WIDGETS') {
+        groups[2].permissions.push(p);
+      } else if (p.module === 'RESIDENCE_REPORT') {
+        groups[3].permissions.push(p);
+      } else {
+        groups[4].permissions.push(p);
+      }
+    });
+
+    return groups.filter((g) => g.permissions.length > 0);
+  }, [delegablePermissions]);
+
+  // Permission label helper with rich granular specification
   const renderPermissionBadge = (permCode: string) => {
-    const parts = permCode.split(':');
-    const mod = parts[0] || permCode;
-    const act = parts[1] || '';
-    const modName = MODULE_DESCRIPTIONS[mod]?.name || mod;
-    const actName = ACTION_NAMES[act]?.label || act;
+    const spec = getPermissionSpecification(permCode);
+    const riskColor = spec.risk === 'HIGH' ? '#dc2626' : spec.risk === 'MEDIUM' ? '#d97706' : '#15803d';
+    const riskBg = spec.risk === 'HIGH' ? '#fef2f2' : spec.risk === 'MEDIUM' ? '#fffbeb' : '#f0fdf4';
+    const riskBorder = spec.risk === 'HIGH' ? '#fecaca' : spec.risk === 'MEDIUM' ? '#fde68a' : '#bbf7d0';
 
     return (
       <span
         key={permCode}
-        className="hsw-perm-badge delegable"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '4px',
+          gap: '6px',
           fontSize: '11px',
-          padding: '2px 8px',
-          borderRadius: 'var(--radius-pill)',
+          padding: '3px 8px',
+          borderRadius: 'var(--radius-sm)',
+          backgroundColor: '#ffffff',
+          border: '1px solid var(--border-medium)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
         }}
-        title={`${modName} (${actName})`}
+        title={`[${permCode}] ${spec.title}\nPhạm vi tác vụ: ${spec.scope}\nẢnh hưởng: ${spec.impact}`}
       >
-        <Sparkles size={10} />
-        <code>{permCode}</code> {modName}
+        <code style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#f2f0ea', padding: '1px 5px', borderRadius: '3px' }}>
+          {permCode}
+        </code>
+        <strong style={{ color: 'var(--text-primary)' }}>{spec.title}</strong>
+        <span
+          style={{
+            fontSize: '9px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            padding: '1px 5px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: riskBg,
+            color: riskColor,
+            border: `1px solid ${riskBorder}`,
+          }}
+        >
+          {spec.risk === 'HIGH' ? 'Cao' : spec.risk === 'MEDIUM' ? 'Vừa' : 'Thấp'}
+        </span>
       </span>
     );
   };
@@ -372,58 +451,250 @@ export const AdminDelegationPage: React.FC = () => {
             </div>
           </div>
 
-          <fieldset disabled={mutationPending} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
-            <legend style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', padding: '0 4px' }}>
-              Danh Mục Quyền Nghiệp Vụ Cho Phép Ủy Quyền ({delegablePermissions.length} quyền khả dụng từ máy chủ):
-            </legend>
+          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', backgroundColor: '#fbfaf8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+              <div>
+                <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
+                  Danh Mục Quyền Nghiệp Vụ Cho Phép Ủy Quyền ({delegablePermissions.length} quyền khả dụng từ máy chủ):
+                </strong>
+                <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Đã chọn: <strong style={{ color: 'var(--accent-forest)' }}>{selectedPermissionIds.length}</strong> / {delegablePermissions.length} quyền
+                </span>
+              </div>
+
+              {/* Quick Select Helpers */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  disabled={mutationPending}
+                  onClick={() => setSelectedPermissionIds(delegablePermissions.map((p) => p.permissionId))}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    color: 'var(--accent-forest)',
+                    fontWeight: 600,
+                  }}
+                >
+                  ✓ Chọn Tất Cả ({delegablePermissions.length})
+                </button>
+
+                <button
+                  type="button"
+                  disabled={mutationPending || selectedPermissionIds.length === 0}
+                  onClick={() => setSelectedPermissionIds([])}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  ✕ Bỏ Chọn
+                </button>
+
+                <button
+                  type="button"
+                  disabled={mutationPending}
+                  onClick={() => {
+                    const safeIds = delegablePermissions
+                      .filter((p) => p.action === 'V' || p.action === 'E')
+                      .map((p) => p.permissionId);
+                    setSelectedPermissionIds(safeIds);
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    backgroundColor: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    color: '#15803d',
+                    fontWeight: 600,
+                  }}
+                  title="Chỉ chọn các quyền xem, tra cứu và xuất báo cáo (rủi ro thấp)"
+                >
+                  🛡️ Chỉ Quyền Xem / Tra Cứu (An Toàn)
+                </button>
+
+                <button
+                  type="button"
+                  disabled={mutationPending}
+                  onClick={() => {
+                    const s12Ids = delegablePermissions
+                      .filter((p) => p.module === 'S12')
+                      .map((p) => p.permissionId);
+                    setSelectedPermissionIds(s12Ids);
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                  }}
+                  title="Chỉ chọn nhóm quyền quản trị danh mục sản phẩm S12"
+                >
+                  🏨 Chỉ Danh Mục Dịch Vụ (S12)
+                </button>
+              </div>
+            </div>
+
             {delegablePermissions.length === 0 ? (
               <p role="status" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 'var(--space-2) 0' }}>
                 Đang tải hoặc không có quyền ủy quyền khả dụng từ máy chủ.
               </p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '8px', marginTop: '6px' }}>
-                {delegablePermissions.map((permission) => {
-                  const isChecked = selectedPermissionIds.includes(permission.permissionId);
-                  const permCode = `${permission.module}:${permission.action}`;
-                  const modName = MODULE_DESCRIPTIONS[permission.module]?.name || permission.module;
-                  const actName = ACTION_NAMES[permission.action]?.label || permission.action;
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {delegableGroups.map((group) => {
+                  const selectedInGroup = group.permissions.filter((p) =>
+                    selectedPermissionIds.includes(p.permissionId)
+                  ).length;
 
                   return (
-                    <label
-                      key={permission.permissionId}
+                    <div
+                      key={group.key}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '6px 10px',
-                        backgroundColor: isChecked ? '#f4faf6' : '#faf9f6',
-                        border: isChecked ? '1px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                        fontSize: 'var(--text-xs)',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: 'var(--space-3) var(--space-4)',
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) =>
-                          setSelectedPermissionIds((previous) =>
-                            e.target.checked
-                              ? [...new Set([...previous, permission.permissionId])]
-                              : previous.filter((id) => id !== permission.permissionId)
-                          )
-                        }
-                      />
-                      <div>
-                        <code>{permCode}</code> <strong>{modName}</strong>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>({actName})</span>
+                      {/* Group Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '14px' }}>{group.icon}</span>
+                          <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
+                            {group.title}
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: 'var(--radius-pill)',
+                            backgroundColor: selectedInGroup > 0 ? '#eaf3ed' : '#f3f4f6',
+                            color: selectedInGroup > 0 ? 'var(--accent-forest)' : 'var(--text-muted)',
+                            border: `1px solid ${selectedInGroup > 0 ? '#bbf7d0' : 'var(--border-subtle)'}`,
+                          }}
+                        >
+                          {selectedInGroup} / {group.permissions.length} quyền được chọn
+                        </span>
                       </div>
-                    </label>
+                      <p style={{ margin: '0 0 var(--space-3) 0', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                        {group.desc}
+                      </p>
+
+                      {/* Permission Cards Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '10px' }}>
+                        {group.permissions.map((permission) => {
+                          const isChecked = selectedPermissionIds.includes(permission.permissionId);
+                          const permCode = `${permission.module}:${permission.action}`;
+                          const spec = getPermissionSpecification(permCode);
+                          const actMeta = ACTION_NAMES[permission.action];
+                          const actionLabel = actMeta?.label || permission.action;
+
+                          const riskColor = spec.risk === 'HIGH' ? '#dc2626' : spec.risk === 'MEDIUM' ? '#d97706' : '#15803d';
+                          const riskBg = spec.risk === 'HIGH' ? '#fef2f2' : spec.risk === 'MEDIUM' ? '#fffbeb' : '#f0fdf4';
+                          const riskBorder = spec.risk === 'HIGH' ? '#fecaca' : spec.risk === 'MEDIUM' ? '#fde68a' : '#bbf7d0';
+
+                          return (
+                            <label
+                              key={permission.permissionId}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '10px',
+                                padding: '10px 12px',
+                                backgroundColor: isChecked ? '#f4faf6' : '#faf9f6',
+                                border: isChecked ? '1.5px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) =>
+                                  setSelectedPermissionIds((previous) =>
+                                    e.target.checked
+                                      ? [...new Set([...previous, permission.permissionId])]
+                                      : previous.filter((id) => id !== permission.permissionId)
+                                  )
+                                }
+                                style={{ marginTop: '3px', cursor: 'pointer', transform: 'scale(1.15)' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                {/* Header: Code + Specific Title + Action & Risk Badges */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <code style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#f2f0ea', padding: '1px 5px', borderRadius: '3px' }}>
+                                      {permCode}
+                                    </code>
+                                    <strong style={{ fontSize: 'var(--text-xs)', color: isChecked ? 'var(--accent-forest)' : 'var(--text-primary)' }}>
+                                      {spec.title}
+                                    </strong>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', backgroundColor: '#ffffff', padding: '1px 5px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-subtle)' }}>
+                                      {actionLabel}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: '9px',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        padding: '1px 5px',
+                                        borderRadius: 'var(--radius-pill)',
+                                        backgroundColor: riskBg,
+                                        color: riskColor,
+                                        border: `1px solid ${riskBorder}`,
+                                      }}
+                                    >
+                                      {spec.risk === 'HIGH' ? '🔴 Cao' : spec.risk === 'MEDIUM' ? '🟡 Vừa' : '🟢 Thấp'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Granular Scope */}
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.35, marginBottom: '3px' }}>
+                                  <strong>Phạm vi tác vụ:</strong> {spec.scope}
+                                </div>
+
+                                {/* Operational Impact */}
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+                                  <strong>Ảnh hưởng:</strong> {spec.impact}
+                                </div>
+
+                                {/* Legal Compliance if applicable */}
+                                {spec.compliance && (
+                                  <div style={{ fontSize: '10px', color: 'var(--accent-terracotta)', fontWeight: 600, marginTop: '3px' }}>
+                                    ⚖️ Căn cứ: {spec.compliance}
+                                  </div>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             )}
-          </fieldset>
+          </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
             <Button
@@ -687,12 +958,63 @@ export const AdminDelegationPage: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ marginTop: 'var(--space-3)' }}>
-                <strong style={{ fontSize: 'var(--text-xs)', display: 'block', marginBottom: '4px' }}>
-                  Danh sách quyền được ủy quyền ({selectedDelegation.permissions.length}):
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <strong style={{ fontSize: 'var(--text-xs)', display: 'block', marginBottom: '8px' }}>
+                  Danh Sách Quyền Hạn Chi Tiết Được Cấp ({selectedDelegation.permissions.length} quyền):
                 </strong>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {selectedDelegation.permissions.map((p) => renderPermissionBadge(p))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '8px' }}>
+                  {selectedDelegation.permissions.map((p) => {
+                    const spec = getPermissionSpecification(p);
+                    const riskColor = spec.risk === 'HIGH' ? '#dc2626' : spec.risk === 'MEDIUM' ? '#d97706' : '#15803d';
+                    const riskBg = spec.risk === 'HIGH' ? '#fef2f2' : spec.risk === 'MEDIUM' ? '#fffbeb' : '#f0fdf4';
+                    const riskBorder = spec.risk === 'HIGH' ? '#fecaca' : spec.risk === 'MEDIUM' ? '#fde68a' : '#bbf7d0';
+
+                    return (
+                      <div
+                        key={p}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid var(--border-medium)',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <code style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#f2f0ea', padding: '1px 5px', borderRadius: '3px' }}>
+                              {p}
+                            </code>
+                            <strong style={{ fontSize: '11px', color: 'var(--text-primary)' }}>{spec.title}</strong>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              padding: '1px 5px',
+                              borderRadius: 'var(--radius-pill)',
+                              backgroundColor: riskBg,
+                              color: riskColor,
+                              border: `1px solid ${riskBorder}`,
+                            }}
+                          >
+                            {spec.risk === 'HIGH' ? '🔴 Cao' : spec.risk === 'MEDIUM' ? '🟡 Vừa' : '🟢 Thấp'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                          <strong>Phạm vi tác vụ:</strong> {spec.scope}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          <strong>Ảnh hưởng:</strong> {spec.impact}
+                        </div>
+                        {spec.compliance && (
+                          <div style={{ fontSize: '10px', color: 'var(--accent-terracotta)', fontWeight: 600, marginTop: '3px' }}>
+                            ⚖️ {spec.compliance}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

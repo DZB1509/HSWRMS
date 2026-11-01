@@ -405,5 +405,49 @@ describe('M6 Permission Matrix API, Preview & RBAC Boundaries', () => {
         globalThis.fetch = originalFetch;
       }
     });
+
+    it('calls PUT /admin/permissions/matrix and saves changes', async () => {
+      const originalFetch = globalThis.fetch;
+
+      globalThis.fetch = async (url: any, init: any) => {
+        assert.match(String(url), /\/admin\/permissions\/matrix$/);
+        assert.strictEqual(init.method, 'PUT');
+        const body = JSON.parse(init.body);
+        assert.strictEqual(body.changes.length, 1);
+        assert.strictEqual(body.changes[0].role, 'Receptionist');
+
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({
+            timestamp: '2026-10-19T10:00:00Z',
+            success: true,
+            message: 'Permission matrix updated successfully.',
+            data: [
+              {
+                role: 'Receptionist',
+                module: 'S46',
+                action: 'V',
+                from: false,
+                to: true,
+              },
+            ],
+          }),
+        } as any;
+      };
+
+      try {
+        const diff = await permissionMatrixApi.applyChanges([
+          { role: 'Receptionist', module: 'S46', action: 'V', granted: true },
+        ]);
+        assert.strictEqual(diff.length, 1);
+        assert.strictEqual(diff[0].role, 'Receptionist');
+        assert.strictEqual(diff[0].to, true);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
   });
 });
