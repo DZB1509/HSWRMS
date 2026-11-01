@@ -81,22 +81,28 @@ export function formatDelegationTime(isoString: string | null | undefined): stri
 }
 
 /**
- * Authorization validation for viewing delegations.
- * Fail-closed: Requires 'S52:V' permission.
+ * Authorization validation for delegations (S52).
+ * Fail-closed:
+ * - canView: Requires 'S52:V'
+ * - canCreate: Requires 'S52:C'
+ * - canRevoke: Requires 'S52:D'
  */
 export function validateDelegationAuthorization(
   user: { role?: string; permissions?: string[] } | null | undefined
-): { canView: boolean } {
+): { canView: boolean; canCreate: boolean; canRevoke: boolean } {
   if (!user) {
-    return { canView: false };
+    return { canView: false, canCreate: false, canRevoke: false };
   }
-  const canView = evaluatePermission(user, 'S52:V');
-  return { canView };
+  return {
+    canView: evaluatePermission(user, 'S52:V'),
+    canCreate: evaluatePermission(user, 'S52:C'),
+    canRevoke: evaluatePermission(user, 'S52:D'),
+  };
 }
 
 /**
- * Read-Only Delegation API client.
- * Strictly does NOT implement or expose any mutation methods (create/revoke).
+ * Delegation API client backed by the M6 S52 controller.
+ * The backend validates active Manager, permission delegability, date range, and audit records.
  */
 export const delegationApi = {
   /**
@@ -123,5 +129,36 @@ export const delegationApi = {
       return res.data;
     }
     return [];
+  },
+
+  /**
+   * Creates a time-limited scoped delegation to an active Manager.
+   * Requires S52:C permission.
+   */
+  create: async (body: {
+    managerUserId: number;
+    permissionIds: number[];
+    validFrom: string;
+    validUntil: string;
+  }): Promise<DelegationViewDto> => {
+    const res = await apiClient.post<ApiEnvelope<DelegationViewDto>>('/admin/delegations', body);
+    if (res?.data && validateDelegationView(res.data)) {
+      return res.data;
+    }
+    throw new Error('The server returned an invalid delegation response.');
+  },
+
+  /**
+   * Revokes an active or pending delegation immediately.
+   * Requires S52:D permission.
+   */
+  revoke: async (delegationId: number): Promise<DelegationViewDto> => {
+    const res = await apiClient.post<ApiEnvelope<DelegationViewDto>>(
+      `/admin/delegations/${delegationId}/revoke`
+    );
+    if (res?.data && validateDelegationView(res.data)) {
+      return res.data;
+    }
+    throw new Error('The server returned an invalid delegation response.');
   },
 };

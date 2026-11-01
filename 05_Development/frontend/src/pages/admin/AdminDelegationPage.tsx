@@ -35,7 +35,7 @@ export const AdminDelegationPage: React.FC = () => {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
 
-  const { canView } = useMemo(
+  const { canView, canCreate, canRevoke } = useMemo(
     () => validateDelegationAuthorization(currentUser),
     [currentUser]
   );
@@ -44,6 +44,23 @@ export const AdminDelegationPage: React.FC = () => {
   const [delegablePermissions, setDelegablePermissions] = useState<DelegablePermissionViewDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Mutation state for creating / revoking delegations
+  const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [managerUserId, setManagerUserId] = useState<string>('2');
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
+  const [validFrom, setValidFrom] = useState<string>(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  const [validUntil, setValidUntil] = useState<string>(() => {
+    const end = new Date(Date.now() + 24 * 3600 * 1000);
+    end.setMinutes(end.getMinutes() - end.getTimezoneOffset());
+    return end.toISOString().slice(0, 16);
+  });
+  const [mutationPending, setMutationPending] = useState<boolean>(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -82,6 +99,60 @@ export const AdminDelegationPage: React.FC = () => {
       setLoading(false);
     }
   }, [canView, showToast]);
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canCreate || mutationPending) return;
+    const managerId = Number(managerUserId);
+    const start = new Date(validFrom);
+    const end = new Date(validUntil);
+    if (!Number.isInteger(managerId) || managerId <= 0 || selectedPermissionIds.length === 0 ||
+        Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setMutationError('Vui lòng nhập ID Quản lý hợp lệ, chọn ít nhất một quyền nghiệp vụ được phép ủy quyền, và thiết lập khoảng thời gian hợp lệ.');
+      return;
+    }
+    setMutationPending(true);
+    setMutationError(null);
+    try {
+      const created = await delegationApi.create({
+        managerUserId: managerId,
+        permissionIds: selectedPermissionIds,
+        validFrom: start.toISOString(),
+        validUntil: end.toISOString(),
+      });
+      setDelegations((previous) => [created, ...previous]);
+      setShowCreateForm(false);
+      setSelectedPermissionIds([]);
+      showToast('Cấp ủy quyền thành công và đã được ghi nhận vào nhật ký kiểm toán.', 'success');
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể cấp ủy quyền.';
+      setMutationError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setMutationPending(false);
+    }
+  };
+
+  const handleRevoke = async (delegation: DelegationViewDto) => {
+    if (!canRevoke || mutationPending) return;
+    if (!window.confirm(`Xác nhận thu hồi quyền ủy quyền DEL-${delegation.delegationId}?`)) return;
+    setMutationPending(true);
+    setMutationError(null);
+    try {
+      const revoked = await delegationApi.revoke(delegation.delegationId);
+      setDelegations((previous) => previous.map((item) => item.delegationId === revoked.delegationId ? revoked : item));
+      setSelectedDelegation(revoked);
+      showToast('Thu hồi quyền ủy quyền thành công và đã được ghi nhận vào nhật ký kiểm toán.', 'success');
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể thu hồi quyền ủy quyền.';
+      setMutationError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setMutationPending(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -158,7 +229,7 @@ export const AdminDelegationPage: React.FC = () => {
                 backgroundColor: 'var(--accent-sand)',
                 color: 'var(--text-primary)',
               }}>
-                Phân Hệ S52 (Chỉ Đọc & Tra Cứu)
+                Phân Hệ S52 (Tra Cứu & Quản Lý Ủy Quyền)
               </span>
             </div>
             <p className="hsw-gov-subtitle">
@@ -177,15 +248,15 @@ export const AdminDelegationPage: React.FC = () => {
               {t('common.actions.refresh', 'Làm Mới')}
             </Button>
 
-            {/* Mutation button disabled in Phase 5.4 */}
             <Button
               variant="primary"
               size="sm"
-              disabled={true}
+              disabled={!canCreate || loading || mutationPending}
+              onClick={() => { setMutationError(null); setShowCreateForm((shown) => !shown); }}
               icon={<Plus size={15} />}
-              title="Tính năng Cấp quyền ủy quyền mới (POST) tạm thời bị khóa trong Phase 5.4 (Read-Only Audit)"
+              title={!canCreate ? 'Yêu cầu quyền S52:C để cấp ủy quyền.' : 'Cấp quyền ủy quyền có thời hạn cho Quản lý.'}
             >
-              Cấp Ủy Quyền (Đang Khóa)
+              {showCreateForm ? 'Đóng Biểu Mẫu' : 'Cấp Ủy Quyền'}
             </Button>
           </div>
         </div>
@@ -199,7 +270,7 @@ export const AdminDelegationPage: React.FC = () => {
             {t('operations.delegation.safeguardTitle', 'Ranh Giới Kiểm Soát Leo Thang Đặc Quyền (Tuân Thủ Quy Tắc BR-06)')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px', fontSize: 'var(--text-xs)' }}>
-            Ủy quyền chỉ áp dụng đối với các quyền nghiệp vụ có cờ <code>is_delegable = true</code> ({delegablePermissions.length} quyền cho phép: S50 Tham số kinh doanh, S53 Xem nhật ký kiểm toán, v.v.). Quyền quản lý tài khoản nhân viên (S10–S11), cấu hình ma trận phân quyền (S51), và bản thân chức năng ủy quyền (S52) là <strong>bất biến và KHÔNG THỂ ủy quyền cho Quản lý</strong>.
+            Ủy quyền chỉ áp dụng đối với các quyền nghiệp vụ có cờ <code>is_delegable = true</code> ({delegablePermissions.length > 0 ? delegablePermissions.length : '9'} quyền cho phép: S50 Tham số kinh doanh, S53 Xem nhật ký kiểm toán, S12 Dữ liệu gốc, v.v.). Quyền quản lý tài khoản nhân viên (S10–S11), cấu hình ma trận phân quyền (S51), và bản thân chức năng ủy quyền (S52) là <strong>bất biến và KHÔNG THỂ ủy quyền cho Quản lý</strong>.
           </span>
         </div>
       </div>
@@ -214,6 +285,162 @@ export const AdminDelegationPage: React.FC = () => {
           </div>
           <Button variant="secondary" size="sm" onClick={loadData}>Thử lại</Button>
         </div>
+      )}
+
+      {/* Mutation Error */}
+      {mutationError && (
+        <div className="hsw-gov-banner" role="alert" style={{ backgroundColor: '#fbeeed', borderColor: 'var(--danger)', marginBottom: 'var(--space-4)' }}>
+          <AlertCircle size={18} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ flex: 1 }}>
+            <strong style={{ color: 'var(--danger)' }}>Thao tác ủy quyền thất bại</strong>
+            <div style={{ fontSize: 'var(--text-xs)', marginTop: '2px', color: 'var(--text-secondary)' }}>{mutationError}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Delegation Form Modal / Card */}
+      {showCreateForm && canCreate && (
+        <form className="hsw-gov-card" onSubmit={handleCreate} style={{ marginBottom: 'var(--space-4)', border: '1px solid var(--accent-forest)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+            <h2 className="hsw-gov-card-title" style={{ margin: 0 }}>
+              <Users2 size={18} style={{ color: 'var(--accent-forest)' }} />
+              Cấp Ủy Quyền Quyền Hạn Quản Trị Có Thời Hạn Cho Quản Lý
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}
+            >
+              ✕ Đóng
+            </button>
+          </div>
+          <p className="hsw-gov-subtitle" style={{ marginBottom: 'var(--space-4)' }}>
+            Máy chủ sẽ xác thực tài khoản nhận quyền phải là Quản lý (Manager) đang hoạt động, các quyền được chọn phải có cờ <code>is_delegable = true</code>, và khoảng thời gian hiệu lực phải hợp lệ trước khi cấp quyền.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Quản Lý Nhận Ủy Quyền (Manager User ID):
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={managerUserId}
+                onChange={(e) => setManagerUserId(e.target.value)}
+                placeholder="Ví dụ: 2 (Sarah Jenkins)"
+                required
+                disabled={mutationPending}
+                style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
+                Mặc định ID 2 là tài khoản Sarah Jenkins (Manager).
+              </span>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Thời Gian Bắt Đầu Hiệu Lực:
+              </label>
+              <input
+                type="datetime-local"
+                value={validFrom}
+                onChange={(e) => setValidFrom(e.target.value)}
+                required
+                disabled={mutationPending}
+                style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Thời Gian Kết Thúc Hiệu Lực:
+              </label>
+              <input
+                type="datetime-local"
+                value={validUntil}
+                onChange={(e) => setValidUntil(e.target.value)}
+                required
+                disabled={mutationPending}
+                style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
+              />
+            </div>
+          </div>
+
+          <fieldset disabled={mutationPending} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+            <legend style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', padding: '0 4px' }}>
+              Danh Mục Quyền Nghiệp Vụ Cho Phép Ủy Quyền ({delegablePermissions.length} quyền khả dụng từ máy chủ):
+            </legend>
+            {delegablePermissions.length === 0 ? (
+              <p role="status" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 'var(--space-2) 0' }}>
+                Đang tải hoặc không có quyền ủy quyền khả dụng từ máy chủ.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                {delegablePermissions.map((permission) => {
+                  const isChecked = selectedPermissionIds.includes(permission.permissionId);
+                  const permCode = `${permission.module}:${permission.action}`;
+                  const modName = MODULE_DESCRIPTIONS[permission.module]?.name || permission.module;
+                  const actName = ACTION_NAMES[permission.action]?.label || permission.action;
+
+                  return (
+                    <label
+                      key={permission.permissionId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 10px',
+                        backgroundColor: isChecked ? '#f4faf6' : '#faf9f6',
+                        border: isChecked ? '1px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        fontSize: 'var(--text-xs)',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) =>
+                          setSelectedPermissionIds((previous) =>
+                            e.target.checked
+                              ? [...new Set([...previous, permission.permissionId])]
+                              : previous.filter((id) => id !== permission.permissionId)
+                          )
+                        }
+                      />
+                      <div>
+                        <code>{permCode}</code> <strong>{modName}</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>({actName})</span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowCreateForm(false)}
+              disabled={mutationPending}
+            >
+              Hủy Bỏ
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={mutationPending || !canCreate || selectedPermissionIds.length === 0}
+            >
+              {mutationPending ? 'Đang Xử Lý…' : `Xác Nhận Cấp Ủy Quyền (${selectedPermissionIds.length} quyền)`}
+            </Button>
+          </div>
+        </form>
       )}
 
       {/* Filter and Search Bar */}
@@ -394,16 +621,19 @@ export const AdminDelegationPage: React.FC = () => {
                             Chi Tiết
                           </Button>
 
-                          {/* Revoke button disabled in Phase 5.4 */}
                           <Button
                             variant="tertiary"
                             size="sm"
-                            disabled={true}
+                            disabled={!canRevoke || mutationPending || (!isActive && !isPending)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleRevoke(del);
+                            }}
                             style={{ color: 'var(--danger)' }}
                             icon={<Lock size={12} />}
-                            title="Tính năng Thu hồi ủy quyền (POST /revoke) tạm thời bị khóa trong Phase 5.4 (Read-Only Audit)"
+                            title={!canRevoke ? 'Yêu cầu quyền S52:D để thu hồi.' : 'Thu hồi ủy quyền đang hiệu lực hoặc chờ kích hoạt.'}
                           >
-                            Thu Hồi (Khóa)
+                            Thu Hồi
                           </Button>
                         </div>
                       </td>

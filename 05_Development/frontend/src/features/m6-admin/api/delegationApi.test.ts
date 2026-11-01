@@ -98,7 +98,11 @@ describe('M6 Delegation API & Read-Only Contract Verification', () => {
         role: 'admin',
         permissions: ['S52:V', 'S52:C', 'S52:D'],
       };
-      assert.deepStrictEqual(validateDelegationAuthorization(admin), { canView: true });
+      assert.deepStrictEqual(validateDelegationAuthorization(admin), {
+        canView: true,
+        canCreate: true,
+        canRevoke: true,
+      });
     });
 
     it('denies view to user with missing S52:V (fail-closed)', () => {
@@ -106,13 +110,21 @@ describe('M6 Delegation API & Read-Only Contract Verification', () => {
         role: 'admin',
         permissions: ['S50:V'], // Missing S52:V
       };
-      assert.deepStrictEqual(validateDelegationAuthorization(adminUnverified), { canView: false });
+      assert.deepStrictEqual(validateDelegationAuthorization(adminUnverified), {
+        canView: false,
+        canCreate: false,
+        canRevoke: false,
+      });
 
       const adminEmpty = {
         role: 'admin',
         permissions: [],
       };
-      assert.deepStrictEqual(validateDelegationAuthorization(adminEmpty), { canView: false });
+      assert.deepStrictEqual(validateDelegationAuthorization(adminEmpty), {
+        canView: false,
+        canCreate: false,
+        canRevoke: false,
+      });
     });
 
     it('denies view to MANAGER role (S52 is admin-only, non-delegable)', () => {
@@ -120,24 +132,31 @@ describe('M6 Delegation API & Read-Only Contract Verification', () => {
         role: 'manager',
         permissions: ['S46:V', 'S47:V', 'S50:V', 'S55:V'],
       };
-      assert.deepStrictEqual(validateDelegationAuthorization(manager), { canView: false });
+      assert.deepStrictEqual(validateDelegationAuthorization(manager), {
+        canView: false,
+        canCreate: false,
+        canRevoke: false,
+      });
     });
 
     it('fails closed for null or undefined user', () => {
-      assert.deepStrictEqual(validateDelegationAuthorization(null), { canView: false });
-      assert.deepStrictEqual(validateDelegationAuthorization(undefined), { canView: false });
+      assert.deepStrictEqual(validateDelegationAuthorization(null), {
+        canView: false,
+        canCreate: false,
+        canRevoke: false,
+      });
+      assert.deepStrictEqual(validateDelegationAuthorization(undefined), {
+        canView: false,
+        canCreate: false,
+        canRevoke: false,
+      });
     });
   });
 
-  describe('delegationApi read-only HTTP methods & absence of mutations', () => {
-    it('verifies delegationApi exposes ONLY read methods (list, listDelegablePermissions)', () => {
+  describe('delegationApi verified HTTP contract', () => {
+    it('exposes the backend-supported read and mutation methods', () => {
       const keys = Object.keys(delegationApi);
-      assert.deepStrictEqual(keys.sort(), ['list', 'listDelegablePermissions']);
-      // Explicitly verifies NO create, update, delete, or revoke methods exist on delegationApi
-      assert.strictEqual('create' in delegationApi, false);
-      assert.strictEqual('revoke' in delegationApi, false);
-      assert.strictEqual('delete' in delegationApi, false);
-      assert.strictEqual('update' in delegationApi, false);
+      assert.deepStrictEqual(keys.sort(), ['create', 'list', 'listDelegablePermissions', 'revoke']);
     });
 
     it('fetches delegation list from GET /admin/delegations', async () => {
@@ -213,6 +232,89 @@ describe('M6 Delegation API & Read-Only Contract Verification', () => {
         assert.strictEqual(requestedMethod, 'GET');
         assert.strictEqual(delegables.length, 2);
         assert.strictEqual(delegables[0].module, 'S50');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('creates a delegation through POST /admin/delegations and returns server data', async () => {
+      const originalFetch = globalThis.fetch;
+      let requestedUrl = '';
+      let requestedMethod = '';
+      let requestedBody: any;
+      globalThis.fetch = async (url: any, init: any) => {
+        requestedUrl = String(url);
+        requestedMethod = init?.method;
+        requestedBody = JSON.parse(init?.body || '{}');
+        return {
+          ok: true,
+          status: 201,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({
+            success: true,
+            data: {
+              delegationId: 17,
+              managerUserId: 2,
+              managerName: 'Manager',
+              grantedByAdminUserId: 1,
+              validFrom: '2026-10-31T00:00:00Z',
+              validUntil: '2026-11-01T00:00:00Z',
+              status: 'ACTIVE',
+              permissions: ['S50:U'],
+              revokedAt: null,
+            },
+          }),
+        } as any;
+      };
+      try {
+        const created = await delegationApi.create({
+          managerUserId: 2,
+          permissionIds: [50],
+          validFrom: '2026-10-31T00:00:00Z',
+          validUntil: '2026-11-01T00:00:00Z',
+        });
+        assert.match(requestedUrl, /\/admin\/delegations$/);
+        assert.strictEqual(requestedMethod, 'POST');
+        assert.strictEqual(requestedBody.managerUserId, 2);
+        assert.strictEqual(created.delegationId, 17);
+        assert.strictEqual(created.status, 'ACTIVE');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('revokes a delegation through POST /admin/delegations/{id}/revoke and returns server data', async () => {
+      const originalFetch = globalThis.fetch;
+      let requestedUrl = '';
+      let requestedMethod = '';
+      globalThis.fetch = async (url: any, init: any) => {
+        requestedUrl = String(url);
+        requestedMethod = init?.method;
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({
+            success: true,
+            data: {
+              delegationId: 17,
+              managerUserId: 2,
+              managerName: 'Manager',
+              grantedByAdminUserId: 1,
+              validFrom: '2026-10-31T00:00:00Z',
+              validUntil: '2026-11-01T00:00:00Z',
+              status: 'REVOKED',
+              permissions: ['S50:U'],
+              revokedAt: '2026-10-31T12:00:00Z',
+            },
+          }),
+        } as any;
+      };
+      try {
+        const revoked = await delegationApi.revoke(17);
+        assert.match(requestedUrl, /\/admin\/delegations\/17\/revoke$/);
+        assert.strictEqual(requestedMethod, 'POST');
+        assert.strictEqual(revoked.status, 'REVOKED');
       } finally {
         globalThis.fetch = originalFetch;
       }
