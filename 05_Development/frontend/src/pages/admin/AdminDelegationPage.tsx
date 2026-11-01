@@ -76,6 +76,8 @@ export const AdminDelegationPage: React.FC = () => {
   const loadData = useCallback(async () => {
     if (!canView) {
       setLoading(false);
+      setDelegations([]);
+      setDelegablePermissions([]);
       setError('Bạn không có quyền truy cập Ủy Quyền Quản Lý (Yêu cầu quyền S52:V).');
       return;
     }
@@ -93,6 +95,8 @@ export const AdminDelegationPage: React.FC = () => {
       setDelegablePermissions(delegables);
     } catch (err: any) {
       const msg = err?.message || 'Không thể tải danh sách ủy quyền từ máy chủ';
+      setDelegations([]);
+      setDelegablePermissions([]);
       setError(msg);
       showToast(msg, 'error');
     } finally {

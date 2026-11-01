@@ -14,6 +14,7 @@ import com.heavenstay.hswrms.m6admin.entity.Permission;
 import com.heavenstay.hswrms.m6admin.entity.RightDelegation;
 import com.heavenstay.hswrms.m6admin.repository.AuditLogRepository;
 import com.heavenstay.hswrms.m6admin.repository.PermissionRepository;
+import com.heavenstay.hswrms.m6admin.repository.RightDelegationRepository;
 import com.heavenstay.hswrms.m6admin.security.CurrentActor;
 import com.heavenstay.hswrms.m6admin.service.DelegationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ public class DelegationServiceTest {
     private PermissionRepository permissionRepository;
 
     @Autowired
+    private RightDelegationRepository delegationRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -52,7 +56,7 @@ public class DelegationServiceTest {
     private UserRoleRepository userRoleRepository;
 
     private User managerUser;
-    private final CurrentActor adminActor = new CurrentActor(99, "admin@heavenstay.dev", "ADMIN", true);
+    private final CurrentActor adminActor = new CurrentActor(99999, "admin@heavenstay.com", "ADMIN", true);
 
     @BeforeEach
     void setUp() {
@@ -265,5 +269,26 @@ public class DelegationServiceTest {
         BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
                 delegationService.revoke(created.delegationId(), adminActor));
         assertEquals("DELEGATION_NOT_REVOCABLE", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("UC79: Active delegation is expired by server lifecycle refresh after validUntil")
+    void expiredDelegationIsNotReturnedAsActive() throws Exception {
+        Integer permissionId = delegationService.delegablePermissions().get(0).permissionId();
+        Instant now = Instant.now();
+        DelegationView created = delegationService.create(new DelegationCreateRequest(
+                managerUser.getUserId(), List.of(permissionId), now.minus(1, ChronoUnit.HOURS),
+                now.plus(1, ChronoUnit.HOURS)), adminActor);
+
+        var entity = delegationRepository.findById(created.delegationId()).orElseThrow();
+        var validUntilField = RightDelegation.class.getDeclaredField("validUntil");
+        validUntilField.setAccessible(true);
+        validUntilField.set(entity, java.time.LocalDateTime.ofInstant(now.minus(1, ChronoUnit.SECONDS), java.time.ZoneOffset.UTC));
+        delegationRepository.save(entity);
+
+        DelegationView refreshed = delegationService.list().stream()
+                .filter(item -> item.delegationId().equals(created.delegationId()))
+                .findFirst().orElseThrow();
+        assertEquals(RightDelegation.EXPIRED, refreshed.status());
     }
 }

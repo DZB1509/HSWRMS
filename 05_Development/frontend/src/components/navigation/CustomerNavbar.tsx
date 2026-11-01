@@ -283,11 +283,11 @@ export const CustomerNavbar: React.FC = () => {
             <Link to="/customer/account" style={{ textDecoration: 'none' }} aria-label="Customer account and settings">
               <div className="hsw-customer-user-badge">
                 <div className="hsw-avatar-circle">
-                  {getInitials(profile.fullName)}
+                  {getInitials(profile?.fullName ?? '')}
                 </div>
                 <div style={{ textAlign: 'left' }} className="hsw-customer-user-text">
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {profile.fullName}
+                    {profile?.fullName ?? ''}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--accent-olive)' }}>
                     {activeBooking ? `${activeBooking.villaNumber || 'Villa #102'} · Reserved` : 'Sanctuary Member'}

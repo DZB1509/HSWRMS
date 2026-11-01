@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../components/common/Toast';
@@ -10,34 +10,36 @@ import { HeartPulse, Utensils, ShieldCheck, Lock, Save, Trash2 } from 'lucide-re
 import { getMyHealthProfile, updateMyHealthProfile, type HealthProfileData } from '../../api/health/healthProfileApi';
 import { grantConsent } from '../../api/health/consentApi';
 import { AppApiError } from '../../api/errors/apiError';
+import { useAuth } from '../../app/providers/AuthProvider';
 
 type StressLevel = 'mild' | 'moderate' | 'high';
 const splitList = (value: string): string[] => value.split(',').map((s) => s.trim()).filter(Boolean);
 const joinList = (values: string[] | null | undefined): string => (values ?? []).join(', ');
 const textOrEmpty = (value: string | null | undefined): string => value ?? '';
 
-export const HealthProfilePage: React.FC = () => {
+const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean }> = ({ isCurrentIdentity }) => {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [reloadSequence, setReloadSequence] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasConsented, setHasConsented] = useState(false);
   const [serverConsented, setServerConsented] = useState(false);
-  const [healthNotes, setHealthNotes] = useState({ medicalConditions: '', injuriesOrSurgeries: '', mobilityConsiderations: '', currentMedications: '', stressLevel: 'moderate' as StressLevel, treatmentPreferences: '' });
+  const [healthNotes, setHealthNotes] = useState({ medicalConditions: '', injuriesOrSurgeries: '', mobilityConsiderations: '', currentMedications: '', stressLevel: '' as StressLevel | '', treatmentPreferences: '' });
   const [dietary, setDietary] = useState({ allergies: '', dietaryRestrictions: '', intolerances: '', dislikedIngredients: '', specialInstructions: '' });
   const applyServer = (data: HealthProfileData): void => {
     setHasConsented(data.hasConsented);
     setServerConsented(data.hasConsented);
-    setHealthNotes({ medicalConditions: textOrEmpty(data.currentHealthCondition), injuriesOrSurgeries: textOrEmpty(data.injurySurgeryHistory), mobilityConsiderations: textOrEmpty(data.mobilityJointNotes), currentMedications: textOrEmpty(data.currentMedications), stressLevel: ((data.stressFatigueLevel as StressLevel) || 'moderate'), treatmentPreferences: joinList(data.therapyPreferences) });
+    setHealthNotes({ medicalConditions: textOrEmpty(data.currentHealthCondition), injuriesOrSurgeries: textOrEmpty(data.injurySurgeryHistory), mobilityConsiderations: textOrEmpty(data.mobilityJointNotes), currentMedications: textOrEmpty(data.currentMedications), stressLevel: ((data.stressFatigueLevel as StressLevel) || ''), treatmentPreferences: joinList(data.therapyPreferences) });
     setDietary({ allergies: joinList(data.foodAllergies), dietaryRestrictions: joinList(data.dietaryRequirements), intolerances: textOrEmpty(data.foodIntoleranceNotes), dislikedIngredients: textOrEmpty(data.dislikedIngredients), specialInstructions: textOrEmpty(data.kitchenNotes) });
   };
   useEffect(() => {
     let cancelled = false;
     getMyHealthProfile().then((r) => { if (!cancelled) applyServer(r.data); }).catch((e: unknown) => { if (!cancelled) setLoadError(e instanceof AppApiError ? e.message : 'Could not load your saved health profile.'); }).finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadSequence]);
   const toMsg = (error: unknown, fallback: string): string => {
     if (error instanceof AppApiError) {
       if (error.code === 'HEALTH_CONSENT_REQUIRED') return t('customer.healthProfile.consentRequiredError', 'Please agree to health-data processing before saving.');
@@ -48,7 +50,7 @@ export const HealthProfilePage: React.FC = () => {
   };
   const handleSave = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    if (isSaving || isLoading) return;
+    if (isSaving || isLoading || !isCurrentIdentity()) return;
     setSaveError(null);
     setIsSaving(true);
     try {
@@ -56,16 +58,20 @@ export const HealthProfilePage: React.FC = () => {
         try { await grantConsent({ consentType: 'HEALTH_DATA_PROCESSING' }); }
         catch (error) { const m = toMsg(error, 'Could not record consent.'); setSaveError(m); showToast(m, 'error'); return; }
       }
-      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel, foodAllergies: splitList(dietary.allergies), foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: splitList(dietary.dietaryRestrictions), therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null });
+      if (!isCurrentIdentity()) return;
+      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: splitList(dietary.allergies), foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: splitList(dietary.dietaryRestrictions), therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null });
+      if (!isCurrentIdentity()) return;
       const saved = (await getMyHealthProfile()).data;
+      if (!isCurrentIdentity()) return;
       applyServer(saved);
       showToast(t('customer.healthProfile.saveSuccess', 'Health profile saved successfully.'), 'success');
     } catch (error) { const m = toMsg(error, t('customer.healthProfile.saveFailed', 'Could not save your health profile.')); setSaveError(m); showToast(m, 'error'); }
     finally { setIsSaving(false); }
   };
   const handleRetry = (): void => {
-    setLoadError(null); setIsLoading(true);
-    getMyHealthProfile().then((r) => applyServer(r.data)).catch((e: unknown) => setLoadError(e instanceof AppApiError ? e.message : 'Could not load your saved health profile.')).finally(() => setIsLoading(false));
+    setLoadError(null);
+    setIsLoading(true);
+    setReloadSequence((sequence) => sequence + 1);
   };
   return (
     <div className="hsw-health-profile-page" style={{ padding: 'var(--space-6) 0 var(--space-16)' }}>
@@ -277,7 +283,7 @@ export const HealthProfilePage: React.FC = () => {
                   </label>
                   <select
                     value={healthNotes.stressLevel}
-                    onChange={(e) => setHealthNotes((p) => ({ ...p, stressLevel: e.target.value as 'mild' | 'moderate' | 'high' }))}
+                    onChange={(e) => setHealthNotes((p) => ({ ...p, stressLevel: e.target.value as StressLevel | '' }))}
                     style={{
                       width: '100%',
                       padding: '10px 14px',
@@ -288,6 +294,7 @@ export const HealthProfilePage: React.FC = () => {
                       color: 'var(--text-primary)',
                     }}
                   >
+                    <option value="">{t('customer.healthProfile.stressUnspecified', 'Not specified')}</option>
                     <option value="mild">{t('customer.healthProfile.stressMild', 'Mild (Seeking peaceful rest)')}</option>
                     <option value="moderate">{t('customer.healthProfile.stressModerate', 'Moderate (Need tension relief)')}</option>
                     <option value="high">{t('customer.healthProfile.stressHigh', 'High (Seeking deep somatic recovery)')}</option>
@@ -492,4 +499,15 @@ export const HealthProfilePage: React.FC = () => {
       </Container>
     </div>
   );
+};
+
+export const HealthProfilePage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const identity = currentUser?.id ?? null;
+  const activeIdentity = useRef(identity);
+  activeIdentity.current = identity;
+  if (!identity) {
+    return <div role="alert">Your health profile is unavailable until your Customer identity is verified.</div>;
+  }
+  return <HealthProfilePageForIdentity key={identity} isCurrentIdentity={() => activeIdentity.current === identity} />;
 };

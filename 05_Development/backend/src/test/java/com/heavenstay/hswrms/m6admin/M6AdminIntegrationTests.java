@@ -118,6 +118,67 @@ class M6AdminIntegrationTests {
     }
 
     @Test
+    @DisplayName("FR-M6-05: Delegation API supports audited creation/revocation and denies non-admin mutation")
+    void delegationApiCreateRevokeAndAuthorization() throws Exception {
+        String email = "delegation.manager." + System.currentTimeMillis() + "@heavenstay.com";
+        MvcResult managerCreatedResult = mockMvc.perform(post("/api/v1/admin/staff")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new StaffCreateRequest("Delegation Manager", email, "0900000044", "MANAGER"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode createdStaff = objectMapper.readTree(managerCreatedResult.getResponse().getContentAsString()).path("data");
+        int managerId = createdStaff.path("staff").path("userId").asInt();
+        String temporaryPassword = createdStaff.path("temporaryPassword").asText();
+
+        MvcResult delegablesResult = mockMvc.perform(get("/api/v1/admin/delegations/delegable-permissions")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        int permissionId = objectMapper.readTree(delegablesResult.getResponse().getContentAsString())
+                .path("data").get(0).path("permissionId").asInt();
+        Instant validFrom = Instant.now().minus(60, ChronoUnit.SECONDS);
+        Instant validUntil = Instant.now().plus(1, ChronoUnit.DAYS);
+        DelegationCreateRequest request = new DelegationCreateRequest(managerId, List.of(permissionId), validFrom, validUntil);
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(post("/api/v1/admin/delegations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isUnauthorized());
+
+        MvcResult managerLoginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, temporaryPassword))))
+                .andExpect(status().isOk())
+                .andReturn();
+        String managerToken = objectMapper.readTree(managerLoginResult.getResponse().getContentAsString())
+                .path("data").path("token").asText();
+        mockMvc.perform(post("/api/v1/admin/delegations")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isForbidden());
+
+        MvcResult delegationResult = mockMvc.perform(post("/api/v1/admin/delegations")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status", is("ACTIVE")))
+                .andReturn();
+        int delegationId = objectMapper.readTree(delegationResult.getResponse().getContentAsString())
+                .path("data").path("delegationId").asInt();
+
+        mockMvc.perform(post("/api/v1/admin/delegations/{id}/revoke", delegationId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status", is("REVOKED")))
+                .andExpect(jsonPath("$.data.revokedAt", notNullValue()));
+    }
+
+    @Test
     @DisplayName("FR-M6-01: Admin can list staff and create a new staff account")
     void staffManagementFlow() throws Exception {
         // List staff
@@ -328,8 +389,8 @@ class M6AdminIntegrationTests {
 
         mockMvc.perform(get("/api/v1/system-overview/police-residency-report/export")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", startsWith("text/csv")));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Content-Type", startsWith("text/plain")));
     }
 
     @Test

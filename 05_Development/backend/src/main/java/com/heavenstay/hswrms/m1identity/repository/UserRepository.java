@@ -3,6 +3,8 @@ package com.heavenstay.hswrms.m1identity.repository;
 
 import com.heavenstay.hswrms.m1identity.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -86,4 +88,11 @@ public interface UserRepository extends JpaRepository<User, Integer> {
                                                           @Param("role") String role,
                                                           @Param("status") String status,
                                                           org.springframework.data.domain.Pageable pageable);
+    /**
+     * Acquires a pessimistic write lock on the user row. Used to serialize
+     * OTP issuance for the same user without a schema change.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.userId = :userId")
+    Optional<User> findByIdForUpdate(@Param("userId") Integer userId);
 }

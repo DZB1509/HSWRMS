@@ -15,7 +15,7 @@ import { cleanMojibake } from '../../utils/textEncodingHelper';
 
 export const MealOrderDetailPage: React.FC = () => {
   const { t, i18n } = useTranslation(['operations', 'customer']);
-  const { getDailyPrepList, updateFulfillmentStatus, menuItems, getOrderById } = useDining();
+  const { getDailyPrepList, updateFulfillmentStatus, menuItems, getOrderById, error } = useDining();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
@@ -43,7 +43,7 @@ export const MealOrderDetailPage: React.FC = () => {
   // 2. Fallback search across current date and historical canonical dates
   if (!item && id) {
     const todayStr = getLocalDateString();
-    const datesToSearch = [todayStr, '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2024-12-05'];
+    const datesToSearch = [todayStr];
     for (const d of datesToSearch) {
       const list = getDailyPrepList(d);
       const found = list.find((i) => i.id === id || i.id.replace(/\D/g, '') === id.replace(/\D/g, ''));
@@ -72,10 +72,10 @@ export const MealOrderDetailPage: React.FC = () => {
                 id: String(ko.id),
                 type: ko.orderType === 'A_LA_CARTE' ? 'a_la_carte' : 'retreat_meal',
                 date: ko.orderDate || new Date().toISOString().split('T')[0],
-                mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
-                targetTime: ko.mealType ? ko.mealType.toLowerCase() : 'breakfast',
-                customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName}` : 'Eleanor Vance',
-                villaNumber: ko.villaNumber || 'Villa #102 (Tranquil Garden)',
+                mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : undefined) as MealPeriod,
+                targetTime: ko.mealType ? ko.mealType.toLowerCase() : undefined,
+                customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName}` : 'Customer',
+                villaNumber: ko.villaNumber || '',
                 items: ((ko.items || ko.lines || []) as any[]).map((line) => ({
                   menuItemId: String(line.menuItemId),
                   quantity: line.quantity,
@@ -86,9 +86,9 @@ export const MealOrderDetailPage: React.FC = () => {
                 customerNotes: ko.specialNotes || undefined,
                 dietaryNotes: [...(ko.allergies || ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
                 dietaryVerificationStatus: (ko.dietaryVerificationStatus as any) || 'UNVERIFIED',
-                locationVerificationStatus: (ko.locationVerificationStatus as any) || 'VERIFIED_VILLA',
-                folioPostingStatus: (ko.folioPostingStatus as any) || (ko.orderType === 'A_LA_CARTE' ? 'PENDING_RECONCILIATION' : 'NOT_APPLICABLE'),
-                status: (ko.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
+                locationVerificationStatus: ko.locationVerificationStatus as any,
+                folioPostingStatus: ko.folioPostingStatus as any,
+                status: ko.status?.toLowerCase() as FnbFulfillmentStatus,
                 inventoryStatus: ko.inventoryStatus,
                 inventoryMessage: ko.inventoryMessage,
               };
@@ -190,40 +190,7 @@ export const MealOrderDetailPage: React.FC = () => {
   };
 
   const handleStatusChange = (newStatus: FnbFulfillmentStatus) => {
-    updateFulfillmentStatus(item!.id, item!.type, newStatus);
-    const numId = parseInt(item!.id.replace(/\D/g, ''), 10);
-    if (!isNaN(numId) && numId > 0) {
-      setTimeout(() => {
-        fnbApi.getKitchenOrderById(numId).then((ko) => {
-          if (ko) {
-            setRemoteItem({
-              id: String(ko.id),
-              type: ko.orderType === 'A_LA_CARTE' ? 'a_la_carte' : 'retreat_meal',
-              date: ko.orderDate || new Date().toISOString().split('T')[0],
-              mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
-              targetTime: ko.mealType ? ko.mealType.toLowerCase() : 'breakfast',
-              customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName}` : 'Eleanor Vance',
-              villaNumber: ko.villaNumber || 'Villa #102 (Tranquil Garden)',
-              items: ((ko.items || ko.lines || []) as any[]).map((line) => ({
-                menuItemId: String(line.menuItemId),
-                quantity: line.quantity,
-                notes: ko.specialNotes || undefined,
-                inventoryStatus: line.inventoryStatus,
-                inventoryMessage: line.inventoryMessage,
-              })),
-              customerNotes: ko.specialNotes || undefined,
-              dietaryNotes: [...(ko.allergies || ko.allergyTags || []), ...(ko.dietaryPreferences || [])],
-              dietaryVerificationStatus: (ko.dietaryVerificationStatus as any) || 'UNVERIFIED',
-              locationVerificationStatus: (ko.locationVerificationStatus as any) || 'VERIFIED_VILLA',
-              folioPostingStatus: (ko.folioPostingStatus as any) || (ko.orderType === 'A_LA_CARTE' ? 'PENDING_RECONCILIATION' : 'NOT_APPLICABLE'),
-              status: (ko.status?.toLowerCase() as FnbFulfillmentStatus) || 'pending',
-              inventoryStatus: ko.inventoryStatus,
-              inventoryMessage: ko.inventoryMessage,
-            });
-          }
-        }).catch(() => {});
-      }, 400);
-    }
+    void updateFulfillmentStatus(item!.id, item!.type, newStatus).catch(() => undefined);
   };
 
   const isAllergy = (note: string) => {
@@ -246,7 +213,7 @@ export const MealOrderDetailPage: React.FC = () => {
   const preferences = item.dietaryNotes.filter((n) => !isAllergy(n));
 
   const formatVilla = (villa?: string) => {
-    if (!villa) return 'Villa #102 (Tranquil Garden)';
+    if (!villa) return '—';
     return villa.toLowerCase().startsWith('villa') ? villa : `Villa ${villa}`;
   };
 
@@ -260,6 +227,7 @@ export const MealOrderDetailPage: React.FC = () => {
 
   return (
     <div className="hsw-page-container">
+      {error && <div role="alert" className="hsw-gov-banner">{error}</div>}
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <button
           className="hsw-btn hsw-btn-secondary"
@@ -424,7 +392,7 @@ export const MealOrderDetailPage: React.FC = () => {
                 <User size={16} style={{ color: 'var(--accent-forest)', marginTop: '2px', flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{t('fnb.orderDetail.customerName', 'Customer Name')}</div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.customerName) || 'Eleanor Vance'}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cleanMojibake(item.customerName) || 'Customer'}</div>
                 </div>
               </div>
 

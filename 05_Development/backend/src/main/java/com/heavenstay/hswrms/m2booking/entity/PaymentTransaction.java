@@ -36,6 +36,12 @@ public class PaymentTransaction {
     @Column(name = "retreat_booking_id")
     private Integer retreatBookingId;
 
+    // The shared table also contains the M5 invoice target. Keep M2 deposit
+    // writes from owning that value while exposing the real nullable column to
+    // Hibernate schema generation for this duplicate table mapping.
+    @Column(name = "invoice_id", insertable = false, updatable = false)
+    private Integer invoiceId;
+
     @Column(name = "payment_type", nullable = false, length = 20)
     private String paymentType = TYPE_DEPOSIT;
 

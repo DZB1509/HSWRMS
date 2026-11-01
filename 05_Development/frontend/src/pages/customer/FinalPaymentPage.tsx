@@ -21,8 +21,8 @@ import { formatVND } from '../../i18n';
 import { billingApi } from '../../features/m5-billing/api/billingApi';
 import type { VietQrResponse, VnpayPaymentUrlResponse, FolioResponse, InvoiceResponse } from '../../features/m5-billing/types';
 const formatCurrency = formatVND;
-import { resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
 import { isNetworkOrTimeoutError } from '../../features/m5-billing/utils/paymentSafety';
+import { resolveCustomerBookingId } from '../../features/m5-billing/utils/bookingResolver';
 
 export const FinalPaymentPage: React.FC = () => {
   const { t } = useTranslation();
@@ -30,17 +30,25 @@ export const FinalPaymentPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { bookingId } = useParams<{ bookingId?: string }>();
   const { role } = useAuth();
-  const { getFolioForBooking, processPayment, resetFolioSettlement } = useFolio();
+  const { getFolioForBooking, resetFolioSettlement } = useFolio();
   const [backendFolio, setBackendFolio] = useState<FolioResponse | null>(null);
   const [backendInvoice, setBackendInvoice] = useState<InvoiceResponse | null>(null);
-  const { activeBooking } = useCustomer();
+  const [isLoadingBackend, setIsLoadingBackend] = useState(true);
+  const { activeBooking, bookings } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
-  const folioData = getFolioForBooking(bookingId);
+  const requestedBookingId = bookingId || searchParams.get('bookingId');
+  const customerBookingId = resolveCustomerBookingId(requestedBookingId, bookings);
+  const customerBooking = bookings.find(booking => Number(booking.id) === customerBookingId);
+  const folioData = getFolioForBooking(role === 'customer' ? customerBooking?.bookingReference : bookingId);
 
   const numericBookingId = useMemo(() => {
-    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+    if (role === 'customer') return customerBookingId;
+    if (bookingId && /^\d+$/.test(bookingId)) return Number(bookingId);
+    if (bookingId && activeBooking?.bookingReference !== bookingId && activeBooking?.id !== bookingId) return null;
+    const candidate = Number(activeBooking?.id);
+    return Number.isSafeInteger(candidate) && candidate > 0 ? candidate : null;
+  }, [role, customerBookingId, bookingId, activeBooking?.id]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const initialInvoiceId = useMemo(() => {
@@ -48,10 +56,8 @@ export const FinalPaymentPage: React.FC = () => {
       const parsed = parseInt(queryInvoiceId.trim(), 10);
       if (parsed > 0) return parsed;
     }
-    const nbId = resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-    if (nbId && nbId > 0) return nbId;
-    return 1;
-  }, [queryInvoiceId, bookingId, folioData.bookingReference, activeBooking?.id]);
+    return null;
+  }, [queryInvoiceId]);
 
   const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(initialInvoiceId);
 
@@ -64,7 +70,11 @@ export const FinalPaymentPage: React.FC = () => {
   // Resolve backend Folio & Invoice ID
   useEffect(() => {
     let isMounted = true;
-    if (!numericBookingId) return;
+    if (!numericBookingId) {
+      setIsLoadingBackend(false);
+      setPaymentError('A verified server booking ID is required to load payment details.');
+      return;
+    }
 
     const resolveBackendData = async () => {
       try {
@@ -79,8 +89,10 @@ export const FinalPaymentPage: React.FC = () => {
             setResolvedInvoiceId(newInvoice.invoiceId);
           }
         }
-      } catch {
-        // Backend offline or error; will rely on verified local state
+      } catch (err) {
+        if (isMounted) setPaymentError(err instanceof Error ? err.message : 'Unable to load payment details from the server.');
+      } finally {
+        if (isMounted) setIsLoadingBackend(false);
       }
     };
     resolveBackendData();
@@ -123,28 +135,13 @@ export const FinalPaymentPage: React.FC = () => {
   const [vnpayError, setVnpayError] = useState<string | null>(null);
   const vnpayPollRef = useRef<any>(null);
 
-  // Simulation mode for deterministic reviewer evaluation (Rule 21 & Rule 67)
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const queryAmount = useMemo(() => {
-    const raw = searchParams.get('amount');
-    if (raw && !isNaN(Number(raw)) && Number(raw) > 0) return Number(raw);
-    return null;
-  }, [searchParams]);
-
   const amountToPay: number = useMemo(() => {
-    if (queryAmount && queryAmount > 0) {
-      return queryAmount;
-    }
-    if (backendFolio && ((backendFolio.estimatedAmountDue ?? 0) > 0 || (backendFolio.finalAmount ?? 0) > 0)) {
-      return backendFolio.estimatedAmountDue || backendFolio.finalAmount || 19418000;
-    }
-    if (folioData.outstandingBalance > 24000000) {
-      return 19418000;
-    }
-    return folioData.outstandingBalance > 0 ? folioData.outstandingBalance : 19418000;
-  }, [queryAmount, backendFolio, folioData.outstandingBalance]);
+    if (!backendFolio) return 0;
+    return Number(backendFolio.estimatedAmountDue ?? backendFolio.finalAmount ?? backendFolio.balanceDue ?? 0);
+  }, [backendFolio]);
 
   // Synchronized financial breakdown matching S41 reconciliation
   const { packageBalance, extraSpaCharges, extraFnbCharges, taxAmount, totalAmount } = useMemo(() => {
@@ -163,7 +160,7 @@ export const FinalPaymentPage: React.FC = () => {
     } else if (typeof folioData.retreatRemaining === 'number' && folioData.retreatRemaining > 0) {
       pkgBal = folioData.retreatRemaining;
     } else {
-      pkgBal = 17150000;
+      pkgBal = 0;
     }
 
     // 2. Extra Spa charges: from DTO or filter folio items (SPA / EXTRA_SPA)
@@ -179,7 +176,7 @@ export const FinalPaymentPage: React.FC = () => {
           return cat === 'EXTRA_SPA' || cat === 'SPA';
         })
         .reduce((sum: number, it: any) => sum + (Number(it.amount) || 0), 0);
-      spaChg = spaItemsSum > 0 ? spaItemsSum : (folioData.spaExtrasTotal || 1500000);
+      spaChg = spaItemsSum;
     }
 
     // 3. Extra F&B charges: from DTO or filter folio items (FNB / EXTRA_FNB / MEAL)
@@ -195,7 +192,7 @@ export const FinalPaymentPage: React.FC = () => {
           return cat === 'EXTRA_FNB' || cat === 'FNB' || cat === 'MEAL';
         })
         .reduce((sum: number, it: any) => sum + (Number(it.amount) || 0), 0);
-      fnbChg = fnbItemsSum > 0 ? fnbItemsSum : (folioData.fnbExtrasTotal || 600000);
+      fnbChg = fnbItemsSum;
     }
 
     // 4. Tax (VAT 8% on extras)
@@ -205,13 +202,13 @@ export const FinalPaymentPage: React.FC = () => {
     } else if (typeof backendFolio?.estimatedTax === 'number' && backendFolio.estimatedTax > 0) {
       tax = backendFolio.estimatedTax;
     } else {
-      const vatRate = backendFolio?.vatRate ?? backendInvoice?.vatRate ?? 0.08;
-      tax = Math.round((spaChg + fnbChg) * vatRate);
+      const vatRate = backendFolio?.vatRate ?? backendInvoice?.vatRate;
+      tax = vatRate == null ? 0 : Math.round((spaChg + fnbChg) * vatRate);
     }
 
     // 5. Total settlement amount
     const calcTotal = pkgBal + spaChg + fnbChg + tax;
-    const tot = amountToPay > 0 ? amountToPay : (calcTotal > 0 ? calcTotal : 19418000);
+    const tot = amountToPay > 0 ? amountToPay : calcTotal;
 
     return {
       packageBalance: pkgBal,
@@ -227,8 +224,8 @@ export const FinalPaymentPage: React.FC = () => {
   // Load VietQR when invoice is available
   useEffect(() => {
     let isMounted = true;
-    const invoiceIdToUse = resolvedInvoiceId || numericBookingId || 1;
-    if (isZeroBalance) return;
+    const invoiceIdToUse = resolvedInvoiceId;
+    if (isZeroBalance || !invoiceIdToUse) return;
 
     const loadQr = async () => {
       setIsLoadingQr(true);
@@ -238,36 +235,7 @@ export const FinalPaymentPage: React.FC = () => {
           setVietQrData(qrRes);
         }
       } catch (err: any) {
-        console.warn('VietQR API fetch error, checking status or activating quicklink fallback', err);
-        const msg = String(err?.message || '').toLowerCase();
-        const code = String(err?.code || '');
-        if (msg.includes('already paid') || msg.includes('already settled') || code === 'INVOICE_ALREADY_PAID' || code === 'INVOICE_ALREADY_SETTLED' || code === 'NO_BALANCE_DUE') {
-          goToResult('success');
-          return;
-        }
-        if (isMounted) {
-          const invNum = `INV-20260927-${invoiceIdToUse}`;
-          const content = `HSW INV ${invNum}`;
-          const amt = amountToPay > 0 ? amountToPay : 19418000;
-          const quickUrl = `https://img.vietqr.io/image/970422-0987654321-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(content)}&accountName=HEAVENSTAY%20RESORT`;
-          setVietQrData({
-            qrImageUrl: quickUrl,
-            qrPayload: '',
-            bankBin: '970422',
-            bankName: 'MBBank (Quân Đội)',
-            accountNumber: '0987654321',
-            accountNo: '0987654321',
-            accountName: 'HEAVENSTAY RESORT',
-            amount: amt,
-            transferContent: content,
-            content: content,
-            transactionReference: `HSW_INV_${invoiceIdToUse}_${Date.now()}`,
-            invoiceId: invoiceIdToUse,
-            invoiceNumber: invNum,
-            paymentType: 'FINAL_PAYMENT',
-            paymentStatus: 'PENDING',
-          });
-        }
+        if (isMounted) { setVietQrData(null); setPaymentError(err instanceof Error ? err.message : 'VietQR is unavailable from the server.'); }
       } finally {
         if (isMounted) setIsLoadingQr(false);
       }
@@ -281,22 +249,23 @@ export const FinalPaymentPage: React.FC = () => {
 
   // Polling for VietQR transaction status when displayed
   useEffect(() => {
-    if (!vietQrData || !vietQrData.transactionReference || selectedMethod !== 'VIETQR_BANK_TRANSFER') {
+    const transactionReference = vietQrData?.transactionReference;
+    if (!transactionReference || selectedMethod !== 'VIETQR_BANK_TRANSFER') {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       return;
     }
 
     const checkStatus = async () => {
       try {
-        const txStatus = await billingApi.getTransactionStatus(vietQrData.transactionReference);
+        const txStatus = await billingApi.getTransactionStatus(transactionReference);
         if (txStatus && txStatus.paymentStatus === 'SUCCESSFUL') {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
-          const tx = await processPayment(folioData.bookingReference, amountToPay, 'success');
+          const tx = txStatus.transactionReference;
           navigate(
             isStaff && bookingId
-              ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-              : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+              ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx}${invoiceSuffix}`
+              : `/customer/checkout/payment-result?txId=${tx}${invoiceSuffix}`
           );
         }
       } catch {
@@ -309,19 +278,9 @@ export const FinalPaymentPage: React.FC = () => {
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [vietQrData, selectedMethod, resolvedInvoiceId, isStaff, bookingId, folioData.bookingReference, amountToPay, navigate, processPayment]);
+  }, [vietQrData, selectedMethod, resolvedInvoiceId, isStaff, bookingId, folioData.bookingReference, amountToPay, navigate]);
 
-  const goToResult = async (outcome: 'success' | 'failed' | 'pending') => {
-    const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
-    const tx = await processPayment(folioData.bookingReference, amountToPay, outcome);
-    navigate(
-      isStaff && bookingId
-        ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-        : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
-    );
-  };
-
-  const targetInvoiceId = resolvedInvoiceId || backendFolio?.invoiceId || (numericBookingId === 1 ? 2 : numericBookingId) || 2;
+  const targetInvoiceId = resolvedInvoiceId || backendFolio?.invoiceId || null;
 
   const fetchVnpayUrl = useCallback(async () => {
     if (!targetInvoiceId || isZeroBalance) return;
@@ -345,7 +304,7 @@ export const FinalPaymentPage: React.FC = () => {
         code === 'INVOICE_ALREADY_SETTLED' ||
         code === 'NO_BALANCE_DUE'
       ) {
-        goToResult('success');
+        setVnpayError('The invoice appears paid; refresh its status before continuing.');
         return;
       }
       setVnpayError(err?.message || 'Không thể tạo liên kết thanh toán VNPay.');
@@ -382,7 +341,10 @@ export const FinalPaymentPage: React.FC = () => {
         const st = await billingApi.getInvoicePaymentStatus(invoiceToPoll);
         if (st.paymentStatus === 'SUCCESSFUL') {
           if (vnpayPollRef.current) clearInterval(vnpayPollRef.current);
-          await goToResult('success');
+          if (st.transactionReference) {
+            const suffix = `&invoiceId=${invoiceToPoll}`;
+            navigate(isStaff && bookingId ? `/receptionist/checkout/${bookingId}/payment-result?txId=${st.transactionReference}${suffix}` : `/customer/checkout/payment-result?txId=${st.transactionReference}${suffix}`);
+          }
         }
       } catch {
         // ignore transient polling errors
@@ -415,11 +377,11 @@ export const FinalPaymentPage: React.FC = () => {
       const txStatus = await billingApi.getTransactionStatus(vietQrData.transactionReference);
       if (txStatus.paymentStatus === 'SUCCESSFUL') {
         const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
-        const tx = await processPayment(folioData.bookingReference, amountToPay, 'success');
+        const tx = txStatus.transactionReference;
         navigate(
           isStaff && bookingId
-            ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-            : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+            ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx}${invoiceSuffix}`
+            : `/customer/checkout/payment-result?txId=${tx}${invoiceSuffix}`
         );
       } else {
         setPaymentError('Hệ thống chưa ghi nhận tiền về tài khoản cho nội dung: ' + vietQrData.transferContent + '. Vui lòng kiểm tra lại sau giây lát.');
@@ -439,15 +401,11 @@ export const FinalPaymentPage: React.FC = () => {
     setPaymentError(null);
     setIsProcessing(true);
     try {
-      const generatedRef = vietQrData?.transactionReference || `HSW-M5-${Math.floor(100000 + Math.random() * 900000)}`;
-
       if (resolvedInvoiceId) {
         try {
           const backendRes = await billingApi.payInvoice(resolvedInvoiceId, {
             paymentMethod: selectedMethod,
             amount: amountToPay,
-            transactionReference: generatedRef,
-            cardLast4: selectedMethod === 'CARD' ? '4111' : undefined,
           });
 
           // If backend provided payment URL (e.g. redirect gateway)
@@ -458,38 +416,31 @@ export const FinalPaymentPage: React.FC = () => {
 
           const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
           if (backendRes.paymentStatus === 'SUCCESSFUL') {
-            const tx = await processPayment(folioData.bookingReference, amountToPay, 'success');
             navigate(
               isStaff && bookingId
-                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${backendRes.transactionReference}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${backendRes.transactionReference}${invoiceSuffix}`
             );
           } else if (backendRes.paymentStatus === 'FAILED') {
-            const tx = await processPayment(folioData.bookingReference, amountToPay, 'failed');
+            const tx = backendRes.transactionReference;
             navigate(
               isStaff && bookingId
-                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${tx}${invoiceSuffix}`
             );
           } else {
-            const tx = await processPayment(folioData.bookingReference, amountToPay, 'pending');
+            const tx = backendRes.transactionReference;
             navigate(
               isStaff && bookingId
-                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
+                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx}${invoiceSuffix}`
+                : `/customer/checkout/payment-result?txId=${tx}${invoiceSuffix}`
             );
           }
         } catch (err: any) {
           const isNetworkError = isNetworkOrTimeoutError(err, navigator.onLine);
 
           if (isNetworkError) {
-            const tx = await processPayment(folioData.bookingReference, amountToPay, 'pending');
-            const invoiceSuffix = `&invoiceId=${resolvedInvoiceId}`;
-            navigate(
-              isStaff && bookingId
-                ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx.id}${invoiceSuffix}`
-                : `/customer/checkout/payment-result?txId=${tx.id}${invoiceSuffix}`
-            );
+            setPaymentError('The payment request status could not be confirmed. Check the invoice status before retrying.');
           } else {
             setPaymentError(err?.message || 'Giao dịch thanh toán bị từ chối bởi hệ thống máy chủ.');
           }
@@ -506,14 +457,7 @@ export const FinalPaymentPage: React.FC = () => {
     setIsProcessing(true);
     setPaymentError(null);
     try {
-      if (resolvedInvoiceId) {
-        try {
-          await billingApi.finalizeCheckout(resolvedInvoiceId);
-        } catch (err: any) {
-          setPaymentError(err?.message || 'Không thể hoàn tất trả phòng: Lỗi từ máy chủ.');
-          return;
-        }
-      } else if (!import.meta.env.DEV) {
+      if (!resolvedInvoiceId) {
         setPaymentError('Không thể hoàn tất trả phòng: Chưa có hóa đơn xác thực từ máy chủ.');
         return;
       }
@@ -531,6 +475,14 @@ export const FinalPaymentPage: React.FC = () => {
   const backRoute = isStaff && bookingId
     ? `/receptionist/folio/${bookingId}`
     : '/customer/folio';
+
+  if (isLoadingBackend || !backendFolio) {
+    return <div className="hsw-folio-page"><Container size="narrow"><div className="hsw-payment-container" role="status">
+      <h1>{isLoadingBackend ? 'Loading server folio…' : 'Payment details unavailable'}</h1>
+      <p>{paymentError || 'The server has not returned a verified folio and invoice.'}</p>
+      <button type="button" className="hsw-btn hsw-btn-secondary" onClick={() => navigate(backRoute)}>Return to Folio</button>
+    </div></Container></div>;
+  }
 
   return (
     <div className="hsw-folio-page">
@@ -909,24 +861,15 @@ export const FinalPaymentPage: React.FC = () => {
                           <RefreshCw size={24} className="hsw-spin" style={{ color: '#005baa' }} />
                           <span>Đang tạo VietQR...</span>
                         </div>
-                      ) : (
-                        (() => {
-                          const bin = vietQrData?.bankBin || '970422';
-                          const acc = vietQrData?.accountNumber || (vietQrData as any)?.accountNo || '0987654321';
-                          const name = vietQrData?.accountName || 'HEAVENSTAY RESORT';
-                          const contentStr = vietQrData?.transferContent || (vietQrData as any)?.content || `HSW INV ${resolvedInvoiceId || 1}`;
-                          const qrUrl = vietQrData?.qrImageUrl || `https://img.vietqr.io/image/${bin}-${acc}-compact2.png?amount=${amountToPay}&addInfo=${encodeURIComponent(contentStr)}&accountName=${encodeURIComponent(name)}`;
-                          return (
+                      ) : vietQrData?.qrImageUrl ? (
                             <img
-                              src={qrUrl}
+                              src={vietQrData.qrImageUrl}
                               alt="VietQR Napas 247"
                               style={{ width: '210px', height: 'auto', display: 'block', borderRadius: '6px' }}
                               className="w-64 h-64 mx-auto object-contain"
                               id="vietqr-image"
                             />
-                          );
-                        })()
-                      )}
+                      ) : <span role="status">VietQR details are unavailable from the server.</span>}
                     </div>
 
                     {/* Bank Transfer Details with Copy Buttons */}
@@ -935,7 +878,7 @@ export const FinalPaymentPage: React.FC = () => {
                         {/* Ngân hàng */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
                           <span style={{ color: '#64748b' }}>Ngân hàng thụ hưởng:</span>
-                          <strong style={{ color: '#0f172a' }}>{vietQrData?.bankName || 'MBBank (Quân Đội)'}</strong>
+                          <strong style={{ color: '#0f172a' }}>{vietQrData?.bankName || '—'}</strong>
                         </div>
 
                         {/* Số tài khoản */}
@@ -943,11 +886,11 @@ export const FinalPaymentPage: React.FC = () => {
                           <span style={{ color: '#64748b' }}>Số tài khoản:</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <strong style={{ color: '#005baa', fontFamily: 'monospace', fontSize: '14px' }}>
-                              {vietQrData?.accountNumber || '0987654321'}
+                              {vietQrData?.accountNumber || '—'}
                             </strong>
                             <button
                               type="button"
-                              onClick={() => handleCopy(vietQrData?.accountNumber || '0987654321', 'acc')}
+                              onClick={() => vietQrData?.accountNumber && handleCopy(vietQrData.accountNumber, 'acc')}
                               style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', color: '#64748b' }}
                               title="Sao chép số tài khoản"
                             >
@@ -959,14 +902,14 @@ export const FinalPaymentPage: React.FC = () => {
                         {/* Chủ tài khoản */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
                           <span style={{ color: '#64748b' }}>Chủ tài khoản:</span>
-                          <strong style={{ color: '#0f172a' }}>{vietQrData?.accountName || 'HEAVENSTAY RESORT'}</strong>
+                          <strong style={{ color: '#0f172a' }}>{vietQrData?.accountName || '—'}</strong>
                         </div>
 
                         {/* Số tiền */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
                           <span style={{ color: '#64748b' }}>Số tiền:</span>
                           <strong style={{ color: '#16a34a', fontSize: '15px' }}>
-                            {formatVND(vietQrData?.amount || amountToPay)}
+                            {vietQrData?.amount != null ? formatVND(vietQrData.amount) : '—'}
                           </strong>
                         </div>
 
@@ -975,11 +918,11 @@ export const FinalPaymentPage: React.FC = () => {
                           <span style={{ color: '#475569', fontSize: '12px' }}>Nội dung CK:</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <code style={{ fontWeight: 700, color: '#b91c1c', fontSize: '13px' }}>
-                              {vietQrData?.transferContent || `HSW INV ${resolvedInvoiceId || 1}`}
+                              {vietQrData?.transferContent || '—'}
                             </code>
                             <button
                               type="button"
-                              onClick={() => handleCopy(vietQrData?.transferContent || `HSW INV ${resolvedInvoiceId || 1}`, 'content')}
+                              onClick={() => vietQrData?.transferContent && handleCopy(vietQrData.transferContent, 'content')}
                               style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', color: '#475569' }}
                               title="Sao chép nội dung chuyển khoản"
                             >
@@ -989,23 +932,28 @@ export const FinalPaymentPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Live polling indicator & Check status button */}
-                      <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#16a34a' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-                          <span>Đang lắng nghe thanh toán tự động...</span>
+                      {vietQrData?.transactionReference ? (
+                        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#16a34a' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                            <span>Đang lắng nghe thanh toán tự động...</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleManualCheckStatus}
+                            disabled={isCheckingStatus}
+                            className="hsw-btn hsw-btn-secondary"
+                            style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <RefreshCw size={13} className={isCheckingStatus ? 'hsw-spin' : ''} />
+                            <span>{isCheckingStatus ? 'Đang kiểm tra...' : 'Tôi đã chuyển tiền'}</span>
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={handleManualCheckStatus}
-                          disabled={isCheckingStatus}
-                          className="hsw-btn hsw-btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <RefreshCw size={13} className={isCheckingStatus ? 'hsw-spin' : ''} />
-                          <span>{isCheckingStatus ? 'Đang kiểm tra...' : 'Tôi đã chuyển tiền'}</span>
-                        </button>
-                      </div>
+                      ) : (
+                        <p role="status" style={{ marginTop: '12px', fontSize: '12px', color: '#475569' }}>
+                          QR đã được tạo nhưng chưa xác nhận thanh toán. Quét mã không tự ghi nhận tiền hoặc hoàn tất thanh toán.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

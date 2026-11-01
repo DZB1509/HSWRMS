@@ -188,6 +188,8 @@ export interface SpaContextType {
   rooms: TreatmentRoom[];
   therapists: Therapist[];
   sessions: SpaSession[];
+  isLoading?: boolean;
+  error?: string | null;
 
   // Lookups
   getTreatmentById: (id: string) => SpaTreatment | undefined;
@@ -228,10 +230,10 @@ export interface SpaContextType {
   }) => void;
 
   // Session Lifecycle
-  cancelSession: (sessionId: string) => { success: boolean; message: string };
+  cancelSession: (sessionId: string) => Promise<{ success: boolean; message: string }>;
   startSession: (sessionId: string) => { success: boolean; message: string };
-  completeSession: (sessionId: string, therapistNotes?: string) => { success: boolean; message: string };
-  markNoShow: (sessionId: string) => { success: boolean; message: string };
+  completeSession: (sessionId: string, therapistNotes?: string) => Promise<{ success: boolean; message: string }>;
+  markNoShow: (sessionId: string) => Promise<{ success: boolean; message: string }>;
 
   // Privacy-First Data Projection
   getTherapistRelevantWellnessInfo: (customerId: string, treatmentId?: string) => TherapistSafeWellnessView | null;

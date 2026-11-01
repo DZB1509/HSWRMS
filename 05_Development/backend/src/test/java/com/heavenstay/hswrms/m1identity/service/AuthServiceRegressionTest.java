@@ -75,6 +75,12 @@ class AuthServiceRegressionTest {
         validRequest.setPassword("securepass");
         validRequest.setConfirmPassword("securepass");
         validRequest.setConsent(true);
+
+        lenient().when(userRepository.findByIdForUpdate(anyInt())).thenAnswer(invocation -> {
+            User u = new User();
+            u.setUserId(invocation.getArgument(0));
+            return Optional.of(u);
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

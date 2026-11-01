@@ -23,7 +23,7 @@ spring:
 
 app:
   jwt:
-    secret: defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong
+    secret: ${JWT_SECRET:}
     expiration-ms: 86400000
   cors:
     allowed-origins: http://localhost:5173,http://localhost:4173

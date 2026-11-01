@@ -8,14 +8,13 @@ import com.heavenstay.hswrms.m3spa.repository.SpaScheduleHistoryRepository;
 import com.heavenstay.hswrms.m3spa.service.event.SpaScheduleAcceptedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Event listener that records audit history, enqueues transactional outbox dispatches,
- * and triggers immediate non-blocking external synchronization (BR-M3-14).
+ * and delegates dispatch after enqueueing (BR-M3-14).
  *
  * Fault Tolerance & Outbox Pattern:
  * 1. Schedule history is saved atomically with deduplication checks.
@@ -30,15 +29,14 @@ public class SpaScheduleAuditEventListener {
 
     private final SpaScheduleHistoryRepository historyRepository;
     private final SpaDispatchOutboxRepository outboxRepository;
-    private final SpaDispatchOutboxWorker outboxWorker;
+    private final SpaAcceptedScheduleOutboxDispatcher outboxDispatcher;
 
-    @Autowired
     public SpaScheduleAuditEventListener(SpaScheduleHistoryRepository historyRepository,
                                          SpaDispatchOutboxRepository outboxRepository,
-                                         SpaDispatchOutboxWorker outboxWorker) {
+                                         SpaAcceptedScheduleOutboxDispatcher outboxDispatcher) {
         this.historyRepository = historyRepository;
         this.outboxRepository = outboxRepository;
-        this.outboxWorker = outboxWorker;
+        this.outboxDispatcher = outboxDispatcher;
     }
 
     @EventListener
@@ -119,7 +117,7 @@ public class SpaScheduleAuditEventListener {
         if (!outboxRepository.existsByIdempotencyKey(calKey)) {
             calOutbox = outboxRepository.save(calOutbox);
             try {
-                outboxWorker.processEntry(calOutbox);
+                outboxDispatcher.dispatch(calOutbox);
             } catch (Exception ex) {
                 log.error("[SPA OUTBOX] Immediate calendar dispatch failed; retained in outbox for retry: {}", ex.getMessage());
             }
@@ -128,7 +126,7 @@ public class SpaScheduleAuditEventListener {
         if (!outboxRepository.existsByIdempotencyKey(emailKey)) {
             emailOutbox = outboxRepository.save(emailOutbox);
             try {
-                outboxWorker.processEntry(emailOutbox);
+                outboxDispatcher.dispatch(emailOutbox);
             } catch (Exception ex) {
                 log.error("[SPA OUTBOX] Immediate email dispatch failed; retained in outbox for retry: {}", ex.getMessage());
             }

@@ -36,7 +36,7 @@ public class VNPayDepositService {
     @Value("${app.vnpay.tmn-code:HEAVENSTAY}")
     private String tmnCode;
 
-    @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}")
+    @Value("${app.vnpay.hash-secret:}")
     private String hashSecret;
 
     @Value("${app.vnpay.pay-url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}")

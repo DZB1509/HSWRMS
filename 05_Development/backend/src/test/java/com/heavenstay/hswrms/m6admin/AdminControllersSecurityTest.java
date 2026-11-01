@@ -378,6 +378,24 @@ public class AdminControllersSecurityTest {
     }
 
     @Test
+    @DisplayName("SECURITY-10A: A receptionist without S55:V cannot access system overview")
+    void receptionistWithoutSystemOverviewPermissionIsDenied() throws Exception {
+        Role receptionistRole = roleRepository.findByRoleNameIgnoreCase("Receptionist")
+                .orElseGet(() -> roleRepository.saveAndFlush(new Role("Receptionist", "Receptionist role")));
+        User receptionist = new User("Overview Receptionist", "overview.receptionist@heavenstay.test", "enc_hash");
+        receptionist.setAccountStatus("ACTIVE");
+        receptionist.setEmailVerified(true);
+        receptionist = userRepository.saveAndFlush(receptionist);
+        userRoleRepository.saveAndFlush(new UserRole(receptionist, receptionistRole));
+        String receptionistToken = jwtTokenProvider.generateToken(
+                receptionist.getUserId(), receptionist.getEmail(), receptionist.getFullName(), List.of("RECEPTIONIST"));
+
+        mockMvc.perform(get("/api/v1/system-overview")
+                        .header("Authorization", "Bearer " + receptionistToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("SECURITY-11: Admin attempting to self-delegate is rejected with CANNOT_DELEGATE_TO_SELF")
     void adminCannotSelfDelegate() throws Exception {
         // Also assign Manager role to admin user to test self-delegation block

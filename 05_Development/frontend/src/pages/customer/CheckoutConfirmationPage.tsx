@@ -20,7 +20,7 @@ import { useCustomer } from '../../context/CustomerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
 import { billingApi } from '../../features/m5-billing/api/billingApi';
-import { resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
+import { resolveCustomerBookingId, resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
 
 export const CheckoutConfirmationPage: React.FC = () => {
   const { t } = useTranslation();
@@ -34,14 +34,17 @@ export const CheckoutConfirmationPage: React.FC = () => {
     isStayCheckedOut,
     getCheckoutRecord,
   } = useFolio();
-  const { activeBooking } = useCustomer();
+  const { activeBooking, bookings } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
-  const folioData = getFolioForBooking(bookingId);
+  const requestedBookingId = bookingId || searchParams.get('bookingId');
+  const customerBookingId = resolveCustomerBookingId(requestedBookingId, bookings);
+  const customerBooking = bookings.find(booking => Number(booking.id) === customerBookingId);
+  const folioData = getFolioForBooking(role === 'customer' ? customerBooking?.bookingReference : bookingId);
 
   const numericBookingId = useMemo(() => {
-    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-  }, [bookingId, folioData.bookingReference, activeBooking?.id]);
+    return role === 'customer' ? customerBookingId : resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
+  }, [role, customerBookingId, bookingId, folioData.bookingReference, activeBooking?.id]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(() => {
@@ -111,22 +114,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
     setCheckoutError(null);
     setIsFinalizing(true);
     try {
-      // Attempt backend atomic checkout finalization if verified invoice ID exists
-      if (resolvedInvoiceId) {
-        try {
-          await billingApi.finalizeCheckout(resolvedInvoiceId);
-        } catch (err: any) {
-          setCheckoutError(err?.message || 'Cannot checkout: Server rejected the departure request.');
-          setIsFinalizing(false);
-          return;
-        }
-      } else if (!import.meta.env.DEV) {
-        setCheckoutError('Cannot complete checkout: No verified invoice found on server.');
-        setIsFinalizing(false);
-        return;
-      }
-
-      const result = completeResortCheckout(
+      const result = await completeResortCheckout(
         folioData.bookingReference,
         isStaff ? 'receptionist' : 'customer'
       );

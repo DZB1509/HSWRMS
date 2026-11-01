@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useReducer, useRef } from 'react';
 import type {
   CustomerProfile,
   WellnessProfile,
@@ -9,76 +9,140 @@ import type {
   DeletionRequestStatus,
   BookingStatus,
 } from '../types/customer';
-import {
-  INITIAL_CUSTOMER_PROFILE,
-  INITIAL_WELLNESS_PROFILE,
-} from '../data/mockCustomer';
 import { useAuth } from '../hooks/useAuth';
 import { getMyProfile } from '../api/customer/customerProfileApi';
 import { getCustomerBookings, createCustomerBooking } from '../api/booking/retreatBookingApi';
 import { listMyDeletionRequests, createMyDeletionRequest, cancelMyDeletionRequest } from '../api/health/deletionRequestApi';
+import {
+  createAuthenticatedCustomerProfile,
+  createEmptyWellnessProfile,
+  readCustomerPrivateValue,
+  writeCustomerPrivateValue,
+} from '../utils/customerPrivateStorage';
+import {
+  createIdentityScopedState,
+  identityScopedReducer,
+  selectIdentityScopedState,
+} from '../utils/identityScopedState';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  PROFILE: 'hsw_customer_profile_v1',
-  WELLNESS: 'hsw_wellness_profile_v1',
-  DELETION: 'hsw_deletion_request_v1',
+type DeletionRequestApiData = {
+  deletionRequestId: number;
+  requestType: string;
+  status: string;
+  requestedByUserId: number;
+  createdAt: string;
+};
+
+const mapDeletionRequest = (data: DeletionRequestApiData): HealthDataDeletionRequest => {
+  const statusByApiValue: Record<string, DeletionRequestStatus> = {
+    PENDING: 'pending',
+    DEFERRED: 'deferred_active_retreat',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+  };
+  const status = statusByApiValue[data.status.trim().toUpperCase()];
+  if (!status) throw new Error(`Unsupported deletion request status: ${data.status}`);
+  return {
+    id: String(data.deletionRequestId),
+    customerId: String(data.requestedByUserId),
+    requestedAt: data.createdAt,
+    status,
+    targetDataTypes: [],
+    acknowledgedPolicy: true,
+  };
 };
 
 export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
+  const customerIdentity = currentUser?.role === 'customer' ? currentUser.id : null;
+  const activeCustomerIdentity = useRef(customerIdentity);
+  activeCustomerIdentity.current = customerIdentity;
+  const privateStateRequestSequence = useRef(0);
 
-  // Clear legacy mock bookings key
+  const [profileCacheState, dispatchProfileCacheState] = useReducer(
+    identityScopedReducer<CustomerProfile | null>,
+    createIdentityScopedState<CustomerProfile | null>(null, null),
+  );
+  const profileCache = selectIdentityScopedState(profileCacheState, customerIdentity, null).data;
+  const [wellnessState, dispatchWellnessState] = useReducer(
+    identityScopedReducer<WellnessProfile | null>,
+    createIdentityScopedState<WellnessProfile | null>(null, null),
+  );
+  const currentWellnessState = selectIdentityScopedState(wellnessState, customerIdentity, null);
+  const wellnessProfile = currentWellnessState.data;
+
   useEffect(() => {
-    try {
-      localStorage.removeItem('hsw_customer_bookings_v1');
-    } catch {
-      // Ignore
-    }
-  }, []);
+    const requestId = ++privateStateRequestSequence.current;
+    dispatchProfileCacheState({
+      type: 'begin', identity: customerIdentity, requestId, emptyData: null, isLoading: false,
+    });
+    dispatchWellnessState({
+      type: 'begin', identity: customerIdentity, requestId, emptyData: null, isLoading: false,
+    });
 
-  const [storedProfile, setStoredProfile] = useState<CustomerProfile>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
-      return saved ? JSON.parse(saved) : INITIAL_CUSTOMER_PROFILE;
-    } catch {
-      return INITIAL_CUSTOMER_PROFILE;
-    }
-  });
+    if (customerIdentity === null) return;
 
-  const [wellnessProfile, setWellnessProfile] = useState<WellnessProfile>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.WELLNESS);
-      return saved ? JSON.parse(saved) : INITIAL_WELLNESS_PROFILE;
-    } catch {
-      return INITIAL_WELLNESS_PROFILE;
-    }
-  });
+    const savedProfile = readCustomerPrivateValue<CustomerProfile>(localStorage, 'profile', customerIdentity);
+    const identityMatchedProfile = savedProfile?.id === customerIdentity ? savedProfile : null;
+    dispatchProfileCacheState({
+      type: 'resolve', identity: customerIdentity, requestId, data: identityMatchedProfile, error: null,
+    });
+    dispatchWellnessState({
+      type: 'resolve',
+      identity: customerIdentity,
+      requestId,
+      data: readCustomerPrivateValue<WellnessProfile>(localStorage, 'wellness', customerIdentity),
+      error: null,
+    });
+  }, [customerIdentity]);
 
-  const [bookings, setBookings] = useState<RetreatBooking[]>([]);
-  const [isLoadingBookings, setIsLoadingBookings] = useState<boolean>(false);
+  const [bookingState, dispatchBookingState] = useReducer(
+    identityScopedReducer<RetreatBooking[]>,
+    createIdentityScopedState<RetreatBooking[]>(null, []),
+  );
+  const bookingRequestSequence = useRef(0);
+  const currentBookingState = selectIdentityScopedState(bookingState, customerIdentity, []);
+  const bookings = currentBookingState.data;
+  const isLoadingBookings = currentBookingState.isLoading;
+  const bookingsError = currentBookingState.error;
 
-  const [deletionRequest, setDeletionRequest] = useState<HealthDataDeletionRequest | null>(null);
-  const [isDeletionLoading, setIsDeletionLoading] = useState(false);
-  const [deletionError, setDeletionError] = useState<string | null>(null);
+  const [deletionState, dispatchDeletionState] = useReducer(
+    identityScopedReducer<HealthDataDeletionRequest | null>,
+    createIdentityScopedState<HealthDataDeletionRequest | null>(null, null),
+  );
+  const deletionRequestSequence = useRef(0);
+  const currentDeletionState = selectIdentityScopedState(deletionState, customerIdentity, null);
+  const deletionRequest = currentDeletionState.data;
+  const isDeletionLoading = currentDeletionState.isLoading;
+  const deletionError = currentDeletionState.error;
 
-  // Save to localStorage on changes
-  const [serverProfile, setServerProfile] = useState<CustomerProfile | null>(null);
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const serverProfileRequestSequence = useRef(0);
+  const [serverProfileState, dispatchServerProfileState] = useReducer(
+    identityScopedReducer<CustomerProfile | null>,
+    createIdentityScopedState<CustomerProfile | null>(null, null),
+  );
+  const currentServerProfileState = selectIdentityScopedState(serverProfileState, customerIdentity, null);
+  const serverProfile = currentServerProfileState.data;
+  const isProfileLoading = currentServerProfileState.isLoading;
 
   const refreshServerProfile = useCallback(async () => {
-    if (!currentUser || currentUser.role !== 'customer') {
-      setServerProfile(null);
+    const identity = customerIdentity;
+    const requestId = ++serverProfileRequestSequence.current;
+    dispatchServerProfileState({
+      type: 'begin', identity, requestId, emptyData: null, isLoading: identity !== null,
+    });
+    if (identity === null) {
       return null;
     }
-    setIsProfileLoading(true);
+
     try {
       const response = await getMyProfile();
       const data = response.data;
       const mapped: CustomerProfile = {
-        ...INITIAL_CUSTOMER_PROFILE,
-        id: `usr-${data.userId}`,
+        ...createAuthenticatedCustomerProfile(identity, data.fullName, data.email),
+        id: identity,
         fullName: data.fullName,
         email: data.email,
         phone: data.phoneNumber ?? '',
@@ -91,40 +155,44 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           relationship: data.emergencyContactRelationship ?? '',
         },
       };
-      setServerProfile(mapped);
+      if (activeCustomerIdentity.current !== identity || serverProfileRequestSequence.current !== requestId) return null;
+      dispatchServerProfileState({ type: 'resolve', identity, requestId, data: mapped, error: null });
       return mapped;
     } catch {
-      setServerProfile(null);
+      if (activeCustomerIdentity.current === identity && serverProfileRequestSequence.current === requestId) {
+        dispatchServerProfileState({ type: 'resolve', identity, requestId, data: null, error: null });
+      }
       return null;
-    } finally {
-      setIsProfileLoading(false);
     }
-  }, [currentUser]);
+  }, [customerIdentity]);
 
   useEffect(() => {
     void refreshServerProfile();
   }, [refreshServerProfile]);
 
-  const profile: CustomerProfile = useMemo(() => {
-    if (serverProfile) return serverProfile;
-    if (currentUser && currentUser.role === 'customer') {
-      return {
-        ...storedProfile,
-        id: currentUser.id,
-        fullName: currentUser.name,
-        email: currentUser.email,
-      };
-    }
-    return storedProfile;
-  }, [serverProfile, storedProfile, currentUser]);
+  const profile: CustomerProfile | null = serverProfile ?? profileCache ?? (
+    customerIdentity !== null && currentUser?.role === 'customer'
+      ? createAuthenticatedCustomerProfile(customerIdentity, currentUser.name, currentUser.email)
+      : null
+  );
 
   // Fetch bookings directly from SQL Server Backend API
   const fetchCustomerBookingsFromBackend = useCallback(async () => {
-    setIsLoadingBookings(true);
+    const requestId = ++bookingRequestSequence.current;
+    const identity = customerIdentity;
+    dispatchBookingState({
+      type: 'begin',
+      identity,
+      requestId,
+      emptyData: [],
+      isLoading: identity !== null,
+    });
+    if (identity === null) return;
+
     try {
       const summaries = await getCustomerBookings();
-      if (summaries && summaries.length > 0) {
-        const mapped: RetreatBooking[] = summaries.map((s) => {
+      const mapped: RetreatBooking[] = summaries?.length
+        ? summaries.map((s) => {
           let status: BookingStatus = 'upcoming';
           const bStatus = (s.bookingStatus || '').toUpperCase();
           if (bStatus === 'CHECKED_IN') status = 'in_stay';
@@ -179,80 +247,92 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             itinerary: [],
             createdAt: s.checkInDate,
           };
-        });
-        setBookings(mapped);
-      } else {
-        setBookings([]);
-      }
-    } catch {
-      setBookings([]);
-    } finally {
-      setIsLoadingBookings(false);
+        })
+        : [];
+      dispatchBookingState({
+        type: 'resolve',
+        identity,
+        requestId,
+        data: mapped,
+        error: null,
+      });
+    } catch (err) {
+      dispatchBookingState({
+        type: 'resolve',
+        identity,
+        requestId,
+        data: [],
+        error: err instanceof Error ? err.message : 'Unable to load Customer bookings.',
+      });
     }
-  }, []);
+  }, [customerIdentity]);
 
   useEffect(() => {
     void fetchCustomerBookingsFromBackend();
   }, [fetchCustomerBookingsFromBackend]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(storedProfile));
-    } catch {
-      // Ignore
-    }
-  }, [storedProfile]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.WELLNESS, JSON.stringify(wellnessProfile));
-    } catch {
-      // Ignore
-    }
-  }, [wellnessProfile]);
-
   const updateProfile = (updated: Partial<CustomerProfile>) => {
-    setStoredProfile((prev) => ({ ...prev, ...updated }));
+    const identity = customerIdentity;
+    if (!identity || activeCustomerIdentity.current !== identity) return;
+
+    const base = profile ?? createAuthenticatedCustomerProfile(identity, currentUser?.name ?? '', currentUser?.email ?? '');
+    const next = { ...base, ...updated, id: identity };
+    const requestId = ++privateStateRequestSequence.current;
+    dispatchProfileCacheState({ type: 'begin', identity, requestId, emptyData: null, isLoading: false });
+    dispatchProfileCacheState({ type: 'resolve', identity, requestId, data: next, error: null });
+    writeCustomerPrivateValue(localStorage, 'profile', identity, next);
   };
 
   const updateWellnessProfile = (updated: Partial<WellnessProfile>) => {
-    setWellnessProfile((prev) => ({
-      ...prev,
+    const identity = customerIdentity;
+    if (!identity || activeCustomerIdentity.current !== identity) return;
+
+    const next = {
+      ...(wellnessProfile ?? createEmptyWellnessProfile()),
       ...updated,
       lastUpdated: new Date().toISOString(),
-    }));
+    };
+    const requestId = ++privateStateRequestSequence.current;
+    dispatchWellnessState({ type: 'begin', identity, requestId, emptyData: null, isLoading: false });
+    dispatchWellnessState({ type: 'resolve', identity, requestId, data: next, error: null });
+    writeCustomerPrivateValue(localStorage, 'wellness', identity, next);
   };
 
   const activeBooking = bookings.find((b) => b.status === 'upcoming' || b.status === 'in_stay') || null;
 
-  const mapDeletionRequest = (data: { deletionRequestId: number; requestType: string; status: string; requestedByUserId: number; createdAt: string }): HealthDataDeletionRequest => ({
-    id: String(data.deletionRequestId),
-    customerId: String(data.requestedByUserId),
-    requestedAt: data.createdAt,
-    status: data.status as DeletionRequestStatus,
-    targetDataTypes: [],
-    acknowledgedPolicy: true,
-  });
-
   const refreshDeletionRequests = useCallback(async () => {
-    if (!currentUser || currentUser.role !== 'customer') {
-      setDeletionRequest(null);
-      setDeletionError(null);
-      return;
-    }
-    setIsDeletionLoading(true);
-    setDeletionError(null);
+    const identity = customerIdentity;
+    const requestId = ++deletionRequestSequence.current;
+    dispatchDeletionState({
+      type: 'begin',
+      identity,
+      requestId,
+      emptyData: null,
+      isLoading: identity !== null,
+    });
+    if (identity === null) return;
     try {
       const response = await listMyDeletionRequests();
+      if (activeCustomerIdentity.current !== identity) return;
       const first = response.data && response.data.length > 0 ? response.data[0] : null;
-      setDeletionRequest(first ? mapDeletionRequest(first) : null);
+      dispatchDeletionState({
+        type: 'resolve',
+        identity,
+        requestId,
+        data: first ? mapDeletionRequest(first) : null,
+        error: null,
+      });
     } catch (error) {
-      setDeletionRequest(null);
-      setDeletionError(error instanceof Error ? error.message : 'Could not load deletion requests.');
-    } finally {
-      setIsDeletionLoading(false);
+      if (activeCustomerIdentity.current !== identity) return;
+      dispatchDeletionState({
+        type: 'resolve',
+        identity,
+        requestId,
+        data: null,
+        error: error instanceof Error ? error.message : 'Could not load deletion requests.',
+      });
     }
-  }, [currentUser, mapDeletionRequest]);
+  }, [customerIdentity]);
 
   useEffect(() => {
     void refreshDeletionRequests();
@@ -265,20 +345,41 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!acknowledged) {
       throw new Error('Acknowledgement is required before submitting a deletion request.');
     }
-    const response = await createMyDeletionRequest({ requestType: 'HEALTH_DATA' });
-    const mapped = mapDeletionRequest(response.data);
-    setDeletionRequest(mapped);
-    return {
-      success: true,
-      status: mapped.status,
-      message: response.message || 'Health data deletion request successfully submitted for review.',
-    };
-  }, [mapDeletionRequest]);
+    const identity = customerIdentity;
+    if (!identity) throw new Error('A signed-in Customer is required to submit a deletion request.');
+    const requestId = ++deletionRequestSequence.current;
+    dispatchDeletionState({ type: 'begin', identity, requestId, emptyData: null, isLoading: true });
+    try {
+      const response = await createMyDeletionRequest({ requestType: 'HEALTH_DATA' });
+      const mapped = mapDeletionRequest(response.data);
+      if (activeCustomerIdentity.current === identity) {
+        dispatchDeletionState({ type: 'resolve', identity, requestId, data: mapped, error: null });
+      }
+      return {
+        success: true,
+        status: mapped.status,
+        message: response.message || 'Health data deletion request successfully submitted for review.',
+      };
+    } catch (error) {
+      if (activeCustomerIdentity.current === identity) {
+        dispatchDeletionState({
+          type: 'resolve',
+          identity,
+          requestId,
+          data: null,
+          error: error instanceof Error ? error.message : 'Could not submit deletion request.',
+        });
+      }
+      throw error;
+    }
+  }, [customerIdentity]);
 
   const cancelDeletionRequest = useCallback(async (id: string): Promise<void> => {
+    const identity = customerIdentity;
+    if (!identity) throw new Error('A signed-in Customer is required to cancel a deletion request.');
     await cancelMyDeletionRequest(Number(id));
-    await refreshDeletionRequests();
-  }, [refreshDeletionRequests]);
+    if (activeCustomerIdentity.current === identity) await refreshDeletionRequests();
+  }, [customerIdentity, refreshDeletionRequests]);
 
   const createBooking = (
     bookingData: Omit<RetreatBooking, 'id' | 'bookingReference' | 'createdAt'>
@@ -289,7 +390,13 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       bookingReference: `HSW-BK-${Date.now().toString().slice(-5)}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
-    setBookings((prev) => [newBooking, ...prev]);
+    if (customerIdentity !== null) {
+      dispatchBookingState({
+        type: 'update',
+        identity: customerIdentity,
+        update: (prev) => [newBooking, ...prev],
+      });
+    }
 
     // Persist retreat booking transaction to backend SQL database
     createCustomerBooking({
@@ -301,9 +408,11 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       specialRequest: bookingData.specialRequests,
     })
       .then((persisted) => {
-        if (persisted?.bookingReference) {
-          setBookings((prev) =>
-            prev.map((b) =>
+        if (customerIdentity !== null && persisted?.bookingReference) {
+          dispatchBookingState({
+            type: 'update',
+            identity: customerIdentity,
+            update: (prev) => prev.map((b) =>
               b.id === newBooking.id
                 ? {
                     ...b,
@@ -311,8 +420,8 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     bookingReference: persisted.bookingReference || b.bookingReference,
                   }
                 : b
-            )
-          );
+            ),
+          });
         }
       })
       .catch((err) => {
@@ -332,9 +441,13 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     _transactionId: string,
     status: DepositStatus
   ) => {
-    setBookings((prev) =>
-      prev.map((b) => (b.id === bookingId ? { ...b, depositStatus: status } : b))
-    );
+    if (customerIdentity !== null) {
+      dispatchBookingState({
+        type: 'update',
+        identity: customerIdentity,
+        update: (prev) => prev.map((b) => (b.id === bookingId ? { ...b, depositStatus: status } : b)),
+      });
+    }
   };
 
   return (
@@ -358,6 +471,7 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         getBookingById,
         updateBookingDeposit,
         isLoadingBookings,
+        bookingsError,
         refreshBookings: fetchCustomerBookingsFromBackend,
       }}
     >

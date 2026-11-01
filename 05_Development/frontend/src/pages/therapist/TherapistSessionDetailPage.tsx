@@ -12,7 +12,6 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
-import { spaApi } from '../../features/m3-spa/api/spaApi';
 import {
   ChevronLeft,
   Clock,
@@ -70,27 +69,10 @@ export const TherapistSessionDetailPage: React.FC = () => {
     setIsProcessing(true);
     setActionResult(null);
 
-    const numericSessionId = Number(session.id.replace(/\D/g, '')) || 301;
-    const outcomeStr = action === 'complete' ? 'COMPLETED' : 'NO_SHOW';
-
     try {
-      await spaApi.recordOutcome(numericSessionId, {
-        outcome: outcomeStr,
-        therapistNotes: therapistNotes || undefined,
-      });
-
-      setActionResult({
-        success: true,
-        message: action === 'complete' ? 'Session marked as Completed.' : 'Session marked as No-Show.',
-      });
-    } catch (err: unknown) {
-      // Fallback in standalone mock mode
-      let result: { success: boolean; message: string };
-      if (action === 'complete') {
-        result = completeSession(session.id, therapistNotes || undefined);
-      } else {
-        result = markNoShow(session.id);
-      }
+      const result = action === 'complete'
+        ? await completeSession(session.id, therapistNotes || undefined)
+        : await markNoShow(session.id);
       setActionResult(result);
     } finally {
       setIsProcessing(false);

@@ -19,6 +19,8 @@ public interface RetreatBookingRepository extends JpaRepository<RetreatBooking, 
 
     List<RetreatBooking> findByCustomerProfileIdOrderByCreatedAtDesc(Integer customerProfileId);
 
+    Optional<RetreatBooking> findByRetreatBookingIdAndCustomerProfileId(Integer retreatBookingId, Integer customerProfileId);
+
     List<RetreatBooking> findByCustomerProfileIdInOrderByCreatedAtDesc(Collection<Integer> customerProfileIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

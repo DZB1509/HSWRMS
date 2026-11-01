@@ -29,6 +29,12 @@ import {
 } from '../../api/booking/retreatBookingApi';
 
 export const RetreatBookingPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const identity = currentUser?.role === 'customer' ? currentUser.id : null;
+  return <RetreatBookingPageForIdentity key={identity ?? 'no-customer-identity'} />;
+};
+
+const RetreatBookingPageForIdentity: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -76,18 +82,18 @@ export const RetreatBookingPage: React.FC = () => {
   // Auto-fill from customer profile or current auth persona
   useEffect(() => {
     if (!fullName) {
-      setFullName(profile?.fullName || currentUser?.name || 'Eleanor Vance');
+      setFullName(profile?.fullName || currentUser?.name || '');
     }
     if (!email) {
-      setEmail(profile?.email || currentUser?.email || 'customer@heavenstay.dev');
+      setEmail(profile?.email || currentUser?.email || '');
     }
     if (!phoneNumber) {
-      setPhoneNumber(profile?.phone || '+84 901 234 567');
+      setPhoneNumber(profile?.phone || '');
     }
     if (!emergencyContact) {
       const contactStr = profile?.emergencyContact
         ? `${profile.emergencyContact.name} (${profile.emergencyContact.phone} - ${profile.emergencyContact.relationship})`
-        : 'Mr. Vance (+84 909 888 777)';
+        : '';
       setEmergencyContact(contactStr);
     }
   }, [profile, currentUser]);

@@ -4,6 +4,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import type { Role } from '../../../types/auth';
 import type { CapabilityKey } from '../../../types/governance';
 import { useGovernance } from '../../../hooks/useGovernance';
+import { isPermissionAuthorized } from '../../../context/governanceAuthorization';
 import { ShieldAlert, ArrowRight } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 
@@ -31,7 +32,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   requiredPermission,
 }) => {
   const { role, isAuthenticated, currentUser, hasPermission } = useAuth();
-  const { hasCapability } = useGovernance();
+  const { hasCapability, permissionLoadState } = useGovernance();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,11 +44,17 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // Capability check if specified
   const isCapabilityDenied = requiredCapability && !hasCapability(role, requiredCapability);
 
+  if ((requiredCapability || requiredPermission) && permissionLoadState === 'loading') {
+    return <div role="status" aria-live="polite">Verifying your permissions…</div>;
+  }
+
   // Role check if specified
   const isRoleDenied = allowedRoles && allowedRoles.length > 0 && role && !allowedRoles.includes(role);
 
   // Permission code check if specified (e.g. S10:V, S11:V)
-  const isPermissionDenied = requiredPermission ? !hasPermission(requiredPermission) : false;
+  const isPermissionDenied = requiredPermission
+    ? !isPermissionAuthorized(requiredPermission, hasPermission(requiredPermission), permissionLoadState)
+    : false;
 
   // Unauthorized for role, capability, or permission
   if (isRoleDenied || isCapabilityDenied || isPermissionDenied) {
@@ -79,7 +86,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           Access Restricted (RBAC)
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-          Your current session persona is <strong>{currentUser?.name}</strong> with role <code>{role}</code>.
+          {(requiredCapability || requiredPermission) && permissionLoadState === 'error'
+            ? 'Effective permissions could not be verified from the server. Access remains restricted.'
+            : <>Your current session persona is <strong>{currentUser?.name}</strong> with role <code>{role}</code>.</>}
           This route strictly requires authorization clearance for: {allowedRoles && allowedRoles.length > 0 ? <code>{allowedRoles.join(' / ')}</code> : ''}{requiredCapability ? <span> with capability: <code>{requiredCapability}</code></span> : ''}{requiredPermission ? <span> with permission: <code>{requiredPermission}</code></span> : ''}.
         </p>
         <div style={{

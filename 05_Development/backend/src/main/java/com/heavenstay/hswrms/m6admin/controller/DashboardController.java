@@ -6,6 +6,7 @@ import com.heavenstay.hswrms.m6admin.security.CurrentActor;
 import com.heavenstay.hswrms.m6admin.service.SystemOverviewService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +41,14 @@ public class DashboardController {
     @PreAuthorize("@perm.has('RESIDENCE_REPORT','E')")
     public ResponseEntity<String> exportPoliceResidencyReport() {
         CurrentActor actor = CurrentActor.require();
-        String csv = service.generatePoliceResidencyReportCsv(actor);
+        String csv;
+        try {
+            csv = service.generatePoliceResidencyReportCsv(actor);
+        } catch (UnsupportedOperationException unavailable) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(unavailable.getMessage());
+        }
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"police-residency-report-" + System.currentTimeMillis() + ".csv\"")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))

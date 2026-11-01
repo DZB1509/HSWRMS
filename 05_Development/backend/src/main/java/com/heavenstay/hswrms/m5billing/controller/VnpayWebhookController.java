@@ -32,8 +32,8 @@ public class VnpayWebhookController {
     public VnpayWebhookController(CheckoutService checkoutService,
                                   VNPayService vnPayService,
                                   PaymentTransactionRepository paymentTransactionRepository,
-                                  @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}") String hashSecret,
-                                  @Value("${app.vietqr.webhook-secret:SECRET_VIETQR_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}") String vietQrWebhookSecret) {
+                                  @Value("${app.vnpay.hash-secret:}") String hashSecret,
+                                  @Value("${app.vietqr.webhook-secret:}") String vietQrWebhookSecret) {
         this.checkoutService = checkoutService;
         this.vnPayService = vnPayService;
         this.paymentTransactionRepository = paymentTransactionRepository;

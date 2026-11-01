@@ -182,12 +182,12 @@ export interface VietQrResponse {
   amount: number;
   transferContent: string;
   content?: string;
-  transactionReference: string;
+  transactionReference?: string | null;
   invoiceId?: number;
   bookingId?: number;
   invoiceNumber?: string;
-  paymentType: string;
-  paymentStatus: string;
+  paymentType?: string | null;
+  paymentStatus?: string | null;
   message?: string;
 }
 

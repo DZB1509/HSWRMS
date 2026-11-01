@@ -19,6 +19,8 @@ export const HealthDataDeletionPage: React.FC = () => {
   const {
     activeBooking,
     deletionRequest,
+    isDeletionLoading,
+    deletionError,
     submitDeletionRequest,
     cancelDeletionRequest,
   } = useCustomer();
@@ -81,7 +83,7 @@ export const HealthDataDeletionPage: React.FC = () => {
             title="Important Wellness Data Retention & Safety Rule"
             description={t(
               'customer.deletion.policyAlert',
-              'Health data deletion cannot immediately occur while an active or upcoming retreat is in progress, as customer safety and treatment protocol require verified health notes during your stay.'
+              'Submitting this form records a health-data deletion request for review. It does not immediately delete health data; safety and retention requirements must be reviewed before any deletion is performed.'
             )}
             variant="warning"
           />
@@ -108,7 +110,7 @@ export const HealthDataDeletionPage: React.FC = () => {
               </h4>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                 You currently have an active reservation (<strong>Ref: {activeBooking.bookingReference}</strong> · {activeBooking.startDate} to {activeBooking.endDate}).
-                Your health data deletion will be registered immediately and safely executed following retreat check-out.
+                A submitted request is recorded for review. This page does not confirm that health data has been deleted or schedule deletion after check-out.
               </p>
             </div>
           </div>
@@ -124,9 +126,12 @@ export const HealthDataDeletionPage: React.FC = () => {
               color: 'var(--accent-forest)',
             }}
           >
-            ✓ {t('customer.deletion.eligibleNotice', 'No active retreats found. Your health records are eligible for immediate purge.')}
+          ✓ {t('customer.deletion.eligibleNotice', 'No active retreat is listed. A submitted health-data request remains pending review and does not immediately delete records.')}
           </div>
         )}
+
+        {isDeletionLoading && <p role="status">Loading your deletion request status…</p>}
+        {deletionError && <p role="alert">Could not load or update your deletion request: {deletionError}</p>}
 
         {/* Existing Deletion Request Card */}
         {deletionRequest ? (
@@ -157,7 +162,9 @@ export const HealthDataDeletionPage: React.FC = () => {
                     ? t('customer.deletion.statusDeferred', 'Deferred (Active Retreat in Progress)')
                     : deletionRequest.status === 'pending'
                     ? t('customer.deletion.statusPending', 'Pending Administrative Review')
-                    : t('customer.deletion.statusCompleted', 'Completed & Purged')}
+                    : deletionRequest.status === 'cancelled'
+                    ? 'Cancelled'
+                    : t('customer.deletion.statusCompleted', 'Completed')}
                 </span>
               </h3>
             </div>
@@ -231,7 +238,7 @@ export const HealthDataDeletionPage: React.FC = () => {
                 type="submit"
                 variant="destructive"
                 size="md"
-                disabled={!acknowledged}
+                disabled={!acknowledged || isDeletionLoading}
                 icon={<Trash2 size={16} />}
               >
                 {t('customer.deletion.submitBtn', 'Submit Deletion Request')}
