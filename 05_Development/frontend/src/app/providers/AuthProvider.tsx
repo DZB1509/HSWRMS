@@ -49,6 +49,7 @@ const userFromSession = (session: AuthSession, role: Role): User => ({
   name: session.fullName,
   email: session.email,
   role,
+  roles: session.roles || [role],
   title: MOCK_PERSONAS[role]?.title || 'Staff Member',
   department: MOCK_PERSONAS[role]?.department || 'Resort Operations',
   avatar: MOCK_PERSONAS[role]?.avatar || 'ST',
@@ -133,11 +134,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sessionStorage.setItem(AUTH_STORAGE_KEY, newRole);
 
     const creds: Partial<Record<Role, { email: string; pass: string }>> = {
-      admin: { email: 'admin@heavenstay.com', pass: 'DevDemo123!' },
-      manager: { email: 'manager@heavenstay.com', pass: 'Manager@123456' },
-      receptionist: { email: 'receptionist@heavenstay.com', pass: 'DevDemo123!' },
-      therapist: { email: 'therapist@heavenstay.com', pass: 'Staff@123456' },
-      fb_staff: { email: 'fnb@heavenstay.com', pass: 'Staff@123456' },
+      admin: { email: 'admin@heavenstay.dev', pass: 'DevDemo123!' },
+      manager: { email: 'manager@heavenstay.dev', pass: 'DevDemo123!' },
+      receptionist: { email: 'receptionist@heavenstay.dev', pass: 'DevDemo123!' },
+      therapist: { email: 'therapist@heavenstay.dev', pass: 'DevDemo123!' },
+      fb_staff: { email: 'fbstaff@heavenstay.dev', pass: 'DevDemo123!' },
       customer: { email: 'customer@heavenstay.dev', pass: 'DevDemo123!' }
     };
     const targetCred = creds[newRole];
@@ -155,6 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await res.json();
             if (data?.data?.token) {
               setAuthToken(data.data.token, true);
+              refreshPermissions();
               return;
             }
           }
@@ -171,6 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const devData = await devRes.json();
           if (devData?.data?.token) {
             setAuthToken(devData.data.token, true);
+            refreshPermissions();
           }
         }
       } catch {

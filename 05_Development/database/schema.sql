@@ -670,6 +670,10 @@ CREATE TABLE dbo.VillaCategory (
 
         CONSTRAINT DF_VillaCategory_PriceModifier DEFAULT (0),
 
+    base_price              DECIMAL(18,2) NULL
+
+        CONSTRAINT DF_VillaCategory_BasePrice DEFAULT (3500000),
+
     inventory_count     INT NOT NULL
 
         CONSTRAINT DF_VillaCategory_InventoryCount DEFAULT (0),
@@ -765,6 +769,8 @@ CREATE TABLE dbo.PhysicalVilla (
         CONSTRAINT DF_PhysicalVilla_MaxOccupancy DEFAULT (3),
 
     area_sqm            DECIMAL(10,2) NULL,
+
+    nightly_rate        DECIMAL(18,2) NULL,
 
     has_private_pool    BIT NOT NULL
 

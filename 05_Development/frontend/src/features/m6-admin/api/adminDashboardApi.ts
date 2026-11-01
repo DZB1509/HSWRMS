@@ -47,14 +47,16 @@ export interface DashboardLoaders {
  * Validates whether the user has required Admin permissions to view the Dashboard Cockpit.
  * Fail-closed: Denies if user or roles are null/undefined.
  */
-export function validateDashboardAuthorization(user: { roles?: string[]; permissions?: string[] } | null | undefined): {
+export function validateDashboardAuthorization(user: { role?: string; roles?: string[]; permissions?: string[] } | null | undefined): {
   canView: boolean;
   isAdmin: boolean;
 } {
-  if (!user || !user.roles || !Array.isArray(user.roles)) {
+  if (!user) {
     return { canView: false, isAdmin: false };
   }
-  const isAdmin = user.roles.some((r) => r.toLowerCase() === 'admin');
+  const role = user.role ? user.role.toLowerCase() : '';
+  const roles = Array.isArray(user.roles) ? user.roles.map((r) => r.toLowerCase()) : [];
+  const isAdmin = role === 'admin' || roles.includes('admin');
   return { canView: isAdmin, isAdmin };
 }
 

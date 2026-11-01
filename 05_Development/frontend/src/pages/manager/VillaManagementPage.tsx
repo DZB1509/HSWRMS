@@ -116,7 +116,9 @@ export const VillaManagementPage: React.FC = () => {
           maxChildren: item.maxChildren ?? item.villaCategory?.maxChildren ?? 1,
           maxOccupancy: item.maxOccupancy ?? item.villaCategory?.maxOccupancy ?? 3,
           areaSqm: typeof item.areaSqm === 'number' ? item.areaSqm : Number(item.areaSqm) || 100,
-          nightlyRate: typeof item.nightlyRate === 'number' ? item.nightlyRate : (Number(item.nightlyRate) || 4500000),
+          nightlyRate: typeof item.nightlyRate === 'number'
+            ? item.nightlyRate
+            : (item.nightlyRate != null ? Number(item.nightlyRate) : (item.villaCategory?.basePrice || 4500000)),
           hasPrivatePool: Boolean(item.hasPrivatePool),
           poolInfo: item.poolInfo || (item.hasPrivatePool ? 'Có hồ bơi riêng' : 'Không có hồ bơi'),
           status: (item.villaStatus || 'AVAILABLE') as VillaOperationalStatus,
@@ -298,7 +300,7 @@ export const VillaManagementPage: React.FC = () => {
     setStatusReason('');
   };
 
-  const handleUpdateVillaStatus = (e: React.FormEvent) => {
+  const handleUpdateVillaStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVilla || !pendingStatus) return;
 
@@ -307,24 +309,45 @@ export const VillaManagementPage: React.FC = () => {
       return;
     }
 
-    setVillas((prev) =>
-      prev.map((v) =>
-        v.id === selectedVilla.id
-          ? {
-              ...v,
-              status: pendingStatus,
-              viewAndOperationalNotes: statusReason ? `${v.viewAndOperationalNotes} | [Ghi chú: ${statusReason}]` : v.viewAndOperationalNotes
-            }
-          : v
-      )
-    );
+    const newNote = statusReason
+      ? `${selectedVilla.viewAndOperationalNotes ? selectedVilla.viewAndOperationalNotes + ' | ' : ''}[Ghi chú: ${statusReason}]`
+      : selectedVilla.viewAndOperationalNotes;
 
-    // Sync status change directly to backend Database
-    fetch(`http://localhost:8080/api/v1/villas/${selectedVilla.villaNumber}/status`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ status: pendingStatus })
-    }).catch((err) => console.warn('Failed to sync villa status to DB:', err));
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/villas/${selectedVilla.villaNumber}/status`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          status: pendingStatus,
+          viewAndOperationalNotes: newNote,
+          reason: statusReason
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+
+      setVillas((prev) =>
+        prev.map((v) =>
+          v.id === selectedVilla.id
+            ? {
+                ...v,
+                status: pendingStatus,
+                viewAndOperationalNotes: newNote
+              }
+            : v
+        )
+      );
+
+      showToast(`Đã cập nhật trạng thái biệt thự ${selectedVilla.villaNumber} thành công vào CSDL!`, 'success');
+      setSelectedVilla(null);
+    } catch (err: any) {
+      console.error('Failed to sync villa status to DB:', err);
+      showToast(`Không thể lưu trạng thái vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+      return;
+    }
 
     logAuditEvent({
       actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
@@ -337,22 +360,12 @@ export const VillaManagementPage: React.FC = () => {
       detailsKey: 'operations.audit.villaStatusChanged',
       detailsFallback: `Đã chuyển trạng thái căn ${selectedVilla.villaNumber} sang ${pendingStatus}. Lý do: ${statusReason || 'Cập nhật vận hành thường kỳ'}`
     });
-
-    showToast(`Đã cập nhật trạng thái biệt thự ${selectedVilla.villaNumber} thành công!`, 'success');
-    setSelectedVilla(null);
   };
 
   const handleSaveVilla = async (updatedVilla: PhysicalVillaItem, reason: string) => {
     if (!canManageInventory) {
       showToast('Thao tác bị từ chối: Quản trị viên hoặc quyền quản lý kho biệt thự là bắt buộc.', 'error');
       return;
-    }
-
-    setVillas((prev) =>
-      prev.map((v) => (v.id === updatedVilla.id || v.villaNumber === updatedVilla.villaNumber ? updatedVilla : v))
-    );
-    if (selectedVilla && (selectedVilla.id === updatedVilla.id || selectedVilla.villaNumber === updatedVilla.villaNumber)) {
-      setSelectedVilla(updatedVilla);
     }
 
     try {
@@ -382,10 +395,19 @@ export const VillaManagementPage: React.FC = () => {
         const errData = await res.json().catch(() => null);
         throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
       }
+
+      setVillas((prev) =>
+        prev.map((v) => (v.id === updatedVilla.id || v.villaNumber === updatedVilla.villaNumber ? updatedVilla : v))
+      );
+      if (selectedVilla && (selectedVilla.id === updatedVilla.id || selectedVilla.villaNumber === updatedVilla.villaNumber)) {
+        setSelectedVilla(updatedVilla);
+      }
+
       showToast(`Đã cập nhật thông tin biệt thự ${updatedVilla.villaNumber} vào CSDL thành công!`, 'success');
     } catch (err: any) {
-      console.warn('Backend sync warning:', err);
-      showToast(`Đã cập nhật thông tin biệt thự ${updatedVilla.villaNumber}!`, 'success');
+      console.error('Backend sync error:', err);
+      showToast(`Không thể lưu biệt thự vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+      return;
     }
 
     logAuditEvent({

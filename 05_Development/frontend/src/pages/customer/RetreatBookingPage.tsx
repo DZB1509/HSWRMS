@@ -79,7 +79,7 @@ export const RetreatBookingPage: React.FC = () => {
       setFullName(profile?.fullName || currentUser?.name || 'Eleanor Vance');
     }
     if (!email) {
-      setEmail(profile?.email || currentUser?.email || 'customer@heavenstay.com');
+      setEmail(profile?.email || currentUser?.email || 'customer@heavenstay.dev');
     }
     if (!phoneNumber) {
       setPhoneNumber(profile?.phone || '+84 901 234 567');
@@ -472,7 +472,7 @@ export const RetreatBookingPage: React.FC = () => {
                             setFieldErrors(errs);
                           }
                         }}
-                        placeholder="customer@heavenstay.com"
+                        placeholder="customer@heavenstay.dev"
                         style={{
                           width: '100%',
                           padding: '10px 12px',

@@ -16,6 +16,11 @@ describe('M6 Admin Dashboard API & Partial Failure Resilience', () => {
       const res = validateDashboardAuthorization(user);
       assert.equal(res.canView, true);
       assert.equal(res.isAdmin, true);
+
+      // Also verifies single role property support (User interface)
+      const singleRoleAdmin = { role: 'admin', permissions: ['S49:V'] };
+      assert.equal(validateDashboardAuthorization(singleRoleAdmin).canView, true);
+      assert.equal(validateDashboardAuthorization(singleRoleAdmin).isAdmin, true);
     });
 
     it('denies view access to user with only MANAGER role (cockpit is admin-only)', () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Sparkles,
@@ -12,8 +12,11 @@ import {
   Plus,
   Bed,
   Users,
-  Baby
+  Baby,
+  Database,
+  RefreshCw
 } from 'lucide-react';
+import { getAuthToken } from '../../api/client/apiClient';
 import {
   INITIAL_PACKAGES_MASTER,
   INITIAL_SPA_SERVICES_MASTER,
@@ -37,6 +40,10 @@ export const MasterDataPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<MasterDataCategory>('packages');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Database synchronization states
+  const [isDbSynced, setIsDbSynced] = useState<boolean>(false);
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(false);
+
   // Domain states
   const [packages, setPackages] = useState<RetreatPackageMaster[]>(INITIAL_PACKAGES_MASTER);
   const [spaServices, setSpaServices] = useState<SpaServiceMaster[]>(INITIAL_SPA_SERVICES_MASTER);
@@ -56,103 +63,262 @@ export const MasterDataPage: React.FC = () => {
     status: 'active' | 'archived';
   } | null>(null);
 
-  const handleAddPackage = (newPkg: RetreatPackageMaster) => {
-    setPackages((prev) => [newPkg, ...prev]);
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+  };
+
+  const fetchMasterData = useCallback(async () => {
+    setIsLoadingDb(true);
+    try {
+      const [pkgsRes, spaRes, catsRes] = await Promise.all([
+        fetch('http://localhost:8080/api/v1/retreat-packages?includeInactive=true').then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('http://localhost:8080/api/v1/spa-treatments').then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('http://localhost:8080/api/v1/villa-categories').then((r) => r.ok ? r.json() : null).catch(() => null)
+      ]);
+
+      if (pkgsRes?.data && Array.isArray(pkgsRes.data) && pkgsRes.data.length > 0) {
+        const loadedPkgs: RetreatPackageMaster[] = pkgsRes.data.map((item: any) => ({
+          id: String(item.retreatPackageId || item.packageCode),
+          code: item.packageCode || `PKG-${item.retreatPackageId}`,
+          name: item.packageName,
+          durationDays: item.durationNights ? item.durationNights + 1 : 4,
+          durationNights: item.durationNights || 3,
+          goal: item.wellnessGoal || 'Sức Khỏe Toàn Diện',
+          includedSpaSessions: 2,
+          basePrice: Number(item.basePrice) || 12000000,
+          status: (item.packageStatus === 'ACTIVE' || item.packageStatus === 'active') ? 'active' : 'archived',
+          description: item.wellnessGoal || item.targetGuest || 'Chương trình chăm sóc sức khỏe và phục hồi toàn diện.'
+        }));
+        setPackages(loadedPkgs);
+      }
+
+      if (spaRes?.data && Array.isArray(spaRes.data) && spaRes.data.length > 0) {
+        const loadedSpa: SpaServiceMaster[] = spaRes.data.map((item: any) => ({
+          id: String(item.treatmentId || item.treatmentCode),
+          code: item.treatmentCode || `TRT-${item.treatmentId}`,
+          name: item.treatmentName,
+          category: item.category || 'Body Therapy',
+          durationMinutes: item.durationMinutes || 60,
+          practitionerType: item.therapistQualification || 'Therapist',
+          compatibleRoomType: item.roomCompatibility,
+          basePrice: Number(item.basePrice) || 1200000,
+          status: (item.treatmentStatus === 'ACTIVE' || item.treatmentStatus === 'active') ? 'active' : 'archived',
+          description: item.description || 'Liệu trình spa thư giãn chuyên sâu.'
+        }));
+        setSpaServices(loadedSpa);
+      }
+
+      if (catsRes?.data && Array.isArray(catsRes.data) && catsRes.data.length > 0) {
+        const loadedCats: VillaCategoryMaster[] = catsRes.data.map((item: any) => ({
+          id: String(item.villaCategoryId),
+          code: `CAT-${item.villaCategoryId}`,
+          name: item.categoryName,
+          bedroomCount: item.bedroomCount || 1,
+          bedType: item.bedType || item.bedroomDescription || '1 King Bed',
+          maxAdults: item.maxAdults || 2,
+          maxChildren: item.maxChildren || 1,
+          maxOccupancy: item.maxOccupancy || 3,
+          areaRange: item.areaDescription || '100 m²',
+          hasPrivatePool: Boolean(item.hasPrivatePool),
+          hasTreatmentPavilion: Boolean(item.hasTreatmentPavilion),
+          totalVillasCount: item.inventoryCount || 0,
+          baseNightlyRate: Number(item.basePrice) || (Number(item.priceModifier) + 3500000) || 4500000,
+          status: (item.categoryStatus === 'ACTIVE' || item.categoryStatus === 'active') ? 'active' : 'archived',
+          description: item.featuresAndAmenities || 'Hạng biệt thự nghỉ dưỡng sang trọng'
+        }));
+        setVillas(loadedCats);
+      }
+
+      setIsDbSynced(true);
+    } catch (err) {
+      console.warn('Failed to load master data from DB:', err);
+    } finally {
+      setIsLoadingDb(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMasterData();
+  }, [fetchMasterData]);
+
+  const handleAddPackage = async (newPkg: RetreatPackageMaster) => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/retreat-packages', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          packageCode: newPkg.code,
+          packageName: newPkg.name,
+          wellnessGoal: newPkg.goal,
+          durationNights: newPkg.durationNights,
+          basePrice: newPkg.basePrice,
+          packageStatus: 'ACTIVE'
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã lưu gói nghỉ dưỡng "${newPkg.name}" vào CSDL SQL Server thành công!`, 'success');
+      await fetchMasterData();
+    } catch (err: any) {
+      console.error('Failed to add package to DB:', err);
+      showToast(`Không thể lưu gói vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+    }
+
     logAuditEvent({
       actorId: 'usr-adm-01',
       actorName: 'Alexander Wright',
       actorRole: 'admin',
       action: 'CREATE',
       dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: newPkg.id,
+      targetRef: newPkg.code || newPkg.id,
       result: 'SUCCESS',
       detailsKey: 'governance.audit.details.packageCreated',
       detailsFallback: `Đã khởi tạo gói nghỉ dưỡng Wellness mới: ${newPkg.name}`
     });
-    showToast(`Đã thêm gói nghỉ dưỡng "${newPkg.name}" thành công!`, 'success');
   };
 
-  const handleAddSpaService = (newSrv: SpaServiceMaster) => {
-    setSpaServices((prev) => [newSrv, ...prev]);
+  const handleAddSpaService = async (newSrv: SpaServiceMaster) => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/spa/treatments', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          treatmentCode: newSrv.code,
+          treatmentName: newSrv.name,
+          category: newSrv.category,
+          durationMinutes: newSrv.durationMinutes,
+          basePrice: newSrv.basePrice,
+          treatmentStatus: 'ACTIVE'
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã lưu liệu trình Spa "${newSrv.name}" vào CSDL SQL Server thành công!`, 'success');
+      await fetchMasterData();
+    } catch (err: any) {
+      console.error('Failed to add spa treatment to DB:', err);
+      showToast(`Không thể lưu liệu trình vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+    }
+
     logAuditEvent({
       actorId: 'usr-adm-01',
       actorName: 'Alexander Wright',
       actorRole: 'admin',
       action: 'CREATE',
       dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: newSrv.id,
+      targetRef: newSrv.code || newSrv.id,
       result: 'SUCCESS',
       detailsKey: 'governance.audit.details.spaTreatmentCreated',
       detailsFallback: `Đã khởi tạo liệu trình Spa mới: ${newSrv.name}`
     });
-    showToast(`Đã thêm liệu trình trị liệu "${newSrv.name}" thành công!`, 'success');
   };
 
-  const handleAddVillaCategory = (newCat: VillaCategoryItem) => {
-    const masterCat: VillaCategoryMaster = {
-      id: `VIL-${Date.now().toString().slice(-4)}`,
-      code: newCat.categoryCode || `CAT-${Date.now().toString().slice(-4)}`,
-      name: newCat.categoryName,
-      bedroomCount: newCat.bedroomCount,
-      bedType: newCat.bedType,
-      maxAdults: newCat.maxAdults,
-      maxChildren: newCat.maxChildren,
-      maxOccupancy: newCat.maxOccupancy,
-      areaRange: newCat.areaRange,
-      hasPrivatePool: newCat.hasPrivatePool,
-      hasTreatmentPavilion: newCat.highlights?.includes('Chòi trị liệu riêng') || false,
-      totalVillasCount: newCat.inventoryCount || 0,
-      baseNightlyRate: newCat.priceModifier || 5000000,
-      status: 'active',
-      description: newCat.featuresAndAmenities || 'Hạng biệt thự nghỉ dưỡng sang trọng'
-    };
-    setVillas((prev) => [masterCat, ...prev]);
+  const handleAddVillaCategory = async (newCat: VillaCategoryItem) => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/villa-categories', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          categoryName: newCat.categoryName,
+          maxOccupancy: newCat.maxOccupancy,
+          basePrice: newCat.basePrice || newCat.priceModifier || 4500000,
+          inventoryCount: newCat.inventoryCount || 1,
+          bedroomCount: newCat.bedroomCount || 1,
+          bedroomDescription: newCat.bedroomDescription || '1 King Bed',
+          areaDescription: newCat.areaRange || '100 m²',
+          hasPrivatePool: newCat.hasPrivatePool,
+          categoryStatus: 'ACTIVE'
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+      }
+      showToast(`Đã lưu hạng biệt thự "${newCat.categoryName}" vào CSDL SQL Server thành công!`, 'success');
+      await fetchMasterData();
+    } catch (err: any) {
+      console.error('Failed to add category to DB:', err);
+      showToast(`Không thể lưu hạng biệt thự vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+    }
+
     logAuditEvent({
       actorId: 'usr-adm-01',
       actorName: 'Alexander Wright',
       actorRole: 'admin',
       action: 'CREATE',
       dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: masterCat.id,
+      targetRef: `CAT-${newCat.categoryName}`,
       result: 'SUCCESS',
       detailsKey: 'governance.audit.details.villaCategoryCreated',
       detailsFallback: `Đã khởi tạo phân loại biệt thự Wellness mới: ${newCat.categoryName}`
     });
-    showToast(`Đã thêm hạng biệt thự "${newCat.categoryName}" thành công!`, 'success');
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
-    if (editingItem.category === 'packages') {
-      setPackages((prev) =>
-        prev.map((p) =>
-          p.id === editingItem.id
-            ? { ...p, name: editingItem.name, totalPrice: editingItem.price, basePrice: editingItem.price, status: editingItem.status }
-            : p
-        )
-      );
-    } else if (editingItem.category === 'spa') {
-      setSpaServices((prev) =>
-        prev.map((s) =>
-          s.id === editingItem.id
-            ? { ...s, name: editingItem.name, basePrice: editingItem.price, status: editingItem.status }
-            : s
-        )
-      );
-    } else if (editingItem.category === 'villas') {
-      setVillas((prev) =>
-        prev.map((v) =>
-          v.id === editingItem.id
-            ? { ...v, name: editingItem.name, baseNightlyRate: editingItem.price, status: editingItem.status }
-            : v
-        )
-      );
+    try {
+      if (editingItem.category === 'packages') {
+        const res = await fetch(`http://localhost:8080/api/v1/retreat-packages/${encodeURIComponent(editingItem.id)}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            packageName: editingItem.name,
+            basePrice: editingItem.price,
+            packageStatus: editingItem.status === 'active' ? 'ACTIVE' : 'INACTIVE'
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+        }
+      } else if (editingItem.category === 'spa') {
+        const res = await fetch(`http://localhost:8080/api/v1/spa/treatments/${encodeURIComponent(editingItem.id)}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            treatmentName: editingItem.name,
+            basePrice: editingItem.price,
+            treatmentStatus: editingItem.status === 'active' ? 'ACTIVE' : 'INACTIVE'
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+        }
+      } else if (editingItem.category === 'villas') {
+        const numericId = editingItem.id.replace(/\D/g, '') || editingItem.id;
+        const res = await fetch(`http://localhost:8080/api/v1/villa-categories/${encodeURIComponent(numericId)}/price`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            basePrice: editingItem.price
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.message || `Lỗi máy chủ (${res.status})`);
+        }
+      }
+
+      showToast(`Đã lưu thay đổi vào cơ sở dữ liệu SQL Server thành công!`, 'success');
+      await fetchMasterData();
+    } catch (err: any) {
+      console.error('Failed to update master data in DB:', err);
+      showToast(`Không thể lưu vào CSDL: ${err.message || 'Lỗi mạng'}`, 'error');
+      return;
     }
 
     setEditingItem(null);
-    showToast(t('operations.masterData.savedToast', 'Đã cập nhật bản ghi dữ liệu gốc thành công (mô phỏng giao diện)'), 'success');
   };
 
   return (
@@ -181,6 +347,35 @@ export const MasterDataPage: React.FC = () => {
             <p className="hsw-gov-subtitle">
               {t('operations.masterData.pageSubtitle', 'Danh mục quản trị trung tâm định nghĩa Gói Nghỉ Dưỡng, Dịch Vụ Spa & Trị Liệu, và Hạng Biệt Thự Lưu Trú.')}
             </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '12px',
+                fontWeight: 600,
+                backgroundColor: isDbSynced ? 'rgba(74, 124, 89, 0.12)' : 'rgba(217, 119, 6, 0.12)',
+                color: isDbSynced ? 'var(--accent-forest)' : '#b45309',
+                border: isDbSynced ? '1px solid rgba(74, 124, 89, 0.3)' : '1px solid rgba(217, 119, 6, 0.3)'
+              }}
+            >
+              <Database size={13} />
+              {isDbSynced ? 'CSDL SQL Server: Đã Đồng Bộ Trực Tiếp' : 'Đang Tải Dữ Liệu SQL Server...'}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={fetchMasterData}
+              disabled={isLoadingDb}
+              icon={<RefreshCw size={14} className={isLoadingDb ? 'hsw-spin' : ''} />}
+            >
+              {t('common.actions.refresh', 'Làm Mới')}
+            </Button>
           </div>
         </div>
       </div>

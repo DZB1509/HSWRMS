@@ -79,6 +79,12 @@ public class VillaInventoryController {
         PhysicalVilla villa = villaRepo.findByVillaNumber(villaNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("PhysicalVilla", "villaNumber", villaNumber));
         villa.setVillaStatus(newStatus.toUpperCase());
+        if (payload.containsKey("viewAndOperationalNotes") && payload.get("viewAndOperationalNotes") != null) {
+            villa.setViewAndOperationalNotes(payload.get("viewAndOperationalNotes"));
+        } else if (payload.containsKey("reason") && payload.get("reason") != null && !payload.get("reason").isBlank()) {
+            String existing = villa.getViewAndOperationalNotes() != null ? villa.getViewAndOperationalNotes() + " | " : "";
+            villa.setViewAndOperationalNotes(existing + payload.get("reason"));
+        }
         return ResponseEntity.ok(ApiResponse.ok("Villa status updated successfully", villaRepo.save(villa)));
     }
 

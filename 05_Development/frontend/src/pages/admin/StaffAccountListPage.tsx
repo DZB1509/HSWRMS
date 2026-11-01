@@ -449,7 +449,7 @@ export const StaffAccountListPage: React.FC = () => {
                     required
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="Ví dụ: ngoc.tran@heavenstay.com"
+                    placeholder="Ví dụ: ngoc.tran@heavenstay.dev"
                     className="hsw-filter-input"
                     style={{ width: '100%' }}
                   />

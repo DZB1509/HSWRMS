@@ -95,7 +95,7 @@ describe('M6 Staff Management API & Permission Mapping', () => {
         data: {
           userId: 1,
           fullName: 'Admin',
-          email: 'admin@heavenstay.com',
+          email: 'admin@heavenstay.dev',
           roles: ['ADMIN'],
           permissions: ['S10:V', 'S10:C', 'S11:V', 'S11:C', 'S11:D'],
         },

@@ -51,8 +51,7 @@ public class VillaCategory {
     @Column(name = "eligible_packages", length = 250)
     private String eligiblePackages;
 
-    // Transient attributes for UI presentation without SQL Server physical column
-    @Transient
+    @Column(name = "base_price", precision = 18, scale = 2)
     private BigDecimal basePrice = BigDecimal.valueOf(3500000);
 
     @Transient

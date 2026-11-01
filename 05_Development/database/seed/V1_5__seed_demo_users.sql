@@ -8,15 +8,15 @@ GO
 
 PRINT 'Starting HSWRMS Demo Users Seeding...';
 
--- 1. Create Default Customer User
-IF NOT EXISTS (SELECT 1 FROM dbo.[User] WHERE email = 'customer@heavenstay.com')
+-- 1. Create Default Customer User (Standardized to .dev)
+IF NOT EXISTS (SELECT 1 FROM dbo.[User] WHERE email = 'customer@heavenstay.dev')
 BEGIN
     INSERT INTO dbo.[User] (full_name, email, phone_number, password_hash, account_status, email_verified)
-    VALUES (N'Eleanor Vance', 'customer@heavenstay.com', '+84912345678', '$2a$10$w1qE/9s7E7tQzR.557vYCeZ7aO4J9jY3Xp07wYh11h8Z9vU.4jXyO', 'ACTIVE', 1);
+    VALUES (N'Demo Customer', 'customer@heavenstay.dev', '+84912345678', '$2a$10$u8y7KsM0EjyumIcWnmj5v.ssi7jOAuHb5l4.An9zpCYEqMUhhxVae', 'ACTIVE', 1);
 END
 GO
 
-DECLARE @CustomerUserId INT = (SELECT user_id FROM dbo.[User] WHERE email = 'customer@heavenstay.com');
+DECLARE @CustomerUserId INT = (SELECT user_id FROM dbo.[User] WHERE email = 'customer@heavenstay.dev');
 DECLARE @CustomerRoleId INT = (SELECT role_id FROM dbo.[Role] WHERE role_name = 'CUSTOMER');
 
 IF @CustomerUserId IS NOT NULL AND @CustomerRoleId IS NOT NULL
@@ -28,7 +28,7 @@ BEGIN
 END
 GO
 
-DECLARE @CustomerUserId INT = (SELECT user_id FROM dbo.[User] WHERE email = 'customer@heavenstay.com');
+DECLARE @CustomerUserId INT = (SELECT user_id FROM dbo.[User] WHERE email = 'customer@heavenstay.dev');
 IF @CustomerUserId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.CustomerProfile WHERE user_id = @CustomerUserId)
 BEGIN
     INSERT INTO dbo.CustomerProfile (user_id, date_of_birth, residential_address, preferred_language, emergency_contact_name, emergency_contact_phone)
@@ -36,15 +36,15 @@ BEGIN
 END
 GO
 
--- 2. Create Default Receptionist User
-IF NOT EXISTS (SELECT 1 FROM dbo.[User] WHERE email = 'receptionist@heavenstay.com')
+-- 2. Create Default Receptionist User (Standardized to .dev)
+IF NOT EXISTS (SELECT 1 FROM dbo.[User] WHERE email = 'receptionist@heavenstay.dev')
 BEGIN
     INSERT INTO dbo.[User] (full_name, email, phone_number, password_hash, account_status, email_verified)
-    VALUES (N'Nguyen Van Reception', 'receptionist@heavenstay.com', '+84901234567', '$2a$10$w1qE/9s7E7tQzR.557vYCeZ7aO4J9jY3Xp07wYh11h8Z9vU.4jXyO', 'ACTIVE', 1);
+    VALUES (N'Demo Receptionist', 'receptionist@heavenstay.dev', '+84901234567', '$2a$10$u8y7KsM0EjyumIcWnmj5v.ssi7jOAuHb5l4.An9zpCYEqMUhhxVae', 'ACTIVE', 1);
 END
 GO
 
-DECLARE @RecepUserId INT = (SELECT user_id FROM dbo.[User] WHERE email = 'receptionist@heavenstay.com');
+DECLARE @RecepUserId INT = (SELECT user_id FROM dbo.[User] WHERE email = 'receptionist@heavenstay.dev');
 DECLARE @RecepRoleId INT = (SELECT role_id FROM dbo.[Role] WHERE role_name = 'RECEPTIONIST');
 
 IF @RecepUserId IS NOT NULL AND @RecepRoleId IS NOT NULL

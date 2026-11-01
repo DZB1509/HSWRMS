@@ -52,8 +52,7 @@ public class PhysicalVilla {
     @Column(name = "view_and_operational_notes", length = 500)
     private String viewAndOperationalNotes;
 
-    // Transient attributes for UI presentation / DTOs without direct SQL Server table backing
-    @Transient
+    @Column(name = "nightly_rate", precision = 18, scale = 2)
     private BigDecimal nightlyRate;
 
     @Transient

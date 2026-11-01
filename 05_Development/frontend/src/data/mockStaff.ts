@@ -4,7 +4,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-adm-01',
     name: 'Alexander Wright',
-    email: 'alexander.wright@heavenstay.com',
+    email: 'admin@heavenstay.dev',
     role: 'admin',
     title: 'Quản Trị Viên Hệ Thống & Quản Trị Dữ Liệu',
     department: 'Công Nghệ & Hệ Thống Thông Tin',
@@ -17,7 +17,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-mgr-01',
     name: 'Sarah Jenkins',
-    email: 'sarah.jenkins@heavenstay.com',
+    email: 'manager@heavenstay.dev',
     role: 'manager',
     title: 'Quản Lý Vận Hành Khu Nghỉ Dưỡng',
     department: 'Ban Quản Lý Điều Hành',
@@ -30,7 +30,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-rec-01',
     name: 'Trần Thị Linh',
-    email: 'linh.tran@heavenstay.com',
+    email: 'receptionist@heavenstay.dev',
     role: 'receptionist',
     title: 'Chuyên Viên Lễ Tân Cao Cấp',
     department: 'Bộ Phận Tiền Sảnh',
@@ -43,7 +43,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-rec-02',
     name: 'Phạm Thu Hương',
-    email: 'pham.huong@heavenstay.com',
+    email: 'pham.huong@heavenstay.dev',
     role: 'receptionist',
     title: 'Nhân Viên Lễ Tân',
     department: 'Bộ Phận Tiền Sảnh',
@@ -56,7 +56,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-th-01',
     name: 'David Kim',
-    email: 'david.kim@heavenstay.com',
+    email: 'therapist@heavenstay.dev',
     role: 'therapist',
     title: 'Chuyên Viên Trị Liệu Toàn Diện & Bậc Thầy Yoga',
     department: 'Chăm Sóc Sức Khỏe & Spa',
@@ -69,7 +69,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-th-02',
     name: 'Nguyễn Thị Lan',
-    email: 'lan.nguyen@heavenstay.com',
+    email: 'lan.nguyen@heavenstay.dev',
     role: 'therapist',
     title: 'Chuyên Viên Trị Liệu Spa Cao Cấp',
     department: 'Chăm Sóc Sức Khỏe & Spa',
@@ -82,7 +82,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-th-03',
     name: 'Trần Văn Minh',
-    email: 'minh.tran@heavenstay.com',
+    email: 'minh.tran@heavenstay.dev',
     role: 'therapist',
     title: 'Chuyên Gia Bấm Huyệt & Dược Liệu',
     department: 'Chăm Sóc Sức Khỏe & Spa',
@@ -95,7 +95,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-fb-01',
     name: 'Bếp Trưởng Marcus Chen',
-    email: 'marcus.chen@heavenstay.com',
+    email: 'fbstaff@heavenstay.dev',
     role: 'fb_staff',
     title: 'Bếp Trưởng Thực Dưỡng Wellness',
     department: 'Ẩm Thực & Dinh Dưỡng F&B',
@@ -108,7 +108,7 @@ export const INITIAL_STAFF_ACCOUNTS: StaffAccount[] = [
   {
     id: 'usr-fb-02',
     name: 'Hoàng Thị Mai',
-    email: 'mai.hoang@heavenstay.com',
+    email: 'mai.hoang@heavenstay.dev',
     role: 'fb_staff',
     title: 'Bếp Phó Dinh Dưỡng Thực Dưỡng',
     department: 'Ẩm Thực & Dinh Dưỡng F&B',

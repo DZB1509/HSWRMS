@@ -52,7 +52,7 @@ public class DelegationServiceTest {
     private UserRoleRepository userRoleRepository;
 
     private User managerUser;
-    private final CurrentActor adminActor = new CurrentActor(1, "admin@heavenstay.com", "ADMIN", true);
+    private final CurrentActor adminActor = new CurrentActor(99, "admin@heavenstay.dev", "ADMIN", true);
 
     @BeforeEach
     void setUp() {

@@ -11,6 +11,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  roles?: string[];
   title: string;
   avatar?: string;
   department?: string;
@@ -52,8 +53,9 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   customer: {
     id: 'usr-cust-01',
     name: 'Eleanor Vance',
-    email: 'eleanor.vance@example.com',
+    email: 'customer@heavenstay.dev',
     role: 'customer',
+    roles: ['customer'],
     title: 'Wellness Retreat Customer',
     avatar: 'EV',
     permissions: ['S02:V']
@@ -61,8 +63,9 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   receptionist: {
     id: 'usr-rec-01',
     name: 'Linh Tran',
-    email: 'linh.tran@heavenstay.com',
+    email: 'receptionist@heavenstay.dev',
     role: 'receptionist',
+    roles: ['receptionist'],
     title: 'Senior Front Desk Officer',
     department: 'Front Office',
     avatar: 'LT',
@@ -71,8 +74,9 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   therapist: {
     id: 'usr-th-01',
     name: 'David Kim',
-    email: 'david.kim@heavenstay.com',
+    email: 'therapist@heavenstay.dev',
     role: 'therapist',
+    roles: ['therapist'],
     title: 'Holistic Therapist & Yoga Master',
     department: 'Spa & Wellness',
     avatar: 'DK',
@@ -81,8 +85,9 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   fb_staff: {
     id: 'usr-fb-01',
     name: 'Chef Marcus Chen',
-    email: 'marcus.chen@heavenstay.com',
+    email: 'fbstaff@heavenstay.dev',
     role: 'fb_staff',
+    roles: ['fb_staff'],
     title: 'Executive Wellness Chef',
     department: 'Dietary Food & Beverage',
     avatar: 'MC',
@@ -91,8 +96,9 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   manager: {
     id: 'usr-mgr-01',
     name: 'Sarah Jenkins',
-    email: 'sarah.jenkins@heavenstay.com',
+    email: 'manager@heavenstay.dev',
     role: 'manager',
+    roles: ['manager'],
     title: 'Resort Operations Manager',
     department: 'Resort Management',
     avatar: 'SJ',
@@ -101,8 +107,9 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   admin: {
     id: 'usr-adm-01',
     name: 'Alexander Wright',
-    email: 'alexander.wright@heavenstay.com',
+    email: 'admin@heavenstay.dev',
     role: 'admin',
+    roles: ['admin'],
     title: 'System & Governance Administrator',
     department: 'Information Systems',
     avatar: 'AW',
