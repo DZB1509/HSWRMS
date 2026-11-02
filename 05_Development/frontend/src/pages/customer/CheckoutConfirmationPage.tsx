@@ -26,7 +26,8 @@ export const CheckoutConfirmationPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { bookingId } = useParams<{ bookingId?: string }>();
+  const { bookingId: rawBookingId, id } = useParams<{ bookingId?: string; id?: string }>();
+  const bookingId = rawBookingId || id;
   const { role } = useAuth();
   const {
     getFolioForBooking,

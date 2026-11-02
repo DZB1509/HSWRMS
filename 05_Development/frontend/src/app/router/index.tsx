@@ -161,9 +161,13 @@ export const AppRouter: React.FC = () => {
 
         {/* Module 5: Customer Read-only Folio, Payment, Checkout & Review */}
         <Route path="folio" element={<FolioInvoicePage />} />
+        <Route path="folio/:bookingId" element={<FolioInvoicePage />} />
         <Route path="checkout/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/:bookingId/payment" element={<FinalPaymentPage />} />
         <Route path="checkout/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/:bookingId/payment-result" element={<FinalPaymentResultPage />} />
         <Route path="checkout/confirmation" element={<CheckoutConfirmationPage />} />
+        <Route path="checkout/:bookingId/confirmation" element={<CheckoutConfirmationPage />} />
         <Route path="review/:bookingId" element={<ReviewRatingPage />} />
         
         <Route index element={<Navigate to="/customer/dashboard" replace />} />
@@ -175,7 +179,7 @@ export const AppRouter: React.FC = () => {
       <Route
         path="/receptionist"
         element={
-          <RoleGuard allowedRoles={['receptionist']}>
+          <RoleGuard allowedRoles={['receptionist', 'admin', 'manager']}>
             <OperationalLayout />
           </RoleGuard>
         }
@@ -191,13 +195,35 @@ export const AppRouter: React.FC = () => {
         <Route path="spa/extra-booking" element={<ManualExtraSpaPage />} />
         
         {/* Module 5 Checkout Consolidation */}
+        <Route path="folio" element={<FolioInvoicePage />} />
         <Route path="folio/:bookingId" element={<FolioInvoicePage />} />
+        <Route path="checkout/payment" element={<FinalPaymentPage />} />
         <Route path="checkout/:bookingId/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/payment-result" element={<FinalPaymentResultPage />} />
         <Route path="checkout/:bookingId/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/confirmation" element={<CheckoutConfirmationPage />} />
         <Route path="checkout/:bookingId/confirmation" element={<CheckoutConfirmationPage />} />
 
         <Route index element={<Navigate to="/receptionist/dashboard" replace />} />
       </Route>
+
+      {/* Module 5 Direct Cross-Role Billing Routes */}
+      <Route
+        path="/billing/folio/:bookingId"
+        element={
+          <RoleGuard allowedRoles={['receptionist', 'admin', 'manager', 'customer']}>
+            <FolioInvoicePage />
+          </RoleGuard>
+        }
+      />
+      <Route
+        path="/billing/folio"
+        element={
+          <RoleGuard allowedRoles={['receptionist', 'admin', 'manager', 'customer']}>
+            <FolioInvoicePage />
+          </RoleGuard>
+        }
+      />
 
       {/* ====================================================================
           5. Therapist Operations (OperationalLayout - Guard: Therapist)

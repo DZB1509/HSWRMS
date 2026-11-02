@@ -84,7 +84,8 @@ export const FolioInvoicePage: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const { bookingId } = useParams<{ bookingId?: string }>();
+  const { bookingId: rawBookingId, id } = useParams<{ bookingId?: string; id?: string }>();
+  const bookingId = rawBookingId || id;
 
   const { role, currentUser } = useAuth();
 
