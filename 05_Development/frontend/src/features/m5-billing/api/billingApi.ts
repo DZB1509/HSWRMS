@@ -140,7 +140,7 @@ export const billingApi = {
     return res.data;
   },
 
-  getReview: async (bookingId: number | string = 1): Promise<CustomerReviewResponse> => {
+  getReview: async (bookingId: number | string): Promise<CustomerReviewResponse> => {
     const res = await apiClient.get<ApiResponse<CustomerReviewResponse>>(`/customer/reviews/booking/${bookingId}`);
     return res.data;
   },

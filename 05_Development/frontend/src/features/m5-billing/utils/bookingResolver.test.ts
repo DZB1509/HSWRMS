@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveCustomerBookingId, resolveNumericBookingId } from './bookingResolver.ts';
+import { parseBookingId, resolveCustomerBookingId, resolveNumericBookingId } from './bookingResolver.ts';
 
 describe('bookingResolver', () => {
   it('resolves explicit positive integer number', () => {
@@ -72,5 +72,36 @@ describe('resolveCustomerBookingId', () => {
   it('rejects references and IDs not present in the authenticated Customer booking list', () => {
     assert.strictEqual(resolveCustomerBookingId('HSW-BK-999', bookings), null);
     assert.strictEqual(resolveCustomerBookingId('999', bookings), null);
+  });
+});
+
+describe('parseBookingId', () => {
+  it('parses numeric values and strings', () => {
+    assert.strictEqual(parseBookingId(3), 3);
+    assert.strictEqual(parseBookingId('3'), 3);
+    assert.strictEqual(parseBookingId('  102  '), 102);
+  });
+
+  it('parses M5 HSW-88xxx booking references (88000 + id)', () => {
+    assert.strictEqual(parseBookingId('HSW-88003'), 3);
+    assert.strictEqual(parseBookingId('HSW-88001'), 1);
+    assert.strictEqual(parseBookingId('HSW-88042'), 42);
+  });
+
+  it('parses M2 HSW-BK-x and BK-x booking references', () => {
+    assert.strictEqual(parseBookingId('HSW-BK-3'), 3);
+    assert.strictEqual(parseBookingId('BK-5'), 5);
+  });
+
+  it('parses M3 HSW-x booking references', () => {
+    assert.strictEqual(parseBookingId('HSW-7'), 7);
+  });
+
+  it('returns null for non-matching or invalid values', () => {
+    assert.strictEqual(parseBookingId(''), null);
+    assert.strictEqual(parseBookingId(null), null);
+    assert.strictEqual(parseBookingId(undefined), null);
+    assert.strictEqual(parseBookingId('invalid'), null);
+    assert.strictEqual(parseBookingId(-5), null);
   });
 });

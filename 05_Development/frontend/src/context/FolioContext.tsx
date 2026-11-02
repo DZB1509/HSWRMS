@@ -4,6 +4,7 @@ import type { FolioContextType, FolioSummary, FolioLineItem, PaymentTransaction,
 import { useCustomer } from './CustomerContext';
 import { useAuth } from '../hooks/useAuth';
 import { billingApi } from '../features/m5-billing/api/billingApi';
+import { parseBookingId } from '../features/m5-billing/utils/bookingResolver';
 import type { FolioResponse, PaymentResponse, RevenueAnalytics, OccupancyAnalytics, TherapistUtilization } from '../features/m5-billing/types';
 
 const FolioContext = createContext<FolioContextType | undefined>(undefined);
@@ -26,7 +27,7 @@ function toTransaction(tx: PaymentResponse, bookingReference: string): PaymentTr
 }
 
 function toFolioSummary(folio: FolioResponse, bookingReference: string): FolioSummary & { lineItems: FolioLineItem[] } {
-  const isFolioSettled = folio.folioStatus === 'CLOSED' || folio.folioStatus === 'PAID' || folio.invoiceStatus === 'PAID' || Number(folio.balanceDue || 0) === 0;
+  const isFolioSettled = folio.folioStatus === 'CLOSED' || folio.folioStatus === 'PAID' || folio.invoiceStatus === 'PAID';
   const items = (folio.items || []).map((item): FolioLineItem => ({
     id: String(item.folioItemId),
     sourceType: item.chargeCategory === 'SPA' ? 'spa' : item.chargeCategory === 'FNB' ? 'fnb' : 'retreat',
@@ -104,16 +105,33 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [cacheOwnerId]);
 
   const bookingFor = useCallback((ref?: string) => {
-    if (ref) return bookings.find(b => b.bookingReference === ref || b.id === ref);
+    if (ref && ref.trim()) {
+      const cleanRef = ref.trim();
+      const parsedId = parseBookingId(cleanRef);
+      return bookings.find(b =>
+        b.bookingReference === cleanRef ||
+        String(b.id) === cleanRef ||
+        (parsedId !== null && Number(b.id) === parsedId)
+      );
+    }
     return defaultBooking;
   }, [bookings, defaultBooking]);
+
   const numericBookingId = useCallback((ref?: string) => {
-    const booking = bookingFor(ref);
-    const candidate = booking?.id && /^\d+$/.test(String(booking.id))
-      ? Number(booking.id)
-      : ref && /^\d+$/.test(ref) ? Number(ref) : null;
-    return candidate !== null && Number.isSafeInteger(candidate) && candidate > 0 ? candidate : null;
-  }, [bookingFor]);
+    if (!ref || !ref.trim()) {
+      const candidate = Number(defaultBooking?.id);
+      return Number.isSafeInteger(candidate) && candidate > 0 ? candidate : null;
+    }
+    const cleanRef = ref.trim();
+    const parsed = parseBookingId(cleanRef);
+    if (parsed) return parsed;
+    const booking = bookings.find(b => b.bookingReference === cleanRef || String(b.id) === cleanRef);
+    if (booking?.id && /^\d+$/.test(String(booking.id))) {
+      const candidate = Number(booking.id);
+      return Number.isSafeInteger(candidate) && candidate > 0 ? candidate : null;
+    }
+    return null;
+  }, [bookings, defaultBooking]);
   const refreshFolio = useCallback(async (ref?: string) => {
     const requestOwnerId = cacheOwnerId;
     const booking = bookingFor(ref);
@@ -154,7 +172,8 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const getFolioForBooking = useCallback((ref?: string) => {
     const booking = bookingFor(ref);
     const key = ref || booking?.bookingReference || '';
-    const response = folios[key] || Object.values(folios).find(f => booking && f.retreatBookingId === Number(booking.id));
+    const parsedId = parseBookingId(ref);
+    const response = folios[key] || Object.values(folios).find(f => (booking && f.retreatBookingId === Number(booking.id)) || (parsedId !== null && f.retreatBookingId === parsedId));
     return response ? toFolioSummary(response, key) : emptyFolio(key || '');
   }, [bookingFor, folios]);
   const activeFolio = useMemo(() => getFolioForBooking(defaultBooking?.bookingReference), [getFolioForBooking, defaultBooking?.bookingReference]);

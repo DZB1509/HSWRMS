@@ -22,7 +22,7 @@ import { billingApi } from '../../features/m5-billing/api/billingApi';
 import type { VietQrResponse, VnpayPaymentUrlResponse, FolioResponse, InvoiceResponse } from '../../features/m5-billing/types';
 const formatCurrency = formatVND;
 import { isNetworkOrTimeoutError } from '../../features/m5-billing/utils/paymentSafety';
-import { resolveCustomerBookingId } from '../../features/m5-billing/utils/bookingResolver';
+import { resolveCustomerBookingId, parseBookingId } from '../../features/m5-billing/utils/bookingResolver';
 
 export const FinalPaymentPage: React.FC = () => {
   const { t } = useTranslation();
@@ -35,7 +35,7 @@ export const FinalPaymentPage: React.FC = () => {
   const [backendFolio, setBackendFolio] = useState<FolioResponse | null>(null);
   const [backendInvoice, setBackendInvoice] = useState<InvoiceResponse | null>(null);
   const [isLoadingBackend, setIsLoadingBackend] = useState(true);
-  const { activeBooking, bookings } = useCustomer();
+  const { bookings } = useCustomer();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
   const requestedBookingId = bookingId || searchParams.get('bookingId');
@@ -45,11 +45,15 @@ export const FinalPaymentPage: React.FC = () => {
 
   const numericBookingId = useMemo(() => {
     if (role === 'customer') return customerBookingId;
-    if (bookingId && /^\d+$/.test(bookingId)) return Number(bookingId);
-    if (bookingId && activeBooking?.bookingReference !== bookingId && activeBooking?.id !== bookingId) return null;
-    const candidate = Number(activeBooking?.id);
-    return Number.isSafeInteger(candidate) && candidate > 0 ? candidate : null;
-  }, [role, customerBookingId, bookingId, activeBooking?.id]);
+    const fromParam = parseBookingId(bookingId);
+    if (fromParam) return fromParam;
+    const queryParam = searchParams.get('bookingId');
+    const fromQuery = parseBookingId(queryParam);
+    if (fromQuery) return fromQuery;
+    const matched = bookings.find(b => b.bookingReference === bookingId || String(b.id) === bookingId);
+    if (matched && Number(matched.id) > 0) return Number(matched.id);
+    return null;
+  }, [role, customerBookingId, bookingId, searchParams, bookings]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const initialInvoiceId = useMemo(() => {

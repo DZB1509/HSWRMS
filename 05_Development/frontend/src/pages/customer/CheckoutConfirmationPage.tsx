@@ -20,7 +20,7 @@ import { useCustomer } from '../../context/CustomerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
 import { billingApi } from '../../features/m5-billing/api/billingApi';
-import { resolveCustomerBookingId, resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
+import { resolveCustomerBookingId, resolveNumericBookingId, parseBookingId } from '../../features/m5-billing/utils/bookingResolver';
 
 export const CheckoutConfirmationPage: React.FC = () => {
   const { t } = useTranslation();
@@ -44,8 +44,16 @@ export const CheckoutConfirmationPage: React.FC = () => {
   const folioData = getFolioForBooking(role === 'customer' ? customerBooking?.bookingReference : bookingId);
 
   const numericBookingId = useMemo(() => {
-    return role === 'customer' ? customerBookingId : resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-  }, [role, customerBookingId, bookingId, folioData.bookingReference, activeBooking?.id]);
+    if (role === 'customer') return customerBookingId;
+    const fromParam = parseBookingId(bookingId);
+    if (fromParam) return fromParam;
+    const queryParam = searchParams.get('bookingId');
+    const fromQuery = parseBookingId(queryParam);
+    if (fromQuery) return fromQuery;
+    const matched = bookings.find(b => b.bookingReference === bookingId || String(b.id) === bookingId);
+    if (matched && Number(matched.id) > 0) return Number(matched.id);
+    return resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
+  }, [role, customerBookingId, bookingId, searchParams, bookings, folioData.bookingReference, activeBooking?.id]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const [resolvedInvoiceId, setResolvedInvoiceId] = useState<number | null>(() => {

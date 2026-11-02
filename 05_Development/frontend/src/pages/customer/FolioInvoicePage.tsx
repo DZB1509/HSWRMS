@@ -64,7 +64,7 @@ import { formatVND } from '../../i18n';
 
 import { billingApi } from '../../features/m5-billing/api/billingApi';
 
-import { resolveCustomerBookingId, resolveNumericBookingId } from '../../features/m5-billing/utils/bookingResolver';
+import { resolveCustomerBookingId, parseBookingId } from '../../features/m5-billing/utils/bookingResolver';
 
 import type { FolioResponse } from '../../features/m5-billing/types';
 
@@ -103,19 +103,22 @@ export const FolioInvoicePage: React.FC = () => {
   const [folioReload, setFolioReload] = useState(0);
   const customerBookingId = useMemo(() => resolveCustomerBookingId(bookingId, bookings, selectedBookingId || null), [bookingId, bookings, selectedBookingId]);
   const customerBooking = bookings.find(b => Number(b.id) === customerBookingId);
-  const folioBookingRef = role === 'customer' ? customerBooking?.bookingReference : (bookingId || activeBooking?.bookingReference);
+  const folioBookingRef = role === 'customer' ? (customerBooking?.bookingReference || bookingId) : (bookingId || activeBooking?.bookingReference);
 
   const folioData = useMemo(() => {
     return getFolioForBooking(folioBookingRef);
   }, [getFolioForBooking, folioBookingRef]);
 
-
-
   const numericBookingId = useMemo(() => {
-    return role === 'customer'
-      ? customerBookingId
-      : resolveNumericBookingId(bookingId, folioData.bookingReference, activeBooking?.id);
-  }, [role, customerBookingId, bookingId, folioData.bookingReference, activeBooking?.id]);
+    if (role === 'customer') {
+      return customerBookingId;
+    }
+    const fromParam = parseBookingId(bookingId);
+    if (fromParam) return fromParam;
+    const matched = bookings.find(b => b.bookingReference === bookingId || String(b.id) === bookingId);
+    if (matched && Number(matched.id) > 0) return Number(matched.id);
+    return null;
+  }, [role, customerBookingId, bookingId, bookings]);
 
 
 
@@ -127,26 +130,21 @@ export const FolioInvoicePage: React.FC = () => {
 
   const [backendFolio, setBackendFolio] = useState<FolioResponse | null>(null);
 
-  const currentBookingRef = bookingId || backendFolio?.bookingReference || folioData.bookingReference || (activeBooking as any)?.bookingReference || (activeBooking as any)?.bookingCode;
+  const currentBookingRef = bookingId || backendFolio?.bookingReference || folioData.bookingReference || (role === 'customer' ? (activeBooking as any)?.bookingReference : undefined);
 
-  const isCheckedOut =
-    isStayCheckedOut(folioData.bookingReference) ||
-    (currentBookingRef ? isStayCheckedOut(currentBookingRef) : false) ||
-    (bookingId ? isStayCheckedOut(bookingId) : false) ||
-    backendFolio?.folioStatus === 'CLOSED' ||
-    (activeBooking as any)?.bookingStatus === 'COMPLETED' ||
-    (activeBooking as any)?.status === 'COMPLETED';
-
-  const isStaySettledOrCheckedOut =
-    isCheckedOut ||
+  const isSettledByBackend =
     backendFolio?.folioStatus === 'CLOSED' ||
     backendFolio?.folioStatus === 'PAID' ||
-    backendFolio?.invoiceStatus === 'PAID' ||
-    (activeBooking as any)?.bookingStatus === 'COMPLETED' ||
-    (activeBooking as any)?.status === 'COMPLETED' ||
-    folioData.isFullySettled ||
-    folioData.outstandingBalance === 0 ||
-    (backendFolio?.balanceDue !== undefined && backendFolio.balanceDue === 0);
+    backendFolio?.invoiceStatus === 'PAID';
+
+  const isStayCheckedOutSession =
+    (folioData.bookingReference ? isStayCheckedOut(folioData.bookingReference) : false) ||
+    (currentBookingRef ? isStayCheckedOut(currentBookingRef) : false) ||
+    (bookingId ? isStayCheckedOut(bookingId) : false);
+
+  const isCheckedOut = isSettledByBackend || isStayCheckedOutSession;
+
+  const isStaySettledOrCheckedOut = isCheckedOut;
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
@@ -183,105 +181,76 @@ export const FolioInvoicePage: React.FC = () => {
 
 
   useEffect(() => {
-
     let isMounted = true;
 
+    // Immediately reset state to avoid showing stale data from a previous booking
+    setBackendFolio(null);
+    setAdjustments([]);
+    setCreditNotes([]);
+    setSyncError(null);
+
     const fetchBackendData = async () => {
-
       if (!numericBookingId) {
-
         if (isMounted) {
-          setBackendFolio(null);
-          setSyncError(null);
           setIsSyncing(false);
-
         }
-
         return;
-
       }
 
       setIsSyncing(true);
-      setBackendFolio(null);
 
       try {
-
         const data = await billingApi.getFolio(numericBookingId);
-
         if (isMounted) {
-
           setBackendFolio(data);
-
           setSyncError(null);
-
         }
 
         try {
-
           const adjList = await billingApi.listAdjustments({ bookingId: numericBookingId });
-
           if (isMounted) setAdjustments(adjList);
 
           if (data.invoiceId) {
-
             const cnList = await billingApi.getCreditNotesForInvoice(data.invoiceId);
-
             if (isMounted) setCreditNotes(cnList);
-
           }
-
         } catch {
-
           // ignore if adjustment service endpoint is not loaded yet
-
         }
-
       } catch (err) {
-
         if (isMounted) {
           setBackendFolio(null);
           setSyncError(err instanceof Error ? err.message : 'Unable to load the server folio.');
         }
-
       } finally {
-
         if (isMounted) {
-
           setIsSyncing(false);
-
         }
-
       }
-
     };
 
     fetchBackendData();
 
     return () => {
-
       isMounted = false;
-
     };
+  }, [numericBookingId, bookingId, id, folioReload]);
 
-  }, [numericBookingId, folioReload]);
+  // Canonical financial metrics (FR-M5-01 / SRS BF-05 Data Rule 21)
+  const displayPackageTotal = backendFolio?.packagePrice ?? backendFolio?.totalCharges ?? folioData.retreatTotal ?? 24500000;
+  const displayDepositPaid = backendFolio?.depositPaid ?? backendFolio?.depositAmount ?? folioData.depositPaid ?? 7350000;
+  const packageOutstanding = isStaySettledOrCheckedOut ? 0 : Math.max(0, displayPackageTotal - displayDepositPaid);
+  const displayPackageRemaining = packageOutstanding;
 
-  // Canonical financial metrics (FR-M5-01). Backend folio is authoritative; local folio state is the offline fallback.
-  // Every displayed line comes from the same source, so Final Amount Due always equals the sum of the visible lines.
-  const displayPackageTotal = backendFolio ? (backendFolio.packagePrice ?? backendFolio.totalCharges ?? 0) : folioData.retreatTotal;
-  const displayDepositPaid = backendFolio ? (backendFolio.depositPaid ?? backendFolio.depositAmount ?? 0) : folioData.depositPaid;
-  const rawPackageRemaining = backendFolio
-    ? (backendFolio.packageOutstanding ?? Math.max(0, displayPackageTotal - displayDepositPaid))
-    : Math.max(0, displayPackageTotal - displayDepositPaid);
-  const displayPackageRemaining = isStaySettledOrCheckedOut ? 0 : rawPackageRemaining;
-  const displaySpaExtras = backendFolio ? (backendFolio.extraSpaCharges ?? 0) : folioData.spaExtrasTotal;
-  const displayFnbExtras = backendFolio ? (backendFolio.extraFnbCharges ?? 0) : folioData.fnbExtrasTotal;
-  const displaySubtotal = isStaySettledOrCheckedOut ? 0 : (displayPackageRemaining + displaySpaExtras + displayFnbExtras);
-  const displayTax = isStaySettledOrCheckedOut
-    ? 0
-    : (backendFolio?.estimatedTax ?? Math.round((displaySpaExtras + displayFnbExtras) * (backendFolio?.vatRate ?? 0.08)));
+  const displaySpaExtras = Number(backendFolio?.extraSpaCharges ?? folioData.spaExtrasTotal ?? 0);
+  const displayFnbExtras = Number(backendFolio?.extraFnbCharges ?? folioData.fnbExtrasTotal ?? 0);
+  const extrasSubtotal = displaySpaExtras + displayFnbExtras;
+  const displayTax = Math.round(extrasSubtotal * 0.08);
+  const displaySubtotal = displayPackageRemaining + extrasSubtotal;
+
   const displayFinalDue = isStaySettledOrCheckedOut
     ? 0
-    : (backendFolio?.estimatedAmountDue ?? backendFolio?.finalAmount ?? backendFolio?.balanceDue ?? (displaySubtotal + displayTax));
+    : (packageOutstanding + extrasSubtotal + displayTax);
   // Billing Guard Check: Unsettled orders exist if backend flags it or simulation is active
 
   const hasUnsettledOrders = Boolean(backendFolio?.hasUnsettledOrders);
@@ -2315,7 +2284,7 @@ export const FolioInvoicePage: React.FC = () => {
               <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>Subtotal (Extras + Pkg Rem):</div>
 
               <div style={{ fontWeight: 600 }}>
-                {formatVND(displayPackageRemaining + displaySpaExtras + displayFnbExtras)}
+                {formatVND(displaySubtotal)}
               </div>
 
             </div>
@@ -2325,7 +2294,7 @@ export const FolioInvoicePage: React.FC = () => {
               <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>VAT (8% on Extras):</div>
 
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                {formatVND(backendFolio?.estimatedTax ?? 0)}
+                {formatVND(displayTax)}
               </div>
 
             </div>

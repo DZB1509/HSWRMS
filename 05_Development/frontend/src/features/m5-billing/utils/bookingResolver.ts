@@ -35,6 +35,43 @@ export function resolveNumericBookingId(
   return null;
 }
 
+/**
+ * Resolves a booking ID from route parameters or standard reference formats.
+ * Format mapping:
+ * - Direct digits: "3" or 3 -> 3
+ * - M5 reference: "HSW-88003" -> 3 (88000 + id)
+ * - M2 reference: "HSW-BK-3" or "BK-3" -> 3
+ * - M3 reference: "HSW-3" -> 3
+ */
+export function parseBookingId(input?: string | number | null): number | null {
+  if (typeof input === 'number' && Number.isInteger(input) && input > 0) {
+    return input;
+  }
+  if (typeof input !== 'string') return null;
+  const clean = input.trim();
+  if (/^\d+$/.test(clean)) {
+    const val = parseInt(clean, 10);
+    return val > 0 ? val : null;
+  }
+  const m5Match = clean.match(/^HSW-88(\d+)$/i);
+  if (m5Match) {
+    const full = parseInt(m5Match[0].replace(/HSW-/i, ''), 10);
+    const id = full - 88000;
+    if (id > 0) return id;
+  }
+  const bkMatch = clean.match(/^(?:HSW-)?BK-(\d+)$/i);
+  if (bkMatch) {
+    const id = parseInt(bkMatch[1], 10);
+    if (id > 0) return id;
+  }
+  const hswMatch = clean.match(/^HSW-(\d+)$/i);
+  if (hswMatch) {
+    const id = parseInt(hswMatch[1], 10);
+    if (id > 0) return id;
+  }
+  return null;
+}
+
 export interface CustomerBookingIdentity {
   id: string | number;
   bookingReference: string;
@@ -50,8 +87,13 @@ export function resolveCustomerBookingId(
   const eligible = bookings.filter(booking => booking.status?.toLowerCase() !== 'cancelled');
   const requestedText = requested == null ? '' : String(requested).trim();
   const selectedText = selectedId == null ? '' : String(selectedId).trim();
+  const parsedId = parseBookingId(requestedText);
   const match = requestedText
-    ? eligible.find(booking => String(booking.id) === requestedText || booking.bookingReference === requestedText)
+    ? eligible.find(booking =>
+        String(booking.id) === requestedText ||
+        booking.bookingReference === requestedText ||
+        (parsedId !== null && Number(booking.id) === parsedId)
+      )
     : selectedText
       ? eligible.find(booking => String(booking.id) === selectedText)
       : eligible.length === 1 ? eligible[0] : undefined;
