@@ -1,0 +1,190 @@
+================================================================================
+HSWRMS PHASE 5.8.3.81 — CONTROLLED SCHEMA DEPLOYMENT REPORT
+================================================================================
+Timestamp: 2026-10-28T18:24:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Target Instance: localhost (Port 1433)
+Target Catalog: HSWRMS_TEST
+Execution Identity: Windows Administrator (MYLIFE-MYRULE-1\ADMIN via -E)
+Execution Mode: CONTROLLED EXECUTION & READ-ONLY DIAGNOSTIC
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & FINAL VERDICT
+--------------------------------------------------------------------------------
+During Phase 5.8.3.81, the pre-check passed successfully with 100% compliance.
+However, during execution of `HSWRMS_TEST_schema.sql`, execution was interrupted
+at line 475 due to a SQL Server engine requirement on filtered indexes (Msg 1934:
+QUOTED_IDENTIFIER must be ON for filtered indexes).
+
+In accordance with strict safety protocols:
+  [X] STOPPED execution immediately upon error.
+  [X] No blind re-runs attempted.
+  [X] No automatic rollback, DROP TABLE, or DROP DATABASE executed.
+  [X] Safe read-only diagnostics conducted on both HSWRMS_TEST and HSWRMS.
+  [X] Confirmed primary database HSWRMS is 100% untouched and unmutated.
+  [X] Exact state captured and documented for human review.
+
+FINAL VERDICT: DEPLOYMENT FAILED OR INTERRUPTED — HUMAN REVIEW REQUIRED
+
+--------------------------------------------------------------------------------
+2. PRE-DEPLOYMENT REPOSITORY & PAYLOAD VERIFICATION
+--------------------------------------------------------------------------------
+2.1 Repository & Branch Verification:
+    - Path: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+    - Current Branch: feature/hswrms-m1-m6-integration
+    - Verified HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+
+2.2 Payload Cryptographic Hash:
+    - Path: `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+    - Actual SHA-256: DB643DDBC0E5CF5BE848D1CF6EA33DC51B124B89DFAC0CE327CAEEE0C91E6D70
+    - Expected SHA-256: DB643DDBC0E5CF5BE848D1CF6EA33DC51B124B89DFAC0CE327CAEEE0C91E6D70
+    - Result: EXACT MATCH (100% verified untouched).
+
+2.3 Payload Static Inspection:
+    - Confirmed single `USE [HSWRMS_TEST]; GO` at line 19.
+    - Confirmed target verification guard at lines 23-28 (`IF DB_NAME() <> N'HSWRMS_TEST' ... THROW 51000`).
+    - Confirmed 0 occurrences of `USE [master]` or `USE [HSWRMS]`.
+    - Confirmed 0 dynamic SQL (`sp_executesql`, `EXEC`) and 0 SQLCMD directives (`:r`).
+
+--------------------------------------------------------------------------------
+3. LIVE FAIL-FAST PRE-CHECK EXECUTION & RESULTS
+--------------------------------------------------------------------------------
+Exact Command Executed:
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; IF @@SERVERNAME <> N'MYLIFE-MYRULE-1' OR DB_NAME() <> N'HSWRMS_TEST' THROW 53000, 'SERVER OR DATABASE MISMATCH', 1; IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N'HSWRMS_TEST' AND state_desc = N'ONLINE') THROW 53001, 'HSWRMS_TEST IS NOT ONLINE', 1; IF (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0) <> 0 THROW 53002, 'HSWRMS_TEST IS NOT EMPTY; STOP FOR REVIEW', 1; SELECT @@SERVERNAME AS ServerName, DB_NAME() AS CurrentDatabase, SUSER_SNAME() AS ExecutionLogin, (SELECT state_desc FROM sys.databases WHERE name = N'HSWRMS_TEST') AS DatabaseState, (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0) AS UserTableCount;"
+
+Pre-Check Exit Code: 0
+Pre-Check Output:
+  ServerName        CurrentDatabase  ExecutionLogin         DatabaseState  UserTableCount
+  ---------------   ---------------  ---------------------  -------------  --------------
+  MYLIFE-MYRULE-1   HSWRMS_TEST      MYLIFE-MYRULE-1\ADMIN  ONLINE                      0
+
+Pre-Check Evaluation:
+  - All assertions passed.
+  - Target confirmed empty and ready for deployment.
+
+--------------------------------------------------------------------------------
+4. DDL EXECUTION & ERROR DIAGNOSIS
+--------------------------------------------------------------------------------
+Exact Command Executed:
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -i "05_Development/database/generated/HSWRMS_TEST_schema.sql"
+
+Execution Output:
+  Changed database context to 'HSWRMS_TEST'.
+  Msg 1934, Level 16, State 1, Server MYLIFE-MYRULE-1, Line 2
+  CREATE INDEX failed because the following SET options have incorrect settings: 'QUOTED_IDENTIFIER'. Verify that SET options are correct for use with indexed views and/or indexes on computed columns and/or filtered indexes and/or query notifications and/or XML data type methods and/or spatial index operations.
+
+DDL Exit Code: 1
+
+Root Cause Analysis:
+  1. At lines 475-478 of `HSWRMS_TEST_schema.sql`, the DDL attempts to create a filtered index:
+     ```sql
+     CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode
+         ON dbo.SpaTreatment (treatment_code)
+         WHERE treatment_code IS NOT NULL;
+     GO
+     ```
+  2. Microsoft SQL Server requires session options `QUOTED_IDENTIFIER` and `ANSI_NULLS`
+     to be set to `ON` whenever creating or modifying filtered indexes (`WHERE ... IS NOT NULL`).
+  3. When `sqlcmd` runs without the `-I` (Enable Quoted Identifiers) parameter, and when the
+     script lacks an explicit `SET QUOTED_IDENTIFIER ON;` directive, the session defaults to
+     `QUOTED_IDENTIFIER OFF`.
+  4. SQL Server immediately rejected the filtered index creation with error 1934.
+  5. Because `sqlcmd` was executed with `-b` (fail-fast on batch error), execution halted
+     immediately at batch line 475.
+
+--------------------------------------------------------------------------------
+5. POST-INTERRUPTION READ-ONLY DIAGNOSTICS
+--------------------------------------------------------------------------------
+5.1 State of Target Database [HSWRMS_TEST]:
+    Query:
+      sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; SELECT (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0) AS [TableCount], (SELECT COUNT(*) FROM sys.foreign_keys WHERE is_ms_shipped = 0) AS [FkCount], (SELECT COUNT(*) FROM sys.key_constraints WHERE type = 'UQ') AS [UqCount], (SELECT COUNT(*) FROM sys.key_constraints WHERE type = 'PK') AS [PkCount], (SELECT COUNT(*) FROM sys.indexes WHERE is_hypothetical = 0 AND type > 0 AND object_id IN (SELECT object_id FROM sys.tables WHERE is_ms_shipped = 0)) AS [IndexCount], (SELECT COUNT(*) FROM sys.triggers WHERE is_ms_shipped = 0) AS [TriggerCount], (SELECT COUNT(*) FROM dbo.[Role]) AS [RoleSeedCount];"
+    Result:
+      TableCount: 20 (expected 42)
+      FkCount: 21 (expected 56)
+      UqCount: 11 (expected 21)
+      PkCount: 20 (expected 42)
+      IndexCount: 32 (expected 12 non-clustered + PKs/UQs)
+      TriggerCount: 0 (expected 3)
+      RoleSeedCount: 0 (expected 6)
+
+    Deployed Tables (20 tables created prior to line 475):
+      1. User
+      2. AuthIdentity
+      3. Role
+      4. UserRole
+      5. EmailOtp
+      6. CustomerProfile
+      7. ConsentRecord
+      8. HealthProfile
+      9. FoodAllergy
+      10. DietaryRequirement
+      11. HealthProfileTherapyPreference
+      12. HealthDataDeletionRequest
+      13. RetreatPackage
+      14. VillaCategory
+      15. RetreatPackageVillaCategory
+      16. PhysicalVilla
+      17. RetreatBooking
+      18. ResidenceRecord
+      19. Therapist
+      20. SpaTreatment
+
+    Missing Tables (22 tables not reached due to abort at line 475):
+      RetreatPackageSpaTreatment, TreatmentRoom, TherapistTreatmentQualification,
+      TreatmentRoomCompatibility, SpaSession, MenuItem, Ingredient,
+      MenuItemIngredient, IngredientBatch, MealOrder, MealOrderItem,
+      Folio, FolioItem, PaymentTransaction, CustomerReview, Invoice,
+      AuditLog, Permission, RolePermission, RightDelegation,
+      RightDelegationPermission, SystemConfiguration.
+
+5.2 Isolation & Zero-Mutation Audit on Primary Database [HSWRMS]:
+    Query:
+      sqlcmd -S localhost -d master -E -b -Q "SET NOCOUNT ON; SELECT (SELECT state_desc FROM sys.databases WHERE name = N'HSWRMS') AS [HswrmsState], (SELECT COUNT(*) FROM HSWRMS.sys.tables WHERE is_ms_shipped = 0) AS [HswrmsTableCount], (SELECT COUNT(*) FROM HSWRMS.sys.database_principals WHERE name = 'hswrms_test_user') AS [HswrmsTestUserMappings];"
+    Result:
+      HswrmsState: ONLINE
+      HswrmsTableCount: 39 (identical to baseline, 100% intact)
+      HswrmsTestUserMappings: 0 (completely isolated)
+
+    Query for recent modifications in [HSWRMS]:
+      sqlcmd -S localhost -d HSWRMS -E -b -Q "SET NOCOUNT ON; SELECT name, modify_date FROM sys.tables WHERE modify_date > DATEADD(minute, -30, GETDATE());"
+    Result:
+      0 rows returned (zero tables modified in primary database).
+
+5.3 Security & Runtime User Audit:
+    - User `hswrms_test_user` permissions in `HSWRMS_TEST`: Completely unchanged (remains `GRANT CONNECT`, 0 roles).
+    - No passwords, logins, or database users were modified.
+    - No data was seeded into any business table.
+
+--------------------------------------------------------------------------------
+6. REMEDIATION PROPOSAL FOR HUMAN REVIEW
+--------------------------------------------------------------------------------
+To achieve complete, defect-free schema deployment:
+
+1. SQLCMD Setting Resolution:
+   - Option A (Recommended): Add `SET QUOTED_IDENTIFIER ON;` and `SET ANSI_NULLS ON;`
+     immediately after `USE [HSWRMS_TEST]; GO` in `HSWRMS_TEST_schema.sql` (and `schema.sql`).
+   - Option B: Add the `-I` flag to SQLCMD: `sqlcmd -S localhost -d HSWRMS_TEST -E -b -I -i ...`.
+   (Note: Both combined provides defense-in-depth).
+
+2. Handling the 20 Partially Deployed Tables in `HSWRMS_TEST`:
+   - Under current safety rules, automated DROP scripts and DROP DATABASE are strictly prohibited.
+   - The user must explicitly authorize the remediation approach for `HSWRMS_TEST`
+     (e.g., dropping the partially created objects in `HSWRMS_TEST` or cleaning `HSWRMS_TEST` user tables
+     under controlled human review before re-running the payload with `-I` / `SET QUOTED_IDENTIFIER ON;`).
+
+--------------------------------------------------------------------------------
+7. FINAL GIT STATUS
+--------------------------------------------------------------------------------
+Working Tree: Clean
+Untracked files preserved:
+  - 05_Development/database/generated/HSWRMS_TEST_schema.sql
+  - All migrations in 05_Development/database/migrations/
+  - All audit reports in 06_Reports/
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.81
+================================================================================
+

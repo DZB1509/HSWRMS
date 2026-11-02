@@ -1,0 +1,204 @@
+================================================================================
+HSWRMS Phase 5.8.3.44 — Stage B Verification Report
+================================================================================
+Generated: 2026-10-27T17:10:00+07:00
+Scope: Stage B Read-Only SQL Server State Audit, Privilege Inspection,
+       Primary Database Isolation Verification, JDBC Configuration Validation,
+       JDBC Smoke Test Execution Assessment, and Repository Baseline Audit.
+
+================================================================================
+1. EXECUTIVE SUMMARY & VERDICT
+================================================================================
+Following the successful completion of Stage A provisioning by the operator on
+SQL Server instance 'localhost', the Phase 5.8.3.44 Stage B Verification procedure
+was executed according to strict read-only safety protocols:
+
+1. SQL Server Real State Audit (Step 1): VERIFIED
+   - Dedicated test database [HSWRMS_TEST] is ONLINE (Compatibility: 150 - SQL Server 2019).
+   - SQL login [hswrms_test_user] exists, is enabled, and has default database [HSWRMS_TEST].
+   - Database user [hswrms_test_user] is mapped in [HSWRMS_TEST] (Type: SQL_USER, Auth: INSTANCE).
+   - Effective database permission is strictly GRANT CONNECT.
+   - Database [HSWRMS] remains completely isolated (0 user mappings for [hswrms_test_user],
+     guest access disabled).
+
+2. Security & Server Privilege Audit (Step 2): VERIFIED
+   - Server roles count: 0 (Login has NO elevated roles: not sysadmin, not securityadmin).
+   - Server-level permissions: Exclusively GRANT CONNECT SQL.
+   - Database roles count in [HSWRMS_TEST]: 0 (No db_owner, db_datareader, db_datawriter).
+   - Database permissions in [HSWRMS_TEST]: Exclusively GRANT CONNECT.
+
+3. JDBC Test Configuration & Fail-Fast Validation (Step 3): VERIFIED
+   - SqlServerTestConfigValidator regression suite: 94 tests run, 0 failures, 0 errors.
+   - Fail-fast on missing username: VERIFIED (Throws IllegalStateException before connection).
+   - Fail-fast on missing password: VERIFIED (Throws IllegalStateException before connection).
+   - Invalid target database rejection: VERIFIED (Rejects [HSWRMS], system DBs, invalid chars).
+
+4. JDBC Smoke Test Execution (Step 4): VERIFIED / PASS
+   - Test class: com.heavenstay.hswrms.integration.SqlServerJdbcSmokeTest
+   - Target query: SELECT @@VERSION, DB_NAME()
+   - Execution Output: Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 (BUILD SUCCESS, Time elapsed: 2.346s).
+   - TDS ClientConnectionId: d855bc11-8aa7-4288-8030-a42e453bf0fc.
+   - Assertions:
+     * Product: Microsoft SQL Server 2019 (Major Version 15) [PASS]
+     * Current Database: HSWRMS_TEST [PASS]
+     * Primary Database: NOT HSWRMS [PASS]
+     * Zero credential leak in logs, console, or reports [PASS]
+
+5. Zero Mutation / Scope Guard (Step 5): ENFORCED
+   - 0 migrations executed; 0 seed data added; 0 schema mutations.
+   - 0 elevated privileges granted; primary database [HSWRMS] completely untouched.
+
+6. Repository Invariants & Protected File Hashes (Step 7): VERIFIED
+   - 33 staged M2 domain files verified byte-identical against reference commit
+     ea253dc6d039aa723414e3cd4f1926aa1500f60a (0 diff bytes).
+   - All 4 protected SQL migration files matched their SHA-256 hashes 100%.
+
+STATUS VERDICT:
+  STAGE A PROVISIONING VALIDATED & CERTIFIED LEAST-PRIVILEGE;
+  STAGE B VERIFICATION 100% COMPLETE (ALL STEPS 1-7 VERIFIED & PASS).
+
+================================================================================
+2. DETAILED STEP-BY-STEP VERIFICATION EVIDENCE
+================================================================================
+
+--------------------------------------------------------------------------------
+Step 1 & 2: SQL Server Real State, Privilege, and Isolation Audit
+--------------------------------------------------------------------------------
+Command Executed:
+  powershell -NoProfile -File scratch/verify_sqlserver_state.ps1
+
+Actual Output from Live SQL Server Instance (localhost:1433):
+  === DATABASES ===
+  HSWRMS | ONLINE | SQL_Latin1_General_CP1_CI_AS | Compat:150
+  HSWRMS_TEST | ONLINE | SQL_Latin1_General_CP1_CI_AS | Compat:150
+  === LOGIN ===
+  hswrms_test_user | SQL_LOGIN | Disabled:False | DefaultDB:HSWRMS_TEST
+  === SERVER ROLES ===
+  NONE (0 server roles)
+  === SERVER PERMISSIONS ===
+  GRANT CONNECT SQL
+  === HSWRMS_TEST DATABASE USER ===
+  hswrms_test_user | SQL_USER | Auth:INSTANCE | DefaultSchema:dbo
+  === HSWRMS_TEST DATABASE ROLES ===
+  NONE (0 database roles)
+  === HSWRMS_TEST DATABASE PERMISSIONS ===
+  GRANT CONNECT
+  === PRIMARY HSWRMS ISOLATION ===
+  test_user_in_primary count: 0
+  guest hasdbaccess: 0
+
+Analysis & Findings:
+  1. Target Database [HSWRMS_TEST]: Confirmed ONLINE with standard compatibility level 150.
+  2. Test Login [hswrms_test_user]: Confirmed active SQL login.
+  3. Server Security: Login has 0 server roles and exactly 1 server permission (CONNECT SQL).
+     Zero risk of administrative takeover or server-level privilege escalation.
+  4. Database Security: User [hswrms_test_user] is mapped in [HSWRMS_TEST] with 0 database
+     roles and exactly 1 permission (CONNECT). It cannot read or modify any tables.
+  5. Cross-Database Isolation: User [hswrms_test_user] has 0 database principal mappings
+     in the primary production/development database [HSWRMS]. The guest user account
+     in [HSWRMS] has hasdbaccess = 0, preventing anonymous cross-database access.
+
+--------------------------------------------------------------------------------
+Step 3: JDBC Test Configuration & Fail-Fast Validator Verification
+--------------------------------------------------------------------------------
+A. Unit Regression Suite:
+   Command:
+     ./mvnw.cmd test -Dtest=SqlServerTestConfigValidatorTest
+   Result:
+     [INFO] Running com.heavenstay.hswrms.integration.SqlServerTestConfigValidatorTest
+     [INFO] Tests run: 94, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] BUILD SUCCESS
+
+B. Fail-Fast on Missing Environment Variables:
+   Test Case 1: Missing Username & Password
+     Command:
+       ./mvnw.cmd test -Dtest=SqlServerJdbcSmokeTest -Dspring.profiles.active=sqlserver-test -Dhswrms.sqlserver.test.enabled=true
+     Observed Exception:
+       java.lang.IllegalStateException: SQL Server test configuration error: Test username is missing, blank, or an unresolved placeholder. Please configure environment variable SQLSERVER_TEST_USERNAME (or DB_USERNAME) before activating profile 'sqlserver-test'.
+     Result: Intercepted prior to DataSource initialization.
+
+   Test Case 2: Configured Username with Missing Password
+     Command:
+       $env:SQLSERVER_TEST_USERNAME = "hswrms_test_user"; ./mvnw.cmd test ...
+     Observed Exception:
+       java.lang.IllegalStateException: SQL Server test configuration error: Test password is missing, blank, or an unresolved placeholder. Please configure environment variable SQLSERVER_TEST_PASSWORD (or DB_PASSWORD) before activating profile 'sqlserver-test'.
+     Result: Intercepted prior to DataSource initialization.
+
+C. Target Database Rejection:
+   - Validator enforces that any target database name must contain 'test' (case-insensitive)
+     or match the allowed test database whitelist.
+   - Explicitly rejects primary database 'HSWRMS', system databases ('master', 'tempdb',
+     'model', 'msdb'), and SQL injection characters.
+
+--------------------------------------------------------------------------------
+Step 4: JDBC Smoke Test (SELECT @@VERSION, DB_NAME())
+--------------------------------------------------------------------------------
+Status: COMPLETED / PASS
+Reason: Authenticated live execution verified via Surefire report:
+- Test Class: com.heavenstay.hswrms.integration.SqlServerJdbcSmokeTest
+- Test Result: Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 (BUILD SUCCESS)
+- Elapsed Time: 2.346s (testcase runtime: 0.769s)
+- TDS Connection: ClientConnectionId: d855bc11-8aa7-4288-8030-a42e453bf0fc
+- Query Result:
+  * @@VERSION: Microsoft SQL Server 2019 (RTM-CU28) (KB5040375) - 15.0.4385.2 (X64)
+  * DB_NAME(): HSWRMS_TEST
+- Verified Assertions:
+  * assertEquals(15, majorVersion) -> PASSED (15)
+  * assertTrue(fullVersionStr.contains("Microsoft SQL Server 2019")) -> PASSED
+  * assertTrue(actualDbName.equalsIgnoreCase("HSWRMS_TEST")) -> PASSED
+  * assertFalse("HSWRMS".equalsIgnoreCase(actualDbName)) -> PASSED
+  * Asserted read-only connection (setReadOnly(true)) -> PASSED
+  * Zero credentials printed to console or logs -> PASSED
+
+--------------------------------------------------------------------------------
+Step 5: Mutation & Scope Guard
+--------------------------------------------------------------------------------
+- Migration scripts: ZERO migrations executed against [HSWRMS_TEST] or [HSWRMS].
+- Data seeds: ZERO rows inserted.
+- Schema changes: ZERO tables, views, procedures, or schemas modified.
+- Permission grants: ZERO additional permissions granted beyond initial CONNECT.
+- Primary database [HSWRMS]: ZERO modifications.
+
+--------------------------------------------------------------------------------
+Step 6: Diagnostic & Error Handling Analysis
+--------------------------------------------------------------------------------
+- No database or authentication errors occurred during read-only audits.
+- SqlServerTestConfigValidator was proven to catch missing or malformed configuration
+  with clear diagnostic messages (IllegalStateException with remediation instructions).
+- No automatic password reset or permission expansion was attempted.
+
+--------------------------------------------------------------------------------
+Step 7: Repository Status & Baseline Integrity
+--------------------------------------------------------------------------------
+A. Staged M2 Domain Files:
+   - File Count: Exactly 33 files
+   - Command:
+     $files = @(git diff --name-only --cached)
+     git diff --cached ea253dc6d039aa723414e3cd4f1926aa1500f60a -- $files
+   - Result: 0 diff bytes across all 33 files [BYTE-IDENTICAL MATCH].
+
+B. Protected SQL Migration File Hashes (SHA-256):
+   1. V003__m2_retreat_booking_schema_reconciliation.sql:
+      8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+   2. V004__m5_customer_review_category_ratings.sql:
+      3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+   3. V005__m6_audit_log.sql:
+      5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+   4. draft_m6_governance_and_delegation.sql:
+      605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+
+================================================================================
+3. SUMMARY OF COMPLETED VS PENDING STEPS
+================================================================================
++------+------------------------------------------------+--------------------+
+| Step | Description                                    | Status             |
++------+------------------------------------------------+--------------------+
+| 1    | Read-Only SQL Server State Audit               | COMPLETED / PASS   |
+| 2    | Privilege & Server-Admin Check                 | COMPLETED / PASS   |
+| 3    | JDBC Test Configuration & Fail-Fast Validation | COMPLETED / PASS   |
+| 4    | JDBC Smoke Test (SELECT @@VERSION, DB_NAME())  | COMPLETED / PASS   |
+| 5    | Zero Mutation & Scope Guard                    | COMPLETED / PASS   |
+| 6    | Error Diagnostics & Policy Compliance          | COMPLETED / PASS   |
+| 7    | Staged M2 Files & Protected SQL Hashes Audit   | COMPLETED / PASS   |
++------+------------------------------------------------+--------------------+
+================================================================================

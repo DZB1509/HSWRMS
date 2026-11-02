@@ -994,7 +994,7 @@
     "reactivateAccount": "Réactiver le compte",
     "clearanceSectionTitle": "Périmètre RBAC et minimisation des données",
     "scopeAdminTitle": "Autorité complète d'administration système",
-    "scopeAdminDesc": "Autorisé à configurer les paramètres métier, les indicateurs de fonctionnalités, la matrice RBAC, la délégation et le journal d'audit de sécurité.",
+    "scopeAdminDesc": "Autorisé à gérer les données de référence, les paramètres métier et opérationnels, la matrice RBAC, la délégation et le journal d'audit de sécurité.",
     "scopeAdminMin": "N'expose pas les diagnostics médicaux bruts des clients ni les secrets de paiement.",
     "scopeManagerTitle": "Gestion opérationnelle et autorité analytique",
     "scopeManagerDesc": "Autorisé à consulter les rapports de revenus, les statistiques d'occupation des villas, l'utilisation des thérapeutes et la santé opérationnelle du système.",
@@ -1010,7 +1010,8 @@
     "scopeFbMin": "Le personnel de cuisine voit strictement les étiquettes d'allergènes; les dossiers médicaux généraux sont totalement masqués (BR-03).",
     "suspendSuccess": "Compte du personnel suspendu avec succès.",
     "reactivateSuccess": "Compte du personnel réactivé avec succès.",
-    "notFound": "Enregistrement du compte de personnel introuvable."
+    "notFound": "Enregistrement du compte de personnel introuvable.",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "Gestion des données de référence",

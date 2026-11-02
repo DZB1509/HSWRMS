@@ -285,7 +285,7 @@ export const INITIAL_ARRIVALS: ArrivalRecord[] = [
       ja: 'マインドフル・リニューアル',
       fr: 'Renouveau en Pleine Conscience',
     },
-    heroImage: 'https://images.unsplash.com/photo-1512290900672-1f5be6f906f3?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
     startDate: '2026-09-24',
     endDate: '2026-09-26',
     days: 3,

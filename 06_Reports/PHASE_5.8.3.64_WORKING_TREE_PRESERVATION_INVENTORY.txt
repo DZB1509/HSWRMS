@@ -1,0 +1,418 @@
+================================================================================
+HSWRMS — PHASE 5.8.3.64: WORKING TREE PRESERVATION & INTEGRATION INVENTORY
+INDIVIDUAL FILE AUDIT, CLASSIFICATION, DEPENDENCY MAPPING & PRESERVATION STRATEGY
+================================================================================
+Date: 2026-10-28
+Operating Mode: STRICTLY READ-ONLY AUDIT (Zero commits, zero merges, zero staging,
+                zero code mutations, zero file deletions, zero SQL executions)
+Authoritative Integration Workspace:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Integration Branch:
+  feature/hswrms-m1-m6-integration (HEAD: 46ab465)
+================================================================================
+
+1. RECONFIRMATION OF REPOSITORY TOPOLOGY & WORKING-TREE STATUS
+--------------------------------------------------------------------------------
+A. Workspace and Git Topology:
+   - Command Working Directory:
+     E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+   - Git Top-Level Directory:
+     E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules
+   - Git Common Directory (.git):
+     E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/Fall26_ISP392_IS2005_G1/.git/worktrees/HSWRMS-audit-all-modules
+   - Structure:
+     Authoritative integration workspace is a dedicated linked worktree of the
+     primary repository Fall26_ISP392_IS2005_G1.
+
+B. Branch, HEAD, and Upstream State:
+   - Current Branch: feature/hswrms-m1-m6-integration
+   - HEAD Commit: 46ab465a1dbfbccfd027d6fa4f4eaab0e9818998
+   - HEAD Subject: docs(audit): add M1-M6 integration and provisioning evidence
+   - Tracked Upstream: isp-origin/feature/hswrms-m1-m6-integration
+   - Ahead/Behind vs Upstream: ahead 0, behind 0 (in exact sync with remote ref)
+   - Ahead/Behind vs isp-origin/main: ahead 41, behind 0
+
+C. Working-Tree High-Level Summary:
+   - Staged Files: 0 files (Index is completely clean).
+   - Tracked Modified Files: 13 files (+748 lines, -70 lines).
+   - Untracked Files: 50 individual files across backend, tests, migrations,
+     generated payloads, and audit reports.
+   - Total Local Uncommitted Artifacts: 63 distinct files.
+
+
+2. COMPLETE INDIVIDUAL INVENTORY OF MODIFIED TRACKED FILES (13 FILES)
+--------------------------------------------------------------------------------
+Every modified tracked file is recorded individually below with exact path,
+affected module, diff metrics, and technical change summary:
+
+[TRK-01] 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java
+  - Module: Cross-Cutting / Module 4 (F&B) & Module 6 (Security)
+  - Diff: +9 lines, -0 lines
+  - Summary: Registered Spring Security authorization rules for Module 4:
+    * Public GET: /api/v1/fnb/customer/menu-items/** (permitAll)
+    * KDS operations: /api/v1/fnb/kds/** (hasAnyRole: FNB_STAFF, MANAGER, ADMIN)
+    * Customer orders: /api/v1/fnb/customer/** (hasAnyRole: CUSTOMER, RECEPTIONIST, MANAGER, ADMIN)
+  - Preservation Requirement: CRITICAL. Must preserve to prevent 401/403 on F&B APIs.
+
+[TRK-02] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java
+  - Module: Module 4 (F&B Dining & KDS)
+  - Diff: +19 lines, -0 lines
+  - Summary: Added @OneToMany relationship mapping to MealOrderItemEntity with
+    CascadeType.ALL, orphanRemoval=true, helper method addItem(MealOrderItemEntity),
+    and getters/setters for items collection.
+  - Preservation Requirement: CRITICAL. Required for JPA bidirectional persistence.
+
+[TRK-03] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java
+  - Module: Module 4 (F&B Dining & KDS)
+  - Diff: +12 lines, -0 lines
+  - Summary: Added query methods for daily meal deduplication and KDS queues:
+    * findDailyMealSelection(bookingId, orderDate, mealType)
+    * findByBookingIdOrderByCreatedAtDesc(bookingId)
+    * findOrdersByDate(orderDate)
+  - Preservation Requirement: CRITICAL. Required for daily meal selection logic.
+
+[TRK-04] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java
+  - Module: Module 6 (Admin & Governance)
+  - Diff: +1 line, -1 line
+  - Summary: Hardened null safety on permissionService check in getSystemOverview()
+    to adhere to fail-closed security principle when permissionService is null.
+  - Preservation Requirement: CRITICAL. Prevents NullPointerException on slice tests.
+
+[TRK-05] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java
+  - Module: Module 6 (Admin & Governance)
+  - Diff: +1 line, -0 lines
+  - Summary: Registered permissions S39:V and S39:U (Kitchen Management View and
+    Update) mapped to role FNB_STAFF in the static permission catalog.
+  - Preservation Requirement: CRITICAL. Enforces RBAC alignment with SRS.
+
+[TRK-06] 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/AdminControllersSecurityTest.java
+  - Module: Module 6 (Admin & Governance Testing)
+  - Diff: +104 lines, -2 lines
+  - Summary: Added comprehensive unit/security regression tests:
+    * testAdminOverviewDelegatedWidgets()
+    * systemOverview_failClosedWhenPermissionServiceIsNull()
+  - Preservation Requirement: CRITICAL. Verifies S55 admin widget delegation security.
+
+[TRK-07] 05_Development/database/README.md
+  - Module: Database & Environment Documentation
+  - Diff: +92 lines, -18 lines
+  - Summary: Added operational test database provisioning guide, environment variable
+    manifest, and execution preflight steps for HSWRMS_TEST.
+  - Preservation Requirement: HIGH. Essential setup documentation.
+
+[TRK-08] 05_Development/database/schema.sql
+  - Module: Database Architecture Baseline
+  - Diff: +95 lines, -6 lines
+  - Summary: Aligned authoritative 42-table baseline schema with Phase 5.8.3 deliverables:
+    * dbo.[User]: added failed_login_count, locked_at, last_login_at
+    * dbo.RetreatPackage: added package_code, duration_unit, base_price_unit, etc.
+    * dbo.VillaCategory: added inventory_count, bedroom_count, has_private_pool, etc.
+    * dbo.PhysicalVilla: added zone_name, bedroom_info, max_occupancy, etc.
+    * dbo.RetreatPackageSpaTreatment: added included_sessions, entitlement_status, notes
+    * dbo.CustomerReview: added room_rating, spa_rating, dining_rating and check constraint
+    * dbo.Permission: added is_delegable, is_admin_only
+    * dbo.SystemConfiguration: added value_type, min_value, max_value, manager_editable
+    * dbo.RightDelegation: added revoked_at, revoked_by_admin_user_id
+    * dbo.AuditLog: added actor_role, target_ref_id, old_value, new_value, delegation_id
+    * Indexes: IX_User_AccountStatus_LockedAt, IX_RightDelegation_Status_Expiry,
+      IX_AuditLog_TargetRefId, IX_PhysicalVilla_Status_Category.
+  - Preservation Requirement: CRITICAL. Authoritative schema foundation.
+
+[TRK-09] 05_Development/frontend/src/context/DiningContext.tsx
+  - Module: Module 4 (Frontend Dining State & KDS)
+  - Diff: +244 lines, -28 lines
+  - Summary: Upgraded DiningContext from static mocks to live backend REST client
+    integration (fnbApi.ts) with local storage fallback, loading states, and error handling.
+  - Preservation Requirement: CRITICAL. Core customer/staff dining UI state bridge.
+
+[TRK-10] 05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx
+  - Module: Module 4 (Staff Kitchen Display System UI)
+  - Diff: +72 lines, -12 lines
+  - Summary: Connected live KDS dashboard metrics (kdsKpi), active orders count,
+    auto-refresh triggers, and real-time order state transition handlers.
+  - Preservation Requirement: CRITICAL. Main staff kitchen monitoring view.
+
+[TRK-11] 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+  - Module: Module 4 (Staff Kitchen Display System UI)
+  - Diff: +100 lines, -4 lines
+  - Summary: Added order item details, guest dietary/allergen warning badges,
+    special request notes display, and transition action buttons (PREPARING -> READY -> DELIVERED).
+  - Preservation Requirement: CRITICAL. Detailed kitchen ticket workflow.
+
+[TRK-12] 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx
+  - Module: Module 4 (Staff Kitchen Display System UI)
+  - Diff: +61 lines, -1 line
+  - Summary: Added batch prep aggregation display, dish quantity totals for upcoming
+    service windows, and dietary caution icons.
+  - Preservation Requirement: CRITICAL. Kitchen batch preparation view.
+
+[TRK-13] 05_Development/frontend/src/types/dining.ts
+  - Module: Module 4 (Frontend Type Definitions)
+  - Diff: +7 lines, -0 lines
+  - Summary: Added TypeScript definitions for KdsDashboardKpi, MealPrepEntry, and
+    extended OrderStatus transitions.
+  - Preservation Requirement: CRITICAL. Type safety for frontend build.
+
+
+3. INDIVIDUAL INVENTORY & CLASSIFICATION OF UNTRACKED FILES (50 FILES)
+--------------------------------------------------------------------------------
+Classification Categories:
+  - source: Production application code (backend or frontend)
+  - test: Automated test suites or test harnesses
+  - migration: Database schema migration scripts (Flyway / DDL)
+  - schema payload: Generated standalone database setup payloads
+  - report: Verification, preflight, or audit reports
+  - generated artifact: Machine-generated build/test artifacts
+  - unknown: Uncategorized or ad-hoc files
+
+Detailed Table of All 50 Untracked Files:
+
++-----+---------------------------------------------------------------------------------------------------------------------+------------------+-------+--------+
+| #   | File Path                                                                                                           | Classification   | Size  | Lines  |
++-----+---------------------------------------------------------------------------------------------------------------------+------------------+-------+--------+
+| 01  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbCustomerOrderController.java        | source           | 4.8 KB| 96     |
+| 02  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbKdsController.java                  | source           | 4.8 KB| 93     |
+| 03  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/AlaCarteItemRequest.java                       | source           | 1.1 KB| 35     |
+| 04  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/CancelOrderRequest.java                       | source           | 0.5 KB| 14     |
+| 05  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/CreateAlaCarteRequest.java                     | source           | 1.9 KB| 56     |
+| 06  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/CreateDailyMealRequest.java                   | source           | 1.9 KB| 54     |
+| 07  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/KdsDashboardKpiDto.java                        | source           | 1.6 KB| 47     |
+| 08  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MealOrderDto.java                             | source           | 2.1 KB| 72     |
+| 09  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MealOrderItemDto.java                         | source           | 1.9 KB| 64     |
+| 10  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MealPrepEntryDto.java                         | source           | 2.5 KB| 84     |
+| 11  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/MenuItemDto.java                              | source           | 2.4 KB| 75     |
+| 12  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/UpdateOrderStatusRequest.java                 | source           | 0.8 KB| 24     |
+| 13  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderItemEntity.java                   | source           | 1.8 KB| 54     |
+| 14  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MenuItemEntity.java                        | source           | 3.1 KB| 88     |
+| 15  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/BookingContextPort.java               | source           | 2.0 KB| 49     |
+| 16  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/DefaultBookingAndDietaryIntegration...| source           | 8.2 KB| 149    |
+| 17  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/DietaryProfilePort.java               | source           | 1.6 KB| 31     |
+| 18  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderItemRepository.java           | source           | 0.4 KB| 9      |
+| 19  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MenuItemRepository.java                | source           | 1.0 KB| 17     |
+| 20  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderService.java                      | source           | 1.0 KB| 15     |
+| 21  | 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java                  | source           | 27.2 KB| 502   |
+| 22  | 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java        | test             | 11.8 KB| 227   |
+| 23  | 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/integration/DefaultBookingAndDietaryIntegration...| test             | 13.8 KB| 242   |
+| 24  | 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/FnbBillingIntegrationTest.java             | test             | 11.4 KB| 207   |
+| 25  | 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceTest.java                  | test             | 38.1 KB| 637   |
+| 26  | 05_Development/backend/src/test/resources/schema.sql                                                                | test             | 0.5 KB| 10     |
+| 27  | 05_Development/database/generated/HSWRMS_TEST_schema.sql                                                            | schema payload   | 46.2 KB| 1082  |
+| 28  | 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql                               | migration        | 32.6 KB| 663   |
+| 29  | 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql                                    | migration        | 1.0 KB| 19     |
+| 30  | 05_Development/database/migrations/V005__m6_audit_log.sql                                                           | migration        | 1.2 KB| 28     |
+| 31  | 05_Development/database/migrations/draft_m6_governance_and_delegation.sql                                           | migration (draft)| 42.4 KB| 999   |
+| 32  | 05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts                                                           | source           | 5.0 KB| 168    |
+| 33  | 05_Development/frontend/src/features/m4-fnb/hooks/useKdsPolling.ts                                                   | source           | 3.4 KB| 107    |
+| 34  | 06_Reports/HSWRMS_REPOSITORY_INTEGRATION_BASELINE.txt                                                                | report           | 28.9 KB| 393   |
+| 35  | 06_Reports/PHASE_5.8.3.47_RESIDUAL_RISK_AND_INTEGRATION_READINESS_REPORT.txt                                         | report           | 17.4 KB| 156   |
+| 36  | 06_Reports/PHASE_5.8.3.48_M6_AUTHORIZATION_REGRESSION_REPORT.txt                                                     | report           | 20.3 KB| 299   |
+| 37  | 06_Reports/PHASE_5.8.3.49_KDS_BACKEND_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.txt                                       | report           | 50.3 KB| 635   |
+| 38  | 06_Reports/PHASE_5.8.3.50_M4_KDS_IMPLEMENTATION_REPORT.txt                                                           | report           | 23.8 KB| 314   |
+| 39  | 06_Reports/PHASE_5.8.3.51_M4_CROSS_WORKSPACE_AUDIT.txt                                                               | report           | 36.2 KB| 491   |
+| 40  | 06_Reports/PHASE_5.8.3.52_M4_CANCELLATION_AUDIT_TRAIL_REPORT.txt                                                     | report           | 13.4 KB| 229   |
+| 41  | 06_Reports/PHASE_5.8.3.53_M4_SELECTIVE_INTEGRATION_REPORT.txt                                                        | report           | 20.1 KB| 301   |
+| 42  | 06_Reports/PHASE_5.8.3.54_M4_POST_INTEGRATION_REGRESSION_AUDIT.txt                                                   | report           | 21.9 KB| 321   |
+| 43  | 06_Reports/PHASE_5.8.3.55_M4_BOOKING_BOUNDARY_INTEGRATION_REPORT.txt                                                 | report           | 14.3 KB| 232   |
+| 44  | 06_Reports/PHASE_5.8.3.56_M4_READINESS_GATE_REVIEW.txt                                                               | report           | 22.5 KB| 292   |
+| 45  | 06_Reports/PHASE_5.8.3.57_TEST_ENVIRONMENT_PROVISIONING_PLAN.txt                                                     | report           | 23.9 KB| 333   |
+| 46  | 06_Reports/PHASE_5.8.3.58_READ_ONLY_SQLSERVER_PREFLIGHT_REPORT.txt                                                   | report           | 14.3 KB| 238   |
+| 47  | 06_Reports/PHASE_5.8.3.59_TEST_SCHEMA_PAYLOAD_SAFETY_REVIEW.txt                                                      | report           | 12.0 KB| 222   |
+| 48  | 06_Reports/PHASE_5.8.3.60_TEST_SCHEMA_EXECUTION_SAFETY_REVIEW.txt                                                    | report           | 13.3 KB| 189   |
+| 49  | 06_Reports/PHASE_5.8.3.61_SCHEMA_EXECUTION_AUTHORIZATION_PREFLIGHT.txt                                               | report           | 12.0 KB| 194   |
+| 50  | 06_Reports/PHASE_5.8.3.62_CONTROLLED_SCHEMA_DEPLOYMENT_PLAN.txt                                                      | report           | 13.7 KB| 227   |
++-----+---------------------------------------------------------------------------------------------------------------------+------------------+-------+--------+
+
+
+4. DEPENDENCY ANALYSIS: M4 SOURCE, TESTS, MIGRATIONS & SCHEMA
+--------------------------------------------------------------------------------
+A. M4 Internal Code Dependencies:
+   - FnbCustomerOrderController & FnbKdsController depend directly on:
+     * MealOrderService
+     * DTOs (MealOrderDto, MenuItemDto, CreateDailyMealRequest, etc.)
+   - MealOrderServiceImpl depends directly on:
+     * Entities: MealOrderEntity, MealOrderItemEntity, MenuItemEntity
+     * Repositories: MealOrderRepository, MealOrderItemRepository, MenuItemRepository
+     * Boundary Ports: BookingContextPort (M2), DietaryProfilePort (M1)
+     * Billing Port: BillingPort / DefaultBillingAdapter (M5 Folio posting)
+     * Permission Evaluator: PermissionEvaluator (M6 S39:V / S39:U checks)
+   - DefaultBookingAndDietaryIntegrationService implements:
+     * BookingContextPort using RetreatBookingRepository (M2)
+     * DietaryProfilePort using HealthProfileRepository, FoodAllergyRepository,
+       and DietaryRequirementRepository (M1)
+
+B. Database Schema Dependencies:
+   - M4 entities strictly require only 3 tables from dbo:
+     1. dbo.MenuItem (menu_item_id, item_name, category, dietary_tags, allergens, price, availability_status)
+     2. dbo.MealOrder (meal_order_id, retreat_booking_id, order_date, meal_type, order_type, delivery_location, order_status, total_amount, created_at)
+     3. dbo.MealOrderItem (meal_order_item_id, meal_order_id, menu_item_id, quantity, special_requests, calculated_price)
+   - All 3 tables exist in the authoritative baseline `05_Development/database/schema.sql`.
+   - Workspace A's M4 implementation DOES NOT depend on tables Ingredient,
+     IngredientBatch, or MenuItemIngredient. It runs 100% against the baseline schema.
+
+C. Migration Script Independence:
+   - V003 (M2 retreat booking) is not required for M4 compilation or unit tests.
+   - V004 (M5 customer reviews) is not required for M4.
+   - V005 (M6 audit log) is not required for M4.
+   - draft_m6_governance_and_delegation.sql is unnumbered and independent of M4.
+
+D. Test Suite Dependencies:
+   - Backend tests (FnbControllersSecurityTest, MealOrderServiceTest, FnbBillingIntegrationTest,
+     DefaultBookingAndDietaryIntegrationServiceTest) rely on:
+     * Mockito / Spring Boot Test slices (@WebMvcTest, @DataJpaTest, @SpringBootTest)
+     * 05_Development/backend/src/test/resources/schema.sql (H2 DDL for test execution)
+
+
+5. DUPLICATE, OBSOLETE, CONFLICTING OR RISKY ARTIFACTS
+--------------------------------------------------------------------------------
+[RISK-01] draft_m6_governance_and_delegation.sql (Status: Draft Unnumbered):
+  - Description: Contains 999 lines of migration DDL for administration, permission,
+    and delegation tables.
+  - Risk: The script is unnumbered and explicitly marked as "STATUS: DRAFT (UNNUMBERED)".
+    Its contents are ALREADY consolidated into `schema.sql`.
+  - Recommendation: DO NOT stage or commit into Flyway migration sequence until
+    a formal sequential number (e.g. V006) is assigned and approved.
+
+[RISK-02] HSWRMS_TEST_schema.sql (Status: Generated Preflight Payload):
+  - Description: 46 KB generated DDL script in `database/generated/`.
+  - Risk: Derived artifact designed for local test database provisioning.
+  - Recommendation: Treat as a reproducible test provisioning asset. Do not mix
+    with source code commits.
+
+[RISK-03] V003__m2_retreat_booking_schema_reconciliation.sql (Status: Pending Reconciliation):
+  - Description: 32 KB migration imported from vinhpt1/dat-nguyen-gia.
+  - Risk: Overlaps with schema changes already reflected in baseline `schema.sql`.
+  - Recommendation: Retain untracked until M2 branch reconciliation is performed.
+
+[RISK-04] CRLF / LF Line Ending Warnings on Windows:
+  - Description: Git reports "LF will be replaced by CRLF the next time Git touches it"
+    on several modified tracked Java and TypeScript files.
+  - Impact: Harmless on Windows, but must be committed with standard core.autocrlf
+    settings to avoid spurious diffs.
+
+
+6. CROSS-REFERENCE TO PRIOR COMPLETED AUDITS
+--------------------------------------------------------------------------------
+This report formally incorporates the verified findings of prior phases:
+- Phase 5.8.3.50 (M4 KDS Implementation): 31/31 backend tests passing, 8/8 frontend
+  tests passing, frontend build clean (exit code 0).
+- Phase 5.8.3.51 (Cross-Workspace Audit): Formal rejection of Workspace B blanket merge
+  due to P0-1 (premature folio billing on PENDING) and P0-2 (schema drift with ingredient
+  inventory tables). Workspace A confirmed as authoritative baseline.
+- Phase 5.8.3.55 (M4 Booking Boundary Audit): Verified that BookingContextPort strictly
+  enforces customer ownership and stay-date containment against M2.
+- Phase 5.8.3.56 (Readiness Gate Review): Gate decision CONDITIONALLY READY; zero P0
+  blockers remain in Module 4.
+- Phase 5.8.3.61 & 5.8.3.62 (Preflight & Deployment): Test provisioning scripts and
+  credentials verified safe; live SQL Server DDL execution paused pending user approval.
+- Phase 5.8.3.63 (Repository Baseline): Mapped 12 branches; identified 0 conflicts for
+  DucHoangM1, 123 conflicts for dat-nguyen-gia, 236 conflicts for vinhpt1.
+
+
+7. PROPOSED PRESERVATION & BASELINE STAGING STRATEGY
+--------------------------------------------------------------------------------
+To strictly honor the safety rule ("Do not recommend staging all files indiscriminately"),
+the 63 local files are partitioned into 4 distinct groups:
+
+GROUP A: Core Phase 5.8.3 Deliverables (Suitable for Immediate Baseline Commit)
+Total: 39 files (13 modified tracked + 26 untracked source/test files).
+  - Scope:
+    * 13 Tracked modified files (SecurityConfig, MealOrderEntity, MealOrderRepository,
+      AdminDashboardController, PermissionCatalog, AdminControllersSecurityTest,
+      database/README.md, database/schema.sql, DiningContext.tsx, FnbDashboardPage.tsx,
+      MealOrderDetailPage.tsx, MealPrepListPage.tsx, types/dining.ts).
+    * 2 Untracked M4 controllers (FnbCustomerOrderController, FnbKdsController).
+    * 10 Untracked M4 DTOs.
+    * 2 Untracked M4 entities (MealOrderItemEntity, MenuItemEntity).
+    * 3 Untracked M4 ports & adapters (BookingContextPort, DietaryProfilePort,
+      DefaultBookingAndDietaryIntegrationService).
+    * 2 Untracked M4 repositories (MealOrderItemRepository, MenuItemRepository).
+    * 2 Untracked M4 services (MealOrderService, MealOrderServiceImpl).
+    * 4 Untracked M4 backend tests (FnbControllersSecurityTest,
+      DefaultBookingAndDietaryIntegrationServiceTest, FnbBillingIntegrationTest,
+      MealOrderServiceTest).
+    * 1 Untracked backend test resource (schema.sql).
+    * 2 Untracked frontend files (fnbApi.ts, useKdsPolling.ts).
+  - Rationale: These 39 files form a single, coherent, compilable, and fully tested
+    functional increment. They complete the M4 KDS and M6 governance deliverables.
+  - Proposed Commit Subject:
+    feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration
+
+GROUP B: Database Migration Scripts (Separate Review & Staging)
+Total: 3 files.
+  - Scope:
+    * 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql
+    * 05_Development/database/migrations/V005__m6_audit_log.sql
+    * 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql
+  - Rationale: Migrations V004 and V005 are clean and idempotent, but database migrations
+    should be committed separately from application source code to maintain atomic history.
+  - Proposed Commit Subject:
+    db(migrations): add V004 customer review and V005 audit log migrations
+
+GROUP C: Audit, Readiness & Preflight Reports (Documentation Commit)
+Total: 18 files.
+  - Scope:
+    * 06_Reports/HSWRMS_REPOSITORY_INTEGRATION_BASELINE.txt
+    * 06_Reports/PHASE_5.8.3.47_RESIDUAL_RISK_AND_INTEGRATION_READINESS_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.48_M6_AUTHORIZATION_REGRESSION_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.49_KDS_BACKEND_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.txt
+    * 06_Reports/PHASE_5.8.3.50_M4_KDS_IMPLEMENTATION_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.51_M4_CROSS_WORKSPACE_AUDIT.txt
+    * 06_Reports/PHASE_5.8.3.52_M4_CANCELLATION_AUDIT_TRAIL_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.53_M4_SELECTIVE_INTEGRATION_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.54_M4_POST_INTEGRATION_REGRESSION_AUDIT.txt
+    * 06_Reports/PHASE_5.8.3.55_M4_BOOKING_BOUNDARY_INTEGRATION_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.56_M4_READINESS_GATE_REVIEW.txt
+    * 06_Reports/PHASE_5.8.3.57_TEST_ENVIRONMENT_PROVISIONING_PLAN.txt
+    * 06_Reports/PHASE_5.8.3.58_READ_ONLY_SQLSERVER_PREFLIGHT_REPORT.txt
+    * 06_Reports/PHASE_5.8.3.59_TEST_SCHEMA_PAYLOAD_SAFETY_REVIEW.txt
+    * 06_Reports/PHASE_5.8.3.60_TEST_SCHEMA_EXECUTION_SAFETY_REVIEW.txt
+    * 06_Reports/PHASE_5.8.3.61_SCHEMA_EXECUTION_AUTHORIZATION_PREFLIGHT.txt
+    * 06_Reports/PHASE_5.8.3.62_CONTROLLED_SCHEMA_DEPLOYMENT_PLAN.txt
+    * 06_Reports/PHASE_5.8.3.64_WORKING_TREE_PRESERVATION_INVENTORY.txt (this report)
+  - Rationale: Matches precedent of commit 46ab465. Keeping documentation in a dedicated
+    docs commit keeps Git logs clean and structured.
+  - Proposed Commit Subject:
+    docs(audit): add Phase 5.8.3 M4-M6 audit, readiness, and baseline reports
+
+GROUP D: Files That Should Remain Untracked / Require Separate Decision
+Total: 2 files.
+  - Scope:
+    1. 05_Development/database/migrations/draft_m6_governance_and_delegation.sql
+       (Draft script, unnumbered; already represented in schema.sql).
+    2. 05_Development/database/generated/HSWRMS_TEST_schema.sql
+       (Generated test payload; should either remain local or be committed under a
+       dedicated test provisioning commit).
+
+
+8. ITEMS REQUIRING HUMAN DECISIONS PRIOR TO EXECUTION
+--------------------------------------------------------------------------------
+1. Decision HD-01: Approval of Staging Partition Strategy:
+   - Does the user approve committing Group A (39 source/test files), Group B
+     (2-3 migration files), and Group C (18 reports) as 3 distinct commits, rather
+     than a single indiscriminate git add .?
+
+2. Decision HD-02: Status of draft_m6_governance_and_delegation.sql:
+   - Should this file remain untracked as a reference draft, or should it be
+     formally assigned migration version V006?
+
+3. Decision HD-03: Authority to Proceed to Baseline Commit:
+   - After reviewing this inventory, does the user authorize staging and committing
+     Group A on branch `feature/hswrms-m1-m6-integration`?
+
+
+9. FINAL GATE RECOMMENDATION & DECISION
+--------------------------------------------------------------------------------
+FINAL DECISION: >>> READY FOR BASELINE COMMIT REVIEW <<<
+
+Justification:
+Every one of the 63 modified and untracked files has been individually cataloged,
+classified, and cross-referenced.
+No indiscriminate staging is recommended.
+The working tree state is 100% preserved. Zero mutations were made to any Git
+references, source files, or database schemas.
+The project is fully prepared for user review and subsequent baseline commit creation.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.64
+================================================================================
+

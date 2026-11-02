@@ -33,7 +33,6 @@
     "masterDataManagement": "Gestion des Données Maîtresses",
     "securityGovernance": "Sécurité & Gouvernance",
     "businessParameters": "Paramètres Métier",
-    "featureFlags": "Indicateurs de Fonctionnalité",
     "permissionMatrix": "Matrice des Droits",
     "managerDelegation": "Délégation de Pouvoirs",
     "sensitiveDataAuditLog": "Journal d'Audit des Données",
@@ -42,7 +41,7 @@
     "admin": "Admin",
     "delegatedAdministration": "Administration Déléguée",
     "businessParametersDelegated": "Paramètres Opérationnels (Délégués)",
-    "featureFlagsDelegated": "Drapeaux de Fonctionnalités (Délégués)"
+    "bookingHistory": "Historique des réservations"
   },
   "payment": {
     "requiredDeposit": "Acompte Requis",
@@ -598,8 +597,6 @@
     "bannerNotice": "Les paramètres et règles de permissions de ce prototype sont gérés dans l'état client à des fins de démonstration. En production, les politiques d'autorisation et les pistes d'audit immuables sont appliquées par des moteurs de règles côté serveur.",
     "kpiParams": "Paramètres Opérationnels",
     "kpiParamsSub": "Seuils opérationnels configurés",
-    "kpiFlags": "Drapeaux de Fonctionnalités",
-    "kpiFlagsSub": "Modules optionnels actuellement actifs",
     "kpiDelegations": "Délégations Gestionnaire",
     "kpiDelegationsSub": "Délégations restreintes actives au Gestionnaire",
     "kpiAudit": "Activité de la Piste d'Audit",
@@ -607,7 +604,6 @@
     "navTitle": "Fonctions Administratives & Modules de Gouvernance",
     "screensScope": "Périmètre officiel administrateur : Écrans 10–12 & 50–54, 56",
     "descParams": "Configurez les délais d'annulation, taux de remboursement, pourcentage d'acompte et délais de sélection des repas.",
-    "descFlags": "Activez ou désactivez en toute sécurité les services optionnels tels que la commande en villa ou le spa supplémentaire.",
     "descMatrix": "Examinez les attributions de capacités par rôle et appliquez les limites immuables de confidentialité et de moindre privilège.",
     "descDelegation": "Accordez des capacités administratives temporaires et strictement délimitées au Gestionnaire (Sarah Jenkins).",
     "descAudit": "Consultez les métadonnées chronologiques des accès relatifs à la santé, à l'identité et aux dossiers financiers.",
@@ -640,24 +636,6 @@
     "allowedRange": "Plage Autorisée",
     "lastUpdated": "Mis à jour le",
     "resetTitle": "Rétablir la valeur par défaut"
-  },
-  "flags": {
-    "pageTitle": "Drapeaux de Fonctionnalités & Sélecteurs Opérationnels",
-    "systemScope": "Modules Système",
-    "pageSubtitle": "Activez ou désactivez les modules clients en libre-service et les procédures automatisées de déclaration réglementaire.",
-    "safetyTitle": "Les Limites de Sécurité et Confidentialité sont Non Modifiables",
-    "safetyDesc": "Les invariants de sécurité (tels que la minimisation des données RBAC et le contrôle des règlements au départ) sont des règles architecturales obligatoires exclues des drapeaux de fonctionnalités.",
-    "modularTitle": "Modules Fonctionnels Configurables",
-    "activeCount": "Actifs",
-    "highImpact": "Fort Impact",
-    "scope": "Portée",
-    "lastModified": "Modifié le",
-    "immutableTitle": "Contrôles Fondamentaux Immuables (Architecture Protégée)",
-    "alwaysEnforced": "TOUJOURS EN VIGUEUR",
-    "confirmTitle": "Confirmer la Modification à Fort Impact",
-    "confirmPrompt": "Vous êtes sur le point de modifier l'état opérationnel de :",
-    "confirmAuditNote": "Cette transition d'état prendra effet immédiatement dans le prototype et ajoutera un événement horodaté au journal d'audit.",
-    "applyToggle": "Appliquer la Transition"
   },
   "matrix": {
     "pageTitle": "Matrice de Permissions de Contrôle d'Accès Basé sur les Rôles (RBAC)",
@@ -792,24 +770,6 @@
         "desc": "Heure programmée pour la génération nocturne du rapport de résidence (Loi de 2020)."
       }
     },
-    "flags": {
-      "extraSpaOnline": {
-        "name": "Customer Online Extra Spa Booking",
-        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
-      },
-      "extraFnbOnline": {
-        "name": "Customer In-Villa Dining A-la-carte Ordering",
-        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
-      },
-      "residenceExport": {
-        "name": "Nightly Police Residence Declaration Batch",
-        "desc": "Compile automatiquement les données d'identification des arrivées des clients à l'heure programmée (l'obligation légale de déclaration de résidence reste obligatoire)."
-      },
-      "reviewInvites": {
-        "name": "Automated Post-Checkout Review Invitations",
-        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
-      }
-    },
     "permissions": {
       "categories": {
         "experience": "Customer Retreat Experience",
@@ -903,10 +863,6 @@
         "name": "Configure System Business Parameters",
         "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
       },
-      "manageFlags": {
-        "name": "Manage Modular Feature Flags",
-        "desc": "Toggle optional customer self-service modules and automated compliance routines."
-      },
       "viewMatrix": {
         "name": "Inspect System RBAC Permission Matrix",
         "desc": "Review cross-role functional capability allocations and security boundary definitions."
@@ -944,7 +900,6 @@
         "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
         "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
         "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
-        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
         "parameterUpdated": "Successfully updated business parameter value.",
         "permissionUpdated": "Successfully updated permission matrix capability.",
         "delegationCreated": "Successfully created limited delegation record for Manager.",
@@ -995,7 +950,7 @@
     "reactivateAccount": "Réactiver le compte",
     "clearanceSectionTitle": "Périmètre RBAC et minimisation des données",
     "scopeAdminTitle": "Autorité complète d'administration système",
-    "scopeAdminDesc": "Autorisé à configurer les paramètres métier, les indicateurs de fonctionnalités, la matrice RBAC, la délégation et le journal d'audit de sécurité.",
+    "scopeAdminDesc": "Autorisé à gérer les données de référence, les paramètres métier et opérationnels, la matrice RBAC, la délégation et le journal d'audit de sécurité.",
     "scopeAdminMin": "N'expose pas les diagnostics médicaux bruts des clients ni les secrets de paiement.",
     "scopeManagerTitle": "Gestion opérationnelle et autorité analytique",
     "scopeManagerDesc": "Autorisé à consulter les rapports de revenus, les statistiques d'occupation des villas, l'utilisation des thérapeutes et la santé opérationnelle du système.",
@@ -1011,7 +966,8 @@
     "scopeFbMin": "Le personnel de cuisine voit strictement les étiquettes d'allergènes; les dossiers médicaux généraux sont totalement masqués (BR-03).",
     "suspendSuccess": "Compte du personnel suspendu avec succès.",
     "reactivateSuccess": "Compte du personnel réactivé avec succès.",
-    "notFound": "Enregistrement du compte de personnel introuvable."
+    "notFound": "Enregistrement du compte de personnel introuvable.",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "Gestion des données de référence",

@@ -1,12 +1,5 @@
 @import './tokens.css';
 
-/* Luminous Angle Property Registration (Must precede rules per CSS Houdini spec) */
-@property --border-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 /* CSS Reset & Foundation */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -19,6 +12,25 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+}
+
+/* Lenis integration & smooth scroll collision prevention */
+html.lenis,
+html.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
 }
 
 body {
@@ -535,74 +547,4 @@ select option {
   .hsw-hero-bg-image {
     animation: none;
   }
-
-  .luminous-border::before,
-  .interactive-card::before,
-  .soft-option::before,
-  .spa-treatment-option::before,
-  .spa-treatment-card::before,
-  .hsw-culinary-card::before,
-  .hsw-retreat-card::before,
-  .customer-booking-card::before,
-  .hsw-editorial-media::before,
-  .hsw-image-reveal-wrap::before {
-    animation: none !important;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .luminous-border:hover::before,
-    .interactive-card:hover::before,
-    .soft-option:hover:not(.is-selected):not(.selected):not(.--active):not(.active):not([aria-selected="true"]):not(:disabled)::before,
-    .spa-treatment-option:hover:not(.spa-treatment-option--active)::before,
-    .spa-treatment-card:hover:not(.is-selected):not(.selected):not(.spa-treatment-option--active)::before,
-    .hsw-culinary-card:hover::before,
-    .hsw-retreat-card:hover::before,
-    .customer-booking-card:hover::before,
-    .hsw-editorial-media:hover::before,
-    .hsw-image-reveal-wrap:hover::before {
-      opacity: 0.75 !important;
-      background: rgba(216, 199, 174, 0.45) !important;
-    }
-  }
-
-  .soft-card,
-  .interactive-card,
-  .soft-option,
-  .spa-treatment-option,
-  .spa-treatment-card,
-  .hsw-culinary-card,
-  .hsw-retreat-card,
-  .customer-booking-card,
-  .hsw-editorial-media,
-  .hsw-image-reveal-wrap,
-  .hover-lift,
-  .hsw-btn {
-    transform: none !important;
-    transition: none !important;
-  }
-
-  .soft-media img,
-  .interactive-card img,
-  .spa-treatment-card img,
-  .hsw-culinary-card img,
-  .hsw-retreat-card img,
-  .customer-booking-card img,
-  .hsw-editorial-media img,
-  .hsw-image-reveal-wrap img {
-    transform: none !important;
-    transition: none !important;
-  }
-
-  .interactive-card h1,
-  .interactive-card h2,
-  .interactive-card h3,
-  .interactive-card h4,
-  .interactive-card .card-title,
-  .interactive-card p,
-  .interactive-card .card-desc,
-  .interactive-card .card-subtitle {
-    transform: none !important;
-    transition: none !important;
-  }
 }
-

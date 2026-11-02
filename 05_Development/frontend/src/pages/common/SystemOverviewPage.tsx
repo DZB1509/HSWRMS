@@ -8,14 +8,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFolio } from '../../context/FolioContext';
-import { useGovernance } from '../../hooks/useGovernance';
 import { formatVND } from '../../i18n';
 
 export const SystemOverviewPage: React.FC = () => {
   const { role } = useAuth();
   const { t, i18n } = useTranslation(['operations', 'common']);
   const { getRevenueAnalytics, getOccupancyAnalytics, getTherapistUtilizationAnalytics } = useFolio();
-  const { policeExportSummary } = useGovernance();
 
   // Cross-module single source of truth analytics
   const revenue = getRevenueAnalytics();
@@ -30,7 +28,7 @@ export const SystemOverviewPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
               <h1 className="hsw-gov-title">
-                {t('operations.systemOverview.pageTitle', 'System Overview & Operational Health Dashboard')}
+                {t('operations.systemOverview.pageTitle', 'Tổng Quan Vận Hành & Bảng Sức Khỏe Toàn Hệ Thống')}
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -42,11 +40,11 @@ export const SystemOverviewPage: React.FC = () => {
                 backgroundColor: role === 'admin' ? 'var(--actor-admin)' : 'var(--actor-manager)',
                 color: role === 'admin' ? 'var(--actor-admin-text)' : 'var(--actor-manager-text)'
               }}>
-                {role === 'admin' ? t('topbar.adminClearance', 'Administrator Clearance') : t('topbar.managerScope', 'Manager Limited Scope')}
+                {role === 'admin' ? t('topbar.adminClearance', 'Thẩm Quyền Quản Trị Viên') : t('topbar.managerScope', 'Phạm Vi Giới Hạn Của Quản Lý')}
               </span>
             </div>
             <p className="hsw-gov-subtitle">
-              {t('operations.systemOverview.pageSubtitle', 'Cross-module operational summary tracking accommodation, therapy fulfillment, culinary readiness, folio settlement, and statutory residence compliance.')}
+              {t('operations.systemOverview.pageSubtitle', 'Báo cáo vận hành liên mô-đun theo dõi lưu trú, thực hiện trị liệu, chuẩn bị ẩm thực, quyết toán hóa đơn và tuân thủ khai báo cư trú theo luật định.')}
             </p>
           </div>
         </div>
@@ -54,13 +52,13 @@ export const SystemOverviewPage: React.FC = () => {
 
       {/* Honest Operational Status Banner */}
       <div className="hsw-gov-banner">
-        <ShieldCheck size={18} style={{ color: 'var(--accent-forest)', flexShrink: 0, marginTop: '2px' }} />
+        <ShieldCheck size={18} style={{ color: '#2d6a4f', flexShrink: 0, marginTop: '2px' }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>
-            {t('operations.systemOverview.statusHonestyTitle', 'Application Operational Health')}
+          <strong style={{ color: '#1b4332' }}>
+            {t('operations.systemOverview.statusHonestyTitle', 'Tình Trạng Sức Khỏe Vận Hành Ứng Dụng')}
           </strong>
           <span style={{ display: 'block', marginTop: '2px' }}>
-            {t('operations.systemOverview.statusHonestyDesc', 'All operational indicators shown below reflect factual cross-module application state calculated from active bookings, scheduled treatments, dining orders, and settled folio items.')}
+            {t('operations.systemOverview.statusHonestyDesc', 'Only metrics returned from verified backend analytics are shown. Metrics without a verified source are marked unavailable.')}
           </span>
         </div>
       </div>
@@ -70,36 +68,36 @@ export const SystemOverviewPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <Building size={18} style={{ color: 'var(--accent-forest)' }} />
-            {t('operations.systemOverview.accommodationTitle', 'Accommodation & Sanctuary Villa Health (Module 2)')}
+            {t('operations.systemOverview.accommodationTitle', 'Tình Trạng Lưu Trú & Biệt Thự Nghỉ Dưỡng (Mô-đun 2)')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            {occupancy.totalVillas} {t('operations.systemOverview.totalVillas', 'Total Physical Villas')}
+            {Number.isFinite(occupancy.totalVillas) ? occupancy.totalVillas : 'Unavailable'} {t('operations.systemOverview.totalVillas', 'Tổng số căn biệt thự thực tế')}
           </span>
         </div>
 
         <div className="hsw-gov-grid" style={{ marginBottom: 0 }}>
-          <div className="hsw-gov-kpi">
-            <span className="hsw-gov-kpi-label">{t('manager.occupancy.occupied', 'Occupied')}</span>
-            <span className="hsw-gov-kpi-val" style={{ color: 'var(--accent-forest)' }}>{occupancy.occupiedCount}</span>
-            <span className="hsw-gov-kpi-sub">{occupancy.occupancyRate}% {t('manager.occupancy.rate', 'occupancy')}</span>
+          <div className="hsw-gov-kpi hsw-kpi-occupied">
+            <span className="hsw-gov-kpi-label">{t('manager.occupancy.occupied', 'Đang có khách')}</span>
+            <span className="hsw-gov-kpi-val" style={{ color: 'var(--accent-forest)' }}>{Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 'Unavailable'}</span>
+            <span className="hsw-gov-kpi-sub">{Number.isFinite(occupancy.occupancyRate) ? occupancy.occupancyRate : 'Unavailable'}% {t('manager.occupancy.rate', 'công suất')}</span>
           </div>
 
-          <div className="hsw-gov-kpi">
-            <span className="hsw-gov-kpi-label">{t('manager.occupancy.available', 'Ready / Available')}</span>
-            <span className="hsw-gov-kpi-val">{occupancy.readyCount}</span>
-            <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.inspectedReady', 'Cleaned & inspected')}</span>
+          <div className="hsw-gov-kpi hsw-kpi-ready">
+            <span className="hsw-gov-kpi-label">{t('manager.occupancy.available', 'Sẵn sàng đón khách')}</span>
+            <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.readyCount) ? occupancy.readyCount : 'Unavailable'}</span>
+            <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.inspectedReady', 'Đã dọn dẹp & kiểm tra')}</span>
           </div>
 
-          <div className="hsw-gov-kpi">
-            <span className="hsw-gov-kpi-label">{t('manager.occupancy.cleaning', 'In Cleaning')}</span>
-            <span className="hsw-gov-kpi-val" style={{ color: 'var(--warning)' }}>{occupancy.cleaningCount}</span>
-            <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.turnoverQueue', 'Housekeeping queue')}</span>
+          <div className="hsw-gov-kpi hsw-kpi-cleaning">
+            <span className="hsw-gov-kpi-label">{t('manager.occupancy.cleaning', 'Đang dọn dẹp')}</span>
+            <span className="hsw-gov-kpi-val" style={{ color: 'var(--warning)' }}>{Number.isFinite(occupancy.cleaningCount) ? occupancy.cleaningCount : 'Unavailable'}</span>
+            <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.turnoverQueue', 'Hàng đợi buồng phòng')}</span>
           </div>
 
-          <div className="hsw-gov-kpi">
-            <span className="hsw-gov-kpi-label">{t('manager.occupancy.maintenance', 'Maintenance')}</span>
-            <span className="hsw-gov-kpi-val" style={{ color: 'var(--text-muted)' }}>{occupancy.maintenanceCount}</span>
-            <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.outOfOrder', 'Scheduled maintenance')}</span>
+          <div className="hsw-gov-kpi hsw-kpi-maintenance">
+            <span className="hsw-gov-kpi-label">{t('manager.occupancy.maintenance', 'Bảo trì')}</span>
+            <span className="hsw-gov-kpi-val" style={{ color: 'var(--text-muted)' }}>{Number.isFinite(occupancy.maintenanceCount) ? occupancy.maintenanceCount : 'Unavailable'}</span>
+            <span className="hsw-gov-kpi-sub">{t('operations.systemOverview.outOfOrder', 'Bảo trì theo lịch')}</span>
           </div>
         </div>
       </div>
@@ -111,28 +109,28 @@ export const SystemOverviewPage: React.FC = () => {
           <div className="hsw-gov-card-header">
             <h2 className="hsw-gov-card-title">
               <Sparkles size={18} style={{ color: 'var(--accent-forest)' }} />
-              {t('operations.systemOverview.therapyTitle', 'Therapy Scheduling & Fulfillment (Module 3)')}
+              {t('operations.systemOverview.therapyTitle', 'Lịch Trình Trị Liệu & Hoàn Tất Buổi Hẹn (Mô-đun 3)')}
             </h2>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('manager.therapists.totalSessions', 'Scheduled Sessions')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
-                {therapists.totalScheduledSessions}
+            <div className="hsw-overview-subcard hsw-card-spa-sessions">
+              <div className="subcard-label">{t('manager.therapists.totalSessions', 'Lịch Hẹn Đã Đặt')}</div>
+              <div className="subcard-val">
+                {Number.isFinite(therapists.totalScheduledSessions) ? therapists.totalScheduledSessions : 'Unavailable'}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                {therapists.completedSessions} completed · {therapists.noShowSessions} no-show
+              <div className="subcard-sub">
+                {Number.isFinite(therapists.completedSessions) ? therapists.completedSessions : 'Unavailable'} hoàn thành · {Number.isFinite(therapists.noShowSessions) ? therapists.noShowSessions : 'Unavailable'} vắng mặt
               </div>
             </div>
 
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('manager.therapists.totalMinutes', 'Booked Treatment Time')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
-                {therapists.totalBookedMinutes} min
+            <div className="hsw-overview-subcard hsw-card-spa-time">
+              <div className="subcard-label">{t('manager.therapists.totalMinutes', 'Thời Lượng Trị Liệu Đã Đặt')}</div>
+              <div className="subcard-val">
+                {Number.isFinite(therapists.totalBookedMinutes) ? therapists.totalBookedMinutes : 'Unavailable'} phút
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                {therapists.totalBookedHours} hrs hands-on care
+              <div className="subcard-sub">
+                {Number.isFinite(therapists.totalBookedHours) ? therapists.totalBookedHours : 'Unavailable'} giờ chăm sóc trực tiếp
               </div>
             </div>
           </div>
@@ -143,73 +141,37 @@ export const SystemOverviewPage: React.FC = () => {
           <div className="hsw-gov-card-header">
             <h2 className="hsw-gov-card-title">
               <Receipt size={18} style={{ color: 'var(--accent-forest)' }} />
-              {t('operations.systemOverview.billingTitle', 'Consolidated Billing & Folio (Module 5)')}
+              {t('operations.systemOverview.billingTitle', 'Tổng Hợp Quyết Toán & Hóa Đơn Folio (Mô-đun 5)')}
             </h2>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('manager.revenue.totalRevenue', 'Total Revenue')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--accent-forest)', marginTop: '2px' }}>
-                {formatVND(revenue.totalRevenue, i18n.language)}
+            <div className="hsw-overview-subcard hsw-card-revenue">
+              <div className="subcard-label">{t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}</div>
+              <div className="subcard-val">
+                {(Number.isFinite(revenue.totalRevenue) ? formatVND(revenue.totalRevenue, i18n.language) : 'Unavailable')}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Consolidated settled revenue
+              <div className="subcard-sub">
+                Doanh thu đã quyết toán tổng hợp
               </div>
             </div>
 
-            <div style={{ padding: 'var(--space-3)', backgroundColor: '#faf9f6', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('operations.systemOverview.unsettledGuard', 'Checkout Guard')}</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--accent-forest)', marginTop: '2px' }}>
-                {t('operations.systemOverview.guardActive', 'Active')}
+            <div className="hsw-overview-subcard hsw-card-guard">
+              <div className="subcard-label">{t('operations.systemOverview.unsettledGuard', 'Kiểm Soát Trả Phòng')}</div>
+              <div className="subcard-val">
+                {t('operations.systemOverview.guardActive', 'Đang Bật')}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                BR-02 Unpaid charge check enabled
+              <div className="subcard-sub">
+                Quy tắc BR-02 chặn check-out khi còn phí chưa thanh toán đang bật
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Police Residence Declaration Compliance Section (Law on Residence 2020) */}
-      <div className="hsw-gov-card">
-        <div className="hsw-gov-card-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <ShieldCheck size={18} style={{ color: 'var(--accent-forest)' }} />
-            <h2 className="hsw-gov-card-title" style={{ margin: 0 }}>
-              {t('operations.systemOverview.policeComplianceTitle', 'Police Temporary Residence Declaration Compliance')}
-            </h2>
-          </div>
-          <span className={`hsw-audit-pill ${policeExportSummary.status === 'SUBMITTED' ? 'success' : 'denied'}`} style={{ fontSize: '11px' }}>
-            {policeExportSummary.status}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div style={{ flex: '1 1 100%' }}>
-            <p style={{ margin: '0 0 var(--space-2) 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {t('operations.systemOverview.policeComplianceDesc', 'Operational safeguards modeled around Vietnam Law on Residence 2020 and Decree 13/2023/ND-CP requirements. HSWRMS compiles daily temporary residence records for domestic and foreign customers registered during physical check-in.')}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', fontSize: '11px', color: 'var(--text-muted)' }}>
-              <span>
-                <strong>{t('operations.systemOverview.batchId', 'Active Batch ID')}:</strong> <code>{policeExportSummary.batchId}</code>
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.totalResidents', 'Registered In-House Customers')}:</strong> {policeExportSummary.totalRecords}
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.domestic', 'Domestic (CCCD)')}:</strong> {policeExportSummary.domesticCount} · <strong>{t('operations.systemOverview.foreign', 'Foreign (Passport)')}:</strong> {policeExportSummary.foreignCount}
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.batchSchedule', 'Batch Cutoff')}:</strong> 22:00 Daily Schedule
-              </span>
-              <span>
-                <strong>{t('operations.systemOverview.generatedAt', 'Compiled At')}:</strong> {policeExportSummary.generatedAt}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="hsw-gov-card" role="status">
+        <h2 className="hsw-gov-card-title">{t('operations.systemOverview.policeComplianceTitle', 'Police residency export')}</h2>
+        <p>Unavailable: the backend has no verified residence-record source. No resident count, batch status, or submission status is shown.</p>
       </div>
     </div>
   );

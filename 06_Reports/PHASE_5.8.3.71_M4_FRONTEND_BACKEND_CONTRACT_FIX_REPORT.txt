@@ -1,0 +1,292 @@
+================================================================================
+HSWRMS - PHASE 5.8.3.71: M4 FRONTEND-BACKEND CONTRACT FIX REPORT
+P1 DEFECT RESOLUTION, CONTRACT RECONCILIATION, AND REGRESSION VERIFICATION
+================================================================================
+Date: 2026-10-28
+Repository Root: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Branch: feature/hswrms-m1-m6-integration
+Current Commit: f1757e1 (Parent: 258c7bd)
+Status: Completed — Staging / Commit Suspended Pending User Review
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Phase 5.8.3.71 successfully resolves all P1 integration defects identified in the
+Phase 5.8.3.70 verification report (06_Reports/PHASE_5.8.3.70_POST_COMMIT_INTEGRATION_VERIFICATION.txt).
+Prior to this phase, the Module 4 (F&B / KDS) frontend implementation suffered from
+five critical contract mismatches with the Spring Boot backend:
+1. Daily meal selections sent invalid field keys (`bookingId`, `specialNotes`) instead of
+   the required backend contract fields (`retreatBookingId`, `notes`).
+2. A-la-carte orders sent `bookingId`, `deliveryLocation`, `deliveryTime`, `specialNotes`
+   instead of `retreatBookingId`, `location`, `targetTime`, `notes`.
+3. Order cancellations sent `{ reason }` instead of `{ cancellationReason }`, causing Jackson
+   deserialization to bind null and trigger validation failure (@NotBlank).
+4. KDS order queues failed with fatal runtime crashes (`TypeError: id.replace is not a function`)
+   when receiving numeric `Long` IDs from Spring Boot REST endpoints.
+5. In case of API failure, frontend contexts (`DiningContext.tsx`) swallowed the errors with
+   `console.warn`, leaving unpersisted mock items in local state and misleading users with
+   false-success UI feedback.
+
+All five defects have been rectified with fail-safe contract builders, robust ID coercers,
+and rollback semantics. All changes adhere strictly to the authorized scope:
+- Zero Git staging or commit operations performed.
+- Zero modifications to backend source code or external modules (M1, M2, M3, M5, M6).
+- Zero SQL DDL/DML, migration, or database operations executed.
+- Comprehensive test coverage established: 41 frontend unit tests passing (100%),
+  frontend production build (`tsc -b && vite build`) passing with zero errors, and 110 backend
+  tests (M4 & M6) passing with zero regressions.
+
+--------------------------------------------------------------------------------
+2. DETAILED DEFECT REMEDIATION & CONTRACT MAPPINGS
+--------------------------------------------------------------------------------
+
+A. DEFECT P1.1: DAILY MEAL SELECTION CONTRACT (CreateDailyMealRequest)
+   - Spring Boot Contract: `com.heavenstay.hswrms.m4fnb.dto.CreateDailyMealRequest`
+     * Fields: `@NotNull Long retreatBookingId`, `@NotNull LocalDate orderDate`,
+       `@NotBlank String mealPeriod`, `@NotEmpty List<Long> menuItemIds`, `String notes`
+   - Previous Frontend Flaw:
+     * Sent: `{ bookingId: number, orderDate: string, mealPeriod: string, menuItemIds: number[], specialNotes: string }`
+     * Defect: Missing `retreatBookingId` (binding null -> HTTP 400 Validation Error);
+       `specialNotes` ignored by Jackson (notes bound null).
+   - Remediation:
+     * Implemented `buildDailyMealOrderPayload(...)` in `src/features/m4-fnb/utils/fnbPayloadUtils.ts`.
+     * Validates and fails fast if neither `retreatBookingId` nor `bookingId` is present:
+       `if (bookingId === undefined || bookingId === null) throw new Error(...)`
+     * Maps `retreatBookingId: bookingId` and `notes: payload.notes ?? payload.specialNotes`.
+     * Updated `fnbApi.createDailyMealOrder` to use the contract builder.
+     * Updated `DiningContext.saveMealSelection` to pass `retreatBookingId` and `notes`.
+
+B. DEFECT P1.2: A-LA-CARTE ORDER CONTRACT (CreateAlaCarteRequest)
+   - Spring Boot Contract: `com.heavenstay.hswrms.m4fnb.dto.CreateAlaCarteRequest`
+     * Fields: `@NotNull Long retreatBookingId`, `LocalDate orderDate`, `String targetTime`,
+       `String location`, `@NotEmpty List<CreateAlaCarteItemRequest> items`
+       (where item has `Long menuItemId`, `Integer quantity`, `String notes`)
+   - Previous Frontend Flaw:
+     * Sent: `{ bookingId, deliveryLocation, deliveryTime, items: [{ menuItemId, quantity, specialNotes }] }`
+     * Defect: Missing `retreatBookingId` (HTTP 400); `location`, `targetTime`, and `notes`
+       unbound because client sent legacy property names.
+   - Remediation:
+     * Implemented `buildAlaCarteOrderPayload(...)` in `src/features/m4-fnb/utils/fnbPayloadUtils.ts`.
+     * Validates and fails fast if `retreatBookingId` / `bookingId` is missing.
+     * Maps `retreatBookingId: bookingId`, `location: payload.location ?? payload.deliveryLocation`,
+       `targetTime: payload.targetTime ?? payload.deliveryTime`, and
+       `items[].notes: item.notes ?? item.specialNotes`.
+     * Updated `fnbApi.createAlaCarteOrder` to serialize compliant JSON.
+     * Updated `DiningContext.createAlaCarteOrder` to pass verified contract properties.
+
+C. DEFECT P1.3: ORDER CANCELLATION CONTRACT (CancelOrderRequest)
+   - Spring Boot Contract: `com.heavenstay.hswrms.m4fnb.dto.CancelOrderRequest`
+     * Fields: `@NotBlank(message = "Cancellation reason is required") String cancellationReason`
+   - Previous Frontend Flaw:
+     * Sent: `{ reason: "..." }`
+     * Defect: Jackson mapped nothing to `cancellationReason` -> Spring Boot threw HTTP 400
+       MethodArgumentNotValidException with "Cancellation reason is required".
+   - Remediation:
+     * Implemented `buildCancelOrderPayload(...)` in `src/features/m4-fnb/utils/fnbPayloadUtils.ts`.
+     * Serializes strictly to `{ cancellationReason: (reason && reason.trim()) || defaultReason }`.
+     * Replaces old `reason` key entirely.
+     * Applied to both customer cancellation (`cancelCustomerOrder`) and staff KDS cancellation
+       (`cancelKdsOrder`).
+
+D. DEFECT P1.4: NUMERIC ID TYPE SAFETY IN KDS (TypeError Resolution)
+   - Spring Boot Response:
+     * Jackson serializes `Long mealOrderId` as numeric JSON (`{"mealOrderId": 101, ...}`).
+   - Previous Frontend Flaw:
+     * `extractNumericId(id: string)` assumed `id` was always a string and called `id.replace(/\D/g, '')`.
+     * When receiving raw numeric IDs or objects, browser threw:
+       `TypeError: id.replace is not a function`, crashing KDS queue rendering.
+   - Remediation:
+     * Created dedicated pure utility `src/features/m4-fnb/utils/fnbIdUtils.ts`:
+       ```typescript
+       export function extractNumericId(id: string | number | undefined | null): number | null {
+         if (id === undefined || id === null) return null;
+         if (typeof id === 'number') return isNaN(id) ? null : id;
+         const str = String(id).trim();
+         const digits = str.replace(/\D/g, '');
+         if (digits) {
+           const parsed = parseInt(digits, 10);
+           return isNaN(parsed) ? null : parsed;
+         }
+         return null;
+       }
+       ```
+     * In `DiningContext.mapBackendPrepEntry`: coerced ID to string `const safeId = String(dto.id)`.
+     * In `MealOrderDetailPage.tsx`: coerced ID to string `id: String(res.id)`.
+     * Re-exported `extractNumericId` from `DiningContext.tsx` to maintain backward-compatibility
+       with any existing consumer imports.
+
+E. DEFECT P1.5: ELIMINATION OF SILENT FALSE-SUCCESS LOCAL STATE FALLBACKS
+   - Previous Frontend Flaw:
+     * When `fnbApi.createDailyMealOrder` or `fnbApi.createAlaCarteOrder` failed (e.g., 400, 403, 500),
+       `DiningContext` caught the exception with `console.warn` and left the optimistic local item
+       in state.
+     * Users saw their daily meals or orders appear as placed, but they were never persisted in the
+       backend database. On page refresh, the orders vanished.
+   - Remediation:
+     * In `DiningContext.saveMealSelection`:
+       - On API failure, captures error via `setError(...)`.
+       - Explicitly rolls back the optimistic selection:
+         `setMealSelections(prev => prev.filter(s => s.id !== tempId));`
+     * In `DiningContext.createAlaCarteOrder`:
+       - On API failure, surfaces error via `setError(...)`.
+       - Explicitly rolls back the optimistic order:
+         `setAlaCarteOrders(prev => prev.filter(o => o.id !== tempId));`
+     * In `DiningContext.updateFulfillmentStatus`:
+       - Surfaces error and triggers `refreshKitchenQueue()` to restore server source-of-truth.
+
+--------------------------------------------------------------------------------
+3. FILES MODIFIED & CREATED
+--------------------------------------------------------------------------------
+A. Tracked Files Modified (3 files):
+   1. `05_Development/frontend/src/context/DiningContext.tsx`:
+      - Replaced faulty inline `extractNumericId` with robust `fnbIdUtils` import.
+      - Coerced backend prep entry IDs to strings (`String(dto.id)`).
+      - Added optimistic state rollback on daily meal and a-la-carte creation errors.
+      - Fixed status update and cancel ID matching to use safe string comparisons.
+   2. `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`:
+      - Updated DTO interfaces (`MealOrderBackendDto`, `MealOrderItemBackendDto`, `MealPrepEntryBackendDto`).
+      - Integrated `buildDailyMealOrderPayload`, `buildAlaCarteOrderPayload`, `buildCancelOrderPayload`.
+      - Replaced `{ reason }` with `{ cancellationReason }`.
+   3. `05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx`:
+      - Coerced detail order ID to string (`id: String(res.id)`).
+
+B. Untracked Files Created (3 files):
+   1. `05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts`:
+      - Pure helper for safe numeric extraction without calling `.replace()` on numbers.
+   2. `05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts`:
+      - Contract serialization and validation utilities for `CreateDailyMealRequest`,
+        `CreateAlaCarteRequest`, and `CancelOrderRequest`.
+   3. `05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts`:
+      - Unit regression test suite covering all 5 defect resolutions (14 tests).
+
+--------------------------------------------------------------------------------
+4. VERIFICATION EVIDENCE & TEST EXECUTION LOGS
+--------------------------------------------------------------------------------
+
+A. FRONTEND UNIT & INTEGRATION CONTRACT TESTS:
+   Command:
+     `node --test src/features/m4-fnb/m4IntegrationContract.test.ts src/features/m4-fnb/kitchenQueueSafety.test.ts src/features/m5-billing/utils/bookingResolver.test.ts src/features/m5-billing/utils/paymentSafety.test.ts`
+   Output:
+     ▶ Kitchen Active Queue Lifecycle Safety (8/8 passed)
+     ▶ M4 F&B Frontend-Backend Contract Integration (Phase 5.8.3.71)
+       ✔ requires retreatBookingId and fails fast if omitted
+       ✔ correctly builds payload with retreatBookingId and notes matching backend DTO
+       ✔ supports backward-compatible aliases (bookingId -> retreatBookingId, specialNotes -> notes)
+       ✔ requires retreatBookingId and fails fast if omitted (a-la-carte)
+       ✔ correctly maps retreatBookingId, location, targetTime, and item notes
+       ✔ maps legacy deliveryLocation, deliveryTime, and specialNotes to backend contract
+       ✔ uses cancellationReason key and rejects old reason key
+       ✔ falls back to default reason when reason is omitted or empty whitespace
+       ✔ extractNumericId handles raw numbers without calling .replace()
+       ✔ extractNumericId handles numeric strings and formatted order IDs
+       ✔ extractNumericId returns null for invalid or empty inputs gracefully
+       ✔ mapBackendPrepEntry guarantees string ID for frontend consumption
+       ✔ simulates rollback behavior: failed promise removes optimistic item from state
+       ✔ simulates daily meal selection rollback on backend failure
+       (14/14 passed)
+     ▶ bookingResolver (5/5 passed)
+     ▶ Payment & Checkout Safety Guards (14/14 passed)
+   Result:
+     ℹ tests 41
+     ℹ suites 15
+     ℹ pass 41
+     ℹ fail 0
+     Exit Code: 0 (Execution Time: 390ms)
+
+B. FRONTEND STATIC ANALYSIS (LINTING):
+   Command:
+     `npm run lint` (`oxlint`)
+   Output:
+     Found 8 warnings and 0 errors.
+     Finished in 39ms on 185 files with 96 rules using 12 threads.
+   Result:
+     Exit Code: 0 (Zero lint errors)
+
+C. FRONTEND PRODUCTION BUILD & TYPE CHECK:
+   Command:
+     `npm run build` (`tsc -b && vite build`)
+   Output:
+     ✓ 2705 modules transformed.
+     rendering chunks...
+     dist/index.html                     1.58 kB │ gzip:   0.75 kB
+     dist/assets/index-6iHKxhlB.css    212.20 kB │ gzip:  30.56 kB
+     dist/assets/index-CnUaZICn.js   2,370.52 kB │ gzip: 661.77 kB
+     ✓ built in 2.03s
+   Result:
+     Exit Code: 0 (Zero type errors, zero bundling errors)
+
+D. BACKEND M4 (F&B / KDS) REGRESSION SUITE:
+   Command:
+     `mvn test "-Dtest=FnbControllersSecurityTest,DefaultBookingAndDietaryIntegrationServiceTest,FnbBillingIntegrationTest,MealOrderServiceTest,MealOrderRepositoryTest"`
+   Output:
+     [INFO] Running com.heavenstay.hswrms.m4fnb.controller.FnbControllersSecurityTest
+     [INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] Running com.heavenstay.hswrms.m4fnb.service.DefaultBookingAndDietaryIntegrationServiceTest
+     [INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] Running com.heavenstay.hswrms.m4fnb.service.FnbBillingIntegrationTest
+     [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] Running com.heavenstay.hswrms.m4fnb.service.MealOrderServiceTest
+     [INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] Running com.heavenstay.hswrms.m4fnb.repository.MealOrderRepositoryTest
+     [INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] Results: Tests run: 57, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] BUILD SUCCESS
+   Result:
+     Exit Code: 0 (57/57 tests passed, Execution Time: 35.000s)
+
+E. BACKEND M6 (ADMIN & SECURITY) REGRESSION SUITE:
+   Command:
+     `mvn test "-Dtest=AdminControllersSecurityTest,AccountUnlockJobTest,AuditLogPurgeDaoTest,AuditLogServiceTest,BusinessParameterServiceTest,DelegationServiceTest,PermissionMatrixServiceTest,StaffAccountServiceTest,JwtTokenProviderTest,SsoJwtRoundTripTest"`
+   Output:
+     [INFO] Running com.heavenstay.hswrms.m6admin.AccountUnlockJobTest (1/1 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.AdminControllersSecurityTest (14/14 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.AuditLogPurgeDaoTest (1/1 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.AuditLogServiceTest (6/6 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.BusinessParameterServiceTest (6/6 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.DelegationServiceTest (9/9 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.PermissionMatrixServiceTest (6/6 passed)
+     [INFO] Running com.heavenstay.hswrms.m6admin.StaffAccountServiceTest (6/6 passed)
+     [INFO] Running com.heavenstay.hswrms.security.JwtTokenProviderTest (3/3 passed)
+     [INFO] Running com.heavenstay.hswrms.security.SsoJwtRoundTripTest (1/1 passed)
+     [INFO] Results: Tests run: 53, Failures: 0, Errors: 0, Skipped: 0
+     [INFO] BUILD SUCCESS
+   Result:
+     Exit Code: 0 (53/53 tests passed, Execution Time: 34.902s)
+
+--------------------------------------------------------------------------------
+5. CURRENT REPOSITORY STATE & PRESERVATION INVENTORY
+--------------------------------------------------------------------------------
+- Branch: `feature/hswrms-m1-m6-integration`
+- Git Status:
+  * Staged changes: None (`git diff --cached` is completely empty).
+  * Modified tracked files: Exactly 3 files:
+    - `05_Development/frontend/src/context/DiningContext.tsx`
+    - `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`
+    - `05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx`
+  * Untracked files created in Phase 5.8.3.71:
+    - `05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts`
+    - `05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts`
+    - `05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts`
+    - `06_Reports/PHASE_5.8.3.71_M4_FRONTEND_BACKEND_CONTRACT_FIX_REPORT.txt`
+  * Preserved uncommitted migrations & schema artifacts:
+    - `05_Development/database/generated/HSWRMS_TEST_schema.sql` (Untracked, untouched)
+    - `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql` (Untracked, untouched)
+    - `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql` (Untracked, untouched)
+    - `05_Development/database/migrations/V005__m6_audit_log.sql` (Untracked, untouched)
+    - `05_Development/database/migrations/draft_m6_governance_and_delegation.sql` (Untracked, untouched)
+
+--------------------------------------------------------------------------------
+6. CONCLUSION & NEXT STEPS
+--------------------------------------------------------------------------------
+Phase 5.8.3.71 has fulfilled all objectives. The Module 4 F&B / KDS frontend and backend
+contracts are now aligned, verified by automated unit tests, and immune to silent false-success
+state drift or numeric ID crashes.
+
+As mandated by Phase 5.8.3.71 safety rules:
+- No files have been staged or committed.
+- Execution is halted at report generation.
+- Next phase options:
+  1. User reviews diff and authorizes baseline commit for Phase 5.8.3.71 (Group 4: M4 Frontend-Backend Contract Fix).
+  2. Proceed to review and reconcile untracked database migrations (V003, V004, V005) or test schema provisioning.
+================================================================================
+

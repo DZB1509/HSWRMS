@@ -1,0 +1,321 @@
+================================================================================
+HSWRMS PHASE 5.8.3.82 — READ-ONLY PARTIAL SCHEMA RECOVERY ASSESSMENT
+================================================================================
+Timestamp: 2026-10-28T18:35:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Target Instance: localhost (Port 1433)
+Target Catalog: HSWRMS_TEST
+Execution Identity: Windows Administrator (MYLIFE-MYRULE-1\ADMIN via -E)
+Execution Mode: STRICTLY READ-ONLY ASSESSMENT & PLANNING (ZERO MUTATIONS)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & VERDICT
+--------------------------------------------------------------------------------
+Phase 5.8.3.82 performs an exhaustive, read-only diagnostic on the partially
+deployed database [HSWRMS_TEST] following the execution halt in Phase 5.8.3.81.
+
+Key Operational Findings:
+1. Target Integrity: Confirmed host is `MYLIFE-MYRULE-1` and catalog is `HSWRMS_TEST`.
+2. Clean State of Created Objects: Exactly 20 tables were successfully created
+   and committed before line 475. All 20 tables have correct columns, data types,
+   nullability, primary keys (20 PKs), foreign keys (21 FKs), unique constraints
+   (11 UQs), check constraints (19 CKs), and default constraints (39 DFs).
+3. Missing Objects: Exactly 22 user tables, 3 triggers, 35 foreign keys, 10 unique
+   constraints, and 13 non-clustered/filtered indexes were not created.
+4. Data Seeding Status: Zero user data exists. Table `dbo.[Role]` contains 0 rows
+   (Section 9 baseline role seeds were not reached).
+5. Primary Database Status: [HSWRMS] remains 100% untouched and isolated (39 tables,
+   zero test user mappings, zero recent table modifications).
+6. Root Cause: SQL Server error 1934 at line 476 (`UQ_SpaTreatment_TreatmentCode`)
+   occurred because filtered indexes (`WHERE ... IS NOT NULL`) require session
+   option `QUOTED_IDENTIFIER ON`. The payload lacked this explicit directive and
+   `sqlcmd` was executed without the `-I` flag.
+
+FINAL VERDICT: RECOVERY PLAN READY FOR HUMAN REVIEW
+
+--------------------------------------------------------------------------------
+2. LIVE SYSTEM & DATABASE INVENTORY (READ-ONLY VERIFICATION)
+--------------------------------------------------------------------------------
+Host Assertion:
+  - `@@SERVERNAME` = `MYLIFE-MYRULE-1` (Match)
+  - `DB_NAME()` = `HSWRMS_TEST` (Match)
+  - `state_desc` = `ONLINE` (Database ID: 45)
+
+2.1 Inventory of Currently Deployed User Tables (20 Tables, All 0 Rows):
+  1. `dbo.[User]` (12 columns, 0 rows)
+  2. `dbo.AuthIdentity` (5 columns, 0 rows)
+  3. `dbo.[Role]` (3 columns, 0 rows)
+  4. `dbo.UserRole` (3 columns, 0 rows)
+  5. `dbo.EmailOtp` (9 columns, 0 rows)
+  6. `dbo.CustomerProfile` (12 columns, 0 rows)
+  7. `dbo.ConsentRecord` (7 columns, 0 rows)
+  8. `dbo.HealthProfile` (16 columns, 0 rows)
+  9. `dbo.FoodAllergy` (4 columns, 0 rows)
+  10. `dbo.DietaryRequirement` (4 columns, 0 rows)
+  11. `dbo.HealthProfileTherapyPreference` (5 columns, 0 rows)
+  12. `dbo.HealthDataDeletionRequest` (6 columns, 0 rows)
+  13. `dbo.RetreatPackage` (13 columns, 0 rows)
+  14. `dbo.VillaCategory` (13 columns, 0 rows)
+  15. `dbo.RetreatPackageVillaCategory` (2 columns, 0 rows)
+  16. `dbo.PhysicalVilla` (12 columns, 0 rows)
+  17. `dbo.RetreatBooking` (12 columns, 0 rows)
+  18. `dbo.ResidenceRecord` (7 columns, 0 rows)
+  19. `dbo.Therapist` (3 columns, 0 rows)
+  20. `dbo.SpaTreatment` (8 columns, 0 rows)
+
+2.2 Primary Keys (20 PKs — 1 per existing table):
+  `PK_User`, `PK_AuthIdentity`, `PK_Role`, `PK_UserRole`, `PK_EmailOtp`,
+  `PK_CustomerProfile`, `PK_ConsentRecord`, `PK_HealthProfile`, `PK_FoodAllergy`,
+  `PK_DietaryRequirement`, `PK_HealthProfileTherapyPreference`,
+  `PK_HealthDataDeletionRequest`, `PK_RetreatPackage`, `PK_VillaCategory`,
+  `PK_RetreatPackageVillaCategory`, `PK_PhysicalVilla`, `PK_RetreatBooking`,
+  `PK_ResidenceRecord`, `PK_Therapist`, `PK_SpaTreatment`.
+
+2.3 Foreign Keys (21 FKs — all internal to the 20 existing tables):
+  `FK_AuthIdentity_User`, `FK_ConsentRecord_User`, `FK_CustomerProfile_User`,
+  `FK_DietaryRequirement_HealthProfile`, `FK_EmailOtp_User`,
+  `FK_FoodAllergy_HealthProfile`, `FK_HealthDeletion_HealthProfile`,
+  `FK_HealthDeletion_User`, `FK_HealthProfile_Customer`,
+  `FK_TherapyPreference_HealthProfile`, `FK_PhysicalVilla_Category`,
+  `FK_ResidenceRecord_Booking`, `FK_RetreatBooking_AssignedVilla`,
+  `FK_RetreatBooking_Customer`, `FK_RetreatBooking_Package`,
+  `FK_RetreatBooking_RequestedCategory`, `FK_RPVC_RetreatPackage`,
+  `FK_RPVC_VillaCategory`, `FK_Therapist_User`, `FK_UserRole_Role`,
+  `FK_UserRole_User`.
+
+2.4 Unique Constraints (11 UQs):
+  `UQ_User_Email`, `UQ_AuthIdentity_ProviderSubject`, `UQ_Role_Name`,
+  `UQ_CustomerProfile_User`, `UQ_HealthProfile_Customer`, `UQ_RetreatPackage_Name`,
+  `UQ_VillaCategory_Name`, `UQ_PhysicalVilla_Number`, `UQ_ResidenceRecord_Booking`,
+  `UQ_Therapist_User`, `UQ_SpaTreatment_Name`.
+
+2.5 Non-Clustered Indexes (1 Index Present):
+  - `IX_PhysicalVilla_Status_Category` (on `PhysicalVilla(villa_status, villa_category_id)`)
+  - Filtered index `UQ_SpaTreatment_TreatmentCode` is MISSING (failed at line 476).
+
+2.6 Check & Default Constraints:
+  - 19 Check Constraints present and active.
+  - 39 Default Constraints present and active.
+
+2.7 Triggers:
+  - Exactly 0 triggers present in `HSWRMS_TEST`.
+
+2.8 Security Principals & Permissions:
+  - User `hswrms_test_user` in `HSWRMS_TEST`: Exactly `GRANT CONNECT`.
+  - Roles: `NONE` (no data reader, writer, or owner roles).
+
+--------------------------------------------------------------------------------
+3. AUTHORITATIVE PAYLOAD INSPECTION & ERROR ROOT CAUSE
+--------------------------------------------------------------------------------
+File Inspected: `05_Development/database/generated/HSWRMS_TEST_schema.sql` (1,223 lines)
+
+3.1 Root Cause of Failure at Line 476:
+    - At line 475, the script defines:
+      ```sql
+      CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode
+          ON dbo.SpaTreatment (treatment_code)
+          WHERE treatment_code IS NOT NULL;
+      GO
+      ```
+    - This is a filtered index (`WHERE treatment_code IS NOT NULL`).
+    - Microsoft SQL Server requires the following session options to be set to `ON`
+      when creating, modifying, or querying filtered indexes:
+        * `QUOTED_IDENTIFIER`
+        * `ANSI_NULLS`
+        * `ANSI_PADDING`
+        * `ANSI_WARNINGS`
+        * `ARITHABORT`
+        * `CONCAT_NULL_YIELDS_NULL`
+      and `NUMERIC_ROUNDABORT` must be set to `OFF`.
+    - When `sqlcmd` is executed without the `-I` (Enable Quoted Identifiers) switch,
+      and when the script does not issue `SET QUOTED_IDENTIFIER ON;`, the session
+      runs with `QUOTED_IDENTIFIER OFF`.
+    - SQL Server raised Error 1934:
+      `CREATE INDEX failed because the following SET options have incorrect settings: 'QUOTED_IDENTIFIER'.`
+    - Because `sqlcmd` had `-b` enabled, it halted immediately at line 478.
+
+3.2 Identification of All Filtered Indexes in Payload:
+    There are four (4) filtered indexes throughout the authoritative schema:
+    1. Line 476: `UQ_SpaTreatment_TreatmentCode` on `dbo.SpaTreatment(treatment_code)`
+       `WHERE treatment_code IS NOT NULL`
+    2. Line 909: `UX_PaymentTransaction_Reference` on `dbo.PaymentTransaction(transaction_reference)`
+       `WHERE transaction_reference IS NOT NULL`
+    3. Line 1166: `IX_User_AccountStatus_LockedAt` on `dbo.[User](account_status, locked_at)`
+       `WHERE locked_at IS NOT NULL`
+    4. Line 1175: `IX_AuditLog_TargetRefId` on `dbo.AuditLog(target_ref_id, created_at DESC)`
+       `WHERE target_ref_id IS NOT NULL`
+
+    All 4 indexes require `SET QUOTED_IDENTIFIER ON;` and `SET ANSI_NULLS ON;`
+    to succeed.
+
+3.3 Impact of Rerunning the Full Payload Blindly:
+    - The first statement in `HSWRMS_TEST_schema.sql` is `CREATE TABLE dbo.[User]`.
+    - Since `dbo.[User]` already exists, a blind rerun would immediately fail with
+      `Msg 2714: There is already an object named 'User' in the database`.
+    - With `-b`, it would abort at batch 1 without creating any missing tables.
+    - Blindly rerunning the original script is PROHIBITED and guaranteed to fail.
+
+--------------------------------------------------------------------------------
+4. OBJECT-BY-OBJECT RECONCILIATION
+--------------------------------------------------------------------------------
+
+4.1 Status: PRESENT AND COMPLETE (20 Tables):
+    [OK] User
+    [OK] AuthIdentity
+    [OK] Role
+    [OK] UserRole
+    [OK] EmailOtp
+    [OK] CustomerProfile
+    [OK] ConsentRecord
+    [OK] HealthProfile
+    [OK] FoodAllergy
+    [OK] DietaryRequirement
+    [OK] HealthProfileTherapyPreference
+    [OK] HealthDataDeletionRequest
+    [OK] RetreatPackage
+    [OK] VillaCategory
+    [OK] RetreatPackageVillaCategory
+    [OK] PhysicalVilla (including index IX_PhysicalVilla_Status_Category)
+    [OK] RetreatBooking
+    [OK] ResidenceRecord
+    [OK] Therapist
+    [OK] SpaTreatment (table & constraints present, but index missing)
+
+4.2 Status: PRESENT BUT INCOMPLETE (1 Object):
+    [INCOMPLETE] SpaTreatment: Table exists with PK, UQ, CKs, but missing
+                 filtered index `UQ_SpaTreatment_TreatmentCode`.
+
+4.3 Status: MISSING (22 Tables, 3 Triggers, 13 Indexes, 6 Role Seeds):
+    Missing Tables (in dependency order):
+      1. RetreatPackageSpaTreatment
+      2. TreatmentRoom
+      3. TherapistTreatmentQualification
+      4. TreatmentRoomCompatibility
+      5. SpaSession
+      6. MenuItem
+      7. Ingredient
+      8. MenuItemIngredient
+      9. IngredientBatch
+      10. MealOrder
+      11. MealOrderItem
+      12. Folio
+      13. FolioItem
+      14. PaymentTransaction
+      15. CustomerReview
+      16. Invoice
+      17. AuditLog
+      18. Permission
+      19. RolePermission
+      20. RightDelegation
+      21. RightDelegationPermission
+      22. SystemConfiguration
+
+    Missing Triggers (3 Triggers):
+      1. `TR_SpaSession_ValidateScheduling` (on `SpaSession`)
+      2. `TR_FolioItem_RecalculateTotal` (on `FolioItem`)
+      3. `TR_PaymentTransaction_RecalculateFolioPaid` (on `PaymentTransaction`)
+
+    Missing Indexes (13 Indexes):
+      1. `UQ_SpaTreatment_TreatmentCode` (on `SpaTreatment`, filtered)
+      2. `IX_SpaSession_Therapist_Time` (on `SpaSession`)
+      3. `IX_SpaSession_Room_Time` (on `SpaSession`)
+      4. `UX_PaymentTransaction_Reference` (on `PaymentTransaction`, filtered)
+      5. `IX_AuditLog_ActorCreatedAt` (on `AuditLog`)
+      6. `IX_RetreatBooking_Customer_Status` (on `RetreatBooking`)
+      7. `IX_RetreatBooking_Dates` (on `RetreatBooking`)
+      8. `IX_MealOrder_Booking_Date` (on `MealOrder`)
+      9. `IX_FolioItem_Folio_Category` (on `FolioItem`)
+      10. `IX_IngredientBatch_Ingredient_Expiry` (on `IngredientBatch`)
+      11. `IX_User_AccountStatus_LockedAt` (on `User`, filtered)
+      12. `IX_RightDelegation_Status_Expiry` (on `RightDelegation`)
+      13. `IX_AuditLog_TargetRefId` (on `AuditLog`, filtered)
+
+    Missing Baseline Seeds:
+      Section 9 role seed (`Customer`, `Receptionist`, `Therapist`, `F&B Staff`, `Manager`, `Admin`).
+
+4.4 Status: UNCERTAIN OR MISMATCHED:
+    ZERO objects in uncertain or mismatched state. All 20 existing tables match
+    the authoritative schema 100% in column definitions and constraints.
+
+--------------------------------------------------------------------------------
+5. PROPOSED SAFE CONTINUATION STRATEGY (FOR HUMAN REVIEW ONLY)
+--------------------------------------------------------------------------------
+> [!IMPORTANT]
+> The following plan proposes creating a dedicated, non-destructive continuation
+> payload. ZERO SQL commands will be executed until explicit human authorization.
+
+### 5.1 Architecture of Continuation Script
+Create a dedicated file:
+`05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql`
+
+Structure:
+1. Target Verification & Fail-Closed Guard:
+   ```sql
+   USE [HSWRMS_TEST];
+   GO
+   IF DB_NAME() <> N'HSWRMS_TEST'
+   BEGIN
+       SET NOEXEC ON;
+       THROW 51000, N'CRITICAL: Active database is not HSWRMS_TEST', 1;
+   END
+   GO
+   ```
+2. Session Options Configuration (Fix for Error 1934):
+   ```sql
+   SET QUOTED_IDENTIFIER ON;
+   SET ANSI_NULLS ON;
+   SET ANSI_PADDING ON;
+   SET ANSI_WARNINGS ON;
+   SET ARITHABORT ON;
+   SET CONCAT_NULL_YIELDS_NULL ON;
+   SET NUMERIC_ROUNDABORT OFF;
+   GO
+   ```
+3. Phase 1: Create Missing Filtered Index on Existing Table:
+   ```sql
+   CREATE UNIQUE NONCLUSTERED INDEX UQ_SpaTreatment_TreatmentCode
+       ON dbo.SpaTreatment (treatment_code)
+       WHERE treatment_code IS NOT NULL;
+   GO
+   ```
+4. Phase 2: Create Remaining 22 Tables in Exact Dependency Order:
+   Lines 480 to 1135 of `HSWRMS_TEST_schema.sql` (`RetreatPackageSpaTreatment` through `SystemConfiguration`).
+5. Phase 3: Create All Triggers:
+   `TR_SpaSession_ValidateScheduling`, `TR_FolioItem_RecalculateTotal`, `TR_PaymentTransaction_RecalculateFolioPaid`.
+6. Phase 4: Create All Non-Clustered & Filtered Indexes:
+   Lines 1137 to 1180 of `HSWRMS_TEST_schema.sql`.
+7. Phase 5: Seed Section 9 Baseline Roles:
+   Lines 1182 to 1222 of `HSWRMS_TEST_schema.sql` (Inserts the 6 system roles into `dbo.[Role]`).
+
+### 5.2 Execution Command for Human Approval:
+```powershell
+sqlcmd -S localhost -d HSWRMS_TEST -E -b -I -i "05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql"
+```
+Flags explained:
+- `-S localhost`: Strictly binds connection to local SQL Server instance.
+- `-d HSWRMS_TEST`: Connects directly to test catalog.
+- `-E`: Uses authenticated Windows Administrator credentials.
+- `-b`: Terminates immediately on any batch error.
+- `-I`: Explicitly enables `QUOTED_IDENTIFIER` in SQLCMD client.
+- `-i`: Executes only the reviewed continuation payload.
+
+### 5.3 Safety Properties of this Continuation Strategy:
+- Preserves all 20 existing tables and their 21 FKs, 11 UQs, and 20 PKs without dropping or altering them.
+- Avoids `DROP DATABASE` or `DROP TABLE`.
+- Dependency Safety: Every foreign key in the 22 missing tables references either one of the 20 existing tables (which already exist) or a table defined earlier in the continuation script.
+- Clean 42-Table Target: Upon completion, the database will contain exactly 42 tables, 56 FKs, 21 UQs, 12 indexes, 3 triggers, and 6 baseline roles, achieving 100% parity with the authoritative specification.
+
+--------------------------------------------------------------------------------
+6. RESIDUAL RISKS & UNRESOLVED ASSUMPTIONS
+--------------------------------------------------------------------------------
+1. Assumption: The 20 existing tables will remain unmodified until continuation execution.
+2. Safety Invariant: Primary database [HSWRMS] remains 100% isolated. No commands in this plan target or touch [HSWRMS].
+3. Permission Grant Sequencing: Runtime DML permissions (`db_datareader`, `db_datawriter`) for `hswrms_test_user` remain deferred until the complete 42-table schema deployment is verified.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.82
+================================================================================
+

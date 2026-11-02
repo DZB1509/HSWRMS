@@ -1,0 +1,186 @@
+HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM-HSWRMS (ISP392_IS2005_G1) — Project Task Plan,,,,,,,,,,,,
+,,,,,,,,,,,,
+Weeks,#,Tasks,Interaction,PIC,Support,Complexity,Start-date,Act_Start-date,End-date,Duration (Days),Status,Note
+Week 1,1,Project Initiating,Inter1,,,,07/09/2026,07/09/2026,10/09/2026,4,Done,"Kickoff; confirm team roles & module ownership (5 modules / 5 members, full-stack DB→DAO→Controller→UI each)"
+,1.1,Project Planning + PM Plan,Inter1,Tất Đạt,All,Medium,07/09/2026,09/09/2026,13/09/2026,5,Done,
+,1.2,Setup GitLab (6 module branches + shared core),Inter1,Tất Đạt,All,Simple,07/09/2026,08/09/2026,09/09/2026,2,Done,
+,1.3,Meeting: Clarify + Business Rules,Inter1,Gia Đạt,All,Medium,07/09/2026,08/09/2026,10/09/2026,3,Done,
+,2,Shared Foundation,Inter1,,,,07/09/2026,07/09/2026,13/09/2026,6,Done,
+,2.1.1,Documents,Inter1,All,All,Medium,07/09/2026,07/09/2026,10/09/2026,4,Done,
+,2.1.2,Report 1: Project Introduction,Inter1,All,All,Simple,07/09/2026,08/09/2026,10/09/2026,3,Done,
+,2.2.1,Draw Main Business Flow BF-01 – Guest Onboarding & Wellness Profile Setup,Inter1,Đức Hoàng,Tất Đạt,Simple,07/09/2026,09/09/2026,13/09/2026,5,Done,Mỗi người tự nghiên cứu phần liên quan module mình
+,2.2.2,"Draw Main Business Flow BF-02 – Retreat Booking, Deposit & Check-In",Inter1,Gia Đạt,Xuân Hòa,Simple,07/09/2026,09/09/2026,13/09/2026,5,Done,Mỗi người tự nghiên cứu phần liên quan module mình
+,2.2.3,Draw Main Business Flow BF-03 – Spa/Therapy Scheduling & Session Fulfillment,Inter1,Tất Đạt,Phương Thảo,Simple,07/09/2026,09/09/2026,13/09/2026,5,Done,Mỗi người tự nghiên cứu phần liên quan module mình
+,2.2.4,Draw Main Business Flow BF-04 – Personalized Dining & F&B Service Fulfillment,Inter1,Phương Thảo,Thành Vinh,Simple,07/09/2026,09/09/2026,13/09/2026,5,Done,Mỗi người tự nghiên cứu phần liên quan module mình
+,2.2.5,"Draw Main Business Flow BF-05 – Consolidated Checkout, Payment & Guest Feedback",Inter1,Xuân Hòa,Gia Đạt,Simple,07/09/2026,09/09/2026,13/09/2026,5,Done,Mỗi người tự nghiên cứu phần liên quan module mình
+,2.2.6,"Draw Main Business Flow BF-06 – System Administration, Permission & Management Monitoring",Inter1,Thành Vinh,Đức Hoàng,Simple,09/09/2026,09/09/2026,13/09/2026,5,Done,
+Week 2,3,System Design_P1,Inter1,,,,14/09/2026,14/09/2026,20/09/2026,7,Done,
+,3.1,Draw Context Diagram,Inter1,All,All,Medium,14/09/2026,15/09/2026,18/09/2026,4,Done,
+,3.2.1,Draw Use Case Diagram - M1 (Authentication & Health Profile),Inter1,Đức Hoàng,Tất Đạt,Simple,14/09/2026,15/09/2026,18/09/2026,4,Done,Mỗi người tự vẽ UC module mình
+,3.2.2,Draw Use Case Diagram - M2 (Retreat Booking & Accommodation),Inter1,Gia Đạt,Xuân Hòa,Simple,14/09/2026,15/09/2026,18/09/2026,4,Done,Mỗi người tự vẽ UC module mình
+,3.2.3,Draw Use Case Diagram - M3 (Spa Scheduling (CORE)),Inter1,Tất Đạt,Phương Thảo,Simple,14/09/2026,15/09/2026,18/09/2026,4,Done,Mỗi người tự vẽ UC module mình
+,3.2.4,Draw Use Case Diagram - M4 (F&B Nutrition (CORE)),Inter1,Phương Thảo,Thành Vinh,Simple,14/09/2026,15/09/2026,18/09/2026,4,Done,Mỗi người tự vẽ UC module mình
+,3.2.5,Draw Use Case Diagram - M5 (Checkout & Analytics),Inter1,Xuân Hòa,Gia Đạt,Simple,14/09/2026,15/09/2026,18/09/2026,4,Done,Mỗi người tự vẽ UC module mình
+,3.2.6,Draw Use Case Diagram - M6 (System Administration & Permission Management),Inter1,Thành Vinh,Đức Hoàng,Simple,14/09/2026,15/09/2026,18/09/2026,4,Done,Mỗi người tự vẽ UC module mình
+Week 3,3,System Design_P2 & SRS Completion,Inter2,,,,21/09/2026,21/09/2026,27/09/2026,7,Done,Order: Screen Flow → ERD → SRS finalization.
+,3.3.1,Build Screen Flow Fragment - M1 Authentication & Health Profile (Screens 1-12),Inter2,Đức Hoàng,Tất Đạt,Simple,21/09/2026,21/09/2026,22/09/2026,2,Done,Map navigation only; Screen #1 is shared M1-M2. Use the common actor-access color legend and submit editable fragment.
+,3.4.2,Build Screen Flow Fragment - M2 Retreat Booking & Accommodation (Screens 13-24),Inter2,Gia Đạt,Xuân Hòa,Simple,21/09/2026,21/09/2026,22/09/2026,2,Done,Connect package browsing → booking/deposit → my bookings → receptionist check-in/villa operations; align cross-links with M1/M5.
+,3.4.3,Build Screen Flow Fragment - M3 Spa Scheduling (Screens 25-33),Inter2,Tất Đạt,Phương Thảo,Simple,21/09/2026,21/09/2026,22/09/2026,2,Done,"Connect Customer spa flow, Receptionist extra booking, and Therapist dashboard/schedule/session detail using the shared legend."
+,3.4.4,Build Screen Flow Fragment - M4 F&B  (Screens 34-40),Inter2,Phương Thảo,Thành Vinh,Simple,21/09/2026,21/09/2026,22/09/2026,2,Done,"Connect Chè/F&B flow.Customer xem Dietary Menu, chọn daily meal, order extra à-la-carte; Chef/F&B xem Meal Prep Dashboard/List, Meal Detail, allergy/dietary warning cần thiết và cập nhật Preparing/Ready"
+,3.4.5,Build Screen Flow Fragment - M5 Checkout & Analytics (Screens 41-48),Inter2,Xuân Hòa,Gia Đạt,Simple,21/09/2026,21/09/2026,22/09/2026,2,Done,Connect folio/invoice → final payment/result → checkout confirmation → review; add Manager analytics/report branches.
+,3.4.6,Build Screen Flow Fragment - M6 Administration & Permission (Screens 49-56),Inter2,Thành Vinh,Đức Hoàng,Simple,21/09/2026,21/09/2026,22/09/2026,2,Done,"Connect Admin and Manager dashboards to parameters, feature flags, permission matrix, delegation, audit log and system overview."
+,3.4.7,Merge Master Project Screen Flow,Inter2,All,All,Medium,22/09/2026,22/09/2026,24/09/2026,3,Done,"After all fragments are submitted, merge into ONE project-wide Screen Flow (56 screens); normalize arrows, labels, colors and cross-module transitions."
+,3.5,Design HSWRMS UI & Interactive Prototype based on Finalized Screen Flow,Inter2,Tất Đạt,All,Medium,23/09/2026,23/09/2026,25/09/2026,3,Done,Figma UI Design + UI Kit/Design System + Clickable Prototype
+,3.5.1,Draft Conceptual ERD Fragment - M1 Authentication & Health Profile,Inter2,Đức Hoàng,Tất Đạt,Simple,23/09/2026,23/09/2026,24/09/2026,2,Done,"Define M1 entities, key business attributes, PK/FK and relationships; reuse shared User/Role concepts instead of duplicating them."
+,3.5.2,Draft Conceptual ERD Fragment - M2 Retreat Booking & Accommodation,Inter2,Gia Đạt,Xuân Hòa,Simple,23/09/2026,23/09/2026,24/09/2026,2,Done,"Model Retreat Package, Booking, Villa, check-in/residence-related data and shared Customer links; provide Crow-Foot cardinalities."
+,3.5.3,Draft Conceptual ERD Fragment - M3 Spa Scheduling,Inter2,Tất Đạt,Phương Thảo,Simple,23/09/2026,23/09/2026,24/09/2026,2,Done,"Model Spa Service, Session, Therapist, Treatment Room and reservation relationships; support the therapist+room availability rule."
+,3.5.4,Draft Conceptual ERD Fragment - M4 F&B Nutrition,Inter2,Phương Thảo,Thành Vinh,Simple,23/09/2026,23/09/2026,24/09/2026,2,Done,Model meal/menu/order entities and the minimum dietary/allergy data relationships required by F&B operations.
+,3.5.5,Draft ERD Fragment - M5 Checkout & Analytics ,Inter2,Xuân Hòa,Gia Đạt,Simple,23/09/2026,23/09/2026,24/09/2026,2,Done,"Model Folio, charges, Invoice, Payment, Review;  "
+,3.5.6,Draft Conceptual ERD Fragment - M6 Administration & Permission,Inter2,Thành Vinh,Đức Hoàng,Simple,23/09/2026,23/09/2026,24/09/2026,2,Done,"Model business parameters, feature flags, permissions/delegation and audit log; align User/Role references with M1."
+,3.5.7,Merge Unified Project ERD,Inter2,All,All,Medium,24/09/2026,24/09/2026,26/09/2026,3,Done,"Merge all six fragments into ONE Crow-Foot ERD, remove duplicate entities and verify cross-module FK/cardinality."
+,3.6.1,Complete SRS - M1 Functional Requirements + Entity Descriptions/Data Rules,Inter2,Đức Hoàng,Tất Đạt,Simple,26/09/2026,26/09/2026,27/09/2026,2,Done,Write M1 screen/function specs and low-fi mockups; compile 3.2 Entity Descriptions + 3.3 Data Business Rules from all module inputs; clean Definitions/Acronyms.
+,3.6.2,Complete SRS - M2 Functional Requirements + External API Inventory,Inter2,Gia Đạt,Xuân Hòa,Simple,26/09/2026,26/09/2026,27/09/2026,2,Done,"Write M2 screen/function specs and low-fi mockups; compile 5.2 External API Inventory using inputs from M1/M3/M5 (VNPay, Identity, Calendar/Email as applicable)."
+,3.6.3,Complete SRS - M3 Functional Requirements + Background Jobs + Final Document Integration,Inter2,Tất Đạt,Phương Thảo,Simple,26/09/2026,26/09/2026,27/09/2026,2,Done,"Write M3 screen/function specs and low-fi mockups; compile 5.3/Section 7 background jobs; merge Week 3 outputs and final-check TOC, Change Log, figures, Customer/HSWRMS terminology."
+,3.6.4,Complete SRS - M4 Functional Requirements + Screen Inventory,Inter2,Phương Thảo,Thành Vinh,Simple,26/09/2026,26/09/2026,27/09/2026,2,Done,Write M4 screen/function specs and low-fi mockups; insert the final Master Screen Flow and validate the complete 56-screen list in Section 5.1.
+,3.6.5,Complete SRS - M5 Functional Requirements + Requirement Appendix,Inter2,Xuân Hòa,Gia Đạt,Simple,26/09/2026,26/09/2026,27/09/2026,2,Done,"Write M5 screen/function specs and low-fi mockups; compile III.1 Business Rules and III.2 System Messages from all modules, especially payment/checkout rules."
+,3.6.6,Complete SRS - M6 Functional Requirements + Permission Matrix/Other Requirements,Inter2,Thành Vinh,Đức Hoàng,Simple,26/09/2026,26/09/2026,27/09/2026,2,Done,"Write M6 screen/function specs and low-fi mockups; complete 4.4 Permission Matrix and III.3 Other Requirements for RBAC, security, audit and limited Manager delegation."
+Week 4,4,Core Module Implementation,Inter2,,,,28/09/2026,28/09/2026,04/10/2026,7,Late,Implementation: Begin deploying the core M1–M6 operations on the shared foundation.
+,4.1.1,"Register, verify email OTP, secure login",Inter2,Đức Hoàng,Tất Đạt,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.1.2,Build Register Form + Server-Side Validation,Inter2,Đức Hoàng,Tất Đạt,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.1.3,Generate & Send Email OTP (SendGrid),Inter2,Đức Hoàng,Tất Đạt,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.1.4,Verify OTP & Activate Account,Inter2,Đức Hoàng,Tất Đạt,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.1.5,"Login (Hash-Compare Password, Issue Session/Token) + Logout",Inter2,Đức Hoàng,Tất Đạt,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.1.6,Login/Register with Google/Facebook SSO,Inter2,Đức Hoàng,Tất Đạt,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.2.1,"Browse Retreat Packages, filter by goal",Inter2,Gia Đạt,Xuân Hòa,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.2.2,Browse Retreat Package List,Inter2,Gia Đạt,Xuân Hòa,Simple,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.2.3,Filter Packages by Goal (Weight Loss/Stress Relief/Yoga),Inter2,Gia Đạt,Xuân Hòa,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.2.4,View Package Detail Page,Inter2,Gia Đạt,Xuân Hòa,Simple,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.3.1,Request & Schedule Spa/Therapy Sessions (System-Driven Scheduling),Inter2,Tất Đạt,Phương Thảo,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.3.2,Generate Scheduling Candidates (Time + Qualified Therapist + Compatible Room),Inter2,Tất Đạt,Phương Thảo,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.3.3,Customer Enter Preferred Date/Time & Select Complete Candidate Bundle,Inter2,Tất Đạt,Phương Thảo,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.4.1,Pre-select Daily Meals (filtered by allergy/diet profile),Inter2,Phương Thảo,Thành Vinh,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.4.2,Browse Menu Filtered by Allergy/Diet Profile,Inter2,Phương Thảo,Thành Vinh,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.4.3,Pre-Select Daily Meals,Inter2,Phương Thảo,Thành Vinh,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.5.1,Generate Customer Folio & Consolidated Invoice by Retreat Booking,Inter2,Xuân Hòa,Gia Đạt,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.5.2,Aggregate Package + Spa + F&B Charges by retreat_booking_id,Inter2,Xuân Hòa,Gia Đạt,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.5.3,Generate & Render Invoice Document,Inter2,Xuân Hòa,Gia Đạt,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.6.1,Configure Approved System Business Parameters,Inter2,Thành Vinh,Đức Hoàng,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.6.2,Build Business Parameter Management & Validation,Inter2,Thành Vinh,Đức Hoàng,Complex,28/09/2026,28/09/2026,04/10/2026,7,Late,
+,4.6.3,Configure Approved Operational Parameters,Inter2,Thành Vinh,Đức Hoàng,Medium,28/09/2026,28/09/2026,04/10/2026,7,Late,
+Week 5,5,Core Business Logic & Transactions,Inter2,,,,05/10/2026,06/10/2026,11/10/2026,6,Doing,"Complete business rules, transactions, scheduling, payment, inventory.."
+,5.1.1,"Dietary & Health Profile Form (explicit, unchecked consent)",Inter2,Đức Hoàng,Tất Đạt,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.1.2,"Build Consent UI (Explicit, Unchecked Checkboxes - Decree 356/2025)",Inter2,Đức Hoàng,Tất Đạt,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.1.3,Create/Edit Dietary & Health Profile Form,Inter2,Đức Hoàng,Tất Đạt,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.1.4,Encrypt Sensitive Health & Dietary Data at Rest,Inter2,Đức Hoàng,Tất Đạt,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.2.1,Select Package/Dates/Villa + Initiate Deposit Payment,Inter2,Gia Đạt,Xuân Hòa,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.2.2,Select Package/Dates/Villa Type,Inter2,Gia Đạt,Xuân Hòa,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.2.3,Calculate Deposit Amount,Inter2,Gia Đạt,Xuân Hòa,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.2.4,Process VNPay Deposit Payment via Approved Payment Boundary,Inter2,Gia Đạt,Xuân Hòa,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.2.5,Handle VNPay Failure/Return/Callback Idempotency,Inter2,Gia Đạt,Xuân Hòa,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.1,System-Driven Scheduling Engine & Atomic Spa Reservation,Inter2,Tất Đạt,Phương Thảo,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.2,Filter Compatible & Available Treatment Rooms for Treatment Interval,Inter2,Tất Đạt,Phương Thảo,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.3,Filter Qualified & Available Therapists for Treatment Interval,Inter2,Tất Đạt,Phương Thảo,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.4,Revalidate + Lock Therapist/Room + Atomic Reservation,Inter2,Tất Đạt,Phương Thảo,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.5,Handle No Availability & HTTP 409 Concurrency Conflict,Inter2,Tất Đạt,Phương Thảo,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.6,Implement Customer Reschedule & System Recovery Flow,Inter2,Tất Đạt,Phương Thảo,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.3.7,Implement Attendance Confirmation & Reminder Timeline,Inter2,Tất Đạt,Phương Thảo,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.4.1,Daily Meal Prep Dashboard + Ingredient Demand & Inventory Alerts,Inter2,Phương Thảo,Thành Vinh,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.4.2,Aggregate Daily Meal Orders & Calculate Ingredient Demand,Inter2,Phương Thảo,Thành Vinh,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.4.3,Display Dietary Warnings + Ingredient Availability Alerts,Inter2,Phương Thảo,Thành Vinh,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.5.1,"Process Final Payment, Update Villa Status",Inter2,Xuân Hòa,Gia Đạt,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.5.2,Check Pending/Unpaid Extra Spa & F&B Charges Before Checkout,Inter2,Xuân Hòa,Gia Đạt,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.5.3,Block Checkout if Outstanding Charges Exist,Inter2,Xuân Hòa,Gia Đạt,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.5.4,Process Final Payment,Inter2,Xuân Hòa,Gia Đạt,Complex,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.5.5,Update Booking & Physical Villa State after Checkout,Inter2,Xuân Hòa,Gia Đạt,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.6.1,Feature flag toggle per module,Inter2,Thành Vinh,Đức Hoàng,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.6.2,Build Feature-Flag Store,Inter2,Thành Vinh,Đức Hoàng,Medium,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+,5.6.3,Toggle Feature Flag per Module (Admin UI),Inter2,Thành Vinh,Đức Hoàng,Simple,06/10/2026,06/10/2026,11/10/2026,6,Doing,
+Week 6,6,Operational Workflows,Inter2,,,,12/10/2026,,18/10/2026,,To do,"Actual workflows: Receptionist, Therapist, F&B, Checkout, Staff/Admin"
+,6.1.1,Manage Staff Accounts & Role Assignments,Inter2,Thành Vinh,Đức Hoàng,Complex,12/10/2026,,,,To do,
+,6.1.2,Create Staff Account,Inter2,Thành Vinh,Đức Hoàng,Medium,12/10/2026,,,,To do,
+,6.1.3,Assign Approved Role (Receptionist/Therapist/F&B Staff/Manager/Admin),Inter2,Đức Hoàng,Tất Đạt,Complex,12/10/2026,,,,To do,
+,6.1.4,Edit/Deactivate Staff Account,Inter2,Thành Vinh,Đức Hoàng,Medium,12/10/2026,,,,To do,
+,6.2.1,Dashboard of Arrivals + Check-In + Residence Declaration,Inter2,Gia Đạt,Xuân Hòa,Complex,12/10/2026,,,,To do,
+,6.2.2,View Daily Arrivals Dashboard,Inter2,Gia Đạt,Xuân Hòa,Medium,12/10/2026,,,,To do,
+,6.2.3,Verify Customer Information,Inter2,Gia Đạt,Xuân Hòa,Medium,12/10/2026,,,,To do,
+,6.2.4,Collect Required Customer Residence/ID Data at Check-In,Inter2,Gia Đạt,Xuân Hòa,Medium,12/10/2026,,,,To do,
+,6.2.5,Encrypt Guest ID Data at Rest,Inter2,Gia Đạt,Xuân Hòa,Complex,12/10/2026,,,,To do,
+,6.2.6,Perform Check-In + Assign Physical Villa,Inter2,Gia Đạt,Xuân Hòa,Complex,12/10/2026,,,,To do,
+,6.2.7,Export Daily Residence Declaration Report,Inter2,Gia Đạt,Xuân Hòa,Medium,12/10/2026,,,,To do,
+,6.3.1,View Therapist Daily Schedule & Treatment-Relevant Health Notes,Inter2,Tất Đạt,Phương Thảo,Complex,12/10/2026,,,,To do,
+,6.3.2,View Therapist Daily Schedule,Inter2,Tất Đạt,Phương Thảo,Medium,12/10/2026,,,,To do,
+,6.3.3,View Minimum Treatment-Relevant Health/Safety Projection,Inter2,Tất Đạt,Phương Thảo,Complex,12/10/2026,,,,To do,
+,6.4.1,Update Meal Order Lifecycle & Ingredient Inventory,Inter2,Phương Thảo,Thành Vinh,Complex,12/10/2026,,,,To do,
+,6.4.2,"Reserve/Deduct Usable Ingredient Stock on PREPARING, then Update to READY",Inter2,Phương Thảo,Thành Vinh,Complex,12/10/2026,,,,To do,
+,6.4.3,Submit Review & Rating after Checkout,Inter2,Xuân Hòa,Gia Đạt,Simple,12/10/2026,,,,To do,
+,6.5.1,Submit Review & Rating Form,Inter2,Xuân Hòa,Gia Đạt,Simple,12/10/2026,,,,To do,Allow at most one review per eligible completed RetreatBooking.
+,6.6.1,Configure detailed permission matrix per screen/role,Inter2,Thành Vinh,Đức Hoàng,Complex,12/10/2026,,,,To do,
+,6.6.2,Design Permission Matrix Data Model,Inter2,Thành Vinh,Đức Hoàng,Complex,12/10/2026,,,,To do,
+,6.6.3,Build Admin UI to Configure Matrix per Screen/Role,Inter2,Thành Vinh,Đức Hoàng,Medium,12/10/2026,,,,To do,
+,6.6.4,Enforce Receptionist No Unrestricted Access to Sensitive Health/Diet Data,Inter2,Thành Vinh,Đức Hoàng,Complex,12/10/2026,,,,To do,
+Week 7,7,Advanced Features & Module Completion,Inter2,,,,19/10/2026,,25/10/2026,,To do,"Completed advanced features, privacy, audit, reports, reschedule, and self-test module."
+,7.1.1,Manage System Master Data,Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.1.2,Manage Villa Categories (CRUD),Inter2,Thành Vinh,Đức Hoàng,Medium,19/10/2026,,,,To do,
+,7.1.3,Manage Spa Treatments / Services Master Data,Inter2,Đức Hoàng,Tất Đạt,Medium,19/10/2026,,,,To do,
+,7.1.4,Manage Spa Treatments / Services Master Data,Inter2,Đức Hoàng,Tất Đạt,Complex,19/10/2026,,,,To do,
+,7.2.1,Manage Physical Villa Operational Status,Inter2,Gia Đạt,Xuân Hòa,Medium,19/10/2026,,,,To do,
+,7.2.2,Update Physical Villa Status,Inter2,Gia Đạt,Xuân Hòa,Medium,19/10/2026,,,,To do,
+,7.2.3,View Villa Status Board,Inter2,Gia Đạt,Xuân Hòa,Simple,19/10/2026,,,,To do,
+,7.3.1,Mark Session Completed / No-Show,Inter2,Tất Đạt,Phương Thảo,Medium,19/10/2026,,,,To do,
+,7.3.2,Mark Session Completed,Inter2,Tất Đạt,Phương Thảo,Medium,19/10/2026,,,,To do,
+,7.3.3,Mark Session No-Show,Inter2,Tất Đạt,Phương Thảo,Medium,19/10/2026,,,,To do,
+,7.4.1,Order Extra A-la-carte & Mark as Billable,Inter2,Phương Thảo,Thành Vinh,Complex,19/10/2026,,,,To do,
+,7.4.2,Order Extra A-La-Carte Item,Inter2,Phương Thảo,Thành Vinh,Medium,19/10/2026,,,,To do,
+,7.4.3,Expose Extra F&B Charge through M4→M5 Billing Boundary,Inter2,Phương Thảo,Thành Vinh,Complex,19/10/2026,,,,To do,
+,7.5.1,Revenue Dashboard (Pie/Bar by Package/Spa/F&B),Inter2,Xuân Hòa,Gia Đạt,Complex,19/10/2026,,,,To do,
+,7.5.2,Build Revenue Aggregation Query (by Package/Spa/F&B),Inter2,Xuân Hòa,Gia Đạt,Complex,19/10/2026,,,,To do,
+,7.5.3,Render Pie/Bar Revenue Dashboard,Inter2,Xuân Hòa,Gia Đạt,Medium,19/10/2026,,,,To do,
+,7.6.1,Delegate limited admin rights to Manager,Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.6.2,Delegate Limited Admin Rights to Manager,Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.7.1,Health Data Deletion Request & Deferred Processing,Inter2,Đức Hoàng,Tất Đạt,Complex,19/10/2026,,,,To do,
+,7.7.2,Customer Submit Health Data Deletion Request,Inter2,Đức Hoàng,Tất Đạt,Medium,19/10/2026,,,,To do,
+,7.7.3,Process Purge/Anonymization when Deletion Becomes Eligible,Inter2,Đức Hoàng,Tất Đạt,Complex,19/10/2026,,,,To do,
+,7.7.4,Log Deletion Action for Audit,Inter2,Đức Hoàng,Tất Đạt,Medium,19/10/2026,,,,To do,
+,7.8.1,View Booking Details & Itinerary Timeline,Inter2,Gia Đạt,Xuân Hòa,Medium,19/10/2026,,,,To do,
+,7.8.2,View Booking Details,Inter2,Gia Đạt,Xuân Hòa,Simple,19/10/2026,,,,To do,
+,7.8.3,View Itinerary Timeline,Inter2,Gia Đạt,Xuân Hòa,Medium,19/10/2026,,,,To do,
+,7.9.1,Manually Book Extra Spa Services (Billable),Inter2,Tất Đạt,Phương Thảo,Complex,19/10/2026,,,,To do,
+,7.9.2,Receptionist Manual Spa Booking,Inter2,Tất Đạt,Phương Thảo,Complex,19/10/2026,,,,To do,
+,7.9.3,Expose Extra Spa Charge through M3→M5 Billing Boundary,Inter2,Tất Đạt,Phương Thảo,Complex,19/10/2026,,,,To do,
+,7.10.1,Minimize Sensitive Health Data Exposed to F&B Staff,Inter2,Phương Thảo,Thành Vinh,Complex,19/10/2026,,,,To do,
+,7.10.2,Build Data-Minimization View (Provide F&B Dietary/Allergy Projection Only),Inter2,Phương Thảo,Thành Vinh,Complex,19/10/2026,,,,To do,
+,7.10.3,Enforce Data Minimization at Backend Authorization/DTO Layer,Inter2,Phương Thảo,Thành Vinh,Complex,19/10/2026,,,,To do,
+,7.11.1,Export Occupancy & Therapist Utilization Report (Excel),Inter2,Xuân Hòa,Gia Đạt,Medium,19/10/2026,,,,To do,
+,7.11.2,Export Occupancy Report (Excel),Inter2,Xuân Hòa,Gia Đạt,Medium,19/10/2026,,,,To do,
+,7.11.3,Export Therapist Utilization Report (Excel),Inter2,Xuân Hòa,Gia Đạt,Medium,19/10/2026,,,,To do,
+,7.12.1,View sensitive-data access audit log,Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.12.2,Log Sensitive-Data Access Events,Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.12.3,View Sensitive-Data Access Audit Log,Inter2,Thành Vinh,Đức Hoàng,Medium,19/10/2026,,,,To do,
+,7.12.4,Admin Dashboard + Manager Dashboard + Role-Scoped System Overview,Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.12.5,Implement Role-Scoped Dashboards (S49 / S55 / S56),Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+,7.13.1,Unit Test & Self-Review (Authentication & Health Profile),Inter2,Đức Hoàng,Tất Đạt,Complex,19/10/2026,,,,To do,
+,7.13.2,Unit Test & Self-Review (Retreat Booking & Accommodation),Inter2,Gia Đạt,Xuân Hòa,Medium,19/10/2026,,,,To do,
+,7.13.3,Unit Test & Self-Review (Spa Scheduling (CORE)),Inter2,Tất Đạt,Phương Thảo,Complex,19/10/2026,,,,To do,
+,7.13.4,Unit Test & Self-Review (F&B Nutrition (CORE)),Inter2,Phương Thảo,Thành Vinh,Complex,19/10/2026,,,,To do,
+,7.13.5,Unit Test & Self-Review (Checkout & Analytics),Inter2,Xuân Hòa,Gia Đạt,Complex,19/10/2026,,,,To do,
+,7.13.6,Unit Test & Self-Review (System Administration & Permission Management),Inter2,Thành Vinh,Đức Hoàng,Complex,19/10/2026,,,,To do,
+Week 8,8,Cross-Module Integration & Hardening,Inter3,,,,26/10/2026,,01/11/2026,,To do,"Integrates M1–M6, DB/API contracts, RBAC, billing boundaries, third-party APIs and hardening"
+,8.1,Reconcile Development Schema & Module Migrations with Approved SQL Server Baseline,Inter3,Tất Đạt,Thành Vinh,Complex,26/10/2026,,,,To do,
+,8.2,Integrate M2/M3/M4 Billing Boundaries with M5,Inter3,Xuân Hòa,Gia Đạt,Complex,28/10/2026,,,,To do,
+,8.3,Integrate Identity Roles (M1) with M6 RBAC/Permission Enforcement,Inter3,Thành Vinh,Đức Hoàng,Complex,28/10/2026,,,,To do,
+,8.4,"Integrate Third-Party APIs: SSO (M1), VNPay (M2/M5), Email Notification (M3)",Inter3,Gia Đạt,Tất Đạt,Complex,30/10/2026,,,,To do,
+,8.4,End-to-End Cross-Module Integration & Contract Testing,Inter3,All,Tất Đạt,Complex,31/10/2026,,,,To do,"Validate M1→M6 dependencies, REST contracts, security, migrations,
+         booking→spa/F&B→folio→checkout flows before Week 9."
+Week 9,9,System Testing & Documentation,Inter3,,,,02/11/2026,,08/11/2026,,To do,"Perform full system testing after integration, fix UI/backend/security/concurrency bugs, review SRS/SDS, and finalize the User Manual based on actual implementation."
+,9.1,Fix UI Bugs,Inter3,All,All,Medium,02/11/2026,,,,To do,
+,9.2,Fix Backend / Integration / Security / Concurrency Bugs,Inter3,All,Thành Vinh,Complex,02/11/2026,,,,To do,
+,9.3,Merge SRS/SDS: each member submits their own module's section,Inter3,All,Tất Đạt,Complex,04/11/2026,,,,To do,Gia Đạt + Thảo + Tất Đạt tổng hợp thành bản thống nhất.Each member updates the as-built section of their module.Do not overwrite approved requirements with implementation assumptions.
+,9.4,Prepare User Manual (each member writes their own module's section),Inter3,All,Phương Thảo,Medium,05/11/2026,,,,To do,Hoàng tổng hợp
+Week 10,10,Final Presentation & Closing,Inter3,,,,09/11/2026,,15/11/2026,,To do,"Prepare slides, rehearse, demo the integrated system, perform a final check of the source code/documents, and submit the project."
+,10.1,Prepare Slides (each member presents their own module),Inter3,All,All,Simple,09/11/2026,,,,To do,
+,10.2,Rehearse Presentation,Inter3,All,Thành Vinh,Medium,11/11/2026,,,,To do,
+,10.3,Demo System (all 6 modules + integration),Inter3,All,Tất Đạt,Complex,12/11/2026,,,,To do,
+,10.4,Submit Source Code & Documents,Inter3,All,Xuân Hòa,Medium,13/11/2026,,,,To do,
+,10.5,Final Project Review,Inter3,All,Thành Vinh,Medium,14/11/2026,,,,To do,
+,,,,,,,,,,,,
+NOTE,Thực tế 11/11  là buổi học cuối của môn trước khi lên hội đồng,,,,,,,,,,,

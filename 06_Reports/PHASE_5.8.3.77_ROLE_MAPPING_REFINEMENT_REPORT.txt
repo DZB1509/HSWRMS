@@ -1,0 +1,161 @@
+================================================================================
+HSWRMS PHASE 5.8.3.77 — ROLE MAPPING REFINEMENT REPORT
+================================================================================
+Timestamp: 2026-10-28T17:54:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+Execution Mode: REFINEMENT & REGRESSION VERIFICATION (PRE-COMMIT GATE)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & REFINEMENT OBJECTIVE
+--------------------------------------------------------------------------------
+Phase 5.8.3.77 finalizes the F&B Staff role-mapping fix by executing the minimal
+refinement approved by the user in Phase 5.8.3.76:
+- The canonical database role "F&B Staff" is mapped strictly and exclusively to
+  GrantedAuthority `ROLE_FNB_STAFF`.
+- The redundant alias `ROLE_F&B STAFF` has been removed completely from
+  `CustomUserDetails.java`.
+- Standard roles (`Customer`, `Receptionist`, `Therapist`, `Manager`, `Admin`)
+  continue to map cleanly to `ROLE_<UPPERCASE>` with zero behavioral differences.
+- Null/empty role handling and authority deduplication are fully preserved.
+- All 37 security tests and 49 M4 integration tests pass with 100% success.
+- NO automatic git commit or staging has been executed; awaiting explicit approval.
+
+--------------------------------------------------------------------------------
+2. STEP 1 — GIT STATE VERIFICATION
+--------------------------------------------------------------------------------
+- Branch: feature/hswrms-m1-m6-integration
+- HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+- Staging Area: Clean (`git diff --cached` is empty)
+- `git diff --check`: Exit Code 0 (Zero whitespace errors, zero conflict markers)
+
+--------------------------------------------------------------------------------
+3. STEP 2 — MINIMAL ROLE NORMALIZATION REFINEMENT
+--------------------------------------------------------------------------------
+3.1 Modified Production File:
+    Path: `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+    Refinement:
+    ```java
+    public static List<String> normalizeRoleAuthorities(String role) {
+        if (role == null || role.isBlank()) {
+            return Collections.emptyList();
+        }
+        String clean = role.trim();
+        if (clean.toUpperCase(Locale.ROOT).startsWith("ROLE_")) {
+            clean = clean.substring(5).trim();
+        }
+        String upper = clean.toUpperCase(Locale.ROOT);
+        String compacted = upper.replace(" ", "").replace("_", "");
+        if ("F&BSTAFF".equals(compacted) || "FBSTAFF".equals(compacted) || "FNBSTAFF".equals(compacted)) {
+            return List.of("ROLE_FNB_STAFF");
+        }
+        return List.of("ROLE_" + upper.replace(' ', '_'));
+    }
+    ```
+    - Canonical DB role "F&B Staff" now emits exactly `ROLE_FNB_STAFF`.
+    - Redundant `ROLE_F&B STAFF` eliminated.
+
+3.2 New Unit Test Suite:
+    Path: `05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+    Updated assertions:
+    - ROLE-MAP-01: Asserts `normalizeRoleAuthorities("F&B Staff")` strictly equals `[ROLE_FNB_STAFF]`
+      and `assertFalse(authorities.contains("ROLE_F&B STAFF"))`.
+    - ROLE-MAP-02: Asserts all aliases (`FB_STAFF`, `fnb_staff`, `ROLE_FNB_STAFF`, `f&b staff`, `FNBSTAFF`)
+      map strictly to `[ROLE_FNB_STAFF]`.
+    - ROLE-MAP-03: Asserts standard non-F&B roles map cleanly without side effects.
+    - ROLE-MAP-04: Asserts null and blank roles return empty list.
+    - ROLE-MAP-05: Asserts `CustomUserDetails` initialized with `List.of("F&B Staff")`
+      contains `ROLE_FNB_STAFF`, does NOT contain `ROLE_F&B STAFF`, and has size 1.
+    - ROLE-MAP-06: Asserts null roles collection handled without NPE.
+
+3.3 Updated Controller Security Suite:
+    Path: `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+    - Preserves canonical database role string `"F&B Staff"` in `Role` fixture and JWT token.
+    - Preserves all 14 security test assertions across staff access, Manager/Admin access,
+      Customer denial, and unauthenticated denial.
+
+--------------------------------------------------------------------------------
+4. STEP 3 — REGRESSION TEST EXECUTION EVIDENCE
+--------------------------------------------------------------------------------
+4.1 CustomUserDetailsTest (Unit Suite)
+    Command: mvn test "-Dtest=CustomUserDetailsTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+    Time: 0.059 s
+
+4.2 FnbControllersSecurityTest (Controller Security Suite)
+    Command: mvn test "-Dtest=FnbControllersSecurityTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 14, Failures: 0, Errors: 0, Skipped: 0
+    Time: 11.38 s
+
+4.3 AdminControllersSecurityTest & JwtTokenProviderTest (Governance Regression)
+    Command: mvn test "-Dtest=AdminControllersSecurityTest,JwtTokenProviderTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 17, Failures: 0, Errors: 0, Skipped: 0
+    Time: 12.01 s
+
+4.4 Combined 4-Class Security Test Suite
+    Command: mvn test "-Dtest=CustomUserDetailsTest,FnbControllersSecurityTest,AdminControllersSecurityTest,JwtTokenProviderTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 37, Failures: 0, Errors: 0, Skipped: 0
+    Total Time: 15.016 s
+
+4.5 M4 Integration & Service Suite
+    Command: mvn test "-Dtest=DefaultBookingAndDietaryIntegrationServiceTest,FnbBillingIntegrationTest,MealOrderServiceTest,MealOrderRepositoryTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 49, Failures: 0, Errors: 0, Skipped: 0
+    Total Time: 16.575 s
+
+TOTAL BACKEND TESTS EXECUTED: 86
+TOTAL FAILURES: 0
+TOTAL ERRORS: 0
+PASS RATE: 100%
+
+--------------------------------------------------------------------------------
+5. STEP 4 — DIFF REVIEW & INCLUSION AUDIT
+--------------------------------------------------------------------------------
+5.1 Exact List of 3 Intended Files:
+    1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+    2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+    3. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+
+5.2 Diff Verification:
+    - Canonical `F&B Staff` receives strictly `ROLE_FNB_STAFF`.
+    - Existing role mappings for Customer, Receptionist, Therapist, Manager, Admin remain 100% unchanged.
+    - Zero unrelated files are included.
+    - Zero database DDL/DML, migration, provisioning, seed, frontend, or configuration files are touched.
+    - `git diff --check` passed with 0 warnings/errors.
+
+--------------------------------------------------------------------------------
+6. STEP 5 — COMMIT AUTHORIZATION GATE
+--------------------------------------------------------------------------------
+Status: GATE HELD — AWAITING EXPLICIT HUMAN AUTHORIZATION.
+
+1. Scope: Exactly 3 files specified above.
+2. Summary:
+   - Normalize database role "F&B Staff" to GrantedAuthority "ROLE_FNB_STAFF".
+   - Eliminate redundant "ROLE_F&B STAFF" alias.
+   - Add unit test suite `CustomUserDetailsTest`.
+   - Update `FnbControllersSecurityTest` to use authentic "F&B Staff" token claims.
+3. Proposed Commit Message:
+   `fix(m4-fnb): normalize canonical F&B staff authority`
+4. Final Git Status:
+   ` M 05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+   ` M 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+   `?? 05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+   (All other untracked reports and migrations preserved cleanly).
+
+Strict Prohibitions Honored:
+- Zero SQL executed.
+- Zero schema deployments, migrations, provisioning, or seed operations.
+- `SEED_DEMO_DATA` not enabled.
+- Database `HSWRMS` untouched.
+- Zero git commit, push, merge, rebase, reset, or deletion.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.77
+================================================================================
+

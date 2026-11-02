@@ -1,0 +1,341 @@
+================================================================================
+HSWRMS Phase 5.8.3.41 — Final Pre-Authorization Review for Test Provisioning
+================================================================================
+Generated: 2026-10-27T16:28:00+07:00
+Scope: Pre-Authorization Verification of provision_hswrms_test.ps1,
+       AST & $PSCmdlet.ShouldProcess() Mutation Guarding, Pre-Connection
+       -WhatIf / -DryRun Interception, Non-Interactive Empty-Password Rejection,
+       Independent 28-Test Harness Rerun, Read-Only Object Absence Check,
+       Staged & Protected File Hash Audits, and CLR Heap Password Lifecycle Review.
+
+================================================================================
+1. EXECUTIVE SUMMARY & FINAL VERDICT
+================================================================================
+Phase 5.8.3.41 performed an exhaustive, independent pre-authorization review of
+the actual files, scripts, and repository baseline to establish whether the
+dedicated test environment provisioning path (Stage A) is safe for human
+authorization.
+
+All mandatory restrictions were strictly enforced throughout this review:
+  - ZERO state mutations were executed against the live SQL Server instance.
+  - NO database, login, user, role, permission, or server setting was created or altered.
+  - The live JDBC smoke test was NOT executed.
+  - NO real password was requested, generated, displayed, or logged.
+  - All 33 staged M2 files and four protected SQL file hashes remain byte-identical.
+  - All verification utilized read-only inspections, AST analysis, and isolated synthetic test cases.
+
+FINAL AUDIT VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+
+Supporting Findings:
+  1. Complete Mutation Guarding: Every database, login, user, and permission mutation
+     in provision_hswrms_test.ps1 is explicitly guarded by $PSCmdlet.ShouldProcess().
+     There are zero unguarded DDL operations in the script.
+  2. Pre-Connection -WhatIf & -DryRun Interception: Verified that -WhatIf and -DryRun
+     halt execution and return cleanly before opening any SqlConnection or TCP socket.
+     Tested against unreachable addresses (192.0.2.1), returning in <20ms with 0 errors.
+  3. Non-Interactive Empty-Password Rejection: Verified that empty password inputs
+     are detected via $PSBoundParameters.ContainsKey without invoking Read-Host,
+     failing closed immediately with an explicit validation error in non-interactive shells.
+  4. 28-Test Harness Execution (Exit Code 0): The isolated audit harness was rerun
+     independently. All 28 test cases passed (14 validation, 13 quoting, 1 invariant).
+  5. Object Absence Confirmed: Read-only queries against SQL Server master confirmed
+     count(HSWRMS_TEST) = 0 and count(hswrms_test_user) = 0.
+  6. Staged & Protected Integrity: All 33 staged M2 files match reference commit
+     ea253dc6d039aa723414e3cd4f1926aa1500f60a with 0 diffs. All 4 protected SQL
+     hashes match their expected values exactly.
+  7. Accurate Credential Lifecycle Disclosure: Explicitly documented that freeing
+     the unmanaged BSTR via ZeroFreeBSTR does NOT guarantee zeroing immutable managed
+     .NET strings on the CLR heap.
+  8. Unit Regression Suite: 97 automated unit tests passed with BUILD SUCCESS.
+
+STOPPING NOTICE:
+  This audit does NOT execute Stage A or Stage B. Provisioning remains completely
+  blocked until explicit, separate human operator authorization is provided.
+
+================================================================================
+2. SCRIPT MUTATION & $PSCmdlet.ShouldProcess() INSPECTION
+================================================================================
+Script Inspected: 05_Development/database/scripts/provision_hswrms_test.ps1 (440 lines)
+AST Parser Check: [System.Management.Automation.Language.Parser]::ParseFile(...)
+Result: 0 Errors, 0 Warnings (Valid AST structure).
+
+Detailed Audit of State-Altering Operations:
+
+Stage 1: Pre-Execution Inspection & Environment Validation (Lines 205–304)
+  - Mixed Mode Check:       SELECT CAST(SERVERPROPERTY(...) AS INT)      [ExecuteScalar  - Read-Only]
+  - Database Existence:     SELECT state_desc FROM sys.databases ...     [ExecuteScalar  - Read-Only]
+  - Login Existence:        SELECT type, is_disabled ... FROM principals [ExecuteReader  - Read-Only]
+  - Server Roles Check:     SELECT COUNT(*) FROM sys.server_role_members [ExecuteScalar  - Read-Only]
+  - Server Perms Check:     SELECT COUNT(*) FROM sys.server_permissions  [ExecuteScalar  - Read-Only]
+  - Primary DB Isolation:   SELECT COUNT(*) FROM sys.database_principals [ExecuteScalar  - Read-Only]
+  * Verdict: ZERO mutations. All operations are strictly read-only diagnostics.
+
+Stage 2: Database Creation (Lines 306–320)
+  - Target DDL: CREATE DATABASE [HSWRMS_TEST] COLLATE SQL_Latin1_General_CP1_CI_AS;
+  - Guarding Code:
+      Line 314: if ($PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "CREATE DATABASE [$DatabaseName]")) {
+      Line 315:     $null = $cmd.ExecuteNonQuery()
+      Line 316:     Write-Host "  [PASS] Database [$DatabaseName] created successfully."
+      Line 317: }
+  * Verdict: Fully guarded by $PSCmdlet.ShouldProcess().
+
+Stage 3: Login Creation (Lines 322–343)
+  - Target DDL: CREATE LOGIN [hswrms_test_user] WITH PASSWORD = ..., CHECK_EXPIRATION = OFF, CHECK_POLICY = ON, DEFAULT_DATABASE = [HSWRMS_TEST];
+  - Parameter Mechanism: RPC parameter @password (NVarChar(128)) with server-side QUOTENAME(@password, '''')
+  - Guarding Code:
+      Line 336: if ($PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "CREATE LOGIN [$LoginName]")) {
+      Line 337:     $null = $cmd.ExecuteNonQuery()
+      Line 338:     Write-Host "  [PASS] Login [$LoginName] created successfully with strict server-side quoting."
+      Line 339: }
+  * Verdict: Fully guarded by $PSCmdlet.ShouldProcess().
+
+Stage 4: User Mapping & Permission Grant (Lines 344–363)
+  - Target DDL: USE [HSWRMS_TEST]; CREATE USER [hswrms_test_user] FOR LOGIN [hswrms_test_user]; GRANT CONNECT TO [hswrms_test_user];
+  - Guarding Code:
+      Line 359: if ($PSCmdlet.ShouldProcess("Database [$DatabaseName]", "CREATE USER [$LoginName] and GRANT CONNECT")) {
+      Line 360:     $null = $cmd.ExecuteNonQuery()
+      Line 361:     Write-Host "  [PASS] User [$LoginName] mapped and granted CONNECT in [$DatabaseName]."
+      Line 362: }
+  * Verdict: Fully guarded by $PSCmdlet.ShouldProcess().
+
+Stage 5: Post-Provisioning Verification & Audit (Lines 364–414)
+  - Login Configuration:    SELECT p.name, p.is_disabled ...             [ExecuteReader  - Read-Only]
+  - Database Permissions:   SELECT p.permission_name, p.state_desc ...   [ExecuteReader  - Read-Only]
+  * Verdict: ZERO mutations. All operations are strictly read-only audits.
+
+Conclusion:
+  Every single state-altering DDL operation (Stage 2, Stage 3, and Stage 4) is
+  explicitly wrapped in a dedicated $PSCmdlet.ShouldProcess() conditional block.
+  No unguarded ExecuteNonQuery calls exist.
+
+================================================================================
+3. PRE-CONNECTION -WhatIf AND -DryRun INTERCEPTION VERIFICATION
+================================================================================
+Pre-Connection Gate (Lines 180–196):
+  $isWhatIf = ($DryRun -or (-not $PSCmdlet.ShouldProcess("SQL Server instance '$ServerInstance'", "Execute Stage A Provisioning (Database [$DatabaseName], Login [$LoginName])")))
+  if ($isWhatIf) {
+      Write-Host "================================================================="
+      Write-Host "HSWRMS TEST PROVISIONING -- DRY RUN / WHAT-IF (SAFE MODE)"
+      Write-Host "================================================================="
+      Write-Host "[DRY RUN PASS] All client-side validations passed successfully."
+      ...
+      Write-Host "[DRY RUN PASS] Network / DB Mutation:  ZERO database connections opened; ZERO mutations executed."
+      Write-Host "================================================================="
+      return
+  }
+
+Empirical Tests & Actual Outputs:
+
+Test 1: Standard PowerShell -WhatIf
+  Command:
+    & '05_Development/database/scripts/provision_hswrms_test.ps1' -WhatIf -PlaintextPasswordForTesting 'ValidPreAuthPass123!'
+  Actual Output:
+    What if: Performing the operation "Execute Stage A Provisioning (Database [HSWRMS_TEST], Login [hswrms_test_user])" on target "SQL Server instance 'localhost'".
+    =================================================================
+    HSWRMS TEST PROVISIONING -- DRY RUN / WHAT-IF (SAFE MODE)
+    =================================================================
+    [DRY RUN PASS] All client-side validations passed successfully.
+    [DRY RUN PASS] ServerInstance:         localhost
+    [DRY RUN PASS] Target Database:        HSWRMS_TEST
+    [DRY RUN PASS] Target Login:           hswrms_test_user
+    [DRY RUN PASS] AllowExistingDb:        False
+    [DRY RUN PASS] AllowExistingLogin:     False
+    [DRY RUN PASS] Password Policy Check:  VALID (Length: 20 chars; Non-placeholder)
+    [DRY RUN PASS] Dynamic SQL Mechanism:  RPC Parameterized TDS with server-side QUOTENAME(@password, '''')
+    [DRY RUN PASS] Network / DB Mutation:  ZERO database connections opened; ZERO mutations executed.
+    =================================================================
+  Exit Code: 0 ($? = True)
+  Connection Opened: FALSE (Line 199 "Connecting to SQL Server..." was never reached).
+
+Test 2: Explicit -DryRun Switch
+  Command:
+    & '05_Development/database/scripts/provision_hswrms_test.ps1' -DryRun -PlaintextPasswordForTesting 'ValidPreAuthPass123!'
+  Actual Output:
+    [DRY RUN PASS] summary emitted; return executed at Line 195.
+  Exit Code: 0 ($? = True)
+
+Test 3: Unreachable Host Verification
+  Command:
+    & '05_Development/database/scripts/provision_hswrms_test.ps1' -DryRun -ServerInstance "192.0.2.1" -PlaintextPasswordForTesting 'ValidPreAuthPass123!'
+  Result: Returned in 15 milliseconds with Exit Code 0.
+  Significance: If a network connection were attempted, the TCP socket would block
+  for the 15–30 second connection timeout. Completing in 15ms conclusively proves
+  no socket or connection attempt was initiated.
+
+================================================================================
+4. EMPTY-PASSWORD FIX VERIFICATION (NON-INTERACTIVE EXECUTION)
+================================================================================
+Defect Identified in Phase 5.8.3.40:
+  When -PlaintextPasswordForTesting was passed an empty string (""), [string]::IsNullOrEmpty("")
+  evaluated to $true, causing execution to bypass the test parameter and invoke
+  Read-Host -AsSecureString in the else block. In background/non-interactive shells,
+  Read-Host blocked on stdin for 20 minutes with 0% CPU.
+
+Remediation Applied:
+  Switched parameter detection to $PSBoundParameters.ContainsKey('PlaintextPasswordForTesting').
+  When the parameter is bound (even with an empty string or null), $plainPass is assigned
+  the value directly and passed to Test-HswrmsProvisioningInput, which immediately throws:
+    "VALIDATION ERROR: Password is required and cannot be null or empty."
+
+Empirical Verification (Non-Interactive Shell):
+  Command:
+    powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command "try { & '05_Development/database/scripts/provision_hswrms_test.ps1' -DryRun -PlaintextPasswordForTesting ''; exit 99 } catch { Write-Host ('NONINTERACTIVE_CAUGHT: ' + `$_.Exception.Message); exit 0 }"
+  Actual Output:
+    NONINTERACTIVE_CAUGHT: HSWRMS PROVISIONING HALTED (FAIL CLOSED): VALIDATION ERROR: Password is required and cannot be null or empty.
+  Exit Code: 0
+  Duration: <1 second
+  Read-Host Invocation: ZERO / Completely bypassed.
+
+================================================================================
+5. INDEPENDENT AUDIT HARNESS RERUN (28 OF 28 TESTS PASSED)
+================================================================================
+Harness File: scratch/test_safer_provisioning_harness.ps1
+Command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scratch/test_safer_provisioning_harness.ps1
+Exit Code: 0
+Execution Time: 3.2 seconds
+
+Summary Table:
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Part                           TestCase                          Expected Outcome         Actual Outcome        Verdict
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Part 1 (Client Validation)     VAL_01_EMPTY                      REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_02_WHITESPACE                 REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_03_TOO_SHORT                  REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_04_PLACEHOLDER_1              REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_05_PLACEHOLDER_2              REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_06_MACRO_PREFIX               REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_07_TOO_LONG                   REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_08_VALID_MIN12                ACCEPT                   ACCEPTED              PASS
+Part 1 (Client Validation)     VAL_09_VALID_MAX128               ACCEPT                   ACCEPTED              PASS
+Part 1 (Client Validation)     VAL_10_VALID_SPECIALS             ACCEPT                   ACCEPTED              PASS
+Part 1 (Client Validation)     VAL_11_DB_IDENTIFIER_WHITELIST    REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_12_LOGIN_IDENTIFIER_WHITELIST REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_13_SERVER_IDENTIFIER_REGEX    REJECT                   REJECTED              PASS
+Part 1 (Client Validation)     VAL_14_WHATIF_SAFE_EXECUTION      ACCEPT & ZERO MUTATION   SAFE WHAT-IF RETURN   PASS
+Part 2 (RPC Parameter Quoting) RPC_01_STANDARD                   Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_02_SINGLE_QUOTE               Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_03_SQL_INJECTION              Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_04_SEMICOLON                  Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_05_COMMENT_DASH               Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_06_BLOCK_COMMENT              Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_07_DOUBLE_QUOTE               Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_08_PAREN_BRACKET              Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_09_SPECIAL_SYMBOLS            Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_10_MACRO_SEQUENCE             Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_11_UNICODE_CHARS              Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_12_BOUNDARY_12                Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 2 (RPC Parameter Quoting) RPC_13_BOUNDARY_128               Strictly Quoted Literal  Enclosed & Escaped    PASS
+Part 3 (Zero State Mutation)   MUT_01_ZERO_STATE_CHANGE          Zero Objects Created     DB: 0, Login: 0       PASS
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Total Tests: 28 | Passed: 28 | Failed: 0 | Blocked: 0 | Exit Code: 0
+
+================================================================================
+6. READ-ONLY SQL SERVER STATE INVARIANTS
+================================================================================
+Target Instance: localhost:1433 (master)
+Verification Script:
+  SELECT COUNT(*) FROM sys.databases WHERE name = 'HSWRMS_TEST';
+  SELECT COUNT(*) FROM sys.server_principals WHERE name = 'hswrms_test_user';
+
+Actual Results:
+  - sys.databases WHERE name = 'HSWRMS_TEST':       0 (Absent) [PASS]
+  - sys.server_principals WHERE name = 'hswrms_...': 0 (Absent) [PASS]
+  - Primary database [HSWRMS]:                      ONLINE, 0 test user mappings [PASS]
+
+================================================================================
+7. STAGED FILES & PROTECTED FILE HASH AUDIT
+================================================================================
+A. Staged M2 Domain Files Integrity:
+   - Staged Files Count: 33 files
+   - Reference Commit: ea253dc6d039aa723414e3cd4f1926aa1500f60a
+   - Command: git diff --cached ea253dc6d039aa723414e3cd4f1926aa1500f60a -- (git diff --name-only --cached)
+   - Diff Output: 0 bytes / 0 lines [BYTE-IDENTICAL MATCH]
+
+B. Protected SQL Files SHA-256 Hashes:
+   1. 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql
+      Expected: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0
+      Actual:   8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0
+      Match:    TRUE [PASS]
+
+   2. 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql
+      Expected: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F
+      Actual:   3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F
+      Match:    TRUE [PASS]
+
+   3. 05_Development/database/migrations/V005__m6_audit_log.sql
+      Expected: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E
+      Actual:   5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E
+      Match:    TRUE [PASS]
+
+   4. 05_Development/database/migrations/draft_m6_governance_and_delegation.sql
+      Expected: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B
+      Actual:   605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B
+      Match:    TRUE [PASS]
+
+================================================================================
+8. TECHNICAL REVIEW OF PASSWORD HANDLING & MANAGED CLR LIMITATIONS
+================================================================================
+Password Lifecycle Trace in provision_hswrms_test.ps1:
+  1. Capture: User input is captured via Read-Host -AsSecureString into an encrypted
+     System.Security.SecureString object in unmanaged DPAPI memory.
+  2. Unmanaged Conversion: Marshal::SecureStringToBSTR allocates a raw COM BSTR in
+     unmanaged memory holding decrypted characters.
+  3. Managed String Allocation: Marshal::PtrToStringBSTR copies the unmanaged BSTR
+     characters into an immutable managed System.String instance ($plainPass) on the
+     CLR garbage-collected (GC) heap.
+  4. TDS Transmission: System.Data.SqlClient reads $plainPass and serializes characters
+     into TDS RPC network buffers sent over TCP to SQL Server.
+  5. Cleanup in finally block:
+     [Marshal]::ZeroFreeBSTR($bstr)
+     $plainPass = $null
+     [System.GC]::Collect()
+
+Critical Security Assessment Regarding Managed Memory:
+  - While ZeroFreeBSTR guarantees that the unmanaged BSTR memory block is overwritten
+    with zeroes and freed back to the OS memory pool, it does NOT zero the immutable
+    managed System.String object on the CLR heap.
+  - In .NET, System.String objects are immutable and allocated on the managed heap.
+    Setting $plainPass = $null merely clears the reference pointer on the evaluation stack;
+    the string characters remain on the GC heap until the garbage collector compacts
+    or sweeps the memory page, and even then the underlying bytes may persist until
+    re-allocated and overwritten.
+  - Furthermore, TDS serialization buffers created by the ADO.NET driver during
+    packetization also reside in process memory until collected.
+  - Process memory may also be paged out to disk by Windows (pagefile.sys or hiberfil.sys)
+    under memory pressure or system sleep.
+  - Honest Conclusion: No local script in .NET can provide an absolute guarantee of
+    zeroing managed string memory without unsafe pointer pinning. The true security
+    objective is pragmatic risk elimination:
+      * Prevent command-line argument inspection via Get-Process, Task Manager, Event 4688.
+      * Prevent recording in PowerShell PSReadLine ConsoleHost_history.txt.
+      * Prevent persisting credentials into git-tracked .sql files or commit diffs.
+      * Zero the unmanaged memory buffers immediately upon completion.
+    The implemented script satisfies all of these objectives completely.
+
+================================================================================
+9. REPOSITORY FILES CHANGED IN PHASE 5.8.3.41
+================================================================================
+1. 05_Development/database/scripts/provision_hswrms_test.ps1 (MODIFIED)
+   - Updated lines 423–428 comments in finally block to clarify that ZeroFreeBSTR
+     zeros unmanaged memory while managed CLR heap strings are dereferenced for GC.
+2. 06_Reports/PHASE_5.8.3.41_FINAL_PREAUTHORIZATION_REVIEW.txt (NEW)
+   - This comprehensive pre-authorization deliverable report.
+
+================================================================================
+10. REMAINING BLOCKERS & AUTHORIZATION GATE
+================================================================================
+Status: ALL TECHNICAL GATES, GUARDS, PARSING, AND INTEGRITY CHECKS PASSED.
+Single Remaining Blocker:
+  STAGE A PROVISIONING REQUIRES EXPLICIT, SEPARATE HUMAN OPERATOR AUTHORIZATION.
+
+When explicit authorization is granted:
+  - Operator executes Stage A via:
+    .\05_Development\database\scripts\provision_hswrms_test.ps1 -ServerInstance "localhost"
+  - Interactive password prompt will securely receive the credential.
+  - The script will provision database [HSWRMS_TEST], login [hswrms_test_user],
+    map the user, grant CONNECT, and verify least-privilege invariants.
+  - Stage A execution output will be reviewed before proceeding to Stage B.
+
+FINAL STATUS: READY FOR EXPLICIT STAGE A AUTHORIZATION
+================================================================================

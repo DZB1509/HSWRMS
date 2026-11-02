@@ -21,21 +21,6 @@ export interface BusinessParameter {
   lastUpdatedBy: string;
 }
 
-export type FeatureFlagScope = 'global' | 'customer' | 'operations' | 'compliance';
-
-export interface FeatureFlag {
-  key: string;
-  nameKey: string;
-  defaultName: string;
-  descriptionKey: string;
-  defaultDescription: string;
-  enabled: boolean;
-  scope: FeatureFlagScope;
-  impactLevel: 'low' | 'medium' | 'high';
-  lastChangedAt: string;
-  lastChangedBy: string;
-}
-
 export type CapabilityKey =
   // Experience & Customer
   | 'book_retreat_package'
@@ -56,15 +41,23 @@ export type CapabilityKey =
   | 'view_meal_prep_queue'
   | 'view_dietary_allergy_warnings'
   | 'update_meal_order_status'
-  // Management Reporting
+  // Management Reporting & Facility
   | 'view_revenue_reports'
   | 'view_occupancy_reports'
   | 'view_therapist_utilization_reports'
   | 'view_manager_dashboard'
+  | 'view_villa_inventory'
+  | 'manage_villa_inventory'
+  | 'view_villa_categories'
+  | 'manage_villa_categories'
+  | 'view_functional_areas'
+  | 'manage_functional_areas'
+  | 'manage_villa_maintenance'
+  | 'manage_pricing'
+  | 'manage_spa_packages'
   // Governance & Administration
   | 'export_police_residence_declaration'
   | 'configure_business_parameters'
-  | 'manage_feature_flags'
   | 'view_permission_matrix'
   | 'delegate_admin_rights'
   | 'view_sensitive_data_audit_log'

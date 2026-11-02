@@ -1,0 +1,177 @@
+================================================================================
+HSWRMS PHASE 5.8.3.75 — F&B STAFF ROLE MAPPING FIX REPORT
+================================================================================
+Timestamp: 2026-10-28T17:34:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+Phase Objective: Verify and fix F&B Staff role mapping causing HTTP 403 on KDS endpoints
+Status: COMPLETE (Ready for review; NOT committed)
+
+--------------------------------------------------------------------------------
+1. ROOT CAUSE VERIFICATION & ANALYSIS
+--------------------------------------------------------------------------------
+1.1 Discrepancy Between Database Role Name & Spring Security Convention
+    - Authoritative database schema (`05_Development/database/schema.sql` line 161)
+      and bootstrap seed (`DevAccountBootstrap.java` line 66 & 75) declare the canonical
+      role name as:
+        Role ID 4: N'F&B Staff'
+        Account: fbstaff@heavenstay.dev -> Role: 'F&B Staff'
+    - Spring Security configuration (`SecurityConfig.java` line 153),
+      controller annotations (`FnbKdsController.java` lines 39, 51, 67, 77, 92),
+      and role constants (`Role.FNB_STAFF = "FNB_STAFF"`) check:
+        hasAnyRole('FNB_STAFF', 'MANAGER', 'ADMIN')
+        which requires GrantedAuthority: "ROLE_FNB_STAFF"
+    - In `FnbCustomerOrderController.java` (line 83), staff authorization checks:
+        .anyMatch(a -> a.getAuthority().equals("ROLE_FNB_STAFF"))
+
+1.2 Failure Mechanism in Runtime
+    - When `fbstaff@heavenstay.dev` logs in, `AuthService.login()` reads the role
+      name from DB entity `Role.getRoleName()` -> "F&B Staff".
+    - `AuthService` issues a JWT containing claims `roles = ["F&B Staff"]`.
+    - On every API call, `JwtAuthenticationFilter` resolves claims and calls:
+        new CustomUserDetails(userId, email, "", fullName, true, roles);
+    - In previous code of `CustomUserDetails.java` (lines 26-30):
+        this.authorities = roles.stream()
+            .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role.toUpperCase())
+            .map(SimpleGrantedAuthority::new)
+            .collect(Collectors.toList());
+    - Evaluating "F&B Staff":
+        "ROLE_" + "F&B Staff".toUpperCase() => "ROLE_F&B STAFF"
+    - Spring Security's `hasRole("FNB_STAFF")` and `hasAnyRole("FNB_STAFF", ...)`
+      looks strictly for "ROLE_FNB_STAFF".
+    - Because "ROLE_F&B STAFF" != "ROLE_FNB_STAFF", Spring Security immediately
+      rejected the user with HTTP 403 Forbidden!
+
+1.3 Masking in Previous Tests
+    - `FnbControllersSecurityTest.java` (line 116) previously bypassed this bug by
+      manually passing `List.of("FNB_STAFF")` to `jwtTokenProvider.generateToken()`,
+      never exercising the actual database role string "F&B Staff" returned by `AuthService`.
+
+--------------------------------------------------------------------------------
+2. IMPLEMENTED FIX DETAILS
+--------------------------------------------------------------------------------
+2.1 Target File: `CustomUserDetails.java`
+    Path: `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+    
+    Implementation:
+    - Added static helper `normalizeRoleAuthorities(String role)`:
+      1. Strips any leading "ROLE_" prefix (case-insensitive) if already present.
+      2. Normalizes input by converting to uppercase and stripping spaces/underscores.
+      3. If normalized string matches "F&BSTAFF", "FBSTAFF", or "FNBSTAFF", it maps
+         to both "ROLE_FNB_STAFF" and "ROLE_F&B STAFF".
+      4. For all other roles ("Customer", "Receptionist", "Therapist", "Manager", "Admin"),
+         it maps cleanly to "ROLE_<UPPERCASE>" with underscores replacing any spaces.
+      5. Handles null, empty, or whitespace-only role strings safely (returns empty list).
+    - Updated constructor to use flatMap + distinct SimpleGrantedAuthority mapping,
+      safeguarding against null collections or duplicate entries.
+
+2.2 Security Invariance & Non-Regressive Guarantees
+    - NO role is granted extra permissions or elevated privileges.
+    - S39 permission checks (@perm.has('S39', 'V') / @perm.has('S39', 'U')) remain intact.
+    - Customer role cannot access KDS endpoints (HTTP 403 strictly preserved).
+    - Unauthenticated callers receive HTTP 401.
+    - Manager and Admin continue to have full access (HTTP 200).
+    - `schema.sql` was NOT modified.
+    - Database data and demo data seed settings were NOT touched.
+
+--------------------------------------------------------------------------------
+3. REGRESSION & TEST SUITE UPDATES
+--------------------------------------------------------------------------------
+3.1 New Unit Test Suite: `CustomUserDetailsTest.java`
+    Path: `05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+    Tests added:
+    - ROLE-MAP-01: Canonical DB role "F&B Staff" maps to ROLE_FNB_STAFF and ROLE_F&B STAFF
+    - ROLE-MAP-02: Aliases of F&B Staff (FB_STAFF, fnb_staff, ROLE_FNB_STAFF) map correctly
+    - ROLE-MAP-03: Standard non-F&B roles map cleanly without side effects
+    - ROLE-MAP-04: Null, empty and whitespace-only roles return empty list safely
+    - ROLE-MAP-05: CustomUserDetails grants ROLE_FNB_STAFF when initialized with DB role "F&B Staff"
+    - ROLE-MAP-06: CustomUserDetails handles null roles list without NullPointerException
+
+3.2 Updated Security Test Suite: `FnbControllersSecurityTest.java`
+    Path: `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+    Updates:
+    - `setUp()` now uses the real DB role name "F&B Staff" in `RoleRepository` lookup/save
+      and issues tokens with `List.of("F&B Staff")`.
+    - Added tests FNB-SEC-09 through FNB-SEC-14:
+      + FNB-SEC-09: F&B staff role (DB 'F&B Staff') accesses /api/v1/fnb/kds/dashboard-kpis (200 OK)
+      + FNB-SEC-10: F&B staff role (DB 'F&B Staff') accesses order details (200 OK)
+      + FNB-SEC-11: Manager role accesses KDS queue and dashboard KPIs (200 OK)
+      + FNB-SEC-12: Admin role accesses KDS queue and dashboard KPIs (200 OK)
+      + FNB-SEC-13: Customer role is FORBIDDEN from accessing KDS dashboard KPIs (403 Forbidden)
+      + FNB-SEC-14: Customer role is FORBIDDEN from accessing KDS order details (403 Forbidden)
+    - Total tests in class increased from 8 to 14.
+
+--------------------------------------------------------------------------------
+4. VERIFICATION EXECUTION EVIDENCE
+--------------------------------------------------------------------------------
+4.1 CustomUserDetailsTest (Unit Suite)
+    Command: mvn test "-Dtest=CustomUserDetailsTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+
+4.2 FnbControllersSecurityTest (Controller Security Suite)
+    Command: mvn test "-Dtest=FnbControllersSecurityTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 14, Failures: 0, Errors: 0, Skipped: 0
+    Time: 11.63 s
+
+4.3 AdminControllersSecurityTest (M6 Admin Security Regression)
+    Command: mvn test "-Dtest=AdminControllersSecurityTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 14, Failures: 0, Errors: 0, Skipped: 0
+
+4.4 JwtTokenProviderTest (JWT Unit Suite)
+    Command: mvn test "-Dtest=JwtTokenProviderTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+
+4.5 Combined Security Suite
+    Command: mvn test "-Dtest=CustomUserDetailsTest,FnbControllersSecurityTest,AdminControllersSecurityTest,JwtTokenProviderTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 37, Failures: 0, Errors: 0, Skipped: 0
+    Total Time: 15.087 s
+
+4.6 M4 Integration & Service Suite
+    Command: mvn test "-Dtest=DefaultBookingAndDietaryIntegrationServiceTest,FnbBillingIntegrationTest,MealOrderServiceTest,MealOrderRepositoryTest"
+    Exit Code: 0 (BUILD SUCCESS)
+    Results: Tests run: 49, Failures: 0, Errors: 0, Skipped: 0
+    Total Time: 15.589 s
+
+4.7 Frontend Production Build & Contract Tests
+    Command: tsc -b && vite build
+    Exit Code: 0 (Built in 3.06s, 2705 modules transformed)
+    Functional tests: 41 passed, 0 failed
+
+--------------------------------------------------------------------------------
+5. WORKING TREE & GIT STATUS SUMMARY
+--------------------------------------------------------------------------------
+Working Tree Status:
+- Modified tracked files:
+  1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java`
+  2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java`
+- New untracked test file:
+  3. `05_Development/backend/src/test/java/com/heavenstay/hswrms/security/CustomUserDetailsTest.java`
+- Staging area: Clean (0 files staged)
+- Preserved untracked migrations & schema:
+  + `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+  + `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql`
+  + `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql`
+  + `05_Development/database/migrations/V005__m6_audit_log.sql`
+  + `05_Development/database/migrations/draft_m6_governance_and_delegation.sql`
+  + All reports in `06_Reports/`
+
+--------------------------------------------------------------------------------
+6. CONCLUSION & NEXT STEPS
+--------------------------------------------------------------------------------
+The F&B Staff role mapping blocker identified in Phase 5.8.3.74 is fully resolved
+and verified across all layers. Accounts with the canonical database role
+"F&B Staff" (`fbstaff@heavenstay.dev`) now correctly obtain GrantedAuthority
+"ROLE_FNB_STAFF" and successfully access KDS endpoints without receiving HTTP 403.
+All security boundaries and regression test suites pass with 100% success.
+
+In accordance with Phase 5.8.3.75 rules, execution is STOPPED.
+No git add, commit, or merge operations have been performed.
+Awaiting user instructions.
+================================================================================
+

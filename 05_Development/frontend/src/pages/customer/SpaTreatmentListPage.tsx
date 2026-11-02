@@ -4,7 +4,7 @@
  * Shows treatments included in retreat + extras available for purchase.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
@@ -20,7 +20,7 @@ import {
   Shield,
   CalendarCheck,
 } from 'lucide-react';
-import type { TreatmentCategory, LocalizedString } from '../../types/spa';
+import type { TreatmentCategory, LocalizedString, SpaTreatment } from '../../types/spa';
 
 const CATEGORY_FILTERS: { key: TreatmentCategory | 'all'; labelKey: string; defaultLabel: string; icon: React.ReactNode }[] = [
   { key: 'all', labelKey: 'spa.categories.all', defaultLabel: 'All Treatments', icon: <Sparkles size={16} /> },
@@ -33,9 +33,12 @@ const CATEGORY_FILTERS: { key: TreatmentCategory | 'all'; labelKey: string; defa
   { key: 'aromatherapy', labelKey: 'spa.categories.aromatherapy', defaultLabel: 'Aromatherapy', icon: <Heart size={16} /> },
 ];
 
+import { useSpaTreatments } from '../../features/m3-spa/hooks/useSpaFeature';
+
 export const SpaTreatmentListPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
-  const { treatments } = useSpa();
+  const { treatments: fallbackTreatments } = useSpa();
+  const { treatments: backendTreatments } = useSpaTreatments();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -48,7 +51,29 @@ export const SpaTreatmentListPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<TreatmentCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filtered = treatments.filter((tr) => {
+  // Map backend treatments to UI model, or fallback to mock if backend empty
+  const activeTreatments: SpaTreatment[] = useMemo(() => {
+    if (backendTreatments && backendTreatments.length > 0) {
+      return backendTreatments.map((bt) => {
+        const existing = fallbackTreatments.find((ft) => ft.id === String(bt.treatmentId) || ft.name.en.toLowerCase() === bt.treatmentName.toLowerCase());
+        return {
+          id: String(bt.treatmentId),
+          name: existing ? existing.name : { en: bt.treatmentName, vi: bt.treatmentName, 'zh-CN': bt.treatmentName, ja: bt.treatmentName, fr: bt.treatmentName },
+          category: (bt.category ? bt.category.toLowerCase() : (existing?.category || 'massage')) as TreatmentCategory,
+          description: existing ? existing.description : { en: bt.description || '', vi: bt.description || '', 'zh-CN': bt.description || '', ja: bt.description || '', fr: bt.description || '' },
+          durationMinutes: bt.durationMinutes,
+          price: bt.basePrice,
+          isIncludedInRetreat: bt.isIncluded,
+          imageUrl: existing ? existing.imageUrl : 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80',
+          benefits: existing ? existing.benefits : [],
+          contraindications: existing ? existing.contraindications : [],
+        };
+      });
+    }
+    return fallbackTreatments;
+  }, [backendTreatments, fallbackTreatments]);
+
+  const filtered = activeTreatments.filter((tr) => {
     if (activeCategory !== 'all' && tr.category !== activeCategory) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();

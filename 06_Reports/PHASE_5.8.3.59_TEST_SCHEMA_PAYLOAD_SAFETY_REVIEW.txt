@@ -1,0 +1,255 @@
+================================================================================
+HSWRMS TEST SCHEMA PAYLOAD PREPARATION & STATIC SAFETY REVIEW
+PHASE 5.8.3.59 — DEDICATED PAYLOAD GENERATION & STATIC OBJECT AUDIT
+================================================================================
+Date: 2026-10-28
+Workspace Target: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Dedicated Schema Payload Preparation for [HSWRMS_TEST]
+Execution Mode: STRICTLY PREPARATION & STATIC AUDIT ONLY
+                (Zero SQL Server connections; zero DDL/DML executions;
+                zero database modifications; zero Git mutations;
+                zero modifications to original schema.sql)
+================================================================================
+
+1. EXECUTIVE SUMMARY & SAFETY BOUNDARY STATEMENT
+--------------------------------------------------------------------------------
+Phase 5.8.3.59 prepares and statically validates a dedicated, sanitized database
+schema payload for the isolated test database [HSWRMS_TEST].
+
+This phase addresses the critical execution context hazard identified in Phase
+5.8.3.57 and reconfirmed in Phase 5.8.3.58, where the original authoritative
+baseline (05_Development/database/schema.sql) contains hardcoded commands:
+  `USE [master];`
+  `IF DB_ID(N'HSWRMS') IS NULL CREATE DATABASE [HSWRMS];`
+  `USE [HSWRMS];`
+
+STRICT SAFETY CONSTRAINTS OBSERVED IN THIS PHASE:
+  [X] Zero network connections opened to Microsoft SQL Server.
+  [X] Zero SQL commands, scripts, DDL, DML, or migrations executed.
+  [X] Zero database objects created, altered, dropped, or modified.
+  [X] The authoritative baseline (schema.sql) was left 100% UNTOUCHED and pristine.
+  [X] Existing migrations (V001-V005) and draft files were left untouched.
+  [X] Application source code was left untouched.
+  [X] Workspace B was left untouched.
+  [X] Zero Git mutations performed (no commit, checkout, reset, stash, or branch switch).
+  [X] Zero credentials, tokens, or connection secrets generated or exposed.
+
+FINAL DECISION: PAYLOAD READY FOR HUMAN REVIEW.
+
+
+2. FILES INSPECTED AND CREATED
+--------------------------------------------------------------------------------
+A. Inspected Authoritative Baseline:
+   - File Path: `05_Development/database/schema.sql` (1,221 lines, 47,083 bytes).
+   - Mode: Read-Only inspection.
+   - Status: Untouched (0 bytes changed).
+
+B. Created Dedicated Payload:
+   - File Path: `05_Development/database/generated/HSWRMS_TEST_schema.sql` (1,223 lines, 46,206 bytes).
+   - Purpose: Isolated, sanitized DDL payload targeting solely [HSWRMS_TEST].
+   - Location: Dedicated generated directory (`05_Development/database/generated/`).
+
+C. Scratch Audit & Verification Artifacts:
+   - `scratch/generate_test_schema.py`: Deterministic payload generator.
+   - `scratch/verify_test_schema.py`: Exhaustive static syntax and object comparator.
+
+
+3. ORIGINAL VERSUS GENERATED SCHEMA OBJECT INVENTORY
+--------------------------------------------------------------------------------
+An automated, regex-based static object audit was executed comparing the
+authoritative source (schema.sql) against the generated payload (HSWRMS_TEST_schema.sql).
+
++----------------------------+---------------+---------------+--------------------+
+| Schema Object Category     | Source Count  | Target Count  | Audit Status       |
++----------------------------+---------------+---------------+--------------------+
+| User Tables (dbo.*)        | 42            | 42            | EXACT 100% MATCH   |
+| Primary Key Constraints    | 42            | 42            | EXACT 100% MATCH   |
+| Foreign Key Constraints    | 56            | 56            | EXACT 100% MATCH   |
+| Unique Constraints         | 21            | 21            | EXACT 100% MATCH   |
+| Non-Clustered Indexes      | 12            | 12            | EXACT 100% MATCH   |
+| DML / Scheduling Triggers  | 3             | 3             | EXACT 100% MATCH   |
+| Initial Role Seed Items    | 6             | 6             | EXACT 100% MATCH   |
+| User Defined Functions     | 0             | 0             | EXACT 100% MATCH   |
+| Database Views             | 0             | 0             | EXACT 100% MATCH   |
+| Stored Procedures          | 0             | 0             | EXACT 100% MATCH   |
+| 'GO' Batch Separators      | 65            | 64            | INTENTIONAL DIFF*  |
++----------------------------+---------------+---------------+--------------------+
+
+*Note on 'GO' batch separators: The source contained 3 GO separators in lines 18-28.
+The generated header replaced this block with 2 GO separators (one after USE [HSWRMS_TEST],
+and one after the fail-closed Target Verification Guard). Net difference = -1.
+
+Inventory Details (All 42 Tables Verified in Identical Sequence):
+   1. dbo.[User]
+   2. dbo.AuthIdentity
+   3. dbo.[Role]
+   4. dbo.UserRole
+   5. dbo.EmailOtp
+   6. dbo.CustomerProfile
+   7. dbo.ConsentRecord
+   8. dbo.HealthProfile
+   9. dbo.FoodAllergy
+   10. dbo.DietaryRequirement
+   11. dbo.HealthProfileTherapyPreference
+   12. dbo.HealthDataDeletionRequest
+   13. dbo.RetreatPackage
+   14. dbo.VillaCategory
+   15. dbo.RetreatPackageVillaCategory
+   16. dbo.PhysicalVilla
+   17. dbo.RetreatBooking
+   18. dbo.ResidenceRecord
+   19. dbo.Therapist
+   20. dbo.SpaTreatment
+   21. dbo.RetreatPackageSpaTreatment
+   22. dbo.TreatmentRoom
+   23. dbo.TherapistTreatmentQualification
+   24. dbo.TreatmentRoomCompatibility
+   25. dbo.SpaSession
+   26. dbo.MenuItem
+   27. dbo.Ingredient
+   28. dbo.MenuItemIngredient
+   29. dbo.IngredientBatch
+   30. dbo.MealOrder
+   31. dbo.MealOrderItem
+   32. dbo.Folio
+   33. dbo.FolioItem
+   34. dbo.Invoice
+   35. dbo.PaymentTransaction
+   36. dbo.CustomerReview
+   37. dbo.[Permission]
+   38. dbo.RolePermission
+   39. dbo.SystemConfiguration
+   40. dbo.RightDelegation
+   41. dbo.RightDelegationPermission
+   42. dbo.AuditLog
+
+Inventory Details (All 3 Triggers Verified):
+   1. dbo.TR_SpaSession_ValidateScheduling (M3 spa therapist & room conflict checks)
+   2. dbo.TR_FolioItem_RecalculateTotal (M5 folio balance roll-up)
+   3. dbo.TR_PaymentTransaction_RecalculateFolioPaid (M5 payment settlement roll-up)
+
+Inventory Details (All 6 Initial Roles in Section 9 Verified):
+   'Customer', 'Receptionist', 'Therapist', 'F&B Staff', 'Manager', 'Admin'.
+
+
+4. INTENTIONAL TRANSFORMATIONS FROM ORIGINAL SCHEMA
+--------------------------------------------------------------------------------
+Only three intentional, safe transformations were performed:
+
+A. Removal of Destructive & Context-Switching Statements:
+   - Source Lines 18-28 Removed:
+     ```sql
+     USE [master];
+     GO
+     IF DB_ID(N'HSWRMS') IS NULL
+     BEGIN
+         CREATE DATABASE [HSWRMS];
+     END
+     GO
+     USE [HSWRMS];
+     GO
+     ```
+   - Rationale: Eliminates the fatal hazard where executing the script via SQLCMD
+     switches the session context to master and then to primary database HSWRMS.
+
+B. Insertion of Explicit Test Target Context and Fail-Closed Guard:
+   - Target Lines 19-29 Inserted:
+     ```sql
+     USE [HSWRMS_TEST];
+     GO
+
+     -- Target Verification Guard: Fail-closed assertion ensuring execution cannot proceed outside HSWRMS_TEST
+     IF DB_NAME() <> N'HSWRMS_TEST'
+     BEGIN
+         PRINT 'CRITICAL TARGET CONTEXT FAILURE: Active database is [' + DB_NAME() + ']; expected [HSWRMS_TEST]. Aborting immediately.';
+         SET NOEXEC ON;
+         THROW 51000, N'CRITICAL TARGET CONTEXT FAILURE: Execution halted because current database is not HSWRMS_TEST.', 1;
+     END
+     GO
+     ```
+   - Rationale:
+     1. `USE [HSWRMS_TEST]; GO` switches the active session directly into the dedicated test database.
+     2. The Target Verification Guard inspects `DB_NAME()`. If for any reason the context is NOT
+        `HSWRMS_TEST`, it executes `SET NOEXEC ON;` followed by `THROW 51000`.
+     3. In Microsoft SQL Server, `SET NOEXEC ON` forces the engine to compile but REFUSE TO EXECUTE
+        any subsequent statements in the session. This guarantees fail-closed behavior across all batches.
+
+C. Updated Verification Confirmation Message:
+   - Source Line 1220:
+     `PRINT 'HSWRMS database schema created successfully.';`
+   - Target Line 1222:
+     `PRINT 'HSWRMS_TEST database schema created successfully.';`
+
+
+5. STATIC AUDIT SEARCH RESULTS FOR PRODUCTION REFERENCES
+--------------------------------------------------------------------------------
+A comprehensive regular-expression audit of `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+yielded the following results:
+
+1. Search for `USE [HSWRMS]`:
+   - Matches: 0 (Zero occurrences).
+2. Search for `USE master`:
+   - Matches: 0 (Zero occurrences).
+3. Search for `CREATE DATABASE`:
+   - Matches: 0 (Zero occurrences).
+4. Search for any other `USE` statements:
+   - Matches: Exactly 1 occurrence (`USE [HSWRMS_TEST];` on line 19).
+5. Search for string `HSWRMS` not followed by `_TEST`:
+   - Matches: Exactly 1 occurrence.
+   - Location: Line 3 (Header comment block: `HSWRMS - HeavenStay Wellness Resort Management System`).
+   - Impact: Zero operational impact (comment only).
+6. Search for 3-part or 4-part table references (e.g., `HSWRMS.dbo.*`):
+   - Matches: 0 (Zero occurrences).
+
+
+6. INDEPENDENT SAFETY REVIEW & RESIDUAL RISK ANALYSIS
+--------------------------------------------------------------------------------
+A. Defense-in-Depth Assessment:
+   - While the internal `USE [HSWRMS_TEST];` and `SET NOEXEC ON` guard provide robust
+     script-level safety, relying SOLELY on script-internal guards is insufficient:
+     * If an operator connects to a remote production server or unintended instance
+       where another database named `HSWRMS_TEST` exists, the script would execute
+       against that instance.
+     * Therefore, client-side execution parameters and operational safeguards
+       must be combined with script-level safeguards.
+
+B. Mandatory Operational Safeguards for Future Execution (Stage 4):
+   1. Explicit CLI Connection Parameters:
+      `sqlcmd -S localhost -d HSWRMS_TEST -i 05_Development/database/generated/HSWRMS_TEST_schema.sql -b`
+      - `-S localhost`: Strictly binds connection to local machine instance.
+      - `-d HSWRMS_TEST`: Explicitly sets connection catalog before executing any batch.
+      - `-b`: Forces SQLCMD to exit immediately with an error code on any batch failure.
+   2. Pre-Execution Target Verification:
+      The operator must verify via read-only query that the target instance is localhost
+      and target database is `HSWRMS_TEST`.
+   3. Strict Ban on Original File Execution:
+      The original file `05_Development/database/schema.sql` is PERMANENTLY BANNED
+      from direct execution against `HSWRMS_TEST`.
+   4. Human Authorization Requirement:
+      No SQL execution may occur without explicit, documented human authorization.
+
+
+7. REMAINING UNCERTAINTIES & BLOCKED ITEMS
+--------------------------------------------------------------------------------
+- Safety Blockers: ZERO.
+- Ambiguities in Schema: ZERO.
+- Schema Payload Completeness: 100% verified against approved baseline.
+
+
+8. CONCLUSION & FINAL DECISION
+--------------------------------------------------------------------------------
+FINAL DECISION: PAYLOAD READY FOR HUMAN REVIEW
+
+Summary:
+- The generated payload `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+  is completely isolated, verified, and free of all production-targeting statements.
+- Object parity is 100% identical to the approved baseline (42 tables, 12 indexes,
+  3 triggers, 56 FKs, 42 PKs, 21 UQs, 6 initial role seeds).
+- The internal fail-closed guard ensures that execution will halt immediately
+  via `SET NOEXEC ON` if the session is not inside `HSWRMS_TEST`.
+- Zero database mutations occurred during Phase 5.8.3.59.
+- Next step: Await human review and authorization before Stage 4 execution.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.59
+================================================================================

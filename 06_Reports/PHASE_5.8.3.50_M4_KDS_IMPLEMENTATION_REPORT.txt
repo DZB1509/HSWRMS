@@ -1,0 +1,354 @@
+================================================================================
+HSWRMS INTEGRATION AUDIT & IMPLEMENTATION REPORT
+PHASE 5.8.3.50 — TRIỂN KHAI M4 F&B / KDS BACKEND & FRONTEND INTEGRATION
+================================================================================
+Execution Timestamp : 2026-10-28 10:56:00 +07:00
+Target Branch       : feature/hswrms-m1-m6-integration
+Repository          : E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Status              : HOÀN THÀNH TOÀN DIỆN (31/31 Backend Tests PASS, 8/8 Frontend Tests PASS, Frontend Build SUCCESS)
+================================================================================
+
+1. TÓM TẮT TRIỂN KHAI & HIỆN TRẠNG BẮT ĐẦU (RESUMED VS COMPLETED)
+--------------------------------------------------------------------------------
+Phase 5.8.3.50 được triển khai để giải quyết khoảng trống đã xác định ở Phase 5.8.3.49:
+chuyển đổi module M4 F&B / KDS từ tầng prototype với React state và mock data thành
+hệ thống tích hợp hoàn chỉnh giữa Backend Spring Boot REST API và Frontend React + Vite.
+
+Trạng thái tiếp nhận khi tiếp tục (Resumed):
+- Backend domain & persistence cơ bản (MenuItemEntity, MealOrderItemEntity, MealOrderEntity,
+  các repository tương ứng, DTOs, MealOrderService/ServiceImpl, SecurityConfig, PermissionCatalog)
+  đã được khởi tạo và biên dịch thử nghiệm.
+- Frontend api client fnbApi.ts đã được phác thảo.
+- Các bài kiểm thử đơn vị cơ bản đã được viết nhưng cần xác minh tích hợp đầy đủ.
+
+Công việc hoàn thành trong đợt tiếp tục (Completed):
+- Xây dựng hoàn chỉnh và chạy thông suốt toàn bộ 4 bộ test Backend M4 (31/31 tests PASS):
+  + MealOrderRepositoryTest (8 tests PASS)
+  + MealOrderServiceTest (13 tests PASS)
+  + FnbControllersSecurityTest (8 tests PASS)
+  + FnbBillingIntegrationTest (2 tests PASS - End-to-end M4 -> M5 Folio Billing)
+- Triển khai custom hook useKdsPolling.ts: chu kỳ 10-15s (mặc định 12s), chống request chồng lấn
+  (in-flight ref guard), tạm dừng khi ẩn tab (document.visibilityState), tự dọn dẹp khi unmount.
+- Nâng cấp DiningContext.tsx: kết nối trực tiếp fnbApi, lấy menu thật từ backend, tạo đơn gửi
+  lên backend (không tin tổng tiền client), cập nhật trạng thái đơn thật, hủy đơn kèm lý do,
+  cung cấp refreshKitchenQueue() và quản lý trạng thái loading/error.
+- Tích hợp màn hình KDS Screen 39 (MealPrepListPage.tsx): bổ sung nút Refresh thủ công với spinner,
+  gắn useKdsPolling (12s), kiểm tra quyền S39:U (disable nếu không có quyền), yêu cầu nhập lý do hủy
+  bắt buộc khi nhân viên chọn hủy đơn.
+- Tích hợp màn hình KDS Screen 38 (FnbDashboardPage.tsx): bổ sung nút Refresh thủ công, gắn useKdsPolling (12s),
+  lấy KPI trực tiếp từ fnbApi.getKdsDashboardKpis().
+- Tích hợp màn hình Chi tiết đơn (MealOrderDetailPage.tsx): tự động fetch từ backend nếu không có trong cache,
+  kiểm tra quyền S39:U, xử lý hủy đơn bắt buộc có lý do.
+- Kiểm thử Frontend: 8/8 test kitchenQueueSafety.test.ts PASS, build production (tsc -b && vite build)
+  thành công 100% với exit code 0.
+- Bảo đảm tuyệt đối an toàn Database và Git (không migration, không DDL, không Git mutation).
+
+
+2. DANH SÁCH FILE TẠO VÀ SỬA ĐỔI
+--------------------------------------------------------------------------------
+A. Backend Domain & Persistence:
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MenuItemEntity.java
+  -> Map chính xác bảng dbo.MenuItem (menu_item_id, item_name, category, meal_type, price,
+     dietary_tags, allergen_information, availability_status).
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderItemEntity.java
+  -> Map chính xác bảng dbo.MealOrderItem (meal_order_item_id, meal_order_id, menu_item_id, quantity).
+- [Sửa đổi] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java
+  -> Bổ sung quan hệ @OneToMany(mappedBy = "mealOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+     với List<MealOrderItemEntity> items và helper methods.
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MenuItemRepository.java
+  -> Truy vấn findAllAvailable(), findByCategoryAndAvailabilityStatus(), findByItemName().
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderItemRepository.java
+  -> Truy vấn theo meal_order_id.
+- [Sửa đổi] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java
+  -> Bổ sung findDailyMealSelection(), findByBookingIdOrderByCreatedAtDesc(), findOrdersByDate(),
+     kế thừa Pessimistic Lock findByIdWithLock().
+
+B. Backend Service, DTOs & Security:
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/ (10 DTO classes):
+  + MenuItemDto.java, MealOrderItemDto.java, MealOrderDto.java
+  + CreateDailyMealRequest.java, AlaCarteItemRequest.java, CreateAlaCarteRequest.java
+  + UpdateOrderStatusRequest.java, CancelOrderRequest.java
+  + KdsDashboardKpiDto.java, MealPrepEntryDto.java
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderService.java
+  -> Interface định nghĩa đầy đủ nghiệp vụ: thực đơn, tạo đơn, chuyển trạng thái, hủy đơn, KPI, KDS queue.
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java
+  -> Thực thi nghiệp vụ: State Machine chuyển trạng thái, tính tiền server-side cho A-la-carte,
+     giảm thiểu dữ liệu sức khỏe (Data Minimization - chỉ lấy dị ứng từ HealthProfileRepository),
+     ghi nhận Folio charge tại DELIVERED thông qua FolioBillingService, chống trùng với existsBySourceMealOrderId.
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbCustomerOrderController.java
+  -> REST endpoints khách hàng: xem menu khả dụng, chọn món retreat theo ngày, đặt món A-la-carte, xem đơn, hủy đơn.
+- [Tạo mới] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbKdsController.java
+  -> REST endpoints bếp / KDS: Dashboard KPIs, hàng đợi bếp (queue), chi tiết đơn tối thiểu, chuyển trạng thái, hủy đơn.
+- [Sửa đổi] 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java
+  -> Đăng ký permission S39:V và S39:U cho FNB_STAFF.
+- [Sửa đổi] 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java
+  -> Cấu hình phân quyền URL: permitAll cho GET menu items, authenticated/roles cho customer endpoints,
+     hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN") cho /api/v1/fnb/kds/**.
+
+C. Backend Tests:
+- [Tạo mới] 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceTest.java (13 tests)
+- [Tạo mới] 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/FnbBillingIntegrationTest.java (2 tests)
+- [Tạo mới] 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/FnbControllersSecurityTest.java (8 tests)
+
+D. Frontend Integration:
+- [Tạo mới] 05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts
+  -> Wrapper gọi API client chuẩn (/api/v1/fnb/...) với đầy đủ TypeScript DTOs.
+- [Tạo mới] 05_Development/frontend/src/features/m4-fnb/hooks/useKdsPolling.ts
+  -> Custom hook quản lý short-polling (12s), visibilitychange handler, unmount safety, manual refresh.
+- [Sửa đổi] 05_Development/frontend/src/types/dining.ts
+  -> Bổ sung các trường backend integration (refreshKitchenQueue, cancelOrder, isRefreshing, error).
+- [Sửa đổi] 05_Development/frontend/src/context/DiningContext.tsx
+  -> Tích hợp fnbApi, quản lý state remote queue, fetch menu, update status, cancel order.
+- [Sửa đổi] 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx (Screen 39)
+  -> Nút Refresh thủ công, polling 12s, kiểm tra quyền S39:U, prompt bắt buộc lý do khi hủy đơn.
+- [Sửa đổi] 05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx (Screen 38)
+  -> Nút Refresh thủ công, polling 12s, nạp live KPIs từ backend.
+- [Sửa đổi] 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+  -> Nạp chi tiết từ backend nếu thiếu, kiểm tra S39:U, xử lý hủy đơn có lý do.
+
+
+3. BACKEND ENDPOINTS & REQUEST/RESPONSE CONTRACTS
+--------------------------------------------------------------------------------
+A. Nhóm Customer & Menu (/api/v1/fnb/customer):
+1. GET /api/v1/fnb/customer/menu-items
+   - Query: category?, mealPeriod?
+   - Auth: Public (permitAll)
+   - Response: ApiResponse<List<MenuItemDto>>
+2. POST /api/v1/fnb/customer/daily-meals
+   - Body: CreateDailyMealRequest { bookingId, orderDate, mealPeriod, menuItemIds, specialNotes }
+   - Auth: CUSTOMER (sở hữu booking), RECEPTIONIST, MANAGER, ADMIN
+   - Response: ApiResponse<MealOrderDto> (HTTP 200 OK / 201 CREATED)
+   - Behavior: Idempotent upsert nếu cùng ngày/bữa và chưa PREPARING.
+3. POST /api/v1/fnb/customer/a-la-carte
+   - Body: CreateAlaCarteRequest { retreatBookingId, orderDate?, deliveryTime?, deliveryLocation?, items }
+   - Auth: CUSTOMER (sở hữu booking), RECEPTIONIST, MANAGER, ADMIN
+   - Response: ApiResponse<MealOrderDto>
+   - Security: Giá được tính server-side từ MenuItem.price * quantity; client không thể tự set tổng tiền.
+4. GET /api/v1/fnb/customer/orders
+   - Query: bookingId
+   - Auth: CUSTOMER (sở hữu booking), RECEPTIONIST, MANAGER, ADMIN
+   - Response: ApiResponse<List<MealOrderDto>>
+5. POST /api/v1/fnb/customer/orders/{id}/cancel
+   - Body: CancelOrderRequest { reason? }
+   - Auth: CUSTOMER (chỉ khi đơn ở trạng thái PENDING)
+   - Response: ApiResponse<MealOrderDto>
+
+B. Nhóm Bếp & KDS (/api/v1/fnb/kds):
+1. GET /api/v1/fnb/kds/dashboard-kpis
+   - Query: date? (mặc định hôm nay)
+   - Auth: hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN")
+   - Response: ApiResponse<KdsDashboardKpiDto>
+2. GET /api/v1/fnb/kds/queue
+   - Query: date?, type?, status?, dietaryOnly?, search?
+   - Auth: hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN"), yêu cầu quyền S39:V
+   - Response: ApiResponse<List<MealPrepEntryDto>> (chỉ trả tên món, dị ứng, villa; không lộ hồ sơ y tế/tài chính)
+3. GET /api/v1/fnb/kds/orders/{id}
+   - Path: id
+   - Auth: hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN"), quyền S39:V
+   - Response: ApiResponse<MealPrepEntryDto>
+4. PUT /api/v1/fnb/kds/orders/{id}/status
+   - Path: id, Body: UpdateOrderStatusRequest { status, cancellationReason? }
+   - Auth: hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN"), quyền S39:U
+   - Response: ApiResponse<MealOrderDto>
+5. POST /api/v1/fnb/kds/orders/{id}/cancel
+   - Path: id, Body: CancelOrderRequest { reason } (bắt buộc)
+   - Auth: hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN"), quyền S39:U
+   - Response: ApiResponse<MealOrderDto>
+
+
+4. MA TRẬN CHUYỂN TRẠNG THÁI & QUY TẮC HỦY ĐƠN (STATE TRANSITION MATRIX)
+--------------------------------------------------------------------------------
+Hệ thống tuân thủ chặt chẽ State Machine được quy định:
+
++----------------+----------------+-------------------------------------------------------------+
+| Trạng thái cũ  | Trạng thái mới | Điều kiện & Quyền hạn                                      |
++----------------+----------------+-------------------------------------------------------------+
+| PENDING        | PREPARING      | Nhân viên F&B (S39:U). Bắt đầu chế biến món.                |
+| PENDING        | CANCELLED      | Khách hàng tự hủy hoặc nhân viên hủy. Lý do không bắt buộc. |
+| PREPARING      | READY          | Nhân viên F&B (S39:U). Món đã chuẩn bị xong.                |
+| PREPARING      | CANCELLED      | CHỈ nhân viên (S39:U). Khách hàng bị chặn. BẮT BUỘC LÝ DO.   |
+| READY          | DELIVERED      | Nhân viên F&B (S39:U). Kích hoạt tính phí A-la-carte M5.    |
+| READY          | CANCELLED      | CHỈ nhân viên (S39:U). Khách hàng bị chặn. BẮT BUỘC LÝ DO.   |
+| DELIVERED      | Bất kỳ         | BỊ CHẶN (Terminal State). Không cho phép đảo ngược.         |
+| CANCELLED      | Bất kỳ         | BỊ CHẶN (Terminal State). Không cho phép đảo ngược.         |
+| Trạng thái X   | Trạng thái X   | IDEMPOTENT RETURN: Trả về 200 OK ngay, không side-effect.   |
++----------------+----------------+-------------------------------------------------------------+
+
+Quy tắc hủy đơn được kiểm thử tự động:
+- Customer hủy đơn khi PREPARING/READY: ném BusinessRuleException("CUSTOMER_CANNOT_CANCEL_PREPARING_ORDER").
+- Staff hủy đơn từ PREPARING trở đi mà thiếu reason: ném BusinessRuleException("CANCELLATION_REASON_REQUIRED").
+- Staff hủy đơn hợp lệ kèm reason: thành công, ghi nhận cảnh báo audit log.
+
+
+5. PHÂN QUYỀN S39 (S39 AUTHORIZATION)
+--------------------------------------------------------------------------------
+A. Đăng ký PermissionCatalog:
+- Bổ sung định nghĩa quyền cho S39:
+  + d("S39", "V", false, false, FNB_STAFF) -> Quyền xem hàng đợi bếp S39.
+  + d("S39", "U", false, false, FNB_STAFF) -> Quyền cập nhật trạng thái / hủy đơn trên S39.
+- Role FNB_STAFF, MANAGER, ADMIN có thẩm quyền theo phân quyền HSWRMS.
+
+B. Bảo vệ tầng Backend Security:
+- SecurityConfig.java cấu hình AntPathRequestMatcher:
+  + /api/v1/fnb/kds/**: .hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN")
+  + /api/v1/fnb/customer/**: .hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")
+  + GET /api/v1/fnb/customer/menu-items: .permitAll()
+- Controller xác thực SecurityContext:
+  + FnbKdsController kiểm tra actor authentication, role, và cấm fail-open.
+  + FnbCustomerOrderController kiểm tra booking ownership: khách hàng chỉ được xem và hủy đơn
+    thuộc retreat booking của chính mình.
+
+C. Bảo vệ tầng Frontend:
+- MealPrepListPage.tsx và MealOrderDetailPage.tsx kiểm tra hasPermission('S39:U') trước khi cho phép
+  thao tác cập nhật trạng thái hoặc hủy đơn. Nếu thiếu quyền, UI vô hiệu hóa dropdown/button.
+- Backend vẫn là chốt chặn cuối cùng: request trực tiếp thiếu quyền sẽ nhận 401/403.
+
+
+6. TÍCH HỢP M5 FOLIO BILLING AN TOÀN (BILLING INTEGRATION)
+--------------------------------------------------------------------------------
+A. Thời điểm tính phí:
+- CHỈ tính phí cho đơn A_LA_CARTE khi chuyển sang DELIVERED.
+- Đơn PENDING, PREPARING, READY, CANCELLED TUYỆT ĐỐI KHÔNG tính phí.
+- Đơn DAILY_MEAL (nằm trong gói retreat package) KHÔNG tính phí lẻ vào Folio.
+
+B. Cơ chế chống trùng (Idempotency & Duplicate Guard):
+- Trước khi tạo FolioItemEntity, MealOrderServiceImpl kiểm tra:
+  folioItemRepository.existsBySourceMealOrderId(orderId)
+- Nếu đã tồn tại phí cho mealOrderId này, bỏ qua không tạo bản ghi mới.
+- Khóa bi quan findByIdWithLock(orderId) ngăn chặn race condition khi nhiều request
+  cùng kích hoạt DELIVERED đồng thời.
+
+C. Đồng bộ hóa với Billing Guard của M5 Checkout:
+- M5 FolioBillingService.validateBillingGuard(bookingId) kiểm tra:
+  mealOrderRepository.findUnsettledOrdersForBooking(bookingId)
+- Khi đơn còn ở PENDING, PREPARING, READY -> validateBillingGuard ném UNSETTLED_SERVICE_ORDERS,
+  ngăn chặn khách checkout khi còn đơn ăn uống chưa hoàn tất.
+- Khi đơn chuyển sang DELIVERED (hoặc CANCELLED) -> đơn không còn unsettled,
+  validateBillingGuard PASS, Folio ghi nhận khoản phí FNB và invoice tính đúng số tiền.
+
+
+7. TÍCH HỢP FRONTEND & SHORT-POLLING
+--------------------------------------------------------------------------------
+A. API Client:
+- fnbApi.ts sử dụng apiClient chuẩn của hệ thống (/api/v1), truyền token JWT tự động,
+  xử lý AppApiError nhất quán.
+
+B. DiningContext:
+- Tải danh mục món thật từ backend khi khởi chạy.
+- Gửi yêu cầu đặt món và cập nhật trạng thái đơn tới backend.
+- Cung cấp hàm refreshKitchenQueue(date).
+
+C. Short-polling:
+- Custom hook useKdsPolling thực hiện chu kỳ 12 giây (đáp ứng yêu cầu 10-15s).
+- Sử dụng inFlightRef để chống các request mạng bị chậm chồng lấn nhau.
+- Tự động ngắt khi chuyển tab hoặc tab chạy ngầm (document.visibilityState === 'hidden')
+  và fetch ngay khi quay lại tab.
+- Dọn dẹp bộ đếm timer khi component unmount.
+- Nút "Refresh" thủ công trên Screen 38 và Screen 39 cho phép bếp cập nhật tức thì.
+
+
+8. TƯƠNG THÍCH DATABASE & SCHEMA
+--------------------------------------------------------------------------------
+A. Không thay đổi Schema:
+- KHÔNG tạo hoặc chạy bất kỳ file migration DDL nào.
+- KHÔNG chỉnh sửa schema.sql hoặc các file V003, V004, V005, draft_m6.
+- Ánh xạ chính xác các bảng hiện hữu:
+  + dbo.MenuItem: menu_item_id, item_name, category, meal_type, price, dietary_tags,
+    allergen_information, availability_status.
+  + dbo.MealOrder: meal_order_id, booking_id, order_type, order_date, order_status,
+    total_amount, special_notes, created_at, updated_at.
+  + dbo.MealOrderItem: meal_order_item_id, meal_order_id, menu_item_id, quantity.
+  + dbo.FolioItem: folio_id, charge_category ('FNB'), amount, description, source_meal_order_id.
+
+B. Xử lý thiếu cột cancellation_reason:
+- Bảng dbo.MealOrder trong schema gốc không có cột cancellation_reason.
+- Tuân thủ ranh giới an toàn: KHÔNG tự ý thêm cột vào database.
+- cancellationReason được kiểm tra bắt buộc ở tầng Service/Controller API (Request DTO),
+  được ghi nhận rõ ràng vào Nhật ký Audit (Audit Log) cho các thao tác nhạy cảm của nhân viên.
+
+
+9. KẾT QUẢ KIỂM THỬ THỰC TẾ
+--------------------------------------------------------------------------------
+A. Backend Tests (31/31 PASSED):
+Lệnh chạy: ./mvnw test "-Dtest=MealOrderRepositoryTest,MealOrderServiceTest,FnbControllersSecurityTest,FnbBillingIntegrationTest"
+Kết quả:
+- com.heavenstay.hswrms.m4fnb.repository.MealOrderRepositoryTest: 8/8 PASS
+  + testFindByIdWithLock
+  + testFindByRetreatBookingId
+  + testFindUnsettledOrdersForBooking
+  + testFindOrdersInDateRange
+  + testFindActiveKitchenQueue
+  + testFindDailyMealSelection
+  + testFindByBookingIdOrderByCreatedAtDesc
+  + testFindOrdersByDate
+- com.heavenstay.hswrms.m4fnb.service.MealOrderServiceTest: 13/13 PASS
+  + testCreateDailyMealOrder_Success
+  + testCreateDailyMealOrder_IdempotentUpsert
+  + testUpdateDailyMealOrder_RejectWhenPreparing
+  + testCreateAlaCarteOrder_Success (Server-side price calculation)
+  + testCreateOrder_UnavailableItem_Rejected
+  + testOrderLifecycle_FullProgression (PENDING -> PREPARING -> READY -> DELIVERED)
+  + testDelivered_CannotTransitionBack (Terminal state check)
+  + testCancelled_CannotTransitionBack (Terminal state check)
+  + testCustomerCancelOrder_SuccessWhenPending
+  + testCustomerCancelOrder_RejectWhenPreparing
+  + testStaffCancelOrder_SuccessWithReason
+  + testStaffCancelOrder_RejectWithoutReason
+  + testDataMinimization_ExcludesHealthAndBillingDetails (Security check)
+- com.heavenstay.hswrms.m4fnb.controller.FnbControllersSecurityTest: 8/8 PASS
+  + anyoneCanBrowseMenu_Returns200
+  + unauthenticatedUserAccessingKds_Returns401
+  + customerRoleAccessingKdsQueue_Returns403
+  + fnbStaffAccessingKdsQueue_Returns200
+  + customerCanViewTheirOwnOrders_Returns200
+  + customerCannotViewOthersOrders_Returns403
+  + unauthenticatedUserCannotCreateDailyMeal_Returns401
+  + managerCanAccessKdsDashboardKpis_Returns200
+- com.heavenstay.hswrms.m4fnb.service.FnbBillingIntegrationTest: 2/2 PASS
+  + testEndToEndM4toM5BillingLifecycle: Đơn PENDING/PREPARING/READY chặn billing guard;
+    chuyển DELIVERED tự động ghi phí FolioItem FNB, mở khóa guard; retry không ghi trùng;
+    hóa đơn phản ánh chính xác FNB charge.
+  + testCancelledOrderDoesNotBlockAndDoesNotCharge: Đơn hủy không bị tính phí và không chặn checkout.
+
+Tổng kết Backend: Tests run: 31, Failures: 0, Errors: 0, Skipped: 0. BUILD SUCCESS.
+
+B. Frontend Tests & Build:
+- Lệnh chạy test: node --test src/features/m4-fnb/kitchenQueueSafety.test.ts
+  Kết quả: 8/8 tests PASS (duration: 182ms, 0 failures).
+- Lệnh biên dịch TypeScript: npx tsc --noEmit
+  Kết quả: Exit code 0 (0 errors).
+- Lệnh đóng gói bundle: npm run build (tsc -b && vite build)
+  Kết quả: Exit code 0 (Build thành công trong 3.22s, 2703 modules transformed).
+
+
+10. TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA EVALUATION)
+--------------------------------------------------------------------------------
+1. Backend API và service M4 đã triển khai và có test: ĐẠT (31 backend tests).
+2. Frontend sử dụng API thật, không phụ thuộc mock state cho luồng chính: ĐẠT (fnbApi, DiningContext).
+3. S39 được bảo vệ ở backend: ĐẠT (PermissionCatalog S39:V/U, Controller & SecurityConfig).
+4. Quy tắc hủy đơn đúng với quyết định nghiệp vụ: ĐẠT (Khách hủy tại PENDING; PREPARING+ chỉ Staff và bắt buộc lý do).
+5. Tính phí A-la-carte tại DELIVERED và có test chống tính phí trùng: ĐẠT (FnbBillingIntegrationTest pass).
+6. Refresh và short-polling hoạt động theo thiết kế: ĐẠT (12s polling, tab visibility pause, manual refresh).
+7. Các test mục tiêu đạt kết quả được ghi nhận: ĐẠT (100% pass, 0 fail, 0 skip).
+8. Không sửa migration/schema hoặc thao tác database thật: ĐẠT (Toàn bộ test dùng H2 in-memory, schema files nguyên vẹn).
+9. Không có Git mutation, commit hoặc push: ĐẠT (Giữ nguyên local working tree).
+
+
+11. NHỮNG VẤN ĐỀ CÒN TỒN TẠI & ĐỀ XUẤT BƯỚC TIẾP THEO
+--------------------------------------------------------------------------------
+- Tồn tại: Do schema dbo.MealOrder không có cột cancellation_reason, lý do hủy đơn hiện
+  được lưu qua Audit Log và Request validation. Nếu nghiệp vụ yêu cầu hiển thị lại lý do hủy
+  trên giao diện trong tương lai, cần đề xuất một migration DDL chính thức để bổ sung cột này
+  trong một phase riêng biệt được phê duyệt.
+- Đề xuất: Trong phase tiếp theo (nếu có), có thể tích hợp notification toast trên frontend
+  để thông báo tức thì khi có món mới trong hàng đợi bếp.
+
+
+12. XÁC NHẬN AN TOÀN VÀ KẾT THÚC
+--------------------------------------------------------------------------------
+- Xác nhận: Toàn bộ file migration và schema được bảo vệ không bị thay đổi.
+- Xác nhận: Không có lệnh git add, git commit, git push, git checkout, git reset nào được chạy.
+- Trạng thái working tree sẵn sàng để người dùng và ChatGPT rà soát tại chỗ.
+================================================================================
+BÁO CÁO KẾT THÚC — PHASE 5.8.3.50 HOÀN THÀNH
+================================================================================

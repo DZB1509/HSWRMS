@@ -16,23 +16,46 @@ import {
 
 export const HealthDataDeletionPage: React.FC = () => {
   const { t } = useTranslation();
-  const { activeBooking, deletionRequest, submitDeletionRequest, cancelDeletionRequest } = useCustomer();
+  const {
+    activeBooking,
+    deletionRequest,
+    isDeletionLoading,
+    deletionError,
+    submitDeletionRequest,
+    cancelDeletionRequest,
+  } = useCustomer();
   const { showToast } = useToast();
 
-  const [reason, setReason] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!acknowledged) return;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-    const result = submitDeletionRequest(reason, acknowledged);
-    showToast(result.message, result.status === 'deferred_active_retreat' ? 'info' : 'success');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!acknowledged || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const result = await submitDeletionRequest('', acknowledged);
+      showToast(result.message, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not submit deletion request.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleCancel = () => {
-    cancelDeletionRequest();
-    showToast('Deletion request has been cancelled.', 'info');
+  const handleCancel = async (id: string) => {
+    if (cancellingId) return;
+    setCancellingId(id);
+    try {
+      await cancelDeletionRequest(id);
+      showToast('Deletion request has been cancelled.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not cancel deletion request.', 'error');
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   return (
@@ -60,7 +83,7 @@ export const HealthDataDeletionPage: React.FC = () => {
             title="Important Wellness Data Retention & Safety Rule"
             description={t(
               'customer.deletion.policyAlert',
-              'Health data deletion cannot immediately occur while an active or upcoming retreat is in progress, as customer safety and treatment protocol require verified health notes during your stay.'
+              'Submitting this form records a health-data deletion request for review. It does not immediately delete health data; safety and retention requirements must be reviewed before any deletion is performed.'
             )}
             variant="warning"
           />
@@ -87,7 +110,7 @@ export const HealthDataDeletionPage: React.FC = () => {
               </h4>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                 You currently have an active reservation (<strong>Ref: {activeBooking.bookingReference}</strong> · {activeBooking.startDate} to {activeBooking.endDate}).
-                Your health data deletion will be registered immediately and safely executed following retreat check-out.
+                A submitted request is recorded for review. This page does not confirm that health data has been deleted or schedule deletion after check-out.
               </p>
             </div>
           </div>
@@ -103,9 +126,12 @@ export const HealthDataDeletionPage: React.FC = () => {
               color: 'var(--accent-forest)',
             }}
           >
-            ✓ {t('customer.deletion.eligibleNotice', 'No active retreats found. Your health records are eligible for immediate purge.')}
+          ✓ {t('customer.deletion.eligibleNotice', 'No active retreat is listed. A submitted health-data request remains pending review and does not immediately delete records.')}
           </div>
         )}
+
+        {isDeletionLoading && <p role="status">Loading your deletion request status…</p>}
+        {deletionError && <p role="alert">Could not load or update your deletion request: {deletionError}</p>}
 
         {/* Existing Deletion Request Card */}
         {deletionRequest ? (
@@ -136,7 +162,9 @@ export const HealthDataDeletionPage: React.FC = () => {
                     ? t('customer.deletion.statusDeferred', 'Deferred (Active Retreat in Progress)')
                     : deletionRequest.status === 'pending'
                     ? t('customer.deletion.statusPending', 'Pending Administrative Review')
-                    : t('customer.deletion.statusCompleted', 'Completed & Purged')}
+                    : deletionRequest.status === 'cancelled'
+                    ? 'Cancelled'
+                    : t('customer.deletion.statusCompleted', 'Completed')}
                 </span>
               </h3>
             </div>
@@ -152,7 +180,7 @@ export const HealthDataDeletionPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-              <Button variant="secondary" size="sm" onClick={handleCancel}>
+              <Button variant="secondary" size="sm" onClick={() => handleCancel(deletionRequest.id)} disabled={cancellingId === deletionRequest.id} isLoading={cancellingId === deletionRequest.id}>
                 {t('customer.deletion.cancelBtn', 'Withdraw Request')}
               </Button>
               <Link to="/customer/health-profile">
@@ -186,27 +214,6 @@ export const HealthDataDeletionPage: React.FC = () => {
               </ul>
             </div>
 
-            {/* Optional Reason */}
-            <div style={{ marginBottom: 'var(--space-5)' }}>
-              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                {t('customer.deletion.reasonLabel', 'Reason for Request (Optional)')}
-              </label>
-              <textarea
-                rows={3}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder={t('customer.deletion.reasonPlaceholder', 'Please share why you wish to remove your health data...')}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: 'var(--text-sm)',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-
             {/* Confirmation Checkbox */}
             <div style={{ marginBottom: 'var(--space-6)' }}>
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
@@ -231,7 +238,7 @@ export const HealthDataDeletionPage: React.FC = () => {
                 type="submit"
                 variant="destructive"
                 size="md"
-                disabled={!acknowledged}
+                disabled={!acknowledged || isDeletionLoading}
                 icon={<Trash2 size={16} />}
               >
                 {t('customer.deletion.submitBtn', 'Submit Deletion Request')}

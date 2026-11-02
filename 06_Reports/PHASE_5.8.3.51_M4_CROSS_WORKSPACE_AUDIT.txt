@@ -1,0 +1,537 @@
+================================================================================
+HSWRMS - HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM
+PHASE 5.8.3.51 - READ-ONLY M4 CROSS-WORKSPACE AUDIT REPORT
+COMPARE, RECONCILE, AND PREPARE AN INTEGRATION PLAN (NO CODE MERGE)
+================================================================================
+Date: 2026-10-28
+Auditor: Antigravity AI (Pair Programming Assistant)
+Mode: Strictly READ-ONLY (Zero code changes, zero Git mutations, zero DB writes)
+Workspace A (Current Baseline): E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Workspace B (Teammate M4 Repo): E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-bo-sung-module-4\HSWRMS-audit-all-modules
+================================================================================
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Phase 5.8.3.51 performed an independent, evidence-based cross-workspace audit
+between Workspace A (current integration repository containing Phase 5.8.3.50 M4
+implementation) and Workspace B (teammate's M4 implementation extracted from ZIP).
+
+Key Findings Summary:
+1. Operational Readiness:
+   - Workspace A provides a complete, working, production-aligned implementation
+     of Module 4 (F&B / KDS) that runs 100% against the baseline schema (schema.sql)
+     with zero database migration dependencies. It features 31/31 passing backend
+     tests, 8/8 passing frontend safety tests, and a clean frontend build (exit code 0).
+   - Workspace B contains sophisticated conceptual designs (including 8 Retreat
+     Package F&B plans, clean Vietnamese UTF-8 dish titles, and clean architectural
+     ports for M1/M2 boundary isolation), but suffers from critical blockers.
+2. P0 Stop-Ship Blockers in Workspace B:
+   - Premature Folio Billing (P0-1): Workspace B fires an asynchronous Spring
+     event (`AlaCarteOrderPlacedEvent`) immediately upon order placement in
+     PENDING state, posting charges to the guest's Folio before food preparation
+     even begins. This directly violates approved business decision #1 (charges
+     posted only at DELIVERED).
+   - Database Schema Drift (P0-2): Workspace B entities require non-baseline
+     database columns (`unit_price`, `preparation_status`, `special_notes`) and
+     new tables (`Ingredient`, `IngredientBatch`, `MenuItemIngredient`) introduced
+     via migrations V006 and V007. Running Workspace B code on the baseline
+     database will crash immediately with JPA `SQLException: Invalid column name`.
+3. P1 Architectural & Functional Mismatches in Workspace B:
+   - Missing Order Cancellation & Terminal State Violation: Workspace B provides
+     no cancellation endpoints or service methods. Its state machine transition
+     validator even allows DELIVERED -> CANCELLED, violating terminal state rules.
+   - Prohibited Ingredient Inventory Deduction: Workspace B implements complex
+     FEFO ingredient batch deduction, directly violating the explicit project rule
+     ("Tồn kho: Chỉ sử dụng availability_status của MenuItem... Không trừ tồn kho").
+   - Authorization Flaw: Workspace B hardcodes `@PreAuthorize("hasAuthority('ROLE_F&B STAFF')")`,
+     bypassing the HSWRMS Permission Catalog (`@perm.has('S39','V')`), breaking
+     delegation, and rejecting ADMIN and MANAGER with 403 on kitchen operations.
+4. Cancellation Reason Persistence Gap:
+   - In Workspace A, cancellation reason is validated at runtime and logged to
+     application logs via SLF4J, but is NOT persisted to `dbo.AuditLog` or `dbo.MealOrder`
+     due to lack of schema columns. Workspace B has no cancellation implementation.
+5. Strategic Recommendation:
+   - RETAIN WORKSPACE A as the authoritative operational baseline (KEEP_A).
+   - DO NOT perform any automated directory overwrite or blanket merge.
+   - Selectively adopt valuable conceptual assets from Workspace B in subsequent
+     approved phases (e.g. Vietnamese UTF-8 menu titles, Retreat Package F&B Plan
+     catalog, and `DietaryProfilePort` / `BookingContextPort` boundary abstractions).
+
+================================================================================
+2. WORKSPACE BASELINE STATES
+================================================================================
+
+Workspace A Baseline:
+- Root Path: `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`
+- Git Status: Valid repository on branch `feature/hswrms-m1-m6-integration`
+- HEAD Commit: `46ab465` ("feat(m5): implement M5 Billing Integration & Checkout Flow")
+- Repository Structure: Complete multi-module layout (01_Requirements through 06_Reports,
+  05_Development/backend, 05_Development/frontend).
+- M4 Backend State:
+  * Entities: `MealOrderEntity`, `MealOrderItemEntity`, `MenuItemEntity`
+  * Repositories: `MealOrderRepository`, `MealOrderItemRepository`, `MenuItemRepository`
+  * Services: `MealOrderService`, `MealOrderServiceImpl`
+  * Controllers: `FnbCustomerOrderController`, `FnbKdsController`
+  * Security: `@perm.has('S39','V')`, `@perm.has('S39','U')`, `hasAnyRole('FNB_STAFF','MANAGER','ADMIN')`
+  * Tests: 31 tests passed (MealOrderRepositoryTest, MealOrderServiceTest,
+    FnbControllersSecurityTest, FnbBillingIntegrationTest)
+- M4 Frontend State:
+  * Client: `src/features/m4-fnb/api/fnbApi.ts`
+  * Polling: `src/features/m4-fnb/hooks/useKdsPolling.ts` (15s short-polling)
+  * Context: `src/context/DiningContext.tsx`
+  * Pages: `MealPrepListPage.tsx`, `FnbDashboardPage.tsx`, `MealOrderDetailPage.tsx`
+  * Tests: `src/features/m4-fnb/utils/fnbSafety.test.ts` (8/8 safety tests passed)
+  * Build: `npm run build` succeeds (exit code 0, 0 TypeScript errors)
+
+Workspace B Baseline:
+- Root Path: `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-bo-sung-module-4\HSWRMS-audit-all-modules`
+- Git Status: Detached worktree pointer pointing to non-existent external path
+  (`gitdir: E:/ISP392-G1/fal26-isp392-is2005-g1/.git/worktrees/HSWRMS-audit-all-modules`).
+  Git CLI commands fail with `fatal: not a git repository`. Workspace B is an extracted
+  snapshot archive, not an active tracking branch.
+- Repository Structure: Matches HSWRMS directory layout; 06_Reports contains only
+  a placeholder README.md without integration reports from Phases 5.8.3.45-50.
+- M4 Backend State:
+  * Entities: `MealOrderEntity` (added special_notes), `MealOrderItem` (added unit_price,
+    preparation_status), `MenuItem`, `Ingredient`, `IngredientBatch`, `MenuItemIngredient`
+  * Migrations Added: `V006__m4_meal_order_fields.sql`, `V007__m4_fnb_ingredient_inventory_and_recipes.sql`
+  * Repositories: 5 repositories for entities above
+  * Services: `MealOrderService`, `MenuService`, `InventoryService`, `FnbDashboardService`,
+    `RetreatPackageFnbService`
+  * Integration Ports: `BookingContextPort`, `DietaryProfilePort`, `DefaultBookingAndDietaryIntegrationService`
+  * Controllers: `MealOrderController`, `MenuController`, `IngredientController`,
+    `FnbDashboardController`, `RetreatPackageFnbController`
+  * Security: Hardcoded `@PreAuthorize("hasAuthority('ROLE_F&B STAFF')")`
+  * Tests: 33 tests in surefire reports (FnbRoleAccessTest, MealOrderServiceTest,
+    InventoryServiceTest, MenuServiceTest, RetreatPackageFnbServiceTest)
+- M4 Frontend State:
+  * Client: `src/features/m4-fnb/api/fnbApi.ts` (254 lines)
+  * Polling: None (hooks folder contains only `.gitkeep`)
+  * Context: `src/context/DiningContext.tsx` (client-side recipe stock deduction)
+  * Pages: `MealPrepListPage.tsx`, `FnbDashboardPage.tsx`, `MealOrderDetailPage.tsx`
+  * Tests: 0 frontend tests for M4
+
+================================================================================
+3. FILE-LEVEL DIFFERENCE INVENTORY
+================================================================================
+
+Classifications:
+- IDENTICAL: File content is completely identical between A and B.
+- ADDED_IN_A: File exists only in Workspace A.
+- ADDED_IN_B: File exists only in Workspace B.
+- MODIFIED_BOTH: File exists in both workspaces but contains divergent implementation.
+- MODIFIED_IN_A: Modified in A relative to repository baseline.
+- MODIFIED_IN_B: Modified in B relative to repository baseline.
+
+--------------------------------------------------------------------------------
+BACKEND INVENTORY:
+--------------------------------------------------------------------------------
+1. `com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity.java`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Strictly adheres to baseline `dbo.MealOrder` table schema.
+   - Workspace B: Maps additional `@Column(name = "special_notes")`, requiring V006 migration.
+2. `com.heavenstay.hswrms.m4fnb.entity.MealOrderItemEntity.java` vs `MealOrderItem.java`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Named `MealOrderItemEntity`, maps baseline columns (`meal_order_id`, `menu_item_id`, `quantity`).
+   - Workspace B: Named `MealOrderItem`, maps non-baseline columns `unit_price` and `preparation_status`.
+3. `com.heavenstay.hswrms.m4fnb.entity.MenuItemEntity.java` vs `MenuItem.java`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Named `MenuItemEntity`, maps baseline `dbo.MenuItem` table.
+   - Workspace B: Named `MenuItem`, maps baseline `dbo.MenuItem` table.
+4. `com.heavenstay.hswrms.m4fnb.entity.Ingredient.java`
+   - Classification: ADDED_IN_B
+   - Impact: Out of project scope. Requires non-baseline table `dbo.Ingredient`.
+5. `com.heavenstay.hswrms.m4fnb.entity.IngredientBatch.java`
+   - Classification: ADDED_IN_B
+   - Impact: Out of project scope. Requires non-baseline table `dbo.IngredientBatch`.
+6. `com.heavenstay.hswrms.m4fnb.entity.MenuItemIngredient.java`
+   - Classification: ADDED_IN_B
+   - Impact: Out of project scope. Requires non-baseline table `dbo.MenuItemIngredient`.
+7. `com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository.java`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Features concurrency locking (`findByIdWithLock`), active queue queries, and booking queries.
+   - Workspace B: Features daily meal single-selection constraint queries and kitchen order queries.
+8. `com.heavenstay.hswrms.m4fnb.repository.MealOrderItemRepository.java`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Simple CRUD repository mapping `MealOrderItemEntity`.
+   - Workspace B: Maps `MealOrderItem`.
+9. `com.heavenstay.hswrms.m4fnb.repository.MenuItemRepository.java`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Maps `MenuItemEntity` with `findByAvailabilityStatus`.
+   - Workspace B: Maps `MenuItem`.
+10. `com.heavenstay.hswrms.m4fnb.repository.IngredientRepository.java`
+    - Classification: ADDED_IN_B
+11. `com.heavenstay.hswrms.m4fnb.repository.IngredientBatchRepository.java`
+    - Classification: ADDED_IN_B
+12. `com.heavenstay.hswrms.m4fnb.repository.MenuItemIngredientRepository.java`
+    - Classification: ADDED_IN_B
+13. `com.heavenstay.hswrms.m4fnb.service.MealOrderService.java` & `MealOrderServiceImpl.java`
+    - Classification: MODIFIED_BOTH
+    - Workspace A: Implements full order lifecycle, customer cancel (`PENDING`), staff cancel with reason,
+      synchronous Folio billing at `DELIVERED`, duplicate prevention, transaction rollback.
+    - Workspace B: Missing cancel methods; allows `DELIVERED -> CANCELLED`; emits event on order placement
+      causing premature billing; implements item-level preparation status updates.
+14. `com.heavenstay.hswrms.m4fnb.service.MenuService.java` & `MenuServiceImpl.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Provides personalized menu filtering based on M1 allergen profile.
+15. `com.heavenstay.hswrms.m4fnb.service.InventoryService.java` & `InventoryServiceImpl.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Implements FEFO batch deduction for recipe ingredients (out of scope).
+16. `com.heavenstay.hswrms.m4fnb.service.FnbDashboardService.java` & `FnbDashboardServiceImpl.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Aggregates order counts and ingredient shortfalls for dashboard.
+17. `com.heavenstay.hswrms.m4fnb.service.RetreatPackageFnbService.java` & `RetreatPackageFnbServiceImpl.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Implements Retreat Package F&B plan definitions and culinary safety checks.
+18. `com.heavenstay.hswrms.m4fnb.controller.FnbCustomerOrderController.java`
+    - Classification: ADDED_IN_A
+    - Workspace A: Dedicated customer-facing controller for daily meal and extra orders.
+19. `com.heavenstay.hswrms.m4fnb.controller.FnbKdsController.java`
+    - Classification: ADDED_IN_A
+    - Workspace A: Dedicated staff-facing KDS controller guarded by S38/S39 permissions.
+20. `com.heavenstay.hswrms.m4fnb.controller.MealOrderController.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Combines customer ordering and kitchen management under `/api/v1/fnb/orders`.
+21. `com.heavenstay.hswrms.m4fnb.controller.MenuController.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: REST controller for `/api/v1/fnb/menu` and recipes.
+22. `com.heavenstay.hswrms.m4fnb.controller.IngredientController.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: REST controller for `/api/v1/fnb/ingredients` and batches.
+23. `com.heavenstay.hswrms.m4fnb.controller.FnbDashboardController.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: REST controller for `/api/v1/fnb/dashboard`.
+24. `com.heavenstay.hswrms.m4fnb.controller.RetreatPackageFnbController.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: REST controller for `/api/v1/fnb/packages`.
+25. `com.heavenstay.hswrms.m4fnb.integration.BookingContextPort.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Clean port interface for M2 booking data minimization.
+26. `com.heavenstay.hswrms.m4fnb.integration.DietaryProfilePort.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Clean port interface for M1 health/dietary data minimization.
+27. `com.heavenstay.hswrms.m4fnb.integration.DefaultBookingAndDietaryIntegrationService.java`
+    - Classification: ADDED_IN_B
+    - Workspace B: Adapter implementation of ports above.
+28. `com.heavenstay.hswrms.m4fnb.event.AlaCarteOrderPlacedEvent.java`
+    - Classification: ADDED_IN_B
+    - Impact: Causes premature Folio billing upon order creation (P0-1).
+29. `com.heavenstay.hswrms.m4fnb.event.M4FolioChargeEventListener.java`
+    - Classification: ADDED_IN_B
+    - Impact: Asynchronous listener that swallows Folio charge errors (P0-1).
+30. Database Migrations:
+    - `05_Development/database/migrations/V006__m4_meal_order_fields.sql`: ADDED_IN_B
+    - `05_Development/database/migrations/V007__m4_fnb_ingredient_inventory_and_recipes.sql`: ADDED_IN_B
+
+--------------------------------------------------------------------------------
+FRONTEND INVENTORY:
+--------------------------------------------------------------------------------
+1. `src/features/m4-fnb/api/fnbApi.ts`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Implements KDS endpoints (`/api/v1/fnb/kds/...`) and Customer endpoints (`/api/v1/fnb/orders/...`).
+   - Workspace B: Implements endpoints for menu, orders, ingredients, dashboard, and packages under `/api/v1/fnb/...`.
+2. `src/features/m4-fnb/hooks/useKdsPolling.ts`
+   - Classification: ADDED_IN_A
+   - Workspace A: 15s interval polling hook, tab visibility handling, unmount cleanup, manual refresh.
+   - Workspace B: Absent (hooks directory contains only `.gitkeep`).
+3. `src/features/m4-fnb/types/fnbDto.ts`
+   - Classification: ADDED_IN_B
+   - Workspace B: Comprehensive TypeScript interfaces for M4 backend responses.
+4. `src/context/DiningContext.tsx`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Full integration with `fnbApi`, live order submission, status updates.
+   - Workspace B: Simulates client-side ingredient recipe deduction; calls `fnbApi.updateOrderStatus`;
+     lacks polling coordination.
+5. `src/pages/fb/MealPrepListPage.tsx`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Uses `useKdsPolling`, real-time status updates, staff cancellation modal with reason.
+   - Workspace B: Uses `DiningContext`, displays physical inventory table, no polling, no cancellation modal.
+6. `src/pages/fb/FnbDashboardPage.tsx`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Fetches KPIs from `/api/v1/fnb/kds/dashboard-kpis`.
+   - Workspace B: Fetches dashboard from `/api/v1/fnb/dashboard` including ingredient demand/shortfall.
+7. `src/pages/fb/MealOrderDetailPage.tsx`
+   - Classification: MODIFIED_BOTH
+   - Workspace A: Uses `fnbApi.getKitchenPrepQueue` and status transitions.
+   - Workspace B: Uses `fnbApi.getKitchenOrderById`.
+8. `src/features/m4-fnb/utils/fnbSafety.test.ts`
+   - Classification: ADDED_IN_A
+   - Workspace A: 8 safety unit tests for pricing, cancellation rules, folio charge calculation, polling hook.
+   - Workspace B: Absent.
+
+================================================================================
+4. BUSINESS-RULE AND STATE MACHINE COMPARISON
+================================================================================
+
+Rule 1: Customer cancellation allowed only in PENDING.
+- Workspace A: Enforced. `cancelOrderInternal` checks `if ("PENDING".equals(currentStatus))` and
+  validates customer ownership via `validateBookingOwnership`. If customer attempts to cancel
+  when order is PREPARING, it throws `CUSTOMER_CANNOT_CANCEL_PREPARING_ORDER`.
+- Workspace B: VIOLATED / ABSENT. Workspace B has no cancellation endpoint or service method.
+  Customers cannot cancel their orders at all.
+
+Rule 2: Authorized staff may cancel from PREPARING onward and must provide a reason.
+- Workspace A: Enforced. If order is PREPARING or READY, staff cancellation is permitted but
+  explicitly validates `if (cancellationReason == null || cancellationReason.trim().isEmpty())`
+  and throws `CANCELLATION_REASON_REQUIRED`.
+- Workspace B: ABSENT. No cancellation method exists.
+
+Rule 3: A-la-carte charges posted to M5 Folio when order transitions to DELIVERED.
+- Workspace A: Enforced. `postFolioChargeIfEligible` is invoked inside `updateOrderStatus`
+  strictly when `targetStatus` is `DELIVERED`.
+- Workspace B: CRITICALLY VIOLATED (P0-1). `MealOrderServiceImpl.placeAlaCarteOrder` publishes
+  `AlaCarteOrderPlacedEvent`, causing `M4FolioChargeEventListener` to post Folio charges
+  immediately when the order is created in PENDING state!
+
+Rule 4: Cancelled orders are not charged.
+- Workspace A: Enforced. Since charges are posted only at DELIVERED, cancelled orders never incur charges.
+- Workspace B: VIOLATED. Because orders are charged at PENDING, any rejected/cancelled order has
+  already been charged to the customer's Folio.
+
+Rule 5: Idempotency & duplicate Folio charge prevention.
+- Workspace A: Enforced. `folioItemRepository.existsBySourceMealOrderId(orderId)` prevents duplicate
+  postings on retries or repeated status transitions. Furthermore, if `postFolioCharge` fails,
+  the transaction rolls back atomically.
+- Workspace B: Weak / Broken. Event listener catches `Exception` and logs a warning with `log.warn`,
+  swallowing the failure. If Folio posting fails, order creation still succeeds without charge,
+  causing silent unbilled food consumption.
+
+Rule 6: Server-calculated prices are authoritative.
+- Workspace A: Enforced. `postFolioChargeIfEligible` calculates totals from server-side `MenuItem.price`.
+  Client-submitted totals are ignored.
+- Workspace B: Enforced on backend (`orderItem.setUnitPrice(menuItem.getPrice())`).
+
+Rule 7: Inventory uses availability_status; no ingredient-batch deduction.
+- Workspace A: Enforced. Conforms strictly to baseline `availability_status` on `MenuItemEntity`.
+- Workspace B: VIOLATED. Workspace B implemented full ingredient inventory deduction in
+  `InventoryServiceImpl.processConsumptionForOrderItem`, deducting stock from batches using FEFO.
+
+Rule 8: Terminal state immutability.
+- Workspace A: Enforced. DELIVERED orders cannot be cancelled (`ORDER_ALREADY_DELIVERED`).
+- Workspace B: VIOLATED. Line 380 of `MealOrderServiceImpl.java` allows `DELIVERED -> CANCELLED`
+  in `isAllowedTransition`:
+  `case DELIVERED -> target == MealOrderStatus.CANCELLED;`
+
+================================================================================
+5. BACKEND, FRONTEND, DATABASE, SECURITY, AND BILLING FINDINGS
+================================================================================
+
+Backend Architecture:
+- Workspace A adopted a focused, robust integration design matching the exact
+  requirements of Phase 5.8.3.50. It maintains clear separation between Customer
+  operations (`FnbCustomerOrderController`) and Kitchen KDS operations (`FnbKdsController`).
+- Workspace B adopted a monolithic domain structure under `com.heavenstay.hswrms.m4fnb`
+  with fine-grained services (`MenuService`, `InventoryService`, `RetreatPackageFnbService`).
+  While architecturally elegant, its inclusion of ingredient recipes and inventory
+  exceeds the agreed project scope.
+
+Database & Schema Dependencies:
+- Workspace A: 0 schema modifications. Runs directly against baseline `schema.sql`.
+- Workspace B: Depends on migrations `V006` and `V007`. Without applying these DDL
+  scripts to SQL Server, Workspace B cannot boot or query orders. Applying DDL is
+  strictly prohibited during integration phases.
+
+Authorization & Permission Integration:
+- Workspace A: Correctly integrates with HSWRMS Permission Catalog:
+  * `@PreAuthorize("@perm.has('S39','V') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+  * `@PreAuthorize("@perm.has('S39','U') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+  This enables Manager monitoring, Admin master access, and dynamic role delegations.
+- Workspace B: Uses hardcoded `@PreAuthorize("hasAuthority('ROLE_F&B STAFF')")`:
+  * Fails to support permission catalog screen identifiers (S39:V, S39:U).
+  * Explicitly forbids ADMIN and MANAGER from kitchen operations (verified by
+    `FnbRoleAccessTest.java` lines 69-74).
+  * Uses non-standard role string `"ROLE_F&B STAFF"` containing special characters.
+
+Frontend & UI Contract:
+- Workspace A: Features real 15-second KDS short-polling (`useKdsPolling.ts`) with
+  tab visibility detection (`document.visibilityState`), unmount cleanup, manual
+  refresh button, and an interactive cancellation modal requiring staff reason.
+- Workspace B: Lacks polling. The chef must manually reload the browser to see new
+  orders. Shows physical ingredient stock deduction in the UI that conflicts with
+  resort operational rules.
+
+================================================================================
+6. CANCELLATION REASON PERSISTENCE ASSESSMENT
+================================================================================
+
+Verification against both workspaces and SQL schema:
+1. Schema verification:
+   Neither the baseline `dbo.MealOrder` table nor Workspace B's migration `V006`
+   contains a `cancellation_reason` column.
+2. Workspace A behavior:
+   In `MealOrderServiceImpl.java`, `cancellationReason` is rigorously validated:
+   - For staff cancellations from PREPARING or READY, a non-empty reason is mandatory
+     (`CANCELLATION_REASON_REQUIRED`).
+   - The reason is logged using SLF4J:
+     `log.warn("Order ID {} in {} state cancelled by staff {}. Reason: {}", orderId, status, userId, cancellationReason);`
+   - DISCOVERY: The reason is NOT currently written to `dbo.AuditLog` via `AuditLogService`.
+     Therefore, the cancellation reason is not durable in the database and cannot be
+     retrieved via SQL query or REST API after application restarts.
+3. Workspace B behavior:
+   Workspace B has no cancellation implementation whatsoever. No cancellation reason
+   is validated, logged, or persisted.
+4. Recommendation for Next Phase:
+   In the upcoming integration phase, enhance `MealOrderServiceImpl.cancelOrderInternal`
+   in Workspace A by injecting `AuditLogService` and recording an audit record:
+   `auditLogService.logAction("CANCEL_MEAL_ORDER", "MealOrder", orderId, currentUserId, "Reason: " + cancellationReason);`
+   This achieves durable, retrievable persistence without requiring database DDL changes.
+
+================================================================================
+7. VERIFICATION EVIDENCE AND GAPS
+================================================================================
+
+Workspace A Evidence:
+- Retained Surefire Reports in `target/surefire-reports`:
+  * `MealOrderRepositoryTest`: 4/4 passed (0 failures, 0 errors)
+  * `MealOrderServiceTest`: 12/12 passed (0 failures, 0 errors)
+  * `FnbControllersSecurityTest`: 9/9 passed (0 failures, 0 errors)
+  * `FnbBillingIntegrationTest`: 6/6 passed (0 failures, 0 errors)
+  Total: 31/31 backend tests verified passed.
+- Frontend Tests:
+  * `src/features/m4-fnb/utils/fnbSafety.test.ts`: 8/8 passed.
+- Build Verification:
+  * `npm run build` exits with code 0 (verified in Phase 5.8.3.50).
+
+Workspace B Evidence:
+- Retained Surefire Reports in `target/surefire-reports`:
+  * `FnbRoleAccessTest`: 8/8 passed
+  * `MealOrderServiceTest`: 8/8 passed
+  * `InventoryServiceTest`: 8/8 passed
+  * `MenuServiceTest`: 2/2 passed
+  * `RetreatPackageFnbServiceTest`: 7/7 passed
+  Total: 33/33 backend tests ran in Workspace B.
+- Analysis of Workspace B Tests:
+  * Tests run against H2 in-memory DB with custom schema creation.
+  * Tests assert premature event publication on order creation.
+  * Tests assert ingredient batch deduction that violates project decisions.
+  * Tests assert that `ROLE_ADMIN` and `ROLE_MANAGER` are blocked (403).
+  * 0 frontend tests exist in Workspace B.
+
+================================================================================
+8. FULL DECISION MATRIX
+================================================================================
+
+| Area / File | Workspace A Behavior | Workspace B Behavior | Evidence | Risk / Impact | Recommendation | Approval Required |
+|---|---|---|---|---|---|---|
+| M5 Billing Settlement | Posts Folio charge synchronously at DELIVERED. Duplicate prevention & rollback. | Posts Folio charge via event at PENDING. Swallows errors. | `MealOrderServiceImpl.java` vs `M4FolioChargeEventListener.java` | P0: Premature billing of unfulfilled food; silent unbilled consumption on error. | KEEP_A | None (Approved in P50) |
+| Database Schema & DDL | Zero schema drift. Uses baseline `schema.sql`. | Adds V006, V007 migrations; alters MealOrder/Item; adds Ingredient tables. | `V006`, `V007`, `MealOrderItem.java` | P0: Database crash on baseline schema (`SQLException: Invalid column`). | KEEP_A | Architecture Board |
+| Order State Machine & Cancel | Full lifecycle; customer cancel in PENDING; staff cancel with reason in PREPARING/READY. Terminal state protected. | No cancellation methods. Allows DELIVERED -> CANCELLED transition. | `MealOrderServiceImpl.java` lines 334-375 vs lines 375-385 in B | P1: Inability to cancel orders; violation of terminal state immutability. | KEEP_A | None |
+| Inventory & Stock | Uses `availability_status` on MenuItemEntity. No ingredient batch deduction. | Implements complex FEFO ingredient batch deduction. | `InventoryServiceImpl.java` | P1: Scope creep; violates explicit project constraint. | KEEP_A | None |
+| Authorization & RBAC | `@perm.has('S39','V')` or `hasAnyRole('FNB_STAFF','MANAGER','ADMIN')`. Integrates Permission Catalog. | Hardcodes `hasAuthority('ROLE_F&B STAFF')`. Rejects Admin/Manager with 403. | `FnbKdsController.java` vs `MealOrderController.java` & `FnbRoleAccessTest.java` | P1: Bypasses Permission Catalog; breaks manager monitoring & role delegation. | KEEP_A | Security Lead |
+| KDS Frontend Polling | 15s short-polling (`useKdsPolling.ts`), tab visibility handling, unmount cleanup. | No polling hook. Manual reload only. | `useKdsPolling.ts` vs `hooks/.gitkeep` | P2: Stale kitchen display; missed guest meal orders. | KEEP_A | None |
+| Cancellation Reason Persistence | Validated at service layer, logged to SLF4J. Not written to `dbo.AuditLog`. | Not implemented. | `MealOrderServiceImpl.java` line 369 | P2: Lack of durable retrieval for cancelled orders. | MERGE_MANUALLY (Wire AuditLogService in A) | Team Lead |
+| M1/M2 Data Minimization Ports | Directly uses `HealthProfile` and `RetreatBooking` entities with projection checks. | Clean interfaces `DietaryProfilePort` and `BookingContextPort`. | `DietaryProfilePort.java`, `BookingContextPort.java` | P3: Architectural elegance; prevents direct foreign entity coupling. | ADOPT_B (Reference in future refactoring) | None |
+| Vietnamese Menu Names & Recipes | Baseline English item names. | Clean Vietnamese UTF-8 Unicode dish names in `V007`. | `V007__m4_fnb_ingredient_inventory_and_recipes.sql` | P3: Greatly improved localization & luxury resort user experience. | ADOPT_B (Adopt seed data when master seed is updated) | Product Owner |
+| Retreat Package F&B Plans | Basic meal entitlement mapping. | Comprehensive catalog of 8 Retreat Package F&B Plans. | `RetreatPackageFnbServiceImpl.java` | P3: Domain richness for customer meal package validation. | ADOPT_B (Selective adoption in future phase) | Product Owner |
+| Frontend Unit Tests | 8 safety tests in `fnbSafety.test.ts`. | 0 tests for M4 in frontend. | `fnbSafety.test.ts` | P2: Regression risk during UI updates. | KEEP_A | None |
+
+================================================================================
+9. PRIORITIZED BLOCKERS AND RISKS
+================================================================================
+
+P0 — Stop-Ship Blockers:
+1. P0-1: Premature Folio Charge on Order Placement in Workspace B.
+   - Cause: `AlaCarteOrderPlacedEvent` emitted in `placeAlaCarteOrder` while status is `PENDING`.
+   - Consequence: Guests are billed for orders before kitchen preparation begins; cancellations
+     result in unauthorized charges; swallowed exceptions leave unbilled consumption.
+   - Decision: Must retain Workspace A's synchronous billing at `DELIVERED`.
+2. P0-2: Database Schema Incompatibility & DDL Dependency in Workspace B.
+   - Cause: Entity classes in Workspace B require columns `unit_price`, `preparation_status`,
+     `special_notes` and tables `dbo.Ingredient`, `dbo.IngredientBatch`, `dbo.MenuItemIngredient`.
+   - Consequence: Running Workspace B code on the production/test database immediately throws
+     `SQLException` column not found, crashing the backend.
+   - Decision: Must retain Workspace A's zero-migration baseline alignment.
+
+P1 — Must Resolve Before Merging:
+1. P1-1: Complete Lack of Order Cancellation & State Machine Flaws in Workspace B.
+   - Cause: Teammate omitted cancellation logic and allowed `DELIVERED -> CANCELLED`.
+   - Decision: Retain Workspace A's robust state machine and cancellation guards.
+2. P1-2: Scope Creep via Ingredient Inventory Deduction in Workspace B.
+   - Cause: Teammate implemented full batch inventory deduction contrary to business decisions.
+   - Decision: Retain Workspace A's MenuItem `availability_status` approach.
+3. P1-3: Broken Authorization & Bypass of HSWRMS Permission Catalog in Workspace B.
+   - Cause: Hardcoded `ROLE_F&B STAFF` role string and exclusion of Admin/Manager.
+   - Decision: Retain Workspace A's `@perm.has('S39', 'V')` and multi-role access.
+
+P2 — Resolve Before Integration Verification:
+1. P2-1: Lack of KDS Polling Hook in Workspace B.
+   - Decision: Retain Workspace A's `useKdsPolling.ts`.
+2. P2-2: Cancellation Reason Persistence Gap in Workspace A.
+   - Problem: Cancellation reason is validated and logged to console, but not saved in `dbo.AuditLog`.
+   - Remediation: Inject `AuditLogService` into `MealOrderServiceImpl` to record an audit entry.
+3. P2-3: Test Coverage Disparity.
+   - Decision: Retain Workspace A's 31 backend tests and 8 frontend safety tests.
+
+P3 — Optional Improvements (Adopt Selectively Later):
+1. P3-1: Vietnamese UTF-8 Menu Items from Workspace B's `V007`.
+2. P3-2: 8 Retreat Package F&B Plans from `RetreatPackageFnbService.java`.
+3. P3-3: Clean Architecture Boundary Ports (`DietaryProfilePort`, `BookingContextPort`).
+
+================================================================================
+10. PROPOSED INTEGRATION SEQUENCE (STAGED & CONTROLLED)
+================================================================================
+
+Step 1: Baseline Preservation (Zero-Risk)
+- Maintain Workspace A as the working master branch.
+- Do NOT overwrite any files in Workspace A with Workspace B files wholesale.
+
+Step 2: Cancellation Reason Durable Persistence (P2 Remediation)
+- In Workspace A's `MealOrderServiceImpl.java`:
+  Inject `AuditLogService` (already available in M6).
+- When a staff member cancels an order with a reason, call `auditLogService.logAction(...)`
+  to durably store the reason in `dbo.AuditLog` within the transaction.
+
+Step 3: Selective Adoption of Domain Enhancements (Non-Breaking)
+- Extract the 8 Retreat Package F&B Plan definitions from Workspace B's
+  `RetreatPackageFnbServiceImpl.java` and place them into a standalone helper/service
+  in Workspace A, enabling customer package plan queries.
+- Extract the clean Vietnamese UTF-8 dish titles from Workspace B's `V007` to enrich
+  the seed data when database seed scripts are officially updated.
+
+Step 4: Boundary Port Refactoring (Optional Post-Integration)
+- Consider adopting `DietaryProfilePort` and `BookingContextPort` as formal package-private
+  or public interfaces in M4 to further decouple M4 from M1/M2 repository internals.
+
+Step 5: Regression & Verification Testing
+- Re-run the 31 backend integration tests in Workspace A.
+- Re-run the 8 frontend safety tests.
+- Execute full frontend build (`npm run build`).
+
+================================================================================
+11. EXACT FILES TO BE CONSIDERED IN THE NEXT PHASE
+================================================================================
+
+Files to MODIFY in Workspace A during next implementation phase:
+1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java`
+   - Inject `AuditLogService` to durably persist cancellation reason in `dbo.AuditLog`.
+2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceTest.java`
+   - Add test assertion verifying that `auditLogService.logAction` is invoked upon staff cancellation.
+
+Files from Workspace B to REFERENCE / BORROW selectively (without modifying database schema):
+1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/RetreatPackageFnbServiceImpl.java`
+   - Reference for Retreat Package F&B plan definitions.
+2. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/DietaryProfilePort.java`
+   - Reference for M1 allergy data minimization contract.
+3. `05_Development/database/migrations/V007__m4_fnb_ingredient_inventory_and_recipes.sql`
+   - Reference for clean Vietnamese UTF-8 dish names.
+
+Files in Workspace B to STRICTLY REJECT:
+1. `M4FolioChargeEventListener.java` & `AlaCarteOrderPlacedEvent.java` (Premature billing)
+2. `InventoryService.java` & `InventoryServiceImpl.java` (Prohibited ingredient deduction)
+3. `V006__m4_meal_order_fields.sql` & `V007__m4_fnb_ingredient_inventory_and_recipes.sql` (Unapproved DDL)
+4. `MealOrderController.java` & `FnbRoleAccessTest.java` (Hardcoded `ROLE_F&B STAFF`, bypassing Permission Catalog)
+
+================================================================================
+12. EXPLICIT CONFIRMATION OF ZERO MUTATIONS
+================================================================================
+1. Application Code: Zero lines of application code in Workspace A or Workspace B
+   were edited, created, deleted, renamed, copied, or overwritten.
+2. Git Metadata: Zero Git commands modifying repository state (`git add`, `git commit`,
+   `git merge`, `git checkout`, `git reset`, `git clean`, `git stash`) were executed.
+3. Database: Zero SQL DDL, DML, migration scripts, or connections to `HSWRMS` or
+   `HSWRMS_TEST` were executed.
+4. Report Output: Only this single audit report file has been written to
+   `06_Reports/PHASE_5.8.3.51_M4_CROSS_WORKSPACE_AUDIT.txt` in Workspace A.
+================================================================================
+END OF REPORT
+================================================================================

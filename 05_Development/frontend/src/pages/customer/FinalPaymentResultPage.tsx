@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +17,8 @@ import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
 import { useAuth } from '../../hooks/useAuth';
 import { formatVND } from '../../i18n';
+import { billingApi } from '../../features/m5-billing/api/billingApi';
+import type { PaymentTransaction } from '../../types/folio';
 
 export const FinalPaymentResultPage: React.FC = () => {
   const { t } = useTranslation();
@@ -24,11 +26,24 @@ export const FinalPaymentResultPage: React.FC = () => {
   const navigate = useNavigate();
   const { bookingId } = useParams<{ bookingId?: string }>();
   const { role } = useAuth();
-  const { getTransactionById, latestTransaction, activeFolio } = useFolio();
+  const { latestTransaction, activeFolio } = useFolio();
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
   const txId = searchParams.get('txId');
-  const transaction = txId ? getTransactionById(txId) : latestTransaction;
+  const [serverTransaction, setServerTransaction] = useState<PaymentTransaction | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(Boolean(txId));
+  useEffect(() => {
+    let active = true;
+    if (!txId) { setIsLoadingStatus(false); return; }
+    billingApi.getTransactionStatus(txId).then(tx => {
+      if (!active) return;
+      const status = tx.paymentStatus === 'SUCCESSFUL' ? 'success' : tx.paymentStatus === 'FAILED' ? 'failed' : tx.paymentStatus === 'CANCELLED' ? 'cancelled' : 'pending';
+      setServerTransaction({ id: tx.transactionReference, bookingReference: bookingId || activeFolio.bookingReference, amount: tx.amountPaid, provider: tx.paymentMethod, status, createdAt: tx.transactionDate, gatewayRef: tx.transactionReference, failureReason: tx.paymentStatus === 'FAILED' ? tx.message : undefined });
+      setIsLoadingStatus(false);
+    }).catch(() => { if (active) setIsLoadingStatus(false); });
+    return () => { active = false; };
+  }, [txId, bookingId, activeFolio.bookingReference]);
+  const transaction = txId ? serverTransaction : latestTransaction;
 
   const currentRef = transaction?.bookingReference || bookingId || activeFolio.bookingReference;
 
@@ -45,6 +60,9 @@ export const FinalPaymentResultPage: React.FC = () => {
     : '/customer/checkout/confirmation';
 
   // Rule 23: Direct Route Safety — Safe recovery if accessed without transaction
+  if (isLoadingStatus) {
+    return <div className="hsw-folio-page"><Container size="narrow"><div className="hsw-result-card" role="status">Checking payment status with the server…</div></Container></div>;
+  }
   if (!transaction) {
     return (
       <div className="hsw-folio-page">
@@ -91,6 +109,7 @@ export const FinalPaymentResultPage: React.FC = () => {
   const isSuccess = transaction.status === 'success';
   const isFailed = transaction.status === 'failed';
   const isCancelled = transaction.status === 'cancelled';
+  const isPending = transaction.status === 'pending';
 
   return (
     <div className="hsw-folio-page">
@@ -101,6 +120,7 @@ export const FinalPaymentResultPage: React.FC = () => {
             {isSuccess && <CheckCircle2 size={38} />}
             {isFailed && <XCircle size={38} />}
             {isCancelled && <AlertTriangle size={38} />}
+            {isPending && <HelpCircle size={38} />}
           </div>
 
           {/* Heading */}
@@ -108,6 +128,7 @@ export const FinalPaymentResultPage: React.FC = () => {
             {isSuccess && t('paymentResult.successTitle', 'Payment Transaction Successful')}
             {isFailed && t('paymentResult.failedTitle', 'Payment Transaction Failed')}
             {isCancelled && t('paymentResult.cancelledTitle', 'Payment Transaction Cancelled')}
+            {isPending && t('paymentResult.pendingTitle', 'Payment Transaction Pending / Unconfirmed')}
           </h1>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', maxWidth: '520px', margin: '0 auto var(--space-4)' }}>
@@ -127,6 +148,11 @@ export const FinalPaymentResultPage: React.FC = () => {
               t(
                 'paymentResult.cancelledSubtitle',
                 'The payment process was cancelled before completion. No charges were made to your account.'
+              )}
+            {isPending &&
+              t(
+                'paymentResult.pendingSubtitle',
+                'Transaction outcome could not be verified due to network timeout or gateway delay. Debit status is unconfirmed at this moment. Please do NOT submit another payment immediately to prevent duplicate charges. Check your transaction status on the stay folio or contact the Front Desk.'
               )}
           </p>
 
@@ -150,6 +176,32 @@ export const FinalPaymentResultPage: React.FC = () => {
                 {t(
                   'paymentResult.noticeDescription',
                   'Your financial folio balance is now settled. Please note that completing payment does not automatically check you out of HeavenStay. Please proceed to Resort Checkout to complete key return and departure verification.'
+                )}
+              </p>
+            </div>
+          )}
+
+          {/* NOTICE FOR PENDING: Outcome Unverified */}
+          {isPending && (
+            <div
+              style={{
+                backgroundColor: 'rgba(217, 119, 6, 0.08)',
+                border: '1.5px solid rgba(217, 119, 6, 0.3)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-4) var(--space-5)',
+                margin: 'var(--space-5) 0',
+                textAlign: 'left',
+              }}
+              id="pending-verification-notice"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: 700, fontSize: 'var(--text-sm)', marginBottom: '4px' }}>
+                <HelpCircle size={16} />
+                <span>{t('paymentResult.pendingNoticeTitle', 'Transaction Outcome Unverified · Do Not Retry Immediately')}</span>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                {t(
+                  'paymentResult.pendingNoticeDescription',
+                  'The transaction status has not been confirmed by the backend or payment gateway due to network interruption or timeout. The debit status cannot be determined at this moment. Please do NOT submit another payment immediately to prevent duplicate charges. Review your transaction status on the stay folio or contact the Front Desk for verification.'
                 )}
               </p>
             </div>
@@ -186,9 +238,13 @@ export const FinalPaymentResultPage: React.FC = () => {
 
             <div>
               <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                {t('paymentResult.settledAmount', 'Settled Amount')}
+                {isSuccess
+                  ? t('paymentResult.settledAmount', 'Settled Amount')
+                  : isPending
+                  ? t('paymentResult.unverifiedAmount', 'Transaction Amount (Unverified)')
+                  : t('paymentResult.transactionAmount', 'Transaction Amount')}
               </div>
-              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: isSuccess ? 'var(--accent-forest)' : 'var(--text-primary)' }}>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: isSuccess ? 'var(--accent-forest)' : isPending ? '#b45309' : 'var(--text-primary)' }}>
                 {formatVND(transaction.amount)}
               </div>
             </div>
@@ -269,6 +325,21 @@ export const FinalPaymentResultPage: React.FC = () => {
                   id="btn-cancel-return-folio"
                 >
                   <span>{t('paymentResult.returnFolio', 'Return to Folio')}</span>
+                </button>
+              </>
+            )}
+
+            {isPending && (
+              <>
+                <button
+                  type="button"
+                  className="hsw-btn hsw-btn-retreat-primary"
+                  onClick={() => navigate(folioRoute)}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  id="btn-pending-view-folio"
+                >
+                  <Receipt size={16} />
+                  <span>{t('paymentResult.checkFolioStatus', 'Review Stay Folio Balance')}</span>
                 </button>
               </>
             )}

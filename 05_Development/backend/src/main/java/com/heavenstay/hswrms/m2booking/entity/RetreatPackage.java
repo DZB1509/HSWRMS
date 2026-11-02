@@ -9,18 +9,21 @@ import java.util.Set;
 @Table(name = "RetreatPackage", schema = "dbo")
 public class RetreatPackage {
 
+    public static final String ACTIVE = "ACTIVE";
+    public static final String INACTIVE = "INACTIVE";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "retreat_package_id")
     private Integer retreatPackageId;
 
-    @Column(name = "package_code", length = 50)
+    @Column(name = "package_code", nullable = false, length = 50, unique = true)
     private String packageCode;
 
-    @Column(name = "package_name", nullable = false, unique = true, length = 150)
+    @Column(name = "package_name", nullable = false, length = 150)
     private String packageName;
 
-    @Column(name = "wellness_goal", length = 250)
+    @Column(name = "wellness_goal", length = 200)
     private String wellnessGoal;
 
     @Column(name = "duration_nights", nullable = false)
@@ -33,22 +36,22 @@ public class RetreatPackage {
     private BigDecimal basePrice;
 
     @Column(name = "base_price_unit", nullable = false, length = 50)
-    private String basePriceUnit = "VND/khách/gói";
+    private String basePriceUnit = "VND / khách / trọn gói";
 
-    @Column(name = "included_treatments", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "included_treatments", length = 500)
     private String includedTreatments;
 
-    @Column(name = "dietary_plan", length = 1000)
+    @Column(name = "dietary_plan", length = 200)
     private String dietaryPlan;
 
-    @Column(name = "extra_charge_policy", length = 1000)
+    @Column(name = "extra_charge_policy", length = 500)
     private String extraChargePolicy;
 
-    @Column(name = "target_guest", length = 500)
+    @Column(name = "target_guest", length = 200)
     private String targetGuest;
 
     @Column(name = "package_status", nullable = false, length = 20)
-    private String packageStatus = "ACTIVE";
+    private String packageStatus = ACTIVE;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -60,6 +63,14 @@ public class RetreatPackage {
     private Set<VillaCategory> eligibleVillaCategories = new HashSet<>();
 
     public RetreatPackage() {
+    }
+
+    public RetreatPackage(String packageName, String wellnessGoal, int durationNights, BigDecimal basePrice, String packageStatus) {
+        this.packageName = packageName;
+        this.wellnessGoal = wellnessGoal;
+        this.durationNights = durationNights;
+        this.basePrice = basePrice;
+        this.packageStatus = packageStatus != null ? packageStatus : ACTIVE;
     }
 
     public Integer getRetreatPackageId() {

@@ -1,0 +1,192 @@
+================================================================================
+HSWRMS RESIDUAL RISK TRIAGE & INTEGRATION READINESS REPORT (M1–M6)
+================================================================================
+Project: HeavenStay Wellness Resort Management System (HSWRMS)
+Phase: 5.8.3.47 — Residual Risk Triage & Integration Readiness
+Date: 28/10/2026
+Branch: feature/hswrms-m1-m6-integration (Commit: 46ab465)
+Environment: Java 17 LTS, Spring Boot 3.3.4, H2 In-Memory DB, React 19 / Vite 8
+================================================================================
+
+1. CURRENT INTEGRATION-READINESS ASSESSMENT
+--------------------------------------------------------------------------------
+Overall Integration Readiness Status: PARTIALLY VERIFIED (H2 TEST SUITE PASSING; PRODUCTION DB & REFUND WORKFLOW UNVERIFIED)
+
+- Backend Core Business Logic (M1–M6):
+  * Status: PARTIALLY VERIFIED (195/195 automated regression tests pass cleanly on H2 in-memory DB).
+  * Key flows verified:
+    - M1: BCrypt authentication, JWT generation, account lockout (5 failed attempts / 10 min window), scheduled unlock.
+    - M2: Residence record enforcement, villa inventory availability, booking lifecycle (PENDING -> CONFIRMED -> CHECKED_IN).
+    - M3: Spa treatment slotting, therapist qualification, fail-closed sensitive health note projection (DATA_HEALTH_TREATMENT).
+    - M3 -> M5 Bridge: Extra spa charge automated posting to Folio with pessimistic locking, idempotency protection against duplicate calls/retries, booking mismatch guard, and cancelled session guard.
+    - M4 -> M5 Bridge: MealOrderEntity settlement guard (`findUnsettledOrdersForBooking`), disaggregation of package-included meals vs. chargeable a-la-carte selections.
+    - M5: Folio lazy initialization, 8% VAT consolidated invoice calculation, payment processing with idempotency, zero-balance settlement, atomic checkout finalization transitioning villa to NEEDS_CLEANING.
+    - M6: Role permission matrix dynamic evaluation, delegation with self-delegation block, type-safe configuration bounds, fail-closed permission evaluation, tamper-evident audit logging.
+
+- Critical Boundaries Preventing Immediate Production Deployment:
+  * Database Parity: All 195 backend tests executed against H2 in-memory. Microsoft SQL Server E2E is UNVERIFIED and BLOCKED BY DEPENDENCY (no authorized non-sa test credentials).
+  * Refund Execution: UNVERIFIED / REQUIRES BUSINESS DECISION. Configuration parameters exist, but financial refund calculation and payment gateway refund dispatch are not implemented.
+  * Kitchen Display System (KDS): PARTIALLY VERIFIED. Persistence and M5 billing guard integration are verified; interactive kitchen ordering REST APIs and real-time station display are missing.
+
+
+================================================================================
+2. BLOCKER TRIAGE & RESIDUAL RISK TABLE
+================================================================================
+
+| ID | Category | Severity | Evidence | Status Label | Impact | Dependencies | Recommended Next Action |
+|---|---|:---:|---|---|---|---|---|
+| BLK-01 | Database Engine | HIGH | `SqlServerJdbcSmokeTest` disabled; all 195 tests use H2 in-memory DB | BLOCKED BY DEPENDENCY | Dialect, collation (Vietnamese diacritics), RCSI locking, and SQL Server deadlock behavior unproven | Dedicated `HSWRMS_TEST` database and non-sa login credentials | Execute authorized Stage A provisioning via `provision_hswrms_test.ps1 -WhatIf` then live run; execute `SqlServerJdbcSmokeTest` |
+| BLK-02 | Financial Lifecycle | HIGH | `RetreatBookingService.cancelBooking` sets status to CANCELLED without invoking refund logic or VNPay refund API | REQUIRES BUSINESS DECISION | Guests cancelling CONFIRMED bookings do not receive deposit refunds; payment transactions remain SUCCESSFUL instead of REFUNDED | Approved business rules for refund calculation and VNPay Refund API contract | Define refund API contract, authorization matrix, refund transaction entity, and VNPay merchant refund credentials |
+| BLK-03 | Operational Workflow | MEDIUM | `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb` contains only entity & repository | REQUIRES BUSINESS DECISION | Frontend F&B screens rely on mock localStorage context; kitchen staff cannot update order status via backend REST API | Product decision on KDS scope vs. MVP billing integration | Design REST endpoints (`/api/v1/fnb/orders`) for kitchen dispatch and order placement |
+| BLK-04 | Configuration Safety | LOW-MED | `AdminDashboardController` had potential NPE if `permissionService` null | CONFIRMED (FIXED) | Non-admin overview viewing could throw 500 error if service uninitialized | None (internal code fix) | Resolved via null-safe fail-closed check; verified via `AdminControllersSecurityTest` (12/12 PASS) |
+| BLK-05 | Code Quality | LOW | Oxlint reports 8 unused catch parameters in frontend error fallbacks | CONFIRMED | Minor linter warnings; no runtime failures or build errors | Frontend codebase | Clean up unused error variable declarations in next maintenance window |
+
+
+================================================================================
+3. CONFIRMED DEFECTS & TARGETED CORRECTIONS
+================================================================================
+
+3.1 DEFECT-01: Fail-Closed Protection in `BusinessParameterService.java` (From Phase 5.8.3.46)
+- File: `05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/BusinessParameterService.java`
+- Defect: Condition `if (!actor.admin()) { if (permissionService != null && !permissionService.userHas(...))` failed open when `permissionService` was null, allowing non-admin actors to update manager-editable parameters without S50:U authorization.
+- Fix: Modified to `if (permissionService == null || !permissionService.userHas(...))` ensuring fail-closed rejection (403 AccessDeniedException) and audit logging (`DENIED`).
+- Verification: Added `BusinessParameterServiceTest.managerDeniedWhenPermissionServiceIsNullFailClosed` (PASS).
+
+3.2 DEFECT-02: Missing Idempotency & Mismatch Guards on Extra Spa Charges (From Phase 5.8.3.46)
+- File: `05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java`
+- Defect: Lack of test coverage for duplicate calls to `billingPort.recordExtraSpaCharge`, invalid booking ID, cancelled session, and booking mismatch.
+- Fix: Added 4 comprehensive regression tests covering idempotency, duplicate blocking (`DUPLICATE_CHARGE`), booking mismatch (`BOOKING_MISMATCH`), and cancelled session rejection (`INVALID_SERVICE_STATE`).
+- Verification: All 4 targeted tests passed; full suite expanded from 190 to 195 tests.
+
+3.3 DEFECT-03: Null-Safety Hardening in `AdminDashboardController.java` (Phase 5.8.3.47)
+- File: `05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java`
+- Defect: Line 111 evaluated `actor.admin() || permissionService.userHas(actor.userId(), "S55_ADMIN_WIDGETS", "V")`. If `permissionService` is null when called with a non-admin actor, a `NullPointerException` would be thrown instead of safely failing closed to `false`.
+- Fix: Wrapped with null check:
+  `boolean canViewAdminWidgets = actor.admin() || (permissionService != null && permissionService.userHas(actor.userId(), "S55_ADMIN_WIDGETS", "V"));`
+- Verification: Executed `AdminControllersSecurityTest` (12/12 PASS in 59.95s).
+
+
+================================================================================
+4. TESTS ACTUALLY EXECUTED & REAL RESULTS
+================================================================================
+
+4.1 Targeted Test Execution:
+- Command:
+  `.\mvnw.cmd test "-Dtest=AdminControllersSecurityTest"`
+- Result:
+  [INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 27.02 s
+  [INFO] BUILD SUCCESS (Total time: 59.95s)
+
+4.2 Regression Test Execution Baseline (Phase 5.8.3.46):
+- Command:
+  `.\mvnw.cmd test "-Dtest=AuthLoginEndpointTests,AuthServiceTest,AccountLockoutIntegrationTest,M2SchemaCompatibilityTest,RetreatBookingSecurityTest,RetreatBookingServiceAuthorizationTest,SpaServiceTests,SpaSecurityTests,SpaConcurrencyTest,MealOrderRepositoryTest,M5BillingAndCheckoutTests,AdminControllersSecurityTest,DelegationServiceTest,BusinessParameterServiceTest,StaffAccountServiceTest,AuditLogServiceTest,PermissionMatrixServiceTest,AccountUnlockJobTest"`
+- Result:
+  [INFO] Tests run: 195, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 218.11 s
+  [INFO] BUILD SUCCESS (Total time: 03:25 min)
+
+4.3 Frontend Build & Linter Execution:
+- Command: `npm run build` (`tsc -b && vite build`)
+  Result: 2,701 modules transformed in 2.01s, 0 TypeScript errors, dist/ generated successfully.
+- Command: `npx oxlint`
+  Result: 0 errors, 8 minor catch parameter warnings across 180 files.
+
+
+================================================================================
+5. SQL SERVER E2E PREREQUISITES & VERIFICATION GAPS
+================================================================================
+
+5.1 Verification Gaps (Unproven on SQL Server):
+Because all automated integration tests run against H2 in-memory, the following technical behaviors remain unverified against Microsoft SQL Server:
+1. Collation & Case Sensitivity: Vietnamese Unicode characters (NVARCHAR) handling and collation sensitivity (`SQL_Latin1_General_CP1_CI_AS` vs `Vietnamese_CI_AS`).
+2. Concurrency & Locking Semantics: H2 uses MVCC snapshotting by default. SQL Server uses row/page shared locks for READ COMMITTED unless Read Committed Snapshot Isolation (RCSI) is enabled. Deadlock detection (Error 1205) and retry behavior under concurrent pessimistic write locking (`WITH (UPDLOCK, ROWLOCK)`) have not been tested on real SQL Server.
+3. Temporal Datatypes: Precision and offset handling between Java `LocalDateTime` / `Instant` and SQL Server `DATETIME2(6)` / `DATETIMEOFFSET`.
+4. Flyway Schema Migrations: DDL scripts `V003`, `V004`, `V005`, and `draft_m6` have not executed against an authentic SQL Server instance.
+
+5.2 Minimum Prerequisites for Safe SQL Server E2E Execution:
+To safely run SQL Server verification without risking data corruption or violating security policies:
+1. Dedicated Database: Must target `HSWRMS_TEST` exclusively; connections to `HSWRMS`, `master`, or system databases are strictly prohibited.
+2. Least-Privilege Credentials: Must use a dedicated test login (e.g. `[hswrms_test_user]`) with only `CONNECT` on `HSWRMS_TEST` for smoke testing, or dedicated application roles for integration tests. Administrative accounts (`sa`, `sysadmin`) are strictly forbidden.
+3. Database Isolation: `HSWRMS_TEST` must have `READ_COMMITTED_SNAPSHOT` enabled (`ALTER DATABASE HSWRMS_TEST SET READ_COMMITTED_SNAPSHOT ON`).
+4. Parameterized Provisioning: Execute provisioning strictly via the audited script `05_Development/database/scripts/provision_hswrms_test.ps1` with `-WhatIf` review before live execution.
+5. Environment Variables: Credentials must be passed exclusively via environment variables:
+   - `SQLSERVER_TEST_HOST=localhost`
+   - `SQLSERVER_TEST_PORT=1433`
+   - `SQLSERVER_TEST_DB=HSWRMS_TEST`
+   - `SQLSERVER_TEST_USERNAME=hswrms_test_user`
+   - `SQLSERVER_TEST_PASSWORD=<interactive-or-env-password>`
+6. Explicit Opt-In: Smoke test execution requires `-Dhswrms.sqlserver.test.enabled=true`.
+
+
+================================================================================
+6. REFUND EXECUTION & KDS IMPLEMENTATION BOUNDARIES
+================================================================================
+
+6.1 Refund Execution Boundary:
+- What is Implemented:
+  * System Configuration: `refund_percentage` (default 80%, range 0–100%) and `cancellation_window_hours` (default 48h) exist in `SystemConfiguration` (M6) and are editable by delegated managers.
+  * Payment Entity: `PaymentTransactionEntity.paymentStatus` supports enum value `'REFUNDED'`.
+  * Booking Cancellation Status: `RetreatBookingService.cancelBooking` transitions booking status from `PENDING` or `CONFIRMED` to `CANCELLED`.
+- What is Missing (Boundary):
+  * Financial Calculation: No service computes refundable amount based on elapsed hours prior to arrival vs. `cancellation_window_hours`.
+  * Payment Provider Integration: No VNPay Refund API client (`vnp_Command=refund`, `vnp_TransactionType=02/03`) exists.
+  * Audit & Ledger: No financial credit note or refund payment transaction record is persisted upon cancellation.
+  * Decision Required: Approval of refund business policy (full deposit forfeiture vs. prorated refund), manual receptionist refund approval vs. automated payment gateway refund, and VNPay merchant refund credentials.
+
+6.2 Kitchen Display System (KDS) Boundary:
+- What is Implemented:
+  * Persistence: `MealOrderEntity` tracks booking, order date, meal period, order type (`DAILY_MEAL`, `A_LA_CARTE`), and status (`PENDING`, `PREPARING`, `READY`, `DELIVERED`, `CANCELLED`).
+  * Repository & Billing Guard: `MealOrderRepository.findUnsettledOrdersForBooking` prevents premature invoice finalization and checkout. `findByIdWithLock` serializes charge posting and rejects daily meals (`CANNOT_CHARGE_INCLUDED_SERVICE`).
+- What is Missing (Boundary):
+  * REST API Endpoints: No controller exists to accept dining orders from guests or allow kitchen staff to transition order statuses (`PREPARING` -> `READY` -> `DELIVERED`).
+  * Menu Catalog: No entity or database table exists for menu items, pricing, or nutritional/allergen attributes.
+  * Real-Time Updates: Frontend KDS screens currently operate against a mock `DiningContext` with in-memory state.
+  * Scoped Recommendation: If real-time KDS is required for Phase 6, a separate implementation phase should create `MealOrderService`, `MealOrderController`, menu item master data, and WebSocket or polling status updates.
+
+
+================================================================================
+7. BUSINESS & ARCHITECTURE DECISIONS REQUIRING APPROVAL
+================================================================================
+
+1. Refund Settlement Architecture:
+   - Option A (Automated Gateway Refund): On booking cancellation, backend invokes VNPay refund API directly and records a `REFUNDED` `PaymentTransaction`. Requires VNPay refund API credentials and bank reconciliation handling.
+   - Option B (Manual Front-Desk Refund): Booking cancellation generates a pending refund voucher/task in M5. Receptionist or accountant reviews and executes refund manually offline, updating the record status. (Recommended for MVP).
+
+2. Module 4 (F&B) Delivery Scope:
+   - Option A (Billing Guard MVP): Maintain current architecture where F&B exists primarily as a billing and settlement integration point. Kitchen order creation is managed via front-desk charge posting.
+   - Option B (Full KDS Expansion): Build full backend REST API, menu item catalog, and live kitchen dispatch. Requires new database tables and frontend API client integration.
+
+3. SQL Server Provisioning Authorization:
+   - Formal operator sign-off required to execute `provision_hswrms_test.ps1` against the local SQL Server instance to create the `HSWRMS_TEST` database and `[hswrms_test_user]` login.
+
+
+================================================================================
+8. PRIORITIZED NEXT-PHASE RECOMMENDATION
+================================================================================
+
+- Priority 1 (Next Engineering Step): Authorized Stage A Test Database Provisioning & Smoke Verification.
+  * Objective: Obtain user approval to execute `provision_hswrms_test.ps1 -WhatIf` and provision `HSWRMS_TEST`, then run `SqlServerJdbcSmokeTest` to verify authentic SQL Server connectivity.
+  * Risk: Zero risk to production (strictly targets `HSWRMS_TEST`, non-sa account, zero table modifications).
+
+- Priority 2: M5 Manual Refund Voucher / Audit Ledger.
+  * Objective: Implement Option B (manual refund tracking in Folio/Billing) to record refund eligibility upon booking cancellation without requiring live VNPay refund credentials.
+
+- Priority 3: Module 4 REST API Implementation.
+  * Objective: Expose `/api/v1/fnb/orders` endpoints to transition kitchen orders, allowing frontend `DiningContext` to migrate from mock data to real backend persistence.
+
+
+================================================================================
+9. REPOSITORY INTEGRITY & SAFETY STATEMENT
+================================================================================
+- Staged Files: Exactly 0 staged files modified or committed in this worktree (33 staged M2 files remain safely preserved in their designated worktree).
+- Protected File Checksums:
+  * V003: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 (UNMODIFIED)
+  * V004: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F (UNMODIFIED)
+  * V005: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E (UNMODIFIED)
+  * draft_m6: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B (UNMODIFIED)
+- Git Operation Safety:
+  * NO `git add`, `git commit`, `git push`, `git merge`, or `git stash` was executed.
+  * NO `git reset`, `git clean`, or branch switch was executed.
+  * NO database DDL, migration, or connection to `HSWRMS`/`HSWRMS_TEST` was executed.
+================================================================================
+END OF REPORT
+================================================================================

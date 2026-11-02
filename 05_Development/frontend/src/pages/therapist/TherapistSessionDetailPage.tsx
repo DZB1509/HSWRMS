@@ -23,7 +23,6 @@ import {
   XCircle,
   AlertTriangle,
   Shield,
-  Play,
   FileText,
   Sparkles,
   Activity,
@@ -49,7 +48,6 @@ export const TherapistSessionDetailPage: React.FC = () => {
     getSessionById,
     getTreatmentById,
     getRoomById,
-    startSession,
     completeSession,
     markNoShow,
     getTherapistRelevantWellnessInfo,
@@ -66,25 +64,19 @@ export const TherapistSessionDetailPage: React.FC = () => {
   const [actionResult, setActionResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleAction = (action: 'start' | 'complete' | 'no_show') => {
+  const handleAction = async (action: 'complete' | 'no_show') => {
     if (!session) return;
     setIsProcessing(true);
-    setTimeout(() => {
-      let result: { success: boolean; message: string };
-      switch (action) {
-        case 'start':
-          result = startSession(session.id);
-          break;
-        case 'complete':
-          result = completeSession(session.id, therapistNotes || undefined);
-          break;
-        case 'no_show':
-          result = markNoShow(session.id);
-          break;
-      }
+    setActionResult(null);
+
+    try {
+      const result = action === 'complete'
+        ? await completeSession(session.id, therapistNotes || undefined)
+        : await markNoShow(session.id);
       setActionResult(result);
+    } finally {
       setIsProcessing(false);
-    }, 500);
+    }
   };
 
   if (!session) {
@@ -409,40 +401,28 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="therapist-action-buttons">
-              {session.status === 'confirmed' && (
-                <button
-                  className="therapist-btn-primary"
-                  onClick={() => handleAction('start')}
-                  disabled={isProcessing}
-                  id="therapist-start-session"
-                >
-                  <Play size={16} />
-                  <span>{isProcessing ? t('therapist.processing', 'Processing...') : t('therapist.startSession', 'Start Session')}</span>
-                </button>
-              )}
+              {session.status !== 'completed' && session.status !== 'no_show' && (
+                <>
+                  <button
+                    className="therapist-btn-primary"
+                    onClick={() => handleAction('complete')}
+                    disabled={isProcessing}
+                    id="therapist-complete-session"
+                  >
+                    <CheckCircle size={16} />
+                    <span>{isProcessing ? t('therapist.processing', 'Processing...') : t('therapist.markCompleted', 'Mark Completed')}</span>
+                  </button>
 
-              {session.status === 'in_progress' && (
-                <button
-                  className="therapist-btn-primary"
-                  onClick={() => handleAction('complete')}
-                  disabled={isProcessing}
-                  id="therapist-complete-session"
-                >
-                  <CheckCircle size={16} />
-                  <span>{isProcessing ? t('therapist.processing', 'Processing...') : t('therapist.markCompleted', 'Mark Completed')}</span>
-                </button>
-              )}
-
-              {['confirmed', 'in_progress'].includes(session.status) && (
-                <button
-                  className="therapist-btn-destructive"
-                  onClick={() => handleAction('no_show')}
-                  disabled={isProcessing}
-                  id="therapist-mark-noshow"
-                >
-                  <XCircle size={16} />
-                  <span>{t('therapist.markNoShow', 'Mark No-Show')}</span>
-                </button>
+                  <button
+                    className="therapist-btn-destructive"
+                    onClick={() => handleAction('no_show')}
+                    disabled={isProcessing}
+                    id="therapist-mark-noshow"
+                  >
+                    <XCircle size={16} />
+                    <span>{t('therapist.markNoShow', 'Mark No-Show')}</span>
+                  </button>
+                </>
               )}
 
               {session.status === 'completed' && (
@@ -454,6 +434,13 @@ export const TherapistSessionDetailPage: React.FC = () => {
                       {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
+                </div>
+              )}
+
+              {session.status === 'no_show' && (
+                <div className="therapist-completed-badge" style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>
+                  <XCircle size={28} />
+                  <span>{t('therapist.sessionNoShow', 'Recorded as No-Show')}</span>
                 </div>
               )}
             </div>

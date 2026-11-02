@@ -61,7 +61,7 @@ export const OccupancyReportPage: React.FC = () => {
     switch (status) {
       case 'occupied': return 'deposit_paid';
       case 'reserved': return 'included';
-      case 'ready': return 'settled';
+      case 'ready': return 'ready';
       case 'cleaning': return 'pending_settlement';
       case 'maintenance': return 'refunded';
       default: return 'settled';
@@ -303,7 +303,7 @@ export const OccupancyReportPage: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      <span className={`hsw-status-pill ${getStatusPillClass(villa.status)}`}>
+                      <span className={`hsw-status-pill ${getStatusPillClass(villa.status)}`} style={villa.status === 'ready' ? { backgroundColor: '#00FF99', color: '#004d26', border: '1px solid #00e68a', fontWeight: 600 } : undefined}>
                         {getVillaStatusLabel(villa.status)}
                       </span>
                     </td>

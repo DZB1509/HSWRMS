@@ -7,7 +7,15 @@ Strict Compliance: HSWRMS_ISP392_G1_SRS_11.10 (Feature Flags Removed)
 ================================================================================
 */
 
-USE [HSWRMS];
+-- Database-context-neutral guard: never switch databases implicitly; validate active target context.
+DECLARE @CurrentDb sysname = DB_NAME();
+IF @CurrentDb IN (N'master', N'model', N'msdb', N'tempdb') OR @CurrentDb NOT LIKE N'HSWRMS%'
+BEGIN
+    DECLARE @ErrMsg NVARCHAR(400) = N'Refusing to execute migration in unexpected database context ['
+        + ISNULL(@CurrentDb, N'NULL')
+        + N']. Connect explicitly to the target HSWRMS database (e.g., HSWRMS or HSWRMS_TEST).';
+    THROW 50000, @ErrMsg, 1;
+END;
 GO
 
 -- 1. User Account Security Enhancements (Lockout after consecutive failed attempts)
@@ -187,30 +195,17 @@ END
 GO
 
 -- Performance Indices
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_User_AccountStatus_LockedAt')
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_User_AccountStatus_LockedAt
-        ON dbo.[User](account_status, locked_at)
-        WHERE locked_at IS NOT NULL;
-END
+CREATE NONCLUSTERED INDEX IX_User_AccountStatus_LockedAt
+    ON dbo.[User](account_status, locked_at)
+    WHERE locked_at IS NOT NULL;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_RightDelegation_Status_Expiry')
-BEGIN
-    IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.RightDelegation') AND name = 'valid_from')
-        CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
-            ON dbo.RightDelegation(delegation_status, valid_from, valid_until);
-    ELSE IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.RightDelegation') AND name = 'starts_at')
-        CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
-            ON dbo.RightDelegation(status, starts_at, expires_at);
-END
+CREATE NONCLUSTERED INDEX IX_RightDelegation_Status_Expiry
+    ON dbo.RightDelegation(status, starts_at, expires_at);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AuditLog_ScreenModule_CreatedAt')
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_AuditLog_ScreenModule_CreatedAt
-        ON dbo.AuditLog(screen_or_module, created_at DESC);
-END
+CREATE NONCLUSTERED INDEX IX_AuditLog_ScreenModule_CreatedAt
+    ON dbo.AuditLog(screen_or_module, created_at DESC);
 GO
 
 PRINT 'HSWRMS V1.1 Module 6 Schema Enhancements applied successfully.';

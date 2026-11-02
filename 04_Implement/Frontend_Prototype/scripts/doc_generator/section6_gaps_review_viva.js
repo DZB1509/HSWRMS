@@ -271,7 +271,7 @@ export function renderSection6() {
         <td><strong>11</strong></td>
         <td><span class="badge badge-admin">Administrator</span></td>
         <td>Screen #51, 53, 54<br>(Governance & Audit)</td>
-        <td>Switch to Admin; show feature flag toggles, delegated permissions, and sensitive audit log.</td>
+        <td>Switch to Admin;  delegated permissions, and sensitive audit log.</td>
         <td>Demonstrate anti-escalation controls on delegation (Screen 53) and immutable logging of all health record views (Screen 54).</td>
       </tr>
     </tbody>

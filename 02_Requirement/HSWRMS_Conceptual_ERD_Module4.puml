@@ -1,0 +1,173 @@
+' [TRACEABILITY HEADER]
+' Project: HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)
+' Module: Module 4 — Dietary F&B Management (CORE)
+' Requirements Reference: SRS Ver2 (UC16 - UC20) & Project Specification Ver2 (Section 4, Module 4)
+' Database Schema Reference: 05_Development/database/schema.sql (MS SQL Server HSWRMS Database)
+' Business Rules: BR-03 (Data Minimization RBAC), BR-04 (Extra F&B Folio Posting), BR-07 (Batch Availability & Data Minimization), BR-08 (Consolidated Folio Accounting)
+' Legal Compliance: Nghị định 13/2023/NĐ-CP & 356/2025/NĐ-CP (Personal Data Protection & Health Data Minimization)
+' File: HSWRMS_Conceptual_ERD_Module4.puml
+
+@startuml HSWRMS_Conceptual_ERD_Module4
+
+title HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)\nMODULE 4 — DIETARY F&B MANAGEMENT (CONCEPTUAL ERD - SYNCHRONIZED WITH SCHEMA)
+
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam shadowing true
+
+skinparam class {
+    BackgroundColor #F8FAFC
+    BorderColor #475569
+    ArrowColor #334155
+    FontSize 11
+    FontName "Segoe UI", Arial, sans-serif
+}
+
+' Styling for Core Module 4 Entities (Pink/Rose Theme)
+skinparam class<<Module4>> {
+    BackgroundColor #FDF2F8
+    HeaderBackgroundColor #BE185D
+    BorderColor #F43F5E
+    FontColor #FFFFFF
+}
+
+' Styling for Connected Context Entities (Blue Theme)
+skinparam class<<Context>> {
+    BackgroundColor #F0F9FF
+    HeaderBackgroundColor #0284C7
+    BorderColor #38BDF8
+    FontColor #FFFFFF
+}
+
+' ============================================================
+' CORE MODULE 4 ENTITIES (PINK HEADER)
+' ============================================================
+
+entity "MealOrder" as MealOrder <<Module4>> {
+    * **meal_order_id** : INT <<PK, IDENTITY>>
+    --
+    * **retreat_booking_id** : INT <<FK>>
+    * order_date : DATE
+    meal_type : NVARCHAR(50)
+    * order_type : VARCHAR(20) <<DAILY_MEAL | A_LA_CARTE>>
+    * order_status : VARCHAR(20) <<PENDING | PREPARING | READY | DELIVERED | CANCELLED>>
+    * created_at : DATETIME2(0)
+}
+
+entity "MealOrderItem" as MealOrderItem <<Module4>> {
+    * **meal_order_item_id** : INT <<PK, IDENTITY>>
+    --
+    * **meal_order_id** : INT <<FK>>
+    * **menu_item_id** : INT <<FK>>
+    * quantity : INT <<quantity > 0>>
+    .. Unique Constraint ..
+    UQ_MealOrderItem_OrderMenu (meal_order_id, menu_item_id)
+}
+
+entity "MenuItem" as MenuItem <<Module4>> {
+    * **menu_item_id** : INT <<PK, IDENTITY>>
+    --
+    * item_name : NVARCHAR(150) <<UQ>>
+    category : NVARCHAR(100)
+    meal_type : NVARCHAR(50)
+    * price : DECIMAL(18,2) <<price >= 0>>
+    dietary_tags : NVARCHAR(500)
+    allergen_information : NVARCHAR(MAX)
+    * availability_status : VARCHAR(20) <<AVAILABLE | UNAVAILABLE>>
+}
+
+entity "Ingredient" as Ingredient <<Module4>> {
+    * **ingredient_id** : INT <<PK, IDENTITY>>
+    --
+    * ingredient_name : NVARCHAR(150) <<UQ>>
+}
+
+entity "MenuItemIngredient" as MenuItemIngredient <<Module4>> {
+    * **menu_item_id** : INT <<PK, FK>>
+    * **ingredient_id** : INT <<PK, FK>>
+    --
+    required_quantity : DECIMAL(18,3) <<required_quantity > 0>>
+}
+
+entity "IngredientBatch" as IngredientBatch <<Module4>> {
+    * **ingredient_batch_id** : INT <<PK, IDENTITY>>
+    --
+    * **ingredient_id** : INT <<FK>>
+    * received_date : DATE
+    * expiration_date : DATE <<expiration_date >= received_date>>
+    * remaining_quantity : DECIMAL(18,3) <<remaining_quantity >= 0>>
+    * stock_condition : NVARCHAR(50) <<FRESH | GOOD | NEAR_EXPIRY | HOLD | EXPIRED | DISCARDED>>
+}
+
+' ============================================================
+' CONNECTED CONTEXT ENTITIES (BLUE HEADER)
+' ============================================================
+
+entity "HealthProfile" as HealthProfile <<Context>> {
+    * **health_profile_id** : INT <<PK, IDENTITY>>
+    --
+    * customer_profile_id : INT <<FK, UQ>>
+    * ★ allergies : NVARCHAR(MAX) <<EXPOSED TO F&B (BR-FNB-01/02)>>
+    * ★ dietary_requirements : NVARCHAR(MAX) <<EXPOSED TO F&B>>
+    🔒 treatment_safety_notes : NVARCHAR(MAX) <<MASKED / HIDDEN>>
+    * anonymization_status : VARCHAR(20) <<IDENTIFIABLE | ANONYMIZED>>
+    * created_at : DATETIME2(0)
+    * updated_at : DATETIME2(0)
+}
+
+entity "RetreatBooking" as RetreatBooking <<Context>> {
+    * **retreat_booking_id** : INT <<PK, IDENTITY>>
+    --
+    * customer_profile_id : INT <<FK>>
+    * retreat_package_id : INT <<FK>>
+    requested_villa_category_id : INT <<FK>>
+    assigned_villa_id : INT <<FK>>
+    * check_in_date : DATE
+    * check_out_date : DATE
+    * booking_status : VARCHAR(20) <<PENDING | CONFIRMED | CHECKED_IN | CANCELLED | COMPLETED>>
+    * deposit_amount : DECIMAL(18,2)
+    * total_estimated_amount : DECIMAL(18,2)
+}
+
+entity "User" as User <<Context>> {
+    * **user_id** : INT <<PK, IDENTITY>>
+    --
+    * full_name : NVARCHAR(150)
+    * email : NVARCHAR(255) <<UQ>>
+    * account_status : VARCHAR(20)
+    * email_verified : BIT
+}
+
+entity "FolioItem" as FolioItem <<Context>> {
+    * **folio_item_id** : INT <<PK, IDENTITY>>
+    --
+    * folio_id : INT <<FK>>
+    * charge_category : VARCHAR(20) <<PACKAGE | SPA | FNB>>
+    * description : NVARCHAR(500)
+    * amount : DECIMAL(18,2)
+    * charged_at : DATETIME2(0)
+    source_booking_id : INT <<FK, NULL>>
+    source_spa_session_id : INT <<FK, NULL>>
+    * **source_meal_order_id** : INT <<FK, NOT NULL WHEN FNB>>
+}
+
+' ============================================================
+' RELATIONSHIPS & CARDINALITIES
+' ============================================================
+
+RetreatBooking ||--o{ MealOrder : "1 : N (retreat_booking_id)"
+MealOrder ||--|{ MealOrderItem : "1 : N (meal_order_id)"
+MenuItem ||--o{ MealOrderItem : "1 : N (menu_item_id)"
+MenuItem ||--o{ MenuItemIngredient : "1 : N (menu_item_id)"
+Ingredient ||--o{ MenuItemIngredient : "1 : N (ingredient_id)"
+Ingredient ||--o{ IngredientBatch : "1 : N (ingredient_id)"
+
+' Business Logic & Folio Integrations
+MealOrder ||--o| FolioItem : "BR-04/08: source_meal_order_id (FNB Charge)"
+HealthProfile ..> MealOrder : "BR-FNB-01: Allergy-safe filtering"
+IngredientBatch ..> MenuItem : "UC16: FEFO stock recalculates availability"
+
+@enduml

@@ -1,5 +1,7 @@
 # Local Developer Override Profile
-# Run with: --spring.profiles.active=dev
+# 'dev' is the DEFAULT profile (application.yml) — copy this file to
+# application-dev.yml and it is picked up automatically on every run.
+# Opt out via SPRING_PROFILES_ACTIVE (e.g. "prod", or "dev,smtp" for real e-mail).
 
 spring:
   datasource:
@@ -18,3 +20,13 @@ logging:
   level:
     com.heavenstay.hswrms: DEBUG
     org.springframework.security: DEBUG
+
+# To test real SMTP email delivery instead of the dev console-logger adapter:
+# 1. Run Spring Boot with: --spring.profiles.active=dev,smtp
+# 2. Provide SMTP credentials via environment variables:
+#    export MAIL_HOST=smtp.gmail.com
+#    export MAIL_PORT=587
+#    export MAIL_USERNAME=your.email@gmail.com
+#    export MAIL_PASSWORD=your-16-char-app-password
+#    export MAIL_FROM=your.email@gmail.com
+# (Never commit real email passwords or tokens)

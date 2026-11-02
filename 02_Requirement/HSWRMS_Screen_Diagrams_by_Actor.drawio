@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-09-23T09:36:00.000Z" agent="Antigravity Senior BA / UX Architect" version="21.0.0" type="device">
+  <diagram id="page_guest" name="Actor: 🧑 Guest (Customer)">
+    <mxGraphModel dx="2000" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="ACTOR: 🧑 GUEST (CUSTOMER) SCREEN FLOW&#xa;HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="30" width="900" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Guest Nodes -->
+        <mxCell id="SG01" value="&lt;b&gt;[S-G01] Landing / Home Page&lt;/b&gt;&lt;br/&gt;• Overview &amp; Branding&lt;br/&gt;• [Register] [Login]&lt;br/&gt;• [Explore Retreat Packages]" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="140" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG02" value="&lt;b&gt;[S-G02] Register Screen&lt;/b&gt;&lt;br/&gt;• Name, Email, Phone, Password&lt;br/&gt;• [Register] or [SSO Google/FB]&lt;br/&gt;• &lt;b&gt;UC01&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="140" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG03" value="&lt;b&gt;[S-G03] OTP Verification Screen&lt;/b&gt;&lt;br/&gt;• 6-digit OTP code&lt;br/&gt;• 5-min expiration timer&lt;br/&gt;• [Confirm OTP]&lt;br/&gt;• &lt;b&gt;UC01 Email Flow&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="740" y="140" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG04" value="&lt;b&gt;[S-G04] Login Screen&lt;/b&gt;&lt;br/&gt;• Email / Password&lt;br/&gt;• [Login] [SSO Google/FB]&lt;br/&gt;• &lt;b&gt;UC01&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="320" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG05" value="&lt;b&gt;[S-G05] Wellness &amp; Health Profile&lt;/b&gt;&lt;br/&gt;• Dietary &amp; Therapy Preferences&lt;br/&gt;• Physical Limitations &amp; Allergies&lt;br/&gt;• ⚠️ [Consent Checkbox] (unchecked)&lt;br/&gt;• [Delete Data Req] → UC05&lt;br/&gt;• &lt;b&gt;UC02, UC05 · BR-03 (AES-256)&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="320" width="260" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG06" value="&lt;b&gt;[S-G06] Browse Retreat Packages&lt;/b&gt;&lt;br/&gt;• Package Catalog &amp; Filters&lt;br/&gt;• Wellness Goals (Detox/Stress)&lt;br/&gt;• [View Package Details]&lt;br/&gt;• &lt;b&gt;UC06&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="740" y="320" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG07" value="&lt;b&gt;[S-G07] Package Detail &amp; Booking&lt;/b&gt;&lt;br/&gt;• Dates &amp; Villa Selection&lt;br/&gt;• Price &amp; Deposit Breakdown&lt;br/&gt;• [Pay Deposit via VNPay]&lt;br/&gt;• &lt;b&gt;UC07 · BR-04&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="320" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG08" value="&lt;b&gt;[S-G08] VNPay Payment Portal&lt;/b&gt;&lt;br/&gt;• &lt;i&gt;(External Gateway)&lt;/i&gt;&lt;br/&gt;• QR Code / Banking Cards&lt;br/&gt;• Result: Success / Failed&lt;br/&gt;• &lt;b&gt;UC07 External&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#2E1065;fontColor=#F8FAFC;strokeColor=#C084FC;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="320" width="220" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG09" value="&lt;b&gt;[S-G09] Booking Confirmation&lt;/b&gt;&lt;br/&gt;• Confirmed Booking ID&lt;br/&gt;• Status: CONFIRMED_DEPOSIT&lt;br/&gt;• [View Full Itinerary]&lt;br/&gt;• &lt;b&gt;UC07 → UC10&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="320" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG10" value="&lt;b&gt;[S-G10] My Booking &amp; Itinerary&lt;/b&gt;&lt;br/&gt;• Resort Stay Timeline&lt;br/&gt;• Scheduled Spa &amp; Meals&lt;br/&gt;• [Schedule Spa] [Select Meals]&lt;br/&gt;• &lt;b&gt;UC10&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="740" y="550" width="240" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG11" value="&lt;b&gt;[S-G11] Schedule Spa Session&lt;/b&gt;&lt;br/&gt;• Service &amp; Timeslot Selection&lt;br/&gt;• Therapist &amp; Room Lock&lt;br/&gt;• Calendar &amp; Email Sync&lt;br/&gt;• &lt;b&gt;UC11 · BR-01 Atomic Lock&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="740" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG12" value="&lt;b&gt;[S-G12] Daily Meal Selection&lt;/b&gt;&lt;br/&gt;• Meal Date &amp; Filtered Menu&lt;br/&gt;• Allergy Protection Rules&lt;br/&gt;• [Confirm Meal Choice]&lt;br/&gt;• &lt;b&gt;UC16 · BR-03 Allergy Filter&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="740" y="740" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG13" value="&lt;b&gt;[S-G13] Extra A-la-carte Order&lt;/b&gt;&lt;br/&gt;• Additional Dish Menu&lt;br/&gt;• Subtotal &amp; Charge to Folio&lt;br/&gt;• &lt;b&gt;UC19 · BR-04 Folio Post&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="740" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG14" value="&lt;b&gt;[S-G14] Checkout Review &amp; Invoice&lt;/b&gt;&lt;br/&gt;• Itemized Folio &amp; Deposit Credit&lt;br/&gt;• Final Payment Settle&lt;br/&gt;• &lt;b&gt;UC22&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="740" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SG15" value="&lt;b&gt;[S-G15] Submit Review &amp; Rating&lt;/b&gt;&lt;br/&gt;• Star Rating &amp; Feedback&lt;br/&gt;• Post Checkout Only&lt;br/&gt;• &lt;b&gt;UC23&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="740" width="220" height="140" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="edge_0" value="Click [Register]" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG01" target="SG02"/>
+        <mxCell id="edge_1" value="Click [Login]" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG01" target="SG04"/>
+        <mxCell id="edge_2" value="Email OTP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG02" target="SG03"/>
+        <mxCell id="edge_3" value="OTP Validated" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG03" target="SG05"/>
+        <mxCell id="edge_4" value="Login Success" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG04" target="SG05"/>
+        <mxCell id="edge_5" value="Explore Packages" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG05" target="SG06"/>
+        <mxCell id="edge_6" value="Select Package" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG06" target="SG07"/>
+        <mxCell id="edge_7" value="Pay Deposit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG07" target="SG08"/>
+        <mxCell id="edge_8" value="Payment OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG08" target="SG09"/>
+        <mxCell id="edge_9" value="View Itinerary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG09" target="SG10"/>
+        <mxCell id="edge_10" value="Schedule Spa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG10" target="SG11"/>
+        <mxCell id="edge_11" value="Select Meals" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG10" target="SG12"/>
+        <mxCell id="edge_12" value="Order Extra" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG12" target="SG13"/>
+        <mxCell id="edge_13" value="Request Checkout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG10" target="SG14"/>
+        <mxCell id="edge_14" value="After Checkout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38BDF8;strokeWidth=2;fontColor=#0284C7;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SG14" target="SG15"/>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page_receptionist" name="Actor: 👤 Receptionist (Front Desk)">
+    <mxGraphModel dx="2000" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="ACTOR: 👤 RECEPTIONIST (FRONT DESK) SCREEN FLOW&#xa;HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#38BDF8;strokeWidth=2;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="30" width="900" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="SR01" value="&lt;b&gt;[S-R01] Receptionist Dashboard&lt;/b&gt;&lt;br/&gt;• Today's Arrivals &amp; Checkouts&lt;br/&gt;• Villa Status Overview&lt;br/&gt;• [Check-In] [Villa Status] [Checkout]" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="150" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR02" value="&lt;b&gt;[S-R02] Expected Arrivals List&lt;/b&gt;&lt;br/&gt;• Search Guest / Booking ID&lt;br/&gt;• CONFIRMED_DEPOSIT Status&lt;br/&gt;• [Open Check-In Form]&lt;br/&gt;• &lt;b&gt;UC08 Step 1&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="150" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR03" value="&lt;b&gt;[S-R03] Check-In &amp; Residence Form&lt;/b&gt;&lt;br/&gt;• CCCD / Passport Registration&lt;br/&gt;• Nationality &amp; Birth Date&lt;br/&gt;• &lt;b&gt;UC08 · BR-05 (AES-256 / Residence Law 2020)&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="720" y="150" width="280" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR04" value="&lt;b&gt;[S-R04] Villa Assignment Screen&lt;/b&gt;&lt;br/&gt;• Available CLEAN_AVAILABLE Villas&lt;br/&gt;• Assign Villa &amp; Execute Check-In&lt;br/&gt;• &lt;b&gt;UC08 Step 2&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="150" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR05" value="&lt;b&gt;[S-R05] Check-In Confirmation&lt;/b&gt;&lt;br/&gt;• Booking → CHECKED_IN&lt;br/&gt;• Villa → OCCUPIED&lt;br/&gt;• Keycard Active &amp; Audit Log Saved&lt;br/&gt;• &lt;b&gt;UC08 · BR-05&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="150" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR06" value="&lt;b&gt;[S-R06] Villa Status Management&lt;/b&gt;&lt;br/&gt;• Grid: Clean, Occupied, Dirty, Maint&lt;br/&gt;• Update Status &amp; Notes&lt;br/&gt;• &lt;b&gt;UC09 · BR-02&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="360" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR07" value="&lt;b&gt;[S-R07] Manual Extra Spa Booking&lt;/b&gt;&lt;br/&gt;• Front Desk Manual Spa Booking&lt;br/&gt;• BR-01 Scheduler Engine Matching&lt;br/&gt;• &lt;b&gt;UC15 · BR-01, BR-04&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="720" y="360" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR08" value="&lt;b&gt;[S-R08] Guest Folio Review&lt;/b&gt;&lt;br/&gt;• Folio Charges Statement&lt;br/&gt;• Package, Extra Spa, F&amp;B, Deposit&lt;br/&gt;• &lt;b&gt;UC21&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="360" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR09" value="&lt;b&gt;[S-R09] Consolidated Invoice Screen&lt;/b&gt;&lt;br/&gt;• Final Invoice Statement&lt;br/&gt;• ⛔ &lt;b&gt;BR-02 Guard: Block if Unpaid&lt;/b&gt;&lt;br/&gt;• &lt;b&gt;UC21, UC22&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="360" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR10" value="&lt;b&gt;[S-R10] Final Payment — VNPay&lt;/b&gt;&lt;br/&gt;• POS / QR Code Terminal&lt;br/&gt;• &lt;b&gt;UC22 External&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#2E1065;fontColor=#F8FAFC;strokeColor=#C084FC;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="360" width="220" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SR11" value="&lt;b&gt;[S-R11] Checkout Completion&lt;/b&gt;&lt;br/&gt;• CHECKED_OUT status&lt;br/&gt;• Villa → DIRTY_CLEANING&lt;br/&gt;• Print Invoice &amp; Audit Log&lt;br/&gt;• &lt;b&gt;UC22&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#064E3B;fontColor=#F8FAFC;strokeColor=#34D399;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="560" width="260" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_rec_0" value="Check-In" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR01" target="SR02"/>
+        <mxCell id="e_rec_1" value="Select Guest" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR02" target="SR03"/>
+        <mxCell id="e_rec_2" value="Save Residence Data" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR03" target="SR04"/>
+        <mxCell id="e_rec_3" value="Execute Check-In" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR04" target="SR05"/>
+        <mxCell id="e_rec_4" value="Villa Status" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR01" target="SR06"/>
+        <mxCell id="e_rec_5" value="Extra Spa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR01" target="SR07"/>
+        <mxCell id="e_rec_6" value="Checkout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR01" target="SR08"/>
+        <mxCell id="e_rec_7" value="Generate Invoice" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR08" target="SR09"/>
+        <mxCell id="e_rec_8" value="Process Payment (BR-02 OK)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR09" target="SR10"/>
+        <mxCell id="e_rec_9" value="Payment Callback OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34D399;strokeWidth=2;fontColor=#059669;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SR10" target="SR11"/>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page_chef" name="Actor: 👨‍🍳 Chef / F&amp;B Staff">
+    <mxGraphModel dx="1800" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="500" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="ACTOR: 👨‍🍳 CHEF / F&amp;B STAFF SCREEN FLOW (MODULE 4)&#xa;HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#0F172A;fontColor=#F8FAFC;strokeColor=#FBBF24;strokeWidth=2;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="30" width="900" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="SC01" value="&lt;b&gt;[S-C01] F&amp;B Staff Dashboard&lt;/b&gt;&lt;br/&gt;• Daily Meal Orders Count&lt;br/&gt;• Critical Allergy Alerts Count&lt;br/&gt;• &lt;b&gt;Kitchen Hub&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#451A03;fontColor=#F8FAFC;strokeColor=#FBBF24;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="150" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SC02" value="&lt;b&gt;[S-C02] Daily Meal Prep Dashboard&lt;/b&gt;&lt;br/&gt;• Prep Execution Board by Meal&lt;br/&gt;• High-Visibility Allergy Badges&lt;br/&gt;• &lt;b&gt;UC17, UC20 · Data Minimization Active&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#451A03;fontColor=#F8FAFC;strokeColor=#FBBF24;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="150" width="280" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SC03" value="&lt;b&gt;[S-C03] Meal Order Detail (Chef View)&lt;/b&gt;&lt;br/&gt;• Ingredients &amp; Food Allergies&lt;br/&gt;• ❌ &lt;b&gt;HIDDEN: Medical &amp; Physical Profile&lt;/b&gt;&lt;br/&gt;• &lt;b&gt;UC17, UC20 · Sanitized API View&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#451A03;fontColor=#F8FAFC;strokeColor=#FBBF24;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="760" y="150" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="SC04" value="&lt;b&gt;[S-C04] Update Meal Status&lt;/b&gt;&lt;br/&gt;• PREPARING → READY_FOR_DELIVERY&lt;br/&gt;• &lt;b&gt;UC18&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#451A03;fontColor=#F8FAFC;strokeColor=#FBBF24;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="150" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="SC05" value="&lt;b&gt;[S-C05] Status Updated Confirmation&lt;/b&gt;&lt;br/&gt;• MEAL_ORDER_LINE.Status → READY&lt;br/&gt;• Notification Sent to Delivery&lt;br/&gt;• &lt;b&gt;UC18 Complete&lt;/b&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=#451A03;fontColor=#F8FAFC;strokeColor=#FBBF24;strokeWidth=2;rounded=1;shadow=1;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="150" width="260" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_chef_0" value="Open Daily Prep" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FBBF24;strokeWidth=2;fontColor=#D97706;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SC01" target="SC02"/>
+        <mxCell id="e_chef_1" value="View Order Detail" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FBBF24;strokeWidth=2;fontColor=#D97706;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SC02" target="SC03"/>
+        <mxCell id="e_chef_2" value="Mark as Ready" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FBBF24;strokeWidth=2;fontColor=#D97706;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SC03" target="SC04"/>
+        <mxCell id="e_chef_3" value="Confirm Update" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FBBF24;strokeWidth=2;fontColor=#D97706;fontSize=10;fontStyle=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="SC04" target="SC05"/>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

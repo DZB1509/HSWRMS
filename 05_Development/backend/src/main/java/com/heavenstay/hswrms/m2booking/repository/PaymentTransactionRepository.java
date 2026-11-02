@@ -11,17 +11,21 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
+@Repository("m2PaymentTransactionRepository")
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Integer> {
 
     Optional<PaymentTransaction> findByTransactionReference(String transactionReference);
 
-    /** Serializes concurrent IPN deliveries for the same transaction (idempotency). */
+    /**
+     * Serializes concurrent IPN deliveries for the same transaction (idempotency).
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM PaymentTransaction p WHERE p.transactionReference = :ref")
+    @Query("SELECT p FROM M2DepositPaymentTransaction p WHERE p.transactionReference = :ref")
     Optional<PaymentTransaction> findByReferenceForUpdate(@Param("ref") String ref);
 
-    List<PaymentTransaction> findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(Integer bookingId, String paymentType);
+    List<PaymentTransaction> findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(Integer bookingId,
+            String paymentType);
 
-    List<PaymentTransaction> findByRetreatBookingIdInAndPaymentType(java.util.Collection<Integer> bookingIds, String paymentType);
+    List<PaymentTransaction> findByRetreatBookingIdInAndPaymentType(java.util.Collection<Integer> bookingIds,
+            String paymentType);
 }

@@ -5,6 +5,12 @@ spring:
   application:
     name: hswrms
 
+  # Profile selection: application.yml defaults to 'dev' (console OTP delivery
+  # + demo account seed). Production must set SPRING_PROFILES_ACTIVE to a
+  # non-dev profile (add ",smtp" for real e-mail delivery).
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   datasource:
     # Set DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD in your environment
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true
@@ -30,3 +36,19 @@ app:
     expiration-ms: 86400000
   cors:
     allowed-origins: http://localhost:5173,http://localhost:4173
+  # Google + Facebook SSO (M1 FR-M1-05). Set the credentials through environment
+  # variables — never commit them:
+  #   GOOGLE_CLIENT_ID=<OAuth 2.0 Client ID (Web application) from Google Cloud Console>
+  #   GOOGLE_CLIENT_SECRET=<client secret>
+  #   FACEBOOK_CLIENT_ID=<Facebook App ID from Meta Developers Console>
+  #   FACEBOOK_CLIENT_SECRET=<Facebook App Secret>
+  # Authorized redirect URIs registered in each provider console (must match exactly):
+  #   http://localhost:8080/api/v1/auth/sso/callback/google
+  #   http://localhost:8080/api/v1/auth/sso/callback/facebook
+  # When a provider's credentials are unset, the backend still starts and that
+  # provider's button shows a controlled "not configured" message instead of a
+  # broken provider redirect.
+  sso:
+    frontend-base-url: ${SSO_FRONTEND_BASE_URL:http://localhost:5173}
+    login-ticket-ttl-ms: 300000
+    registration-ticket-ttl-ms: 600000

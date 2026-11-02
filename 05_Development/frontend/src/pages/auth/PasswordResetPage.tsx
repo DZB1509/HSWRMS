@@ -7,6 +7,7 @@ import { TextInput } from '../../components/common/TextInput';
 import { PasswordInput } from '../../components/common/PasswordInput';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../hooks/useToast';
+import { forgotPasswordRequest, resetPasswordRequest } from '../../api/auth/authApi';
 
 export const PasswordResetPage: React.FC = () => {
   const { t } = useTranslation();
@@ -21,7 +22,7 @@ export const PasswordResetPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSendCode = (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setError(t('auth.alerts.emailRequired'));
@@ -29,15 +30,20 @@ export const PasswordResetPage: React.FC = () => {
     }
     setError('');
     setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await forgotPasswordRequest({ email: email.trim() });
       setStep(2);
       showToast(t('auth.alerts.codeSentToast'), 'info');
-    }, 600);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('auth.alerts.codeSentToast');
+      setError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSavePassword = (e: React.FormEvent) => {
+  const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp.trim()) {
       setError(t('auth.alerts.otpRequired'));
@@ -54,12 +60,17 @@ export const PasswordResetPage: React.FC = () => {
 
     setError('');
     setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await resetPasswordRequest({ email: email.trim(), otp: otp.trim(), newPassword });
       setStep(3);
       showToast(t('auth.alerts.resetSuccess'), 'success');
-    }, 700);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('auth.alerts.resetSuccess');
+      setError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

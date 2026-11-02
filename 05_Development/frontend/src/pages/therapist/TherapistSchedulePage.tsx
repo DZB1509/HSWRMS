@@ -37,7 +37,7 @@ const timeDiffMinutes = (startStr: string, endStr: string): number => {
 export const TherapistSchedulePage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
-  const { getSessionsByTherapist, getTherapistById, startSession } = useSpa();
+  const { getSessionsByTherapist, getTherapistById } = useSpa();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | null): string => {
@@ -47,13 +47,13 @@ export const TherapistSchedulePage: React.FC = () => {
   };
   const therapist = getTherapistById(CURRENT_THERAPIST_ID);
 
-  const [selectedDate, setSelectedDate] = useState('2026-09-26');
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   // Default to COMPACT AGENDA-FIRST view per Requirement 8
   const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const base = new Date('2026-09-25');
+    const base = new Date();
     for (let i = 0; i < 5; i++) {
       const d = new Date(base);
       d.setDate(d.getDate() + i);
@@ -73,10 +73,6 @@ export const TherapistSchedulePage: React.FC = () => {
     const hour = 8 + i;
     return `${String(hour).padStart(2, '0')}:00`;
   });
-
-  const handleStartSession = (sessionId: string) => {
-    startSession(sessionId);
-  };
 
   const formattedDateTitle = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -98,7 +94,7 @@ export const TherapistSchedulePage: React.FC = () => {
       <div className="therapist-date-nav" role="tablist" aria-label="Select Date">
         {availableDates.map((d) => {
           const dt = new Date(d + 'T00:00:00');
-          const isToday = d === '2026-09-26';
+          const isToday = d === new Date().toISOString().split('T')[0];
           const isActive = selectedDate === d;
           return (
             <button
@@ -269,21 +265,6 @@ export const TherapistSchedulePage: React.FC = () => {
                           <span>{t('therapist.viewDetails', 'View Details')}</span>
                           <ChevronRight size={13} />
                         </button>
-                        {session.status === 'confirmed' && (
-                          <button
-                            type="button"
-                            className="therapist-start-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartSession(session.id);
-                            }}
-                            id={`therapist-start-${session.id}`}
-                            title={t('therapist.startSession', 'Start Session')}
-                          >
-                            <Play size={12} />
-                            <span>{t('therapist.start', 'Start')}</span>
-                          </button>
-                        )}
                       </div>
                     </div>
                   </React.Fragment>
@@ -391,15 +372,12 @@ export const TherapistSchedulePage: React.FC = () => {
                             <button
                               type="button"
                               className="therapist-start-action-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartSession(session.id);
-                              }}
+                              disabled
                               id={`therapist-timeline-start-${session.id}`}
-                              title={t('therapist.startSession', 'Start Session')}
+                              title="Unavailable: the approved session lifecycle does not persist IN_PROGRESS."
                             >
                               <Play size={12} />
-                              <span>{t('therapist.start', 'Start')}</span>
+                              <span>Start unavailable</span>
                             </button>
                           )}
                         </div>

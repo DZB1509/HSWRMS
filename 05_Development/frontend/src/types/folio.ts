@@ -88,7 +88,7 @@ export interface PaymentTransaction {
   id: string;
   bookingReference: string;
   amount: number;
-  provider: 'vnpay_mock';
+  provider: string;
   status: PaymentTransactionStatus;
   createdAt: string;
   completedAt?: string;
@@ -112,6 +112,9 @@ export interface CustomerStayReview {
   customerId: string;
   customerName?: string;
   overallRating: number; // 1-5
+  roomRating?: number;
+  spaRating?: number;
+  diningRating?: number;
   feedback: string;
   submittedAt: string;
 }
@@ -122,21 +125,25 @@ export interface FolioContextType {
   processPayment: (
     bookingRef: string,
     amount: number,
-    simulateMode?: 'success' | 'failed' | 'cancelled'
+    paymentMethod?: 'CASH' | 'VNPAY' | 'CARD' | 'VIETQR_BANK_TRANSFER'
   ) => Promise<PaymentTransaction>;
   latestTransaction: PaymentTransaction | null;
   getTransactionById: (id: string) => PaymentTransaction | undefined;
   completeResortCheckout: (
     bookingRef: string,
     settledBy?: 'customer' | 'receptionist'
-  ) => { success: boolean; message: string; blockers?: CheckoutBlocker[] };
+  ) => Promise<{ success: boolean; message: string; record?: CheckoutRecord }>;
   isStayCheckedOut: (bookingRef: string) => boolean;
   getCheckoutRecord: (bookingRef: string) => CheckoutRecord | undefined;
   submitReview: (
     bookingRef: string,
     reviewData: Omit<CustomerStayReview, 'id' | 'submittedAt'>
-  ) => { success: boolean; message: string };
+  ) => Promise<{ success: boolean; message: string }>;
   getReviewForBooking: (bookingRef: string) => CustomerStayReview | undefined;
+  resetFolioSettlement?: () => void;
+  isLoading?: boolean;
+  error?: string | null;
+  refreshFolio?: (bookingRef?: string) => Promise<unknown>;
   // Manager analytical aggregators
   getRevenueAnalytics: () => {
     totalRevenue: number;

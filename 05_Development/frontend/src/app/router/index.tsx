@@ -16,6 +16,7 @@ import { RetreatListPage } from '../../pages/retreats/RetreatListPage';
 import { RetreatDetailPage } from '../../pages/retreats/RetreatDetailPage';
 import { LoginPage } from '../../pages/auth/LoginPage';
 import { RegisterPage } from '../../pages/auth/RegisterPage';
+import { SsoCallbackPage } from '../../pages/auth/SsoCallbackPage';
 import { EmailOtpVerificationPage } from '../../pages/auth/EmailOtpVerificationPage';
 import { PasswordResetPage } from '../../pages/auth/PasswordResetPage';
 
@@ -68,6 +69,7 @@ import { MealOrderDetailPage } from '../../pages/fb/MealOrderDetailPage';
 import { FolioInvoicePage } from '../../pages/customer/FolioInvoicePage';
 import { FinalPaymentPage } from '../../pages/customer/FinalPaymentPage';
 import { FinalPaymentResultPage } from '../../pages/customer/FinalPaymentResultPage';
+import { VnpayReturnPage } from '../../pages/customer/VnpayReturnPage';
 import { CheckoutConfirmationPage } from '../../pages/customer/CheckoutConfirmationPage';
 import { ReviewRatingPage } from '../../pages/customer/ReviewRatingPage';
 import { RevenueDashboardPage } from '../../pages/manager/RevenueDashboardPage';
@@ -77,11 +79,12 @@ import { TherapistUtilizationReportPage } from '../../pages/manager/TherapistUti
 // Phase 2.7 Module 6 Screens (Admin, Permissions, Governance & Monitoring)
 import { AdminDashboardPage } from '../../pages/admin/AdminDashboardPage';
 import { BusinessParametersPage } from '../../pages/admin/BusinessParametersPage';
-import { FeatureFlagsPage } from '../../pages/admin/FeatureFlagsPage';
 import { PermissionMatrixPage } from '../../pages/admin/PermissionMatrixPage';
 import { AdminDelegationPage } from '../../pages/admin/AdminDelegationPage';
 import { SensitiveAuditLogPage } from '../../pages/admin/SensitiveAuditLogPage';
 import { ManagerDashboardPage } from '../../pages/manager/ManagerDashboardPage';
+import { VillaManagementPage } from '../../pages/manager/VillaManagementPage';
+import { SpaManagementPage } from '../../pages/manager/SpaManagementPage';
 import { SystemOverviewPage } from '../../pages/common/SystemOverviewPage';
 
 export const AppRouter: React.FC = () => {
@@ -104,11 +107,14 @@ export const AppRouter: React.FC = () => {
           ==================================================================== */}
       <Route element={<AuthLayout />}>
         {/* Screen #5: Login */}
+        <Route path="/vnpay-return" element={<VnpayReturnPage />} />
         <Route path="/login" element={<LoginPage />} />
         {/* Screen #3: Register */}
         <Route path="/register" element={<RegisterPage />} />
         {/* Screen #4: Email OTP Verification */}
         <Route path="/register/verify" element={<EmailOtpVerificationPage />} />
+        {/* Screen #6: Google SSO Callback */}
+        <Route path="/auth/sso/callback" element={<SsoCallbackPage />} />
         {/* Screen #6: Password Reset */}
         <Route path="/password-reset" element={<PasswordResetPage />} />
       </Route>
@@ -155,9 +161,13 @@ export const AppRouter: React.FC = () => {
 
         {/* Module 5: Customer Read-only Folio, Payment, Checkout & Review */}
         <Route path="folio" element={<FolioInvoicePage />} />
+        <Route path="folio/:bookingId" element={<FolioInvoicePage />} />
         <Route path="checkout/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/:bookingId/payment" element={<FinalPaymentPage />} />
         <Route path="checkout/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/:bookingId/payment-result" element={<FinalPaymentResultPage />} />
         <Route path="checkout/confirmation" element={<CheckoutConfirmationPage />} />
+        <Route path="checkout/:bookingId/confirmation" element={<CheckoutConfirmationPage />} />
         <Route path="review/:bookingId" element={<ReviewRatingPage />} />
         
         <Route index element={<Navigate to="/customer/dashboard" replace />} />
@@ -169,7 +179,7 @@ export const AppRouter: React.FC = () => {
       <Route
         path="/receptionist"
         element={
-          <RoleGuard allowedRoles={['receptionist']}>
+          <RoleGuard allowedRoles={['receptionist', 'admin', 'manager']}>
             <OperationalLayout />
           </RoleGuard>
         }
@@ -185,13 +195,35 @@ export const AppRouter: React.FC = () => {
         <Route path="spa/extra-booking" element={<ManualExtraSpaPage />} />
         
         {/* Module 5 Checkout Consolidation */}
+        <Route path="folio" element={<FolioInvoicePage />} />
         <Route path="folio/:bookingId" element={<FolioInvoicePage />} />
+        <Route path="checkout/payment" element={<FinalPaymentPage />} />
         <Route path="checkout/:bookingId/payment" element={<FinalPaymentPage />} />
+        <Route path="checkout/payment-result" element={<FinalPaymentResultPage />} />
         <Route path="checkout/:bookingId/payment-result" element={<FinalPaymentResultPage />} />
+        <Route path="checkout/confirmation" element={<CheckoutConfirmationPage />} />
         <Route path="checkout/:bookingId/confirmation" element={<CheckoutConfirmationPage />} />
 
         <Route index element={<Navigate to="/receptionist/dashboard" replace />} />
       </Route>
+
+      {/* Module 5 Direct Cross-Role Billing Routes */}
+      <Route
+        path="/billing/folio/:bookingId"
+        element={
+          <RoleGuard allowedRoles={['receptionist', 'admin', 'manager', 'customer']}>
+            <FolioInvoicePage />
+          </RoleGuard>
+        }
+      />
+      <Route
+        path="/billing/folio"
+        element={
+          <RoleGuard allowedRoles={['receptionist', 'admin', 'manager', 'customer']}>
+            <FolioInvoicePage />
+          </RoleGuard>
+        }
+      />
 
       {/* ====================================================================
           5. Therapist Operations (OperationalLayout - Guard: Therapist)
@@ -239,15 +271,21 @@ export const AppRouter: React.FC = () => {
         }
       >
         <Route path="dashboard" element={<ManagerDashboardPage />} />
+        <Route path="villas" element={<VillaManagementPage />} />
+        <Route path="spa" element={<SpaManagementPage />} />
         <Route path="revenue" element={<RevenueDashboardPage />} />
         <Route path="occupancy" element={<OccupancyReportPage />} />
         <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
-        <Route path="system-overview" element={<SystemOverviewPage />} />
+        <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
         <Route index element={<Navigate to="/manager/dashboard" replace />} />
       </Route>
 
       {/* ====================================================================
-          8. Admin System Administration (ManagerAdminLayout - Guard: Admin / Delegated Manager)
+          8. Admin System Administration (ManagerAdminLayout)
+          Parent admits admin + manager ONLY so a Manager holding a valid delegation can reach
+          the delegated business-params screen. Every child is individually guarded:
+          admin-only, except business-params (capability-gated). Backend @PreAuthorize is the
+          source of truth; these guards are UX protection.
           ==================================================================== */}
       <Route
         path="/admin"
@@ -258,8 +296,10 @@ export const AppRouter: React.FC = () => {
         }
       >
         <Route path="dashboard" element={<RoleGuard allowedRoles={['admin']}><AdminDashboardPage /></RoleGuard>} />
-        <Route path="staff" element={<RoleGuard allowedRoles={['admin']}><StaffAccountListPage /></RoleGuard>} />
-        <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']}><StaffAccountDetailPage /></RoleGuard>} />
+        <Route path="villas" element={<RoleGuard allowedRoles={['admin', 'manager']}><VillaManagementPage /></RoleGuard>} />
+        <Route path="spa" element={<RoleGuard allowedRoles={['admin', 'manager']}><SpaManagementPage /></RoleGuard>} />
+        <Route path="staff" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S10:V"><StaffAccountListPage /></RoleGuard>} />
+        <Route path="staff/:id" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S11:V"><StaffAccountDetailPage /></RoleGuard>} />
         <Route path="master-data" element={<RoleGuard allowedRoles={['admin']}><MasterDataPage /></RoleGuard>} />
         <Route
           path="business-params"
@@ -269,18 +309,10 @@ export const AppRouter: React.FC = () => {
             </RoleGuard>
           }
         />
-        <Route
-          path="feature-flags"
-          element={
-            <RoleGuard requiredCapability="manage_feature_flags">
-              <FeatureFlagsPage />
-            </RoleGuard>
-          }
-        />
-        <Route path="permissions" element={<RoleGuard allowedRoles={['admin']}><PermissionMatrixPage /></RoleGuard>} />
-        <Route path="delegation" element={<RoleGuard allowedRoles={['admin']}><AdminDelegationPage /></RoleGuard>} />
-        <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']}><SensitiveAuditLogPage /></RoleGuard>} />
-        <Route path="system-overview" element={<SystemOverviewPage />} />
+        <Route path="permissions" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S51:V"><PermissionMatrixPage /></RoleGuard>} />
+        <Route path="delegation" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S52:V"><AdminDelegationPage /></RoleGuard>} />
+        <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S53:V"><SensitiveAuditLogPage /></RoleGuard>} />
+        <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 

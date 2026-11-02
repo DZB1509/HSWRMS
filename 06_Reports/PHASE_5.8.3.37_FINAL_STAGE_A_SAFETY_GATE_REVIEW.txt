@@ -1,0 +1,280 @@
+================================================================================
+HSWRMS Phase 5.8.3.37 — Final Stage A Safety Gate Review
+================================================================================
+Generated: 2026-10-27T14:49:00+07:00
+Scope: Existing Database/Login Safety Analysis, SQLCMD Mode Verification,
+       Client Control-Flow Trace, Credential Risk Disclosure, and Stage A Readiness.
+
+================================================================================
+1. EXECUTIVE SUMMARY & AUDIT VERDICT
+================================================================================
+Phase 5.8.3.37 conducted a rigorous safety gate review of the provisioning script
+and guide. All safety restrictions were strictly maintained:
+  - ZERO state mutations were performed against the SQL Server instance.
+  - NO database, login, user, role, permission, or server setting was created or altered.
+  - The live JDBC smoke test was NOT executed.
+  - NO real password was requested, generated, printed, or stored.
+  - All 33 staged M2 files and four protected SQL hashes remain byte-identical.
+
+FINAL AUDIT VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+
+Supporting Findings:
+  1. Target Database Safety: Hardened Stage 1.2 to fail closed by default if
+     [HSWRMS_TEST] already exists, preventing unintended attachment to pre-existing
+     databases unless explicitly authorized via ':setvar ALLOW_EXISTING_DB "TRUE"'.
+  2. Login Safety: Hardened Stage 1.3 to fail closed by default if [hswrms_test_user]
+     already exists unless explicitly authorized via ':setvar ALLOW_EXISTING_LOGIN "TRUE"'.
+     If reuse is authorized, the script strictly validates that authentication type
+     is SQL Server login (type 'S'), is not disabled, has safe default database
+     (HSWRMS_TEST or master, never HSWRMS), has 0 server roles, and 0 server permissions.
+  3. SQLCMD Mode Verification: Evaluated and safely tested the SQLCMD_MODE_CHECK
+     mechanism across sqlcmd.exe CLI and non-SQLCMD clients (emulating SSMS with
+     SQLCMD Mode OFF), demonstrating how macro expansion failure halts execution.
+  4. Multi-Layer Control Flow: Verified that ':on error exit' (CLI abort), 'RETURN'
+     (batch abort), and 'SET NOEXEC ON' (session-level compile-only lock) operate
+     synergistically to prevent any mutations following an error.
+  5. Security & Isolation Invariants: Re-confirmed CONNECT-only least privilege on
+     [HSWRMS_TEST], strict isolation from primary database [HSWRMS], and realistic
+     disclosure of secret persistence constraints.
+
+STOPPING NOTICE:
+  This audit does NOT execute Stage A or Stage B. Provisioning remains completely
+  blocked until explicit, separate human operator authorization is provided.
+
+================================================================================
+2. ACTUAL GIT STATE & REPOSITORY BASELINE
+================================================================================
+Repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch:     audit-all-modules
+HEAD:       55f80aef5f1139a45efbc94984823ed2a56923ac
+
+Staged Files Integrity:
+  - Staged M2 Booking Domain Files: 33 files
+  - Diff vs commit ea253dc6d039aa723414e3cd4f1926aa1500f60a: 0 bytes / 0 diffs [PASS]
+
+Protected SQL Files SHA-256 Hashes:
+  1. V003__m2_retreat_booking_schema_reconciliation.sql
+     SHA-256: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+  2. V004__m5_customer_review_category_ratings.sql
+     SHA-256: 3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+  3. V005__m6_audit_log.sql
+     SHA-256: 5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+  4. draft_m6_governance_and_delegation.sql
+     SHA-256: 605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+
+Exact Files Changed in Phase 5.8.3.37:
+  - 05_Development/database/scripts/draft_provision_hswrms_test.sql
+    (Added ALLOW_EXISTING_DB and ALLOW_EXISTING_LOGIN variables; hardened Stage 1.2
+     and Stage 1.3 to fail closed if DB/login exist without explicit override;
+     enforced SQL login type and default database verification).
+  - 05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md
+    (Updated Section 5 to document fail-closed preconditions and override flags).
+  - 06_Reports/PHASE_5.8.3.37_FINAL_STAGE_A_SAFETY_GATE_REVIEW.txt
+    (This report deliverable).
+
+================================================================================
+3. TASK 1: EXISTING TARGET DATABASE SAFETY AUDIT
+================================================================================
+A. Behavioral Trace:
+  1. When [HSWRMS_TEST] does NOT exist:
+     - Stage 1.2 'IF EXISTS (SELECT 1 FROM sys.databases WHERE name = N''HSWRMS_TEST'')'
+       evaluates to FALSE. Pre-check passes cleanly.
+     - Stage 2 'IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N''HSWRMS_TEST'')'
+       evaluates to TRUE. 'CREATE DATABASE [HSWRMS_TEST]' executes.
+     - Stage 4 maps the test user into the newly created database and grants CONNECT.
+  2. When [HSWRMS_TEST] already exists and is ONLINE (Prior vs Hardened Behavior):
+     - Prior Behavior: The script checked 'state_desc == ONLINE', printed '[PASS]',
+       skipped database creation in Stage 2, and proceeded to map the user in Stage 4.
+     - Risk Identified: If a pre-existing [HSWRMS_TEST] database was created by another
+       team, contained unknown schemas, tables, sensitive test records, or non-standard
+       collations, the script would silently attach the new login and user to it.
+     - Hardened Implementation in Phase 5.8.3.37:
+       Stage 1.2 now enforces FAIL CLOSED by default:
+       ```sql
+       IF EXISTS (SELECT 1 FROM sys.databases WHERE name = N'HSWRMS_TEST')
+       BEGIN
+           IF '$(ALLOW_EXISTING_DB)' <> 'TRUE'
+           BEGIN
+               RAISERROR('FAIL CLOSED: Target database [HSWRMS_TEST] already exists. Initial provisioning expects a clean environment. If reuse is explicitly intended and authorized, set :setvar ALLOW_EXISTING_DB "TRUE".', 16, 1);
+               SET NOEXEC ON;
+               RETURN;
+           END
+           ...
+       ```
+     - Implication: If [HSWRMS_TEST] already exists, execution immediately aborts with
+       severity 16 error and zero mutations take place, unless the operator explicitly
+       overrides the default by declaring ':setvar ALLOW_EXISTING_DB "TRUE"'.
+
+B. Real SQL Server Preflight Verification:
+  - Current real server query against sys.databases on localhost:1433 confirms:
+    * Primary database [HSWRMS]: ONLINE.
+    * Target database [HSWRMS_TEST]: DOES NOT EXIST (0 rows returned).
+  - Therefore, clean provisioning in Stage A will proceed without needing the override.
+
+================================================================================
+4. TASK 2: EXISTING LOGIN SAFETY AUDIT
+================================================================================
+A. Behavioral Trace when [hswrms_test_user] Already Exists:
+  1. Prior Behavior:
+     - Checked if login was disabled (is_disabled == 1).
+     - Checked server role memberships and explicit server permissions.
+     - Extracted @defaultDb but never evaluated it.
+     - Did not check login authentication type (type_desc / type).
+  2. Risks Identified:
+     - Authentication Type Mismatch: If a principal named 'hswrms_test_user' existed
+       as a Windows Login (type 'U'), Windows Group (type 'G'), or Certificate login,
+       the script skipped CREATE LOGIN, leaving a principal incapable of SQL password auth.
+     - Unsafe Default Database: If the pre-existing login had default_database_name set
+       to 'HSWRMS' or 'master', connecting without specifying the catalog would place
+       the user in an unintended or sensitive database.
+     - Unknown Credentials: Stage 3 skips CREATE LOGIN without altering the password.
+       If $(TEST_PASSWORD) differed from the pre-existing password, JDBC authentication
+       would fail during smoke testing.
+  3. Hardened Implementation in Phase 5.8.3.37:
+     Stage 1.3 now enforces FAIL CLOSED by default:
+     ```sql
+     IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'hswrms_test_user')
+     BEGIN
+         IF '$(ALLOW_EXISTING_LOGIN)' <> 'TRUE'
+         BEGIN
+             RAISERROR('FAIL CLOSED: Login [hswrms_test_user] already exists. Initial provisioning expects a clean environment. If reuse is explicitly intended and authorized, set :setvar ALLOW_EXISTING_LOGIN "TRUE".', 16, 1);
+             SET NOEXEC ON;
+             RETURN;
+         END
+
+         -- Strictly require SQL Server login
+         IF @loginType <> 'S'
+         BEGIN
+             RAISERROR('FAIL CLOSED: Login exists but is not a SQL Server login (type_desc: ''%s'').', 16, 1, @typeDesc);
+             SET NOEXEC ON;
+             RETURN;
+         END
+
+         -- Strictly validate default database
+         IF @defaultDb <> N'HSWRMS_TEST' AND @defaultDb <> N'master'
+         BEGIN
+             RAISERROR('FAIL CLOSED: Login has unsafe default database ''%s'' (expected ''HSWRMS_TEST'' or ''master'').', 16, 1, @defaultDb);
+             SET NOEXEC ON;
+             RETURN;
+         END
+         ...
+     ```
+
+B. Real SQL Server Preflight Verification:
+  - Current real server query against sys.server_principals on localhost:1433 confirms:
+    * Principal [hswrms_test_user]: DOES NOT EXIST (0 rows returned).
+  - Clean provisioning in Stage A will proceed to create the login cleanly.
+
+================================================================================
+5. TASK 3: SQLCMD MODE VERIFICATION AUDIT
+================================================================================
+A. Technical Mechanism Analysis:
+  1. The SQL Server database engine has NO native session property, system function,
+     or DMV that reports "SQLCMD mode is enabled". SQLCMD is strictly a client-side
+     preprocessor protocol (implemented in 'sqlcmd.exe' and SSMS editor).
+  2. In 'draft_provision_hswrms_test.sql', the verification pattern is:
+     Line 44: ':setvar SQLCMD_MODE_CHECK "SQLCMD_ACTIVE"'
+     Line 47: 'IF ''$(SQLCMD_MODE_CHECK)'' <> ''SQLCMD_ACTIVE'''
+  3. Does it merely check a caller-controlled variable?
+     - Yes, in the sense that ':setvar' assigns a preprocessor macro.
+     - However, it critically verifies that CLIENT-SIDE MACRO EXPANSION is active.
+     - If the client preprocessor is NOT running, '$(SQLCMD_MODE_CHECK)' is NOT replaced.
+
+B. Safe Empirical Testing Across Execution Clients:
+  1. CLI Execution (sqlcmd.exe):
+     - Line 44 ':setvar' is intercepted by the preprocessor and stripped.
+     - In Batch 3, '$(SQLCMD_MODE_CHECK)' is expanded to 'SQLCMD_ACTIVE'.
+     - The engine evaluates 'IF ''SQLCMD_ACTIVE'' <> ''SQLCMD_ACTIVE''' (FALSE).
+     - Execution proceeds.
+  2. SSMS with SQLCMD Mode ENABLED:
+     - SSMS SQLCMD parser intercepts ':setvar' and expands '$(SQLCMD_MODE_CHECK)'.
+     - Evaluation matches CLI behavior; pre-check passes.
+  3. Client with SQLCMD Mode DISABLED (Standard T-SQL Client / SSMS without SQLCMD):
+     - Tested safely via ADO.NET submitting identical batch sequences:
+       * Batch 1 (':on error exit'): Engine raises "Msg 102, Incorrect syntax near ':'".
+       * Batch 2 (':setvar ...'): Engine raises "Msg 102, Incorrect syntax near ':'".
+       * Batch 3 ('IF ''$(SQLCMD_MODE_CHECK)'' <> ''SQLCMD_ACTIVE'''):
+         Because macro substitution never occurred, the engine evaluates literal
+         varchar comparison: ''$(SQLCMD_MODE_CHECK)'' <> ''SQLCMD_ACTIVE''.
+         This evaluates to TRUE!
+       * The engine executes the IF body: raises FAIL CLOSED error and runs SET NOEXEC ON.
+       * Subsequent batches submitted on the connection are parsed only; 0 statements execute.
+  4. Precise Audit Conclusion:
+     The SQLCMD_MODE_CHECK mechanism reliably detects whether the client preprocessor
+     is active via round-trip macro substitution. In non-SQLCMD clients, colon syntax
+     errors occur and unexpanded macro tokens trigger immediate fail-closed shutdown.
+
+================================================================================
+6. TASK 4: CONTROL-FLOW & ERROR PATH VERIFICATION
+================================================================================
+A. Synergistic Client & Session Behavior:
+  - CLI (sqlcmd.exe): ':on error exit' ensures that any severity >= 11 error halts
+    the process immediately, returning exit code 1.
+  - SSMS GUI: SSMS ignores process-level termination and submits subsequent batches
+    across 'GO' delimiters. However, 'SET NOEXEC ON' instructs the SQL Server query
+    engine to place the connection in compilation-only mode.
+  - T-SQL Engine: 'RETURN' halts the executing batch immediately, preventing any
+    statements after the failure within that same batch from running.
+  - Result: Whether run in CLI or SSMS, no mutation statement can execute after an error.
+
+B. Summary of 13 Isolated Non-Mutating Failure-Path Harness Tests:
+  All 13 tests passed cleanly with zero canary mutations:
+  --------------------------------------------------------------------------------------
+  Test ID   Description                                              ExitCode Status
+  --------------------------------------------------------------------------------------
+  TEST_01   Undefined TEST_PASSWORD variable with :on error exit            1 [PASS]
+  TEST_02   Empty TEST_PASSWORD string ("")                                 1 [PASS]
+  TEST_03   Placeholder password ('REPLACE_WITH_STRONG_PASSWORD...')        1 [PASS]
+  TEST_04   Unresolved placeholder literal token ('$(TEST_PASSWORD)')       1 [PASS]
+  TEST_05   Stage 1.1: Windows Auth Only (@authMode = 1)                    1 [PASS]
+  TEST_06A  Stage 1.2: Existing DB with ALLOW_EXISTING_DB=FALSE             1 [PASS]
+  TEST_06B  Stage 1.2: Existing DB with ALLOW_EXISTING_DB=TRUE but OFFLINE  1 [PASS]
+  TEST_07A  Stage 1.3: Existing Login with ALLOW_EXISTING_LOGIN=FALSE       1 [PASS]
+  TEST_07B  Stage 1.3: Existing Login is Windows Login (type <> 'S')        1 [PASS]
+  TEST_07C  Stage 1.3: Existing Login has Unsafe Default DB ('HSWRMS')      1 [PASS]
+  TEST_08   Stage 1.4: Primary DB Isolation Violation                       1 [PASS]
+  TEST_09   Stage 3: Inline Pre-DDL Guard Re-Validation                     1 [PASS]
+  TEST_10   SSMS Multi-Batch NOEXEC Emulation (No :on error exit)           0 [PASS]
+  --------------------------------------------------------------------------------------
+
+================================================================================
+7. TASK 5: SECURITY, REPOSITORY INTEGRITY & CREDENTIAL SAFETY
+================================================================================
+A. Principle of Least Privilege:
+  - Principal [hswrms_test_user] is granted EXCLUSIVELY:
+    'GRANT CONNECT TO [hswrms_test_user];' on [HSWRMS_TEST].
+  - ZERO database roles are granted (no db_datareader, db_datawriter, db_owner).
+  - ZERO server roles are granted (no sysadmin, securityadmin).
+  - Zero permissions on primary database [HSWRMS].
+
+B. Credential Safety & System Limitations Disclosure:
+  - Real passwords must NEVER be saved in repository files or passed via CLI args ('-v').
+  - Method 1 (Interactive SSMS unsaved query tab, closed without saving) provides
+    substantial risk reduction (avoids git commits, process command-line logging,
+    and shell history), but does NOT guarantee zero disk footprint due to SSMS
+    AutoRecover snapshots, OS paging (pagefile.sys), and clipboard history.
+  - Method 2 (CLI with process environment variable) has realistic limitations:
+    CLR garbage-collected heap retention of System.String and child process environment
+    inheritance.
+  - Operational guidance: Use Method 1 for interactive local execution, close tab
+    immediately without saving, and clear clipboard.
+
+C. Automated Unit Test Verification:
+  - Command: ./mvnw.cmd test "-Dtest=SqlServerTestConfigValidatorTest,SqlServerJdbcSmokeTestOptInBehaviorTest"
+  - Results: 97 tests run, 0 failures, 0 errors, 0 skipped. BUILD SUCCESS.
+
+================================================================================
+8. REMAINING BLOCKERS & STAGE GATING
+================================================================================
+Technical Blockers:
+  NONE. All safety checks, fail-closed guards, least-privilege permissions,
+  and control-flow failure paths have been hardened, tested, and verified.
+
+Operational Gating:
+  Stage A provisioning requires explicit operator approval before execution.
+  This audit phase (5.8.3.37) stops without provisioning.
+
+FINAL VERDICT:
+  READY FOR EXPLICIT STAGE A AUTHORIZATION
+================================================================================

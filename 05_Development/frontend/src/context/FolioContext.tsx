@@ -1,696 +1,261 @@
-/**
- * HSWRMS — Module 5: Folio & Settlement Context Provider
- *
- * Centralized financial aggregation, payment transaction state,
- * resort checkout validation & completion, review submission,
- * and read-only manager analytics.
- *
- * Source-of-truth principle:
- * - Retreat booking: CustomerContext
- * - Spa charges: SpaContext
- * - F&B charges: DiningContext
- * - Stay / room operational status: OperationsContext
- */
-
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
-import type {
-  FolioContextType,
-  FolioSummary,
-  FolioLineItem,
-  PaymentTransaction,
-  CheckoutRecord,
-  CustomerStayReview,
-  CheckoutBlocker,
-} from '../types/folio';
+/** M5 state adapter. Persisted billing, payment and checkout state always comes from the backend. */
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { FolioContextType, FolioSummary, FolioLineItem, PaymentTransaction, CheckoutRecord, CustomerStayReview } from '../types/folio';
 import { useCustomer } from './CustomerContext';
-import { useSpa } from './SpaContext';
-import { useDining } from './DiningContext';
-import { useOperations } from './OperationsContext';
+import { useAuth } from '../hooks/useAuth';
+import { billingApi } from '../features/m5-billing/api/billingApi';
+import type { FolioResponse, PaymentResponse, RevenueAnalytics, OccupancyAnalytics, TherapistUtilization } from '../features/m5-billing/types';
 
 const FolioContext = createContext<FolioContextType | undefined>(undefined);
-
-const STORAGE_KEYS = {
-  SETTLED_BOOKINGS: 'hsw_settled_bookings_v1',
-  SETTLED_SPA: 'hsw_settled_spa_v1',
-  SETTLED_DINING: 'hsw_settled_dining_v1',
-  CHECKOUT_RECORDS: 'hsw_checkout_records_v1',
-  REVIEWS: 'hsw_stay_reviews_v1',
-  TRANSACTIONS: 'hsw_payment_transactions_v1',
+const localized = (value: string) => ({ vi: value, en: value, 'zh-CN': value, ja: value, fr: value });
+const statusMap: Record<string, PaymentTransaction['status']> = {
+  SUCCESSFUL: 'success', PENDING: 'pending', FAILED: 'failed', CANCELLED: 'cancelled', REFUNDED: 'failed',
 };
 
+function toTransaction(tx: PaymentResponse, bookingReference: string): PaymentTransaction {
+  return {
+    id: tx.transactionReference,
+    bookingReference,
+    amount: tx.amountPaid,
+    provider: tx.paymentMethod,
+    status: statusMap[tx.paymentStatus] || 'pending',
+    createdAt: tx.transactionDate,
+    failureReason: tx.paymentStatus === 'FAILED' ? tx.message : undefined,
+    gatewayRef: tx.transactionReference,
+  };
+}
+
+function toFolioSummary(folio: FolioResponse, bookingReference: string): FolioSummary & { lineItems: FolioLineItem[] } {
+  const isFolioSettled = folio.folioStatus === 'CLOSED' || folio.folioStatus === 'PAID' || folio.invoiceStatus === 'PAID' || Number(folio.balanceDue || 0) === 0;
+  const items = (folio.items || []).map((item): FolioLineItem => ({
+    id: String(item.folioItemId),
+    sourceType: item.chargeCategory === 'SPA' ? 'spa' : item.chargeCategory === 'FNB' ? 'fnb' : 'retreat',
+    sourceId: String(item.sourceSpaSessionId ?? item.sourceMealOrderId ?? item.sourceBookingId ?? item.folioItemId),
+    title: localized(item.description),
+    serviceDate: item.chargedAt?.slice(0, 10),
+    quantity: 1,
+    unitAmount: item.payableAmount ?? item.adjustedAmount ?? item.amount,
+    totalAmount: item.payableAmount ?? item.adjustedAmount ?? item.amount,
+    status: (isFolioSettled || item.isVoided || Boolean((item as any).isSettled) || (item as any).status === 'SETTLED') ? 'settled' : 'pending_settlement',
+    createdAt: item.chargedAt,
+    isIncludedInPackage: item.chargeCategory === 'PACKAGE',
+  }));
+  const balance = isFolioSettled ? 0 : Number(folio.balanceDue || 0);
+  const spa = isFolioSettled ? 0 : Number(folio.extraSpaCharges || 0);
+  const fnb = isFolioSettled ? 0 : Number(folio.extraFnbCharges || 0);
+  const outstandingPackage = isFolioSettled ? 0 : Number(folio.packageOutstanding ?? Math.max(0, balance - spa - fnb));
+  const blockers = [] as FolioSummary['blockers'];
+  if (!isFolioSettled) {
+    if (outstandingPackage > 0) blockers.push({ type: 'unpaid_balance', titleKey: 'customer.checkout.blockerRetreatTitle', messageKey: 'customer.checkout.blockerRetreatMsg', amount: outstandingPackage, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPayBalance' });
+    if (spa > 0) blockers.push({ type: 'unsettled_spa', titleKey: 'customer.checkout.blockerSpaTitle', messageKey: 'customer.checkout.blockerSpaMsg', amount: spa, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPaySpa' });
+    if (fnb > 0) blockers.push({ type: 'unsettled_fnb', titleKey: 'customer.checkout.blockerFnbTitle', messageKey: 'customer.checkout.blockerFnbMsg', amount: fnb, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPayFnb' });
+    if (folio.hasUnsettledOrders && blockers.length === 0) blockers.push({ type: 'unsettled_fnb', titleKey: 'customer.checkout.blockerFnbTitle', messageKey: 'customer.checkout.blockerFnbMsg' });
+  }
+  return {
+    bookingReference: bookingReference || folio.bookingReference,
+    customerName: folio.customerName || '—',
+    villaCode: folio.villaNumber || '—',
+    stayDates: '—',
+    retreatTotal: Number(folio.packagePrice ?? folio.totalCharges ?? 0),
+    depositPaid: Number(folio.depositPaid ?? folio.depositAmount ?? 0),
+    retreatRemaining: outstandingPackage,
+    spaExtrasTotal: spa,
+    fnbExtrasTotal: fnb,
+    totalExtras: spa + fnb,
+    totalBillable: Number(folio.totalCharges || 0),
+    totalPaid: Number(folio.totalPaid || 0),
+    outstandingBalance: balance,
+    isFullySettled: isFolioSettled || (balance <= 0 && !folio.hasUnsettledOrders),
+    canCheckout: !isFolioSettled && balance <= 0 && !folio.hasUnsettledOrders && folio.folioStatus !== 'CLOSED',
+    blockers,
+    lineItems: items,
+  };
+}
+
+const emptyFolio = (bookingReference: string): FolioSummary & { lineItems: FolioLineItem[] } => ({
+  bookingReference, customerName: '—', villaCode: '—', stayDates: '—', retreatTotal: 0, depositPaid: 0,
+  retreatRemaining: 0, spaExtrasTotal: 0, fnbExtrasTotal: 0, totalExtras: 0, totalBillable: 0,
+  totalPaid: 0, outstandingBalance: 0, isFullySettled: false, canCheckout: false,
+  blockers: [], lineItems: [],
+});
+
 export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { bookings, activeBooking } = useCustomer();
-  const { sessions, therapists } = useSpa();
-  const { alaCarteOrders } = useDining();
-  const { villas, arrivals, updateVillaStatus } = useOperations();
-
-  // ── Settlement State ────────────────────────────────
-  const [settledBookings, setSettledBookings] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTLED_BOOKINGS);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [settledSpaSessions, setSettledSpaSessions] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTLED_SPA);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [settledDiningOrders, setSettledDiningOrders] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTLED_DINING);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [checkoutRecords, setCheckoutRecords] = useState<Record<string, CheckoutRecord>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CHECKOUT_RECORDS);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [reviews, setReviews] = useState<Record<string, CustomerStayReview>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.REVIEWS);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
+  const { bookings } = useCustomer();
+  const { currentUser } = useAuth();
+  const cacheOwnerId = currentUser?.id ?? null;
+  const cacheOwnerRef = useRef(cacheOwnerId);
+  const eligibleBookings = useMemo(() => bookings.filter(b => b.status !== 'cancelled'), [bookings]);
+  const defaultBooking = eligibleBookings.length === 1 ? eligibleBookings[0] : undefined;
+  const [folios, setFolios] = useState<Record<string, FolioResponse>>({});
+  const [checkoutByBooking, setCheckoutByBooking] = useState<Record<string, CheckoutRecord>>({});
+  const [reviews, setReviews] = useState<Record<string, CustomerStayReview>>({});
   const [latestTransaction, setLatestTransaction] = useState<PaymentTransaction | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<{ revenue?: RevenueAnalytics; occupancy?: OccupancyAnalytics; therapists?: TherapistUtilization }>({});
 
-  // ── Helper: Folio Aggregation ────────────────────────
-  const getFolioForBooking = useCallback(
-    (bookingRef?: string): FolioSummary & { lineItems: FolioLineItem[] } => {
-      // Find matching retreat booking
-      const targetRef = bookingRef || activeBooking?.bookingReference || 'HSW-88192';
-      const booking =
-        bookings.find((b) => b.bookingReference === targetRef || b.id === targetRef) ||
-        activeBooking ||
-        bookings[0];
+  useEffect(() => {
+    cacheOwnerRef.current = cacheOwnerId;
+    setFolios({});
+    setCheckoutByBooking({});
+    setReviews({});
+    setLatestTransaction(null);
+    setError(null);
+  }, [cacheOwnerId]);
 
-      const bRef = booking ? booking.bookingReference : targetRef;
-      const customerId = booking?.id ? 'usr-cust-01' : 'usr-cust-01';
-      const customerName = 'Eleanor Vance';
-      const villaCode = booking?.villaNumber || 'Villa #102';
-      const stayDates = booking
-        ? `${booking.startDate} — ${booking.endDate}`
-        : '2026-09-24 — 2026-09-27';
+  const bookingFor = useCallback((ref?: string) => {
+    if (ref) return bookings.find(b => b.bookingReference === ref || b.id === ref);
+    return defaultBooking;
+  }, [bookings, defaultBooking]);
+  const numericBookingId = useCallback((ref?: string) => {
+    const booking = bookingFor(ref);
+    const candidate = booking?.id && /^\d+$/.test(String(booking.id))
+      ? Number(booking.id)
+      : ref && /^\d+$/.test(ref) ? Number(ref) : null;
+    return candidate !== null && Number.isSafeInteger(candidate) && candidate > 0 ? candidate : null;
+  }, [bookingFor]);
+  const refreshFolio = useCallback(async (ref?: string) => {
+    const requestOwnerId = cacheOwnerId;
+    const booking = bookingFor(ref);
+    const id = numericBookingId(ref);
+    if (!id) throw new Error('A server booking ID is required to load the folio.');
+    const response = await billingApi.getFolio(id);
+    if (cacheOwnerRef.current !== requestOwnerId) return response;
+    const key = booking?.bookingReference || ref || String(id);
+    setFolios(prev => ({ ...prev, [key]: response }));
+    setError(null);
+    return response;
+  }, [bookingFor, numericBookingId, cacheOwnerId]);
 
-      const lineItems: FolioLineItem[] = [];
+  useEffect(() => {
+    if (!defaultBooking) return;
+    let mounted = true;
+    setIsLoading(true);
+    refreshFolio(defaultBooking.bookingReference)
+      .catch(err => { if (mounted) setError(err instanceof Error ? err.message : 'Unable to load the server folio.'); })
+      .finally(() => { if (mounted) setIsLoading(false); });
+    return () => { mounted = false; };
+  }, [defaultBooking?.bookingReference, refreshFolio]);
 
-      // 1. Retreat Package Item
-      const retreatTotal = booking?.totalPrice || 24500000;
-      const depositPaid = booking?.depositStatus === 'paid' ? (booking.depositAmount || 7350000) : 0;
-      const isRetreatSettled = Boolean(settledBookings[bRef]);
-      const retreatRemaining = isRetreatSettled ? 0 : Math.max(0, retreatTotal - depositPaid);
-
-      if (booking) {
-        lineItems.push({
-          id: `FOLIO-PKG-${booking.id}`,
-          sourceType: 'retreat',
-          sourceId: booking.id,
-          title: booking.retreatName,
-          subtitle: `${booking.days} Days / ${booking.nights} Nights · ${booking.villaType.en}`,
-          serviceDate: booking.startDate,
-          quantity: 1,
-          unitAmount: retreatTotal,
-          totalAmount: retreatTotal,
-          status: isRetreatSettled ? 'settled' : depositPaid > 0 ? 'deposit_paid' : 'pending_settlement',
-          createdAt: booking.createdAt,
-          isIncludedInPackage: true,
-        });
-      }
-
-      // 2. Spa Line Items (from SpaContext)
-      // Strictly prevent double-counting: included sessions (price 0) are marked as included in package.
-      // Filter sessions belonging to this customer/booking
-      const customerSessions = sessions.filter(
-        (s) => s.bookingReference === bRef || s.customerId === customerId
-      );
-
-      let spaExtrasTotal = 0;
-
-      customerSessions.forEach((s) => {
-        const isExtra = s.chargeType === 'extra' && s.price > 0;
-        const isSettled = Boolean(settledSpaSessions[s.id]);
-
-        if (isExtra && !isSettled) {
-          spaExtrasTotal += s.price;
-        }
-
-        lineItems.push({
-          id: `FOLIO-SPA-${s.id}`,
-          sourceType: 'spa',
-          sourceId: s.id,
-          title: s.treatmentName,
-          subtitle: `${s.date} ${s.startTime}–${s.endTime} · Therapist: ${s.therapistName} (${s.roomName.en})`,
-          serviceDate: s.date,
-          quantity: 1,
-          unitAmount: s.price,
-          totalAmount: s.price,
-          status: !isExtra ? 'included' : isSettled ? 'settled' : 'pending_settlement',
-          createdAt: s.createdAt,
-          isIncludedInPackage: !isExtra,
+  useEffect(() => {
+    let mounted = true;
+    Promise.allSettled([billingApi.getRevenueAnalytics(), billingApi.getOccupancyAnalytics(), billingApi.getTherapistUtilization()])
+      .then(results => {
+        if (!mounted) return;
+        setAnalytics({
+          ...(results[0].status === 'fulfilled' ? { revenue: results[0].value } : {}),
+          ...(results[1].status === 'fulfilled' ? { occupancy: results[1].value } : {}),
+          ...(results[2].status === 'fulfilled' ? { therapists: results[2].value } : {}),
         });
       });
+    return () => { mounted = false; };
+  }, []);
 
-      // Demo Enhancement: If Eleanor Vance has no extra spa sessions seeded in mockSpa,
-      // add one traceable extra session (Hot Mineral Herbal Mud Wrap) so demo has rich multi-source extras
-      const hasSpaExtra = customerSessions.some((s) => s.chargeType === 'extra');
-      if (!hasSpaExtra && (bRef === 'HSW-88192' || bRef === 'HSW-84920')) {
-        const demoExtraSessionId = 'SES-EXTRA-881';
-        const isDemoSpaSettled = Boolean(settledSpaSessions[demoExtraSessionId]);
-        const demoSpaPrice = 1500000;
-        if (!isDemoSpaSettled) {
-          spaExtrasTotal += demoSpaPrice;
-        }
-        lineItems.push({
-          id: `FOLIO-SPA-${demoExtraSessionId}`,
-          sourceType: 'spa',
-          sourceId: demoExtraSessionId,
-          title: {
-            vi: 'Quấn Bùn Khoáng Thảo Dược Trị Liệu (Dịch Vụ Gọi Thêm)',
-            en: 'Therapeutic Mineral Herbal Mud Wrap (Extra Service)',
-            'zh-CN': '疗愈矿物草本泥裹（额外自选项目）',
-            ja: 'ミネラルハーバルマッドラップ（追加オプション）',
-            fr: 'Enveloppement Thérapeutique de Boue Minérale (Extra)',
-          },
-          subtitle: '2026-09-25 14:00 · Therapist: Nguyen Thi Lan (Lotus Suite)',
-          serviceDate: '2026-09-25',
-          quantity: 1,
-          unitAmount: demoSpaPrice,
-          totalAmount: demoSpaPrice,
-          status: isDemoSpaSettled ? 'settled' : 'pending_settlement',
-          createdAt: '2026-09-24T15:00:00Z',
-          isIncludedInPackage: false,
-        });
-      }
+  const getFolioForBooking = useCallback((ref?: string) => {
+    const booking = bookingFor(ref);
+    const key = ref || booking?.bookingReference || '';
+    const response = folios[key] || Object.values(folios).find(f => booking && f.retreatBookingId === Number(booking.id));
+    return response ? toFolioSummary(response, key) : emptyFolio(key || '');
+  }, [bookingFor, folios]);
+  const activeFolio = useMemo(() => getFolioForBooking(defaultBooking?.bookingReference), [getFolioForBooking, defaultBooking?.bookingReference]);
 
-      // 3. F&B Extra Line Items (from DiningContext)
-      // Only AlaCarteOrders with chargeType === 'fnb_extra' and totalAmount > 0.
-      // Daily meal selections are included retreat meals and are NOT extra billable items!
-      const customerOrders = alaCarteOrders.filter((o) => o.bookingId === bRef);
+  const processPayment: FolioContextType['processPayment'] = useCallback(async (bookingRef, amount, paymentMethod = 'VIETQR_BANK_TRANSFER') => {
+    const folio = await refreshFolio(bookingRef);
+    let invoiceId = folio.invoiceId;
+    if (!invoiceId && folio.canGenerateInvoice) invoiceId = (await billingApi.generateInvoice(folio.retreatBookingId)).invoiceId;
+    if (!invoiceId) throw new Error('The server has not provided a payable invoice for this booking.');
+    const payment = await billingApi.payInvoice(invoiceId, { paymentMethod, amount });
+    const transaction = toTransaction(payment, folio.bookingReference || bookingRef);
+    setLatestTransaction(transaction);
+    await refreshFolio(bookingRef);
+    return transaction;
+  }, [refreshFolio]);
 
-      let fnbExtrasTotal = 0;
+  const getTransactionById = useCallback((reference: string) => latestTransaction?.id === reference ? latestTransaction : undefined, [latestTransaction]);
 
-      customerOrders.forEach((o) => {
-        const isSettled = Boolean(settledDiningOrders[o.id]);
-        if (!isSettled) {
-          fnbExtrasTotal += o.totalAmount;
-        }
-
-        lineItems.push({
-          id: `FOLIO-FNB-${o.id}`,
-          sourceType: 'fnb',
-          sourceId: o.id,
-          title: {
-            vi: `Thực Đơn A-la-carte Tùy Chọn (${o.lines.length} món)`,
-            en: `A-la-carte Nourishing Order (${o.lines.length} items)`,
-            'zh-CN': `养生零点定制餐点 (${o.lines.length}道)`,
-            ja: `アラカルト養生オーダー (${o.lines.length}品)`,
-            fr: `Commande Nourrissante À la Carte (${o.lines.length} plats)`,
-          },
-          subtitle: `${o.location || 'Villa #102'} · Ordered ${o.createdAt.slice(0, 10)} ${o.targetTime || ''}`,
-          serviceDate: o.createdAt.slice(0, 10),
-          quantity: o.lines.reduce((sum, line) => sum + line.quantity, 0),
-          unitAmount: o.totalAmount,
-          totalAmount: o.totalAmount,
-          status: isSettled ? 'settled' : 'pending_settlement',
-          createdAt: o.createdAt,
-          isIncludedInPackage: false,
-        });
-      });
-
-      // 4. Summaries & Monies
-      const totalExtras = spaExtrasTotal + fnbExtrasTotal;
-      const totalBillable = retreatTotal + spaExtrasTotal + fnbExtrasTotal;
-      const outstandingBalance = retreatRemaining + spaExtrasTotal + fnbExtrasTotal;
-      const totalPaid = depositPaid + (retreatTotal - retreatRemaining) + (lineItems.filter(l => l.status === 'settled' && !l.isIncludedInPackage).reduce((s, l) => s + l.totalAmount, 0));
-      const isFullySettled = outstandingBalance === 0;
-
-      // 5. Checkout Blockers
-      const blockers: CheckoutBlocker[] = [];
-
-      if (retreatRemaining > 0) {
-        blockers.push({
-          type: 'unpaid_balance',
-          titleKey: 'customer.checkout.blockerRetreatTitle',
-          messageKey: 'customer.checkout.blockerRetreatMsg',
-          amount: retreatRemaining,
-          actionPath: `/customer/checkout/payment`,
-          actionLabelKey: 'customer.checkout.actionPayBalance',
-        });
-      }
-
-      if (spaExtrasTotal > 0) {
-        blockers.push({
-          type: 'unsettled_spa',
-          titleKey: 'customer.checkout.blockerSpaTitle',
-          messageKey: 'customer.checkout.blockerSpaMsg',
-          amount: spaExtrasTotal,
-          actionPath: `/customer/checkout/payment`,
-          actionLabelKey: 'customer.checkout.actionPaySpa',
-        });
-      }
-
-      if (fnbExtrasTotal > 0) {
-        blockers.push({
-          type: 'unsettled_fnb',
-          titleKey: 'customer.checkout.blockerFnbTitle',
-          messageKey: 'customer.checkout.blockerFnbMsg',
-          amount: fnbExtrasTotal,
-          actionPath: `/customer/checkout/payment`,
-          actionLabelKey: 'customer.checkout.actionPayFnb',
-        });
-      }
-
-      const canCheckout = blockers.length === 0;
-
-      return {
-        bookingReference: bRef,
-        customerName,
-        villaCode,
-        stayDates,
-        retreatTotal,
-        depositPaid,
-        retreatRemaining,
-        spaExtrasTotal,
-        fnbExtrasTotal,
-        totalExtras,
-        totalBillable,
-        totalPaid,
-        outstandingBalance,
-        isFullySettled,
-        canCheckout,
-        blockers,
-        lineItems,
-      };
-    },
-    [activeBooking, bookings, sessions, alaCarteOrders, settledBookings, settledSpaSessions, settledDiningOrders]
-  );
-
-  const activeFolio = useMemo(() => {
-    return getFolioForBooking();
-  }, [getFolioForBooking]);
-
-  // ── Payment Processing (Mock VNPay) ───────────────────
-  const processPayment = async (
-    bookingRef: string,
-    amount: number,
-    simulateMode: 'success' | 'failed' | 'cancelled' = 'success'
-  ): Promise<PaymentTransaction> => {
-    const txnId = `VNP-M5-${Math.floor(100000 + Math.random() * 900000)}`;
-    const now = new Date().toISOString();
-
-    if (simulateMode === 'failed') {
-      const failedTxn: PaymentTransaction = {
-        id: txnId,
-        bookingReference: bookingRef,
-        amount,
-        provider: 'vnpay_mock',
-        status: 'failed',
-        createdAt: now,
-        completedAt: now,
-        failureReason: 'Card issuing bank authorization declined (Code 51: Insufficient balance or security hold).',
-        cardLast4: '8821',
-      };
-      setTransactions((prev) => [failedTxn, ...prev]);
-      setLatestTransaction(failedTxn);
-      return failedTxn;
-    }
-
-    if (simulateMode === 'cancelled') {
-      const cancelledTxn: PaymentTransaction = {
-        id: txnId,
-        bookingReference: bookingRef,
-        amount,
-        provider: 'vnpay_mock',
-        status: 'cancelled',
-        createdAt: now,
-        completedAt: now,
-        failureReason: 'Transaction aborted by customer on VNPay gateway authentication prompt.',
-        cardLast4: '8821',
-      };
-      setTransactions((prev) => [cancelledTxn, ...prev]);
-      setLatestTransaction(cancelledTxn);
-      return cancelledTxn;
-    }
-
-    // Success path
-    const successTxn: PaymentTransaction = {
-      id: txnId,
-      bookingReference: bookingRef,
-      amount,
-      provider: 'vnpay_mock',
-      status: 'success',
-      createdAt: now,
-      completedAt: now,
-      gatewayRef: `VNPGW-${Math.floor(10000000 + Math.random() * 90000000)}`,
-      cardLast4: '8821',
-    };
-
-    // Settle all outstanding charges for this booking
-    setSettledBookings((prev) => {
-      const updated = { ...prev, [bookingRef]: true };
-      try {
-        localStorage.setItem(STORAGE_KEYS.SETTLED_BOOKINGS, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-
-    setSettledSpaSessions((prev) => {
-      const updated: Record<string, boolean> = {
-        ...prev,
-        'SES-EXTRA-881': true,
-        'SES-305': true,
-        'SES-308': true,
-      };
-      sessions.forEach((s) => {
-        if (s.chargeType === 'extra') updated[s.id] = true;
-      });
-      try {
-        localStorage.setItem(STORAGE_KEYS.SETTLED_SPA, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-
-    setSettledDiningOrders((prev) => {
-      const updated = { ...prev };
-      alaCarteOrders.forEach((o) => {
-        updated[o.id] = true;
-      });
-      try {
-        localStorage.setItem(STORAGE_KEYS.SETTLED_DINING, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-
-    setTransactions((prev) => {
-      const updated = [successTxn, ...prev];
-      try {
-        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-
-    setLatestTransaction(successTxn);
-    return successTxn;
-  };
-
-  const getTransactionById = useCallback(
-    (id: string) => transactions.find((t) => t.id === id),
-    [transactions]
-  );
-
-  // ── Resort Checkout Completion ───────────────────────
-  const completeResortCheckout = (
-    bookingRef: string,
-    settledBy: 'customer' | 'receptionist' = 'customer'
-  ): { success: boolean; message: string; blockers?: CheckoutBlocker[] } => {
-    // Idempotency guard: If checkout already completed, return success idempotently without state mutation
-    if (checkoutRecords[bookingRef]) {
-      const existing = checkoutRecords[bookingRef];
-      return {
-        success: true,
-        message: `Resort checkout already finalized for ${bookingRef}. Key handover acknowledged for Villa #${existing.villaCode}.`,
-      };
-    }
-
-    const folio = getFolioForBooking(bookingRef);
-
-    // Enforce Rule 4: Checkout cannot complete while unpaid obligations remain
-    if (!folio.canCheckout) {
-      return {
-        success: false,
-        message: 'Resort checkout cannot proceed while unresolved monetary obligations remain.',
-        blockers: folio.blockers,
-      };
-    }
-
-    const now = new Date().toISOString();
+  const completeResortCheckout = useCallback(async (bookingRef: string, settledBy: 'customer' | 'receptionist' = 'customer') => {
+    const folio = await refreshFolio(bookingRef);
+    let invoiceId = folio.invoiceId;
+    if (!invoiceId && folio.canGenerateInvoice) invoiceId = (await billingApi.generateInvoice(folio.retreatBookingId)).invoiceId;
+    if (!invoiceId) throw new Error('Checkout cannot proceed: no server invoice is available.');
+    const result = await billingApi.finalizeCheckout(invoiceId);
+    const booking = bookingFor(bookingRef);
     const record: CheckoutRecord = {
-      bookingReference: bookingRef,
-      checkoutDate: now,
-      totalSettled: folio.totalBillable,
-      villaCode: folio.villaCode,
+      bookingReference: result.bookingReference || bookingRef,
+      checkoutDate: result.completedAt,
+      totalSettled: result.totalSettled,
+      villaCode: result.villaNumber || '—',
       settledBy,
-      completedAt: now,
+      completedAt: result.completedAt,
     };
+    setCheckoutByBooking(prev => ({ ...prev, [record.bookingReference]: record }));
+    await refreshFolio(booking?.bookingReference || bookingRef);
+    return { success: true as const, message: result.message, record };
+  }, [bookingFor, refreshFolio]);
 
-    setCheckoutRecords((prev) => {
-      const updated = { ...prev, [bookingRef]: record };
-      try {
-        localStorage.setItem(STORAGE_KEYS.CHECKOUT_RECORDS, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+  const isStayCheckedOut = useCallback((ref: string) => {
+    const booking = bookingFor(ref);
+    const isCompleted = booking?.status === 'completed' || (booking as any)?.bookingStatus === 'COMPLETED';
+    const record = checkoutByBooking[ref];
+    return Boolean(record) || folios[ref]?.folioStatus === 'CLOSED' || isCompleted;
+  }, [checkoutByBooking, folios, bookingFor]);
+  const getCheckoutRecord = useCallback((ref: string) => checkoutByBooking[ref], [checkoutByBooking]);
 
-    // Update OperationsContext: Transition assigned villa to 'cleaning' with 'dirty' status
-    const assignedArrival = arrivals.find((a) => a.bookingReference === bookingRef);
-    if (assignedArrival && assignedArrival.assignedVillaId) {
-      updateVillaStatus(assignedArrival.assignedVillaId, 'cleaning', 'dirty');
-    } else {
-      // Default fallback: Villa 102
-      updateVillaStatus('V-102', 'cleaning', 'dirty');
-    }
+  const submitReview: FolioContextType['submitReview'] = useCallback(async (ref, data) => {
+    const id = numericBookingId(ref);
+    if (!id) return { success: false, message: 'A server booking ID is required to submit a review.' };
+    const saved = await billingApi.submitReview({ retreatBookingId: id, overallRating: data.overallRating, roomRating: data.roomRating, spaRating: data.spaRating, diningRating: data.diningRating, comments: data.feedback });
+    const review: CustomerStayReview = { ...data, id: String(saved.reviewId), bookingReference: ref, submittedAt: saved.submittedAt };
+    setReviews(prev => ({ ...prev, [ref]: review }));
+    return { success: true, message: 'Review submitted.' };
+  }, [numericBookingId]);
+  const getReviewForBooking = useCallback((ref: string) => reviews[ref], [reviews]);
 
-    return {
-      success: true,
-      message: `Resort checkout completed successfully for ${bookingRef}. Key handover acknowledged and housekeeping notification dispatched for Villa #${folio.villaCode}.`,
-    };
-  };
-
-  const isStayCheckedOut = useCallback(
-    (bookingRef: string): boolean => {
-      return Boolean(checkoutRecords[bookingRef]);
-    },
-    [checkoutRecords]
-  );
-
-  const getCheckoutRecord = useCallback(
-    (bookingRef: string): CheckoutRecord | undefined => {
-      return checkoutRecords[bookingRef];
-    },
-    [checkoutRecords]
-  );
-
-  // ── Review & Rating (Post-Checkout Only) ──────────────
-  const submitReview = (
-    bookingRef: string,
-    reviewData: Omit<CustomerStayReview, 'id' | 'submittedAt'>
-  ): { success: boolean; message: string } => {
-    // Enforce Rule 5: Review & Rating is optional and post-checkout only
-    if (!isStayCheckedOut(bookingRef)) {
-      return {
-        success: false,
-        message: 'Stay review and rating becomes available exclusively after resort check-out is complete.',
-      };
-    }
-
-    if (reviews[bookingRef]) {
-      return {
-        success: false,
-        message: 'A review has already been submitted for this completed retreat stay.',
-      };
-    }
-
-    const newReview: CustomerStayReview = {
-      ...reviewData,
-      id: `REV-${Math.floor(1000 + Math.random() * 9000)}`,
-      bookingReference: bookingRef,
-      submittedAt: new Date().toISOString(),
-    };
-
-    setReviews((prev) => {
-      const updated = { ...prev, [bookingRef]: newReview };
-      try {
-        localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-
-    return {
-      success: true,
-      message: 'Thank you for your valuable reflections. Your review has been recorded to elevate future sanctuary journeys.',
-    };
-  };
-
-  const getReviewForBooking = useCallback(
-    (bookingRef: string): CustomerStayReview | undefined => {
-      return reviews[bookingRef];
-    },
-    [reviews]
-  );
-
-  // ── Manager Analytical Aggregators (Rule 6: Privacy Safe) ──
   const getRevenueAnalytics = useCallback(() => {
-    // 1. Retreat Revenue (confirmed bookings + deposits + settled balances)
-    const retreatRevenue = bookings.reduce((sum, b) => {
-      if (b.depositStatus === 'paid') {
-        const remainingSettled = Boolean(settledBookings[b.bookingReference]);
-        return sum + (remainingSettled ? b.totalPrice : b.depositAmount);
-      }
-      return sum;
-    }, 0);
-
-    // 2. Spa Revenue
-    const spaRevenue = sessions.reduce((sum, s) => {
-      if (s.chargeType === 'extra' && s.price > 0) {
-        return sum + s.price;
-      }
-      return sum;
-    }, 1500000); // include demo extra session
-
-    // 3. F&B Revenue
-    const fnbRevenue = alaCarteOrders.reduce((sum, o) => {
-      return sum + o.totalAmount;
-    }, 0);
-
-    const totalRevenue = retreatRevenue + spaRevenue + fnbRevenue;
-    const currentFolio = getFolioForBooking();
-    const outstandingRevenue = currentFolio.outstandingBalance;
-
-    return {
-      totalRevenue,
-      retreatRevenue,
-      spaRevenue,
-      fnbRevenue,
-      outstandingRevenue,
-      categoryBreakdown: [
-        { name: 'Retreat Packages', value: retreatRevenue, color: '#4F5A50' },
-        { name: 'Spa & Therapies', value: spaRevenue, color: '#6D7466' },
-        { name: 'Nourishing Dining', value: fnbRevenue, color: '#D8C7AE' },
-      ],
-    };
-  }, [bookings, sessions, alaCarteOrders, settledBookings, getFolioForBooking]);
-
+    const value = analytics.revenue;
+    return value ? {
+      totalRevenue: value.totalRevenue, retreatRevenue: value.packageRevenue, spaRevenue: value.spaRevenue,
+      fnbRevenue: value.fnbRevenue, outstandingRevenue: value.outstandingBalance, categoryBreakdown: value.categoryBreakdown,
+    } : { totalRevenue: Number.NaN, retreatRevenue: Number.NaN, spaRevenue: Number.NaN, fnbRevenue: Number.NaN, outstandingRevenue: Number.NaN, categoryBreakdown: [] };
+  }, [analytics.revenue]);
   const getOccupancyAnalytics = useCallback(() => {
-    const totalVillas = villas.length;
-    const occupiedCount = villas.filter((v) => v.status === 'occupied').length;
-    const reservedCount = villas.filter((v) => v.status === 'reserved').length;
-    const readyCount = villas.filter((v) => v.status === 'ready').length;
-    const cleaningCount = villas.filter((v) => v.status === 'cleaning').length;
-    const maintenanceCount = villas.filter((v) => v.status === 'maintenance').length;
-    // Mathematically exact calculation without premature integer rounding (e.g. 1/8 * 100 = 12.5%)
-    const occupancyRate = totalVillas > 0 ? (occupiedCount / totalVillas) * 100 : 0;
-
-    const villaDetails = villas.map((v) => {
-      const isOccupied = v.status === 'occupied';
-      const isReserved = v.status === 'reserved';
-      return {
-        id: v.id,
-        code: v.code,
-        category: v.category,
-        status: v.status,
-        customerName: isOccupied ? v.currentCustomerName : isReserved ? v.nextArrival?.customerName || v.currentCustomerName : undefined,
-        bookingRef: isOccupied ? v.currentBookingRef : isReserved ? v.nextArrival?.bookingRef || v.currentBookingRef : undefined,
-        activeCustomerName: isOccupied ? v.currentCustomerName : undefined,
-        activeBookingRef: isOccupied ? v.currentBookingRef : undefined,
-        previousCustomerName: !isOccupied && !isReserved && v.currentCustomerName ? v.currentCustomerName : undefined,
-        previousBookingRef: !isOccupied && !isReserved && v.currentBookingRef ? v.currentBookingRef : undefined,
-      };
-    });
-
-    return {
-      totalVillas,
-      occupiedCount,
-      reservedCount,
-      readyCount,
-      cleaningCount,
-      maintenanceCount,
-      occupancyRate,
-      villaDetails,
-    };
-  }, [villas]);
-
+    const value = analytics.occupancy;
+    return value ? {
+      totalVillas: value.totalVillas, occupiedCount: value.occupiedCount, reservedCount: value.reservedCount,
+      readyCount: value.readyCount, cleaningCount: value.cleaningCount, maintenanceCount: value.maintenanceCount,
+      occupancyRate: value.occupancyRate, villaDetails: value.villaDetails.map(v => ({
+        id: String(v.villaId), code: v.villaNumber, category: v.category, status: v.status.toLowerCase(),
+        customerName: v.customerName || undefined, bookingRef: v.bookingReference || undefined,
+      })),
+    } : { totalVillas: Number.NaN, occupiedCount: Number.NaN, reservedCount: Number.NaN, readyCount: Number.NaN, cleaningCount: Number.NaN, maintenanceCount: Number.NaN, occupancyRate: Number.NaN, villaDetails: [] };
+  }, [analytics.occupancy]);
   const getTherapistUtilizationAnalytics = useCallback(() => {
-    const totalTherapists = therapists.length;
-    const totalScheduledSessions = sessions.length;
-    const completedSessions = sessions.filter((s) => s.status === 'completed').length;
-    const noShowSessions = sessions.filter((s) => s.status === 'no_show').length;
-    const totalBookedMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
-    const totalBookedHours = Math.round((totalBookedMinutes / 60) * 10) / 10;
+    const value = analytics.therapists;
+    return value ? {
+      totalTherapists: value.therapistDetails.length, totalScheduledSessions: value.totalScheduledSessions,
+      completedSessions: value.completedSessions, noShowSessions: value.noShowSessions,
+      totalBookedMinutes: value.therapistDetails.reduce((sum, item) => sum + item.bookedMinutes, 0),
+      totalBookedHours: value.totalBookedHours, therapistDetails: value.therapistDetails.map(item => ({
+        id: String(item.therapistId), name: item.name, sessionsCount: item.sessionsCount,
+        completedCount: item.completedCount, noShowCount: item.noShowCount,
+        bookedMinutes: item.bookedMinutes, bookedHours: item.bookedHours,
+      })),
+    } : { totalTherapists: Number.NaN, totalScheduledSessions: Number.NaN, completedSessions: Number.NaN, noShowSessions: Number.NaN, totalBookedMinutes: Number.NaN, totalBookedHours: Number.NaN, therapistDetails: [] };
+  }, [analytics.therapists]);
+  const resetFolioSettlement = useCallback(() => {
+    setFolios({}); setCheckoutByBooking({}); setLatestTransaction(null); setError(null);
+  }, []);
 
-    const therapistDetails = therapists.map((t) => {
-      const tSessions = sessions.filter((s) => s.therapistId === t.id);
-      const sCount = tSessions.length;
-      const cCount = tSessions.filter((s) => s.status === 'completed').length;
-      const nsCount = tSessions.filter((s) => s.status === 'no_show').length;
-      const bMins = tSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
-      const bHours = Math.round((bMins / 60) * 10) / 10;
-
-      return {
-        id: t.id,
-        name: t.name,
-        sessionsCount: sCount,
-        completedCount: cCount,
-        noShowCount: nsCount,
-        bookedMinutes: bMins,
-        bookedHours: bHours,
-      };
-    });
-
-    return {
-      totalTherapists,
-      totalScheduledSessions,
-      completedSessions,
-      noShowSessions,
-      totalBookedMinutes,
-      totalBookedHours,
-      therapistDetails,
-    };
-  }, [therapists, sessions]);
-
-  return (
-    <FolioContext.Provider
-      value={{
-        getFolioForBooking,
-        activeFolio,
-        processPayment,
-        latestTransaction,
-        getTransactionById,
-        completeResortCheckout,
-        isStayCheckedOut,
-        getCheckoutRecord,
-        submitReview,
-        getReviewForBooking,
-        getRevenueAnalytics,
-        getOccupancyAnalytics,
-        getTherapistUtilizationAnalytics,
-      }}
-    >
-      {children}
-    </FolioContext.Provider>
-  );
+  return <FolioContext.Provider value={{
+    getFolioForBooking, activeFolio, processPayment, latestTransaction, getTransactionById,
+    completeResortCheckout, isStayCheckedOut, getCheckoutRecord, submitReview, getReviewForBooking,
+    resetFolioSettlement, getRevenueAnalytics, getOccupancyAnalytics, getTherapistUtilizationAnalytics,
+    isLoading, error, refreshFolio,
+  }}>{children}</FolioContext.Provider>;
 };
 
 export const useFolio = (): FolioContextType => {
   const context = useContext(FolioContext);
-  if (!context) {
-    throw new Error('useFolio must be used within a FolioProvider');
-  }
+  if (!context) throw new Error('useFolio must be used within a FolioProvider');
   return context;
 };

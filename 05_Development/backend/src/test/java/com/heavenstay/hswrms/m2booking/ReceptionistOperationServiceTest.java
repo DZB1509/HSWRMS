@@ -225,4 +225,24 @@ public class ReceptionistOperationServiceTest {
         assertTrue(ex.getMessage().contains("Cannot change status of Villa"));
         verify(physicalVillaRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Reject direct transition to OCCUPIED outside check-in")
+    void rejectsDirectOccupiedTransition() {
+        mockVilla.setVillaStatus(PhysicalVilla.AVAILABLE);
+        when(physicalVillaRepository.findByIdForUpdate(201)).thenReturn(Optional.of(mockVilla));
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                receptionistService.updateVillaStatus(201, PhysicalVilla.OCCUPIED, null, 2));
+        assertTrue(ex.getMessage().contains("check-in workflow"));
+        verify(physicalVillaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reject unknown villa status values")
+    void rejectsUnknownVillaStatus() {
+        when(physicalVillaRepository.findByIdForUpdate(201)).thenReturn(Optional.of(mockVilla));
+        assertThrows(BusinessRuleException.class, () ->
+                receptionistService.updateVillaStatus(201, "BROKEN", null, 2));
+        verify(physicalVillaRepository, never()).save(any());
+    }
 }

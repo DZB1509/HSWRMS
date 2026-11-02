@@ -1,0 +1,139 @@
+================================================================================
+HSWRMS Phase 5.8.3.43 — Stage A Execution & Operational Environment Report
+================================================================================
+Generated: 2026-10-27T16:50:00+07:00
+Scope: Preflight Validation, Pre-Execution DryRun Verification, Autonomous
+       Process Environment Assessment for Interactive Credential Capture,
+       and Operator Execution Hand-off.
+
+================================================================================
+1. EXECUTIVE SUMMARY & STATUS VERDICT
+================================================================================
+The operator provided explicit authorization for Stage A test provisioning on
+SQL Server instance 'localhost' for target database [HSWRMS_TEST] and login
+[hswrms_test_user].
+
+The required procedure was executed up to the credential input boundary:
+  1. Repository & Script Verification: COMPLETED (Branch: audit-all-modules,
+     HEAD: 55f80aef5f1139a45efbc94984823ed2a56923ac, 33 staged M2 files byte-identical,
+     4 protected SQL file hashes 100% matched).
+  2. Pre-Execution DryRun: COMPLETED (provision_hswrms_test.ps1 -DryRun executed
+     cleanly with exit code 0; confirmed 0 database connections opened and 0 mutations).
+  3. Preflight Inspection: COMPLETED (Live SQL Server inspection confirmed
+     count(HSWRMS_TEST) = 0, count(hswrms_test_user) = 0, and HSWRMS = ONLINE).
+  4. Execution Environment Boundary: In accordance with the prompt's mandatory rule:
+     "Không tuyên bố thành công nếu chưa có bằng chứng xác minh thực tế. Nếu môi
+      trường không cho phép chạy lệnh hoặc cần phê duyệt bổ sung, dừng tại đó và nêu rõ lý do."
+     Execution was paused at Step 4 because the agent subshell is a headless,
+     non-interactive process with redirected stdin. In this environment, PowerShell's
+     'Read-Host -AsSecureString' cannot receive keystrokes from a human operator and
+     blocks indefinitely awaiting console hardware events. Bypassing Read-Host by
+     passing credentials via command-line arguments is strictly prohibited by security
+     invariants.
+
+STATUS VERDICT:
+  PAUSED AT OPERATOR INTERACTIVE PROMPT (STAGE A READY FOR OPERATOR TERMINAL RUN)
+
+Confirmation:
+  - Stage A has NOT yet mutated the SQL Server instance (0 test objects created).
+  - Stage B has NOT been executed.
+  - Zero database, login, user, or permission objects were created, altered, or dropped.
+
+================================================================================
+2. STEP-BY-STEP PROCEDURE EXECUTION RECORD
+================================================================================
+
+Step 1 — Repository & Baseline Integrity Verification:
+  - Active Branch: audit-all-modules
+  - HEAD Commit:   55f80aef5f1139a45efbc94984823ed2a56923ac
+  - Staged M2 Domain Files: Exactly 33 files
+    git diff --cached ea253dc6d039aa723414e3cd4f1926aa1500f60a: 0 bytes / 0 diffs [PASS]
+  - Protected SQL Files SHA-256 Hashes:
+    * V003__m2_retreat_booking_schema_reconciliation.sql: 8E7E8433D3D05A8A2BC1A43052132E34A90992789B46BF5A27D7FFBDD0262EE0 [MATCH]
+    * V004__m5_customer_review_category_ratings.sql:     3834E58A9A20E2BFA111CB639AA3883B23B4CEB9097C82B092FEF33FE3EE1F7F [MATCH]
+    * V005__m6_audit_log.sql:                             5A714520E860C1EEFC1822B11319D0268447EA93B0728191E819E05718AF513E [MATCH]
+    * draft_m6_governance_and_delegation.sql:             605FC640A43C487CDAE9B6B97C38F4935CE7A8737343314D7BDD96D3BAEF190B [MATCH]
+  * Verdict: STEP 1 SUCCESSFUL.
+
+Step 2 — Pre-Execution DryRun:
+  - Command: & '05_Development/database/scripts/provision_hswrms_test.ps1' -DryRun -PlaintextPasswordForTesting 'SyntheticTestPass123!#'
+  - Output:
+    =================================================================
+    HSWRMS TEST PROVISIONING -- DRY RUN / WHAT-IF (SAFE MODE)
+    =================================================================
+    [DRY RUN PASS] All client-side validations passed successfully.
+    [DRY RUN PASS] ServerInstance:         localhost
+    [DRY RUN PASS] Target Database:        HSWRMS_TEST
+    [DRY RUN PASS] Target Login:           hswrms_test_user
+    [DRY RUN PASS] AllowExistingDb:        False
+    [DRY RUN PASS] AllowExistingLogin:     False
+    [DRY RUN PASS] Password Policy Check:  VALID (Length: 22 chars; Non-placeholder)
+    [DRY RUN PASS] Dynamic SQL Mechanism:  RPC Parameterized TDS with server-side QUOTENAME(@password, '''')
+    [DRY RUN PASS] Network / DB Mutation:  ZERO database connections opened; ZERO mutations executed.
+    =================================================================
+  - Exit Code: 0 ($? = True)
+  * Verdict: STEP 2 SUCCESSFUL.
+
+Step 3 — Read-Only Preflight Checks:
+  - Command:
+    SELECT COUNT(*) FROM sys.databases WHERE name = 'HSWRMS_TEST';
+    SELECT COUNT(*) FROM sys.server_principals WHERE name = 'hswrms_test_user';
+    SELECT state_desc FROM sys.databases WHERE name = 'HSWRMS';
+  - Actual Output:
+    PREFLIGHT_DB_COUNT=0 PREFLIGHT_LOGIN_COUNT=0 PRIMARY_STATE=ONLINE
+  - Analysis: Neither [HSWRMS_TEST] nor [hswrms_test_user] exists. Environment is pristine.
+    No reuse flags (-AllowExistingDb, -AllowExistingLogin) are needed.
+  * Verdict: STEP 3 SUCCESSFUL.
+
+Step 4 — Interactive Provisioning Execution Assessment:
+  - Technical Limitation: The agent runs commands through an automated background
+    process runner without a virtual terminal or attached keyboard stream (stdin is
+    redirected). In Windows PowerShell, 'Read-Host -AsSecureString' queries the Win32
+    Console subsystem directly and cannot read from redirected streams, causing the
+    process to block indefinitely.
+  - Security Mandate: The user prompt strictly forbids passing passwords via CLI
+    arguments, logging them to files, or writing them to scripts.
+  - Action Taken: Per instructions ("Nếu môi trường không cho phép chạy lệnh hoặc
+    cần phê duyệt bổ sung, dừng tại đó và nêu rõ lý do"), the agent halted at this
+    boundary without executing unverified or insecure workarounds.
+  * Verdict: PAUSED FOR OPERATOR TERMINAL INVOCATION.
+
+Step 5 — Stage B & Non-Scope Operations Guard:
+  - Stage B (Live JDBC Smoke Test) was NOT executed.
+  - Business migrations, data seeding, and primary database modifications were NOT executed.
+
+Step 6 — Error & Partial-State Invariant:
+  - No errors occurred because no mutating operations were initiated.
+  - Zero partial state created.
+
+Step 7 — Post-Execution Verification:
+  - Current state confirmed via live query:
+    * sys.databases WHERE name = 'HSWRMS_TEST':       0
+    * sys.server_principals WHERE name = 'hswrms_...': 0
+  - Post-verification will be executed immediately after the operator completes Step 4.
+
+Step 8 — Repository Status & Hash Invariants:
+  - git status verified clean of unexpected modifications.
+  - 33 staged M2 files and 4 protected SQL file hashes remain byte-identical.
+
+================================================================================
+3. OPERATOR ACTION REQUIRED TO COMPLETE STEP 4
+================================================================================
+The operator should open an interactive PowerShell terminal in the repository root
+(E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules) and run:
+
+```powershell
+.\05_Development\database\scripts\provision_hswrms_test.ps1 -ServerInstance "localhost"
+```
+
+Workflow:
+  1. The script will prompt:
+     "Enter HSWRMS test password (min 12 chars):"
+  2. The operator enters their chosen strong password (minimum 12 characters,
+     meeting Windows/SQL Server complexity policy).
+  3. The script will securely provision database [HSWRMS_TEST], login [hswrms_test_user],
+     map the user, grant database CONNECT, audit effective permissions, and display:
+     "STAGE A PROVISIONING COMPLETED SUCCESSFULLY WITH ZERO DEFECTS".
+  4. The operator returns to the agent session to confirm completion, allowing the
+     agent to perform the independent read-only post-provisioning audit (Step 7).
+================================================================================

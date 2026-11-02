@@ -1,0 +1,9 @@
+Identity_ID,Alias_Or_Git_Identity,Email,Associated_Person,Student_ID,Role_In_Project,Primary_Module,Evidence_Source,Confidence,Unresolved_Ambiguity
+ID-01,Le Duc Hoang,leduchoang0946347814@gmail.com,Lê Đức Hoàng,UNKNOWN,Module 1 Lead / Developer,M1 - Identity & Access,Git commits on DucHoangM1; Task_Project_G1_IS2005.csv (PIC for M1),HIGH,Student ID not explicitly recorded in repo commit metadata
+ID-02,Datnghe181035,datnghe181035@fpt.edu.vn,Nguyễn Gia Đạt,HE181035,Module 2 Lead / Developer,M2 - Booking & Reservation,Git commits on dat-nguyen-gia; Task_Project_G1_IS2005.csv (PIC for M2),HIGH,None
+ID-03,"datnthe181883 / DZB1509 / Nguyen Tat Dat (K18 HL) / Nguyen_Tat_Dat",datnthe181883@fpt.edu.vn; nguyentatdat150904@gmail.com,Nguyễn Tất Đạt,HE181883,Project Technical Lead / Integrator,M3 - Spa & Shared Infrastructure,Git commits on NTDatZB and feature/hswrms-m1-m6-integration; Task plan; GitLab MRs,HIGH,None
+ID-04,Thao Vu,tvu7092@gmail.com,Vũ Phương Thảo,UNKNOWN,Module 4 Lead / Developer,M4 - Food & Beverage,Git commits on thao-product; Task_Project_G1_IS2005.csv (PIC for M4),HIGH,Student ID not explicitly recorded in repo commit metadata
+ID-05,hoatxhe180798,hoatxhe180798@fpt.edu.vn,Trần Xuân Hòa,HE180798,Module 5 Lead / Developer,M5 - Billing & Checkout,Git commits on XH and XH4; Task_Project_G1_IS2005.csv (PIC for M5),HIGH,None
+ID-06,pthanhvinh26112004,pthanhvinh26112004@gmail.com,Phan Thành Vinh,UNKNOWN,Module 6 Lead / Developer,M6 - Admin & Governance + Master Data,Git commits on vinhpt and vinhpt1; Task_Project_G1_IS2005.csv (PIC for M6),HIGH,Student ID not explicitly recorded in repo commit metadata
+ID-07,Nguyen Cuong Manh,manhnc5@fe.edu.vn,Nguyễn Cường Mạnh,LECTURER,Instructor / Project Supervisor,Repository Administration,Git initial commit 1bc054b; GitLab namespace manhnc2,HIGH,Project supervisor role (non-student contributor)
+

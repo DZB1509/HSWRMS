@@ -1,4 +1,4 @@
-import type { DietaryMenuItem, AlaCarteOrder, DailyMealSelection } from '../types/dining';
+import type { DietaryMenuItem, AlaCarteOrder, DailyMealSelection, LocalizedString } from '../types/dining';
 
 export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
   {
@@ -25,6 +25,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: [],
     isExtra: false,
     calories: 320,
+    price: 85000,
+    backendId: 9,
+    available: true,
+    availableServings: 15,
   },
   {
     id: 'MENU-002',
@@ -50,6 +54,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['eggs'],
     isExtra: false,
     calories: 450,
+    price: 110000,
+    backendId: 10,
+    available: true,
+    availableServings: 12,
   },
   {
     id: 'MENU-003',
@@ -75,6 +83,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['nuts'],
     isExtra: false,
     calories: 380,
+    price: 120000,
+    backendId: 11,
+    available: true,
+    availableServings: 20,
   },
   {
     id: 'MENU-004',
@@ -100,6 +112,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['fish'],
     isExtra: false,
     calories: 520,
+    price: 260000,
+    backendId: 12,
+    available: true,
+    availableServings: 8,
   },
   {
     id: 'MENU-005',
@@ -126,6 +142,8 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     price: 150000,
     isExtra: true,
     calories: 120,
+    backendId: 13,
+    available: true,
   },
   {
     id: 'MENU-006',
@@ -152,6 +170,8 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     price: 1500000,
     isExtra: true,
     calories: 850,
+    backendId: 14,
+    available: true,
   },
   {
     id: 'MENU-007',
@@ -177,6 +197,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: ['soy'],
     isExtra: false,
     calories: 190,
+    price: 140000,
+    backendId: 7,
+    available: true,
+    availableServings: 150,
   },
   {
     id: 'MENU-008',
@@ -202,6 +226,10 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     allergenTags: [],
     isExtra: false,
     calories: 230,
+    price: 65000,
+    backendId: 8,
+    available: true,
+    availableServings: 50,
   },
   {
     id: 'MENU-009',
@@ -228,250 +256,290 @@ export const MOCK_MENU_ITEMS: DietaryMenuItem[] = [
     price: 120000,
     isExtra: true,
     calories: 45,
+    backendId: 15,
+    available: true,
   },
 ];
 
-// Canonical demo operational date is 2026-09-24 (matching mockOperations & mockSpa)
-export const MOCK_MEAL_SELECTIONS: DailyMealSelection[] = [
-  {
-    id: 'MS-1001',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    date: '2026-09-24',
-    mealPeriod: 'breakfast',
-    menuItemIds: ['MENU-001'],
-    notes: 'Warm water and light honey on the side, please',
-    status: 'ready',
-  },
-  {
-    id: 'MS-1002',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    date: '2026-09-24',
-    mealPeriod: 'lunch',
-    menuItemIds: ['MENU-003'],
-    notes: 'Peanut allergy notice: please substitute with sunflower seed dressing',
-    status: 'preparing',
-  },
-  {
-    id: 'MS-1003',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    date: '2026-09-24',
-    mealPeriod: 'dinner',
-    menuItemIds: ['MENU-004'],
-    notes: 'Extra steamed asparagus if available',
-    status: 'pending',
-  },
-  {
-    id: 'MS-1004',
-    bookingId: 'HSW-39201',
-    customerId: 'usr-cust-02',
-    date: '2026-09-24',
-    mealPeriod: 'lunch',
-    menuItemIds: ['MENU-007'],
-    notes: 'Low salt, no spicy chili',
-    status: 'preparing',
-  },
-  {
-    id: 'MS-1005',
-    bookingId: 'HSW-61904',
-    customerId: 'usr-cust-03',
-    date: '2026-09-24',
-    mealPeriod: 'dinner',
-    menuItemIds: ['MENU-002'],
-    notes: 'Gluten-conscious preparation',
-    status: 'pending',
-  },
-  {
-    id: 'MS-1006',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    date: '2026-10-15',
-    mealPeriod: 'breakfast',
-    menuItemIds: ['MENU-001'],
-    notes: 'No honey please',
-    status: 'pending',
-  },
-  {
-    id: 'MS-1007',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    date: '2026-10-15',
-    mealPeriod: 'lunch',
-    menuItemIds: ['MENU-003'],
-    notes: 'Light dressing',
-    status: 'pending',
-  },
-];
+// Initial meal selections and a-la-carte orders are empty, populated only by real user orders
+export const MOCK_MEAL_SELECTIONS: DailyMealSelection[] = [];
+export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [];
 
-export const MOCK_ALA_CARTE_ORDERS: AlaCarteOrder[] = [
-  {
-    id: 'ORD-9001',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-24T14:15:00Z',
-    targetTime: '15:30',
-    location: 'Villa #102',
-    status: 'preparing',
-    lines: [
-      {
-        id: 'L-01',
-        menuItemId: 'MENU-005',
-        quantity: 2,
-        unitPrice: 150000,
-        notes: 'Extra ginger, no ice',
-      }
-    ],
-    totalAmount: 300000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9002',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-24T17:45:00Z',
-    targetTime: '19:15',
-    location: 'Villa #102',
-    status: 'pending',
-    lines: [
-      {
-        id: 'L-02',
-        menuItemId: 'MENU-006',
-        quantity: 1,
-        unitPrice: 1500000,
-        notes: 'Medium rare, garlic herb butter on the side',
-      }
-    ],
-    totalAmount: 1500000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9003',
-    bookingId: 'HSW-39201',
-    customerId: 'usr-cust-02',
-    createdAt: '2026-09-24T10:10:00Z',
-    targetTime: '11:00',
-    location: 'Villa #104',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-03',
-        menuItemId: 'MENU-009',
-        quantity: 2,
-        unitPrice: 120000,
-        notes: 'Warm infusion with lime',
-      }
-    ],
-    totalAmount: 240000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9004',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-23T16:20:00Z',
-    targetTime: '17:00',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-04',
-        menuItemId: 'MENU-005',
-        quantity: 1,
-        unitPrice: 150000,
-        notes: 'Delivered to yoga pavilion',
-      }
-    ],
-    totalAmount: 150000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9005',
-    bookingId: 'HSW-88192',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-23T20:30:00Z',
-    targetTime: '21:00',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-05',
-        menuItemId: 'MENU-009',
-        quantity: 1,
-        unitPrice: 120000,
-        notes: 'Evening bedtime tea',
-      }
-    ],
-    totalAmount: 120000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9006',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-22T15:00:00Z',
-    targetTime: '15:45',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-06',
-        menuItemId: 'MENU-005',
-        quantity: 2,
-        unitPrice: 150000,
-        notes: 'Post massage refreshment',
-      }
-    ],
-    totalAmount: 300000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9007',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-22T19:00:00Z',
-    targetTime: '20:00',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-07',
-        menuItemId: 'MENU-006',
-        quantity: 1,
-        unitPrice: 1500000,
-        notes: 'Private dinner setup on deck',
-      }
-    ],
-    totalAmount: 1500000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-  {
-    id: 'ORD-9008',
-    bookingId: 'HSW-84920',
-    customerId: 'usr-cust-01',
-    createdAt: '2026-09-21T16:00:00Z',
-    targetTime: '16:30',
-    location: 'Villa #102',
-    status: 'delivered',
-    lines: [
-      {
-        id: 'L-08',
-        menuItemId: 'MENU-009',
-        quantity: 1,
-        unitPrice: 120000,
-        notes: 'Welcome afternoon tea',
-      }
-    ],
-    totalAmount: 120000,
-    chargeType: 'fnb_extra',
-    folioPostingStatus: 'pending_checkout_folio',
-  },
-];
+export interface RecipeIngredient {
+  ingredientId: string;
+  name: LocalizedString;
+  unit: string;
+  quantityPerServing: number;
+  stockAvailable: number;
+}
+
+export const MENU_ITEM_RECIPES: Record<string, RecipeIngredient[]> = {
+  'MENU-001': [
+    {
+      ingredientId: 'ING-01',
+      name: { vi: 'Yến mạch nguyên cám', en: 'Rolled Oats', 'zh-CN': '全谷物燕麦', ja: 'ロールドオーツ', fr: 'Flocons d\'avoine' },
+      unit: 'g',
+      quantityPerServing: 60,
+      stockAvailable: 25000,
+    },
+    {
+      ingredientId: 'ING-02',
+      name: { vi: 'Sữa hạnh nhân hữu cơ', en: 'Almond Milk', 'zh-CN': '有机杏仁奶', ja: 'オーガニックアーモンドミルク', fr: 'Lait d\'amande bio' },
+      unit: 'ml',
+      quantityPerServing: 180,
+      stockAvailable: 35000,
+    },
+    {
+      ingredientId: 'ING-03',
+      name: { vi: 'Quả mọng rừng tươi', en: 'Fresh Forest Berries', 'zh-CN': '野生新鲜浆果', ja: 'フレッシュミックスベリー', fr: 'Baies sauvages fraîches' },
+      unit: 'g',
+      quantityPerServing: 40,
+      stockAvailable: 12000,
+    },
+    {
+      ingredientId: 'ING-04',
+      name: { vi: 'Mật ong hoa bạc hà', en: 'Wildflower Honey', 'zh-CN': '野花薄荷蜂蜜', ja: 'ハーブハチミツ', fr: 'Miel sauvage' },
+      unit: 'ml',
+      quantityPerServing: 15,
+      stockAvailable: 8000,
+    },
+  ],
+  'MENU-002': [
+    {
+      ingredientId: 'ING-05',
+      name: { vi: 'Trứng gà hữu cơ', en: 'Organic Eggs', 'zh-CN': '农场有机鸡蛋', ja: 'オーガニック卵', fr: 'Œufs bio' },
+      unit: 'quả',
+      quantityPerServing: 2,
+      stockAvailable: 300,
+    },
+    {
+      ingredientId: 'ING-06',
+      name: { vi: 'Bánh mì bột chua thủ công', en: 'Artisanal Sourdough Bread', 'zh-CN': '天然酵母酸面包', ja: 'サワードウブレッド', fr: 'Pain au levain' },
+      unit: 'lát',
+      quantityPerServing: 2,
+      stockAvailable: 240,
+    },
+    {
+      ingredientId: 'ING-07',
+      name: { vi: 'Quả bơ Hass nghiền', en: 'Crushed Hass Avocado', 'zh-CN': '哈斯牛油果泥', ja: 'ハスアボカド', fr: 'Avocat Hass' },
+      unit: 'g',
+      quantityPerServing: 80,
+      stockAvailable: 15000,
+    },
+    {
+      ingredientId: 'ING-08',
+      name: { vi: 'Xà lách mầm & muối biển hồng', en: 'Microgreens & Pink Salt', 'zh-CN': '微型蔬菜与粉红海盐', ja: 'マイクログリーン＆岩塩', fr: 'Micro-pousses & sel rose' },
+      unit: 'g',
+      quantityPerServing: 20,
+      stockAvailable: 4000,
+    },
+  ],
+  'MENU-003': [
+    {
+      ingredientId: 'ING-09',
+      name: { vi: 'Hạt quinoa ba màu', en: 'Tri-color Quinoa', 'zh-CN': '有机三色藜麦', ja: '三色キヌア', fr: 'Quinoa tricolore' },
+      unit: 'g',
+      quantityPerServing: 70,
+      stockAvailable: 18000,
+    },
+    {
+      ingredientId: 'ING-10',
+      name: { vi: 'Dưa leo & củ cải đỏ hữu cơ', en: 'Cucumber & Garden Radish', 'zh-CN': '黄瓜与樱桃萝卜', ja: 'きゅうり＆ラディッシュ', fr: 'Concombre & radis' },
+      unit: 'g',
+      quantityPerServing: 60,
+      stockAvailable: 16000,
+    },
+    {
+      ingredientId: 'ING-11',
+      name: { vi: 'Xà lách thủy canh tươi', en: 'Hydroponic Garden Greens', 'zh-CN': '水培脆嫩生菜', ja: '水耕栽培グリーン', fr: 'Pousses du potager' },
+      unit: 'g',
+      quantityPerServing: 50,
+      stockAvailable: 14000,
+    },
+    {
+      ingredientId: 'ING-12',
+      name: { vi: 'Sốt bơ đậu phộng rang thủ công', en: 'Roasted Peanut Sauce', 'zh-CN': '秘制烤花生酱汁', ja: 'ローストピーナッツソース', fr: 'Sauce aux cacahuètes' },
+      unit: 'ml',
+      quantityPerServing: 30,
+      stockAvailable: 8500,
+    },
+  ],
+  'MENU-004': [
+    {
+      ingredientId: 'ING-13',
+      name: { vi: 'Phi lê cá hồi tươi', en: 'Fresh Salmon Fillet', 'zh-CN': '深海三文鱼柳', ja: 'サーモンフィレ', fr: 'Filet de saumon' },
+      unit: 'g',
+      quantityPerServing: 160,
+      stockAvailable: 22000,
+    },
+    {
+      ingredientId: 'ING-14',
+      name: { vi: 'Sốt chanh dây hữu cơ', en: 'Organic Passionfruit Glaze', 'zh-CN': '有机百香果汁', ja: 'パッションフルーツソース', fr: 'Coulis de passion' },
+      unit: 'ml',
+      quantityPerServing: 35,
+      stockAvailable: 6000,
+    },
+    {
+      ingredientId: 'ING-15',
+      name: { vi: 'Măng tây xanh Đà Lạt', en: 'Charred Green Asparagus', 'zh-CN': '炭烤有机芦笋', ja: 'グリーンアスパラガス', fr: 'Asperges vertes' },
+      unit: 'g',
+      quantityPerServing: 70,
+      stockAvailable: 10000,
+    },
+    {
+      ingredientId: 'ING-16',
+      name: { vi: 'Dầu ô liu & thì là tươi', en: 'Olive Oil & Baby Dill', 'zh-CN': '特级初榨橄榄油与莳萝', ja: 'オリーブオイル＆ディル', fr: 'Huile d\'olive & aneth' },
+      unit: 'ml',
+      quantityPerServing: 15,
+      stockAvailable: 9000,
+    },
+  ],
+  'MENU-005': [
+    {
+      ingredientId: 'ING-17',
+      name: { vi: 'Táo xanh Đà Lạt', en: 'Local Green Apple', 'zh-CN': '高山青苹果', ja: '青リンゴ', fr: 'Pomme verte' },
+      unit: 'g',
+      quantityPerServing: 80,
+      stockAvailable: 15000,
+    },
+    {
+      ingredientId: 'ING-18',
+      name: { vi: 'Cải bó xôi hữu cơ', en: 'Organic Baby Spinach', 'zh-CN': '有机嫩菠菜', ja: 'ベビーほうれん草', fr: 'Pousses d\'épinard' },
+      unit: 'g',
+      quantityPerServing: 40,
+      stockAvailable: 9000,
+    },
+    {
+      ingredientId: 'ING-19',
+      name: { vi: 'Nước ép cần tây lạnh', en: 'Cold-pressed Celery Juice', 'zh-CN': '冷压西芹原汁', ja: 'コールドプレスセロリ', fr: 'Jus de céleri pressé' },
+      unit: 'ml',
+      quantityPerServing: 120,
+      stockAvailable: 25000,
+    },
+    {
+      ingredientId: 'ING-20',
+      name: { vi: 'Nước cốt gừng ép tươi', en: 'Fresh Ginger Extract', 'zh-CN': '温胃鲜生姜汁', ja: '搾り生姜', fr: 'Extrait de gingembre' },
+      unit: 'ml',
+      quantityPerServing: 10,
+      stockAvailable: 4500,
+    },
+  ],
+  'MENU-006': [
+    {
+      ingredientId: 'ING-21',
+      name: { vi: 'Thăn bò Wagyu A5', en: 'Wagyu Tenderloin', 'zh-CN': '顶级和牛里脊肉', ja: '和牛テンダーロイン', fr: 'Filet de bœuf Wagyu' },
+      unit: 'g',
+      quantityPerServing: 150,
+      stockAvailable: 18000,
+    },
+    {
+      ingredientId: 'ING-22',
+      name: { vi: 'Đuôi tôm hùm tươi', en: 'Lobster Tail', 'zh-CN': '精选龙虾尾', ja: 'ロブスターテール', fr: 'Queue de homard' },
+      unit: 'g',
+      quantityPerServing: 120,
+      stockAvailable: 14000,
+    },
+    {
+      ingredientId: 'ING-23',
+      name: { vi: 'Bơ tỏi tía tô', en: 'Shiso Garlic Butter', 'zh-CN': '香草黄油', ja: 'シソガーリックバター', fr: 'Beurre d\'herbes' },
+      unit: 'g',
+      quantityPerServing: 25,
+      stockAvailable: 5000,
+    },
+    {
+      ingredientId: 'ING-24',
+      name: { vi: 'Khoai tây nghiền truffle', en: 'Truffle Puree', 'zh-CN': '松露土豆泥', ja: 'トリュフピューレ', fr: 'Purée truffée' },
+      unit: 'g',
+      quantityPerServing: 80,
+      stockAvailable: 10000,
+    },
+  ],
+  'MENU-007': [
+    {
+      ingredientId: 'ING-25',
+      name: { vi: 'Ngó sen hồ giòn', en: 'Fresh Lotus Stem', 'zh-CN': '鲜脆高山莲藕', ja: '新鮮蓮根', fr: 'Tiges de lotus' },
+      unit: 'g',
+      quantityPerServing: 80,
+      stockAvailable: 12000,
+    },
+    {
+      ingredientId: 'ING-26',
+      name: { vi: 'Đậu hũ non áp chảo', en: 'Pan-seared Organic Tofu', 'zh-CN': '香煎有机豆腐', ja: '焼き豆腐', fr: 'Tofu bio doré' },
+      unit: 'g',
+      quantityPerServing: 60,
+      stockAvailable: 10000,
+    },
+    {
+      ingredientId: 'ING-27',
+      name: { vi: 'Rau răm & mè rang', en: 'Wild Herbs & Sesame', 'zh-CN': '野生草本与芝麻', ja: 'ハーブ＆胡麻', fr: 'Herbes sauvages & sésame' },
+      unit: 'g',
+      quantityPerServing: 15,
+      stockAvailable: 4000,
+    },
+    {
+      ingredientId: 'ING-28',
+      name: { vi: 'Giấm dừa lên men tự nhiên', en: 'Fermented Coconut Vinegar', 'zh-CN': '古法椰子醋汁', ja: 'ココナッツビネガー', fr: 'Vinaigre de coco' },
+      unit: 'ml',
+      quantityPerServing: 20,
+      stockAvailable: 5000,
+    },
+  ],
+  'MENU-008': [
+    {
+      ingredientId: 'ING-29',
+      name: { vi: 'Hạt chia đen hữu cơ', en: 'Organic Black Chia Seeds', 'zh-CN': '有机奇亚籽', ja: 'チアシード', fr: 'Graines de chia' },
+      unit: 'g',
+      quantityPerServing: 30,
+      stockAvailable: 15000,
+    },
+    {
+      ingredientId: 'ING-30',
+      name: { vi: 'Nước cốt dừa Bến Tre', en: 'Coconut Cream', 'zh-CN': '新鲜浓醇椰奶', ja: 'ココナッツミルク', fr: 'Lait de coco' },
+      unit: 'ml',
+      quantityPerServing: 120,
+      stockAvailable: 10000,
+    },
+    {
+      ingredientId: 'ING-31',
+      name: { vi: 'Xoài Cát Chu chín cây', en: 'Cat Chu Mango', 'zh-CN': '金黄熟芒果片', ja: '完熟マンゴー', fr: 'Mangue mûre' },
+      unit: 'g',
+      quantityPerServing: 70,
+      stockAvailable: 5000,
+    },
+  ],
+  'MENU-009': [
+    {
+      ingredientId: 'ING-32',
+      name: { vi: 'Hoa đậu biếc sấy lạnh', en: 'Dried Butterfly Pea Blossoms', 'zh-CN': '蓝蝶花干花', ja: 'バタフライピー', fr: 'Pois papillon' },
+      unit: 'g',
+      quantityPerServing: 5,
+      stockAvailable: 2000,
+    },
+    {
+      ingredientId: 'ING-33',
+      name: { vi: 'Sả chanh & lá dứa', en: 'Lemongrass & Pandan Leaf', 'zh-CN': '香茅草与斑兰叶', ja: 'レモングラス＆パンダン', fr: 'Citronnelle & pandan' },
+      unit: 'g',
+      quantityPerServing: 15,
+      stockAvailable: 6000,
+    },
+    {
+      ingredientId: 'ING-34',
+      name: { vi: 'Mật ong rừng nguyên chất', en: 'Raw Forest Honey', 'zh-CN': '天然生蜂蜜', ja: '野生ハチミツ', fr: 'Miel brut' },
+      unit: 'ml',
+      quantityPerServing: 15,
+      stockAvailable: 5000,
+    },
+  ],
+};
+
+// Numeric ID aliases matching SQL Server backend IDs (7..15)
+MENU_ITEM_RECIPES['7'] = MENU_ITEM_RECIPES['MENU-007'];
+MENU_ITEM_RECIPES['8'] = MENU_ITEM_RECIPES['MENU-008'];
+MENU_ITEM_RECIPES['9'] = MENU_ITEM_RECIPES['MENU-001'];
+MENU_ITEM_RECIPES['10'] = MENU_ITEM_RECIPES['MENU-002'];
+MENU_ITEM_RECIPES['11'] = MENU_ITEM_RECIPES['MENU-003'];
+MENU_ITEM_RECIPES['12'] = MENU_ITEM_RECIPES['MENU-004'];
+MENU_ITEM_RECIPES['13'] = MENU_ITEM_RECIPES['MENU-005'];
+MENU_ITEM_RECIPES['14'] = MENU_ITEM_RECIPES['MENU-006'];
+MENU_ITEM_RECIPES['15'] = MENU_ITEM_RECIPES['MENU-009'];
+

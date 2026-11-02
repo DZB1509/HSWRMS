@@ -1,0 +1,386 @@
+================================================================================
+HSWRMS TEST-ENVIRONMENT PROVISIONING PLAN & SAFETY PREFLIGHT
+PHASE 5.8.3.57 — SAFE-MODE PLANNING & PRE-PROVISIONING AUDIT
+================================================================================
+Date: 2026-10-28
+Workspace Target: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Preflight Planning for Dedicated Test Database (HSWRMS_TEST)
+Execution Mode: STRICTLY PLAN-ONLY (Zero SQL Server connections; zero database mutations;
+                zero script executions; zero Git mutations; zero application modifications)
+================================================================================
+
+1. EXECUTIVE SUMMARY & SAFETY BOUNDARY STATEMENT
+--------------------------------------------------------------------------------
+Phase 5.8.3.57 establishes an evidence-based, safe provisioning plan for the
+HeavenStay Wellness Resort Management System (HSWRMS) test environment.
+This plan follows the conditional readiness assessment from Phase 5.8.3.56.
+
+STRICT SAFETY BOUNDARIES HONORED IN THIS PHASE:
+  [X] Zero live network connections opened to Microsoft SQL Server.
+  [X] Zero databases created, dropped, altered, truncated, or seeded.
+  [X] Zero PowerShell or SQL scripts executed.
+  [X] Zero DDL, DML, or migration scripts applied.
+  [X] Zero modifications to schema.sql, migrations, or database resources.
+  [X] Zero modifications to application source code.
+  [X] Zero mutations of Git state (no commit, checkout, stash, reset, or branch switch).
+  [X] Workspace B untouched.
+  [X] Zero exposure of passwords, tokens, or connection secrets.
+  [X] Strict isolation: primary development database [HSWRMS] is NEVER targeted.
+
+The dedicated test target is [HSWRMS_TEST] with dedicated least-privileged user
+[hswrms_test_user]. All assessments in this document are derived strictly from
+static inspection of the workspace, configuration files, and audited reports.
+
+GATE STATUS: PLAN READY FOR HUMAN APPROVAL.
+
+
+2. CONFIRMED FACTS VS. UNKNOWNS & ASSUMPTIONS
+--------------------------------------------------------------------------------
+A. Confirmed Facts (Derived from Current Source Code & Configuration):
+   1. Target DBMS: Microsoft SQL Server, port 1433, default collation
+      `SQL_Latin1_General_CP1_CI_AS` (05_Development/database/schema.sql, application.yml).
+   2. Dedicated Test Target Database: `HSWRMS_TEST` (application-sqlserver-test.yml,
+      provision_hswrms_test.ps1 line 61, SqlServerTestConfigValidator.java line 23).
+   3. Primary Development Database: `HSWRMS` (schema.sql line 23, application.yml line 17).
+   4. Target Test Principal: `hswrms_test_user` (provision_hswrms_test.ps1 line 65).
+   5. Isolation Invariant: `SqlServerTestConfigValidator.java` programmatically halts
+      and throws `IllegalStateException` if `spring.datasource.url` or `expected-database`
+      targets `HSWRMS` or system databases (`master`, `tempdb`, `model`, `msdb`), or
+      if test username is `sa`.
+   6. Baseline DDL Mismatch Risk: `05_Development/database/schema.sql` hardcodes
+      `USE [master]; ... CREATE DATABASE [HSWRMS]; ... USE [HSWRMS];` on lines 18-28.
+      Directly piping `schema.sql` into `sqlcmd` will switch database context to `HSWRMS`!
+   7. M4 Table Baseline: `dbo.MenuItem`, `dbo.Ingredient`, `dbo.MenuItemIngredient`,
+      `dbo.IngredientBatch`, `dbo.MealOrder`, and `dbo.MealOrderItem` exist in `schema.sql`.
+   8. Menu Seed Gap: `schema.sql` defines the DDL for `dbo.MenuItem` but contains ZERO
+      seed `INSERT` statements.
+   9. Automated Migration Tooling: Neither Flyway nor Liquibase is enabled in Spring Boot;
+      `spring.jpa.hibernate.ddl-auto: none` is enforced in runtime and test profiles.
+
+B. Unknowns & Assumptions (Requiring Explicit Manual Preflight Verification):
+   1. Live Instance Status: Whether the local Microsoft SQL Server service (`MSSQLSERVER`
+      or `SQLEXPRESS`) is active, responding on port 1433, and configured for Mixed Mode
+      Authentication (`IsIntegratedSecurityOnly == 0`).
+   2. Existing Database State: Whether `HSWRMS` or `HSWRMS_TEST` currently exists on the
+      host SQL Server instance, and their current state (ONLINE, RESTORING, etc.).
+   3. Existing Login State: Whether login `hswrms_test_user` already exists from prior runs.
+   *Resolution*: Stage 1 of the proposed execution plan executes a read-only preflight
+   query to establish these exact facts before any state-altering command is issued.
+
+
+3. PROVISIONING SCRIPT SAFETY & RISK ASSESSMENT
+--------------------------------------------------------------------------------
+Inspected File: `05_Development/database/scripts/provision_hswrms_test.ps1` (440 lines).
+
+A. Parameter Validation & Boundary Safety:
+   - Compile-Time Constraints:
+     * `$DatabaseName`: `[ValidateSet("HSWRMS_TEST")]` (Line 61).
+     * `$LoginName`: `[ValidateSet("hswrms_test_user")]` (Line 65).
+     * `$ServerInstance`: `[ValidateNotNullOrEmpty()]` (Line 57).
+   - Runtime Assertions (`Test-HswrmsProvisioningInput`, lines 99-147):
+     * Server: regex check `^[A-Za-z0-9_\-\.\\]+$` prevents injection in connection string.
+     * Database: strictly `$Db -eq 'HSWRMS_TEST'`.
+     * Login: strictly `$Login -eq 'hswrms_test_user'`.
+     * Password: length 12..128 chars, whitespace-only rejected, prohibited placeholders
+       (`REPLACE_WITH_STRONG_PASSWORD_BEFORE_EXECUTION`, `CHANGE_ME_STRONG_PASSWORD!`) rejected,
+       unresolved macro prefixes (`$(`) rejected.
+
+B. Injection Resistance & Credential Transport:
+   - Transmits password as typed RPC parameter `System.Data.SqlDbType.NVarChar(128)` via
+     the Tabular Data Stream (TDS) protocol (Line 333).
+   - Uses server-side `QUOTENAME(@password, '''')` in dynamic SQL executed via
+     `sys.sp_executesql` (Line 329). Single quotes within the password are automatically
+     escaped by the database engine.
+   - Eliminates SQLCMD text macro substitution collision risks entirely.
+
+C. Safeguards Protecting Primary Database `HSWRMS`:
+   - Stage 1.4 (Lines 291-304): Queries `sys.databases WHERE name = 'HSWRMS'`. If present,
+     connects to `HSWRMS` and asserts that `hswrms_test_user` has 0 mappings in
+     `sys.database_principals`. Fails closed if mapped.
+
+D. Fail-Closed Idempotency & Object Lifecycle:
+   - By default, `-AllowExistingDb` and `-AllowExistingLogin` are `$false`.
+   - If `HSWRMS_TEST` or `hswrms_test_user` exists, script throws `FAIL CLOSED` immediately.
+   - If `-AllowExistingDb` is authorized: verifies database is `ONLINE`.
+   - If `-AllowExistingLogin` is authorized: verifies login is enabled, has default DB
+     in `('HSWRMS_TEST', 'master')`, has ZERO server roles (`sysadmin`, etc.), and has
+     ZERO server permissions other than `CONNECT SQL`.
+
+E. Partial Failure Risk & Recovery Analysis:
+   - The script creates objects sequentially:
+     Stage 2: `CREATE DATABASE [HSWRMS_TEST]`
+     Stage 3: `CREATE LOGIN [hswrms_test_user]`
+     Stage 4: `CREATE USER [hswrms_test_user] ... GRANT CONNECT`
+   - If Stage 2 succeeds but Stage 3 fails (e.g., password complexity failure on OS):
+     `HSWRMS_TEST` exists without login.
+   - Recovery Behavior: The script does NOT drop `HSWRMS_TEST`. Rerunning with corrected
+     password and `-AllowExistingDb` resumes cleanly without data loss.
+
+F. DryRun & WhatIf Verification:
+   - Lines 180-196 implement complete safe dry-run mode via `-DryRun` and `-WhatIf`.
+   - Validates all client-side inputs, parameter bounds, and quoting formulas with
+     ZERO database connections opened and ZERO mutations performed.
+
+
+4. DATABASE SCHEMA & MIGRATION INVENTORY
+--------------------------------------------------------------------------------
+A. Authoritative Baseline Schema (`05_Development/database/schema.sql`):
+   - Contains 1,221 lines defining the complete relational architecture for all modules:
+     * Section 1: Identity & Access (`[User]`, `CustomerProfile`, `HealthProfile`, `StaffProfile`).
+     * Section 2: Core Resort (`VillaCategory`, `PhysicalVilla`, `RetreatPackage`, etc.).
+     * Section 3: Retreat Booking (`RetreatBooking`, `ResidenceRecord`).
+     * Section 4: Spa Scheduling (`SpaTreatment`, `TreatmentRoom`, `SpaSession`, triggers).
+     * Section 5: F&B Dining (`MenuItem`, `Ingredient`, `MenuItemIngredient`, `IngredientBatch`,
+       `MealOrder`, `MealOrderItem`).
+     * Section 6: Folio & Billing (`Folio`, `FolioItem`, `Invoice`, `Payment`).
+     * Section 7: Governance (`AuditLog`, `SystemConfiguration`, `[Permission]`).
+
+B. Critical Safety Rule for Applying Baseline to `HSWRMS_TEST`:
+   - `schema.sql` begins with:
+     ```sql
+     USE [master];
+     IF DB_ID(N'HSWRMS') IS NULL CREATE DATABASE [HSWRMS];
+     USE [HSWRMS];
+     ```
+   - MANDATORY SAFETY REQUIREMENT:
+     To initialize `HSWRMS_TEST`, lines 18-28 MUST NOT be executed directly.
+     The schema payload must either:
+     a) Be executed with lines 18-28 stripped, while connected directly to `HSWRMS_TEST`, OR
+     b) Be executed via a sanitized script where `USE [HSWRMS];` is replaced with `USE [HSWRMS_TEST];`.
+
+C. Versioned Migrations Inventory (`05_Development/database/migrations/`):
+   - `V001__m3_spa_scheduling.sql`: Enhances `dbo.SpaTreatment`.
+   - `V002__m3_reconcile_treatment_code_and_room_type.sql`: Enhances `dbo.TreatmentRoom`.
+   - `V003__m2_retreat_booking_schema_reconciliation.sql`: Reconciles M2 columns/bridges.
+   - `V004__m5_customer_review_category_ratings.sql`: Adds rating columns to `dbo.CustomerReview`.
+   - `V005__m6_audit_log.sql`: Idempotent creation of `dbo.AuditLog`.
+   - Rule on Fresh Database: As documented in `05_Development/database/README.md` (State 1),
+     `schema.sql` ALREADY integrates all objects from `V001` through `V005`.
+     `V001`–`V005` MUST NOT be executed on fresh instances provisioned from `schema.sql`.
+
+D. Unapproved / Draft Files (EXCLUDED FROM PROVISIONING):
+   - `_draft_m1_identity_health_profile.sql` (Research draft; excluded).
+   - `_reviewed_m1_health_profile_structured.sql` (Research draft; excluded).
+   - `_draft_m1_roles_seed.sql` (Draft; excluded).
+   - `draft_m6_governance_and_delegation.sql` (Unnumbered draft; excluded).
+
+
+5. MENU SEED-DATA SPECIFICATION (PROPOSED SPECIFICATION — NOT EXECUTABLE DML)
+--------------------------------------------------------------------------------
+A. Target Table Definition (`dbo.MenuItem`):
+   - `menu_item_id INT IDENTITY(1,1) PRIMARY KEY`
+   - `item_name NVARCHAR(150) NOT NULL UNIQUE`
+   - `category NVARCHAR(100) NULL` (STARTER, MAIN, DESSERT, BEVERAGE)
+   - `meal_type NVARCHAR(50) NULL` (BREAKFAST, LUNCH, DINNER, ALL_DAY)
+   - `price DECIMAL(18,2) NOT NULL DEFAULT (0)` (Constraint: price >= 0)
+   - `dietary_tags NVARCHAR(500) NULL` (Comma-separated: vegan, gluten-free, etc.)
+   - `allergen_information NVARCHAR(MAX) NULL` (Allergen disclosures)
+   - `availability_status VARCHAR(20) NOT NULL DEFAULT ('AVAILABLE')` (AVAILABLE, UNAVAILABLE)
+
+B. Proposed 8 Fictional Test Menu Items:
+   Item 1 (Retreat Package Daily Meal - Starter):
+     - Name: "Herbal Detox Green Broth"
+     - Category: "STARTER" | Meal Type: "ALL_DAY" | Price: 0.00
+     - Dietary Tags: "vegan, organic, low-sodium" | Allergen: null | Status: "AVAILABLE"
+   Item 2 (Retreat Package Daily Meal - Main Lunch):
+     - Name: "Organic Quinoa Wellness Bowl"
+     - Category: "MAIN" | Meal Type: "LUNCH" | Price: 0.00
+     - Dietary Tags: "vegan, gluten-free" | Allergen: null | Status: "AVAILABLE"
+   Item 3 (Retreat Package Daily Meal - Main Dinner):
+     - Name: "Steamed Mountain Sea Bass with Ginger"
+     - Category: "MAIN" | Meal Type: "DINNER" | Price: 0.00
+     - Dietary Tags: "high-protein" | Allergen: "fish" | Status: "AVAILABLE"
+   Item 4 (Retreat Package Daily Meal - Dessert):
+     - Name: "Chia Seed Coconut Mango Pudding"
+     - Category: "DESSERT" | Meal Type: "ALL_DAY" | Price: 0.00
+     - Dietary Tags: "vegan, gluten-free" | Allergen: null | Status: "AVAILABLE"
+   Item 5 (A-La-Carte Premium Dining - Chargeable to Folio):
+     - Name: "Artisanal Grilled Salmon Steak"
+     - Category: "MAIN" | Meal Type: "DINNER" | Price: 280.00
+     - Dietary Tags: "high-protein, omega-3" | Allergen: "fish" | Status: "AVAILABLE"
+   Item 6 (A-La-Carte Premium Dining - Chargeable to Folio):
+     - Name: "Prime Wagyu Tenderloin with Truffle Jus"
+     - Category: "MAIN" | Meal Type: "DINNER" | Price: 650.00
+     - Dietary Tags: "high-protein" | Allergen: null | Status: "AVAILABLE"
+   Item 7 (A-La-Carte Beverage - Chargeable to Folio):
+     - Name: "Cold-Pressed Green Vitality Juice"
+     - Category: "BEVERAGE" | Meal Type: "ALL_DAY" | Price: 85.00
+     - Dietary Tags: "raw, vegan, organic" | Allergen: null | Status: "AVAILABLE"
+   Item 8 (A-La-Carte Beverage - Chargeable to Folio):
+     - Name: "Wild Berry Antioxidant Infusion"
+     - Category: "BEVERAGE" | Meal Type: "ALL_DAY" | Price: 65.00
+     - Dietary Tags: "organic, caffeine-free" | Allergen: null | Status: "AVAILABLE"
+
+C. Idempotency & Safe Seeding Pattern:
+   - Proposed DML pattern will use `IF NOT EXISTS (SELECT 1 FROM dbo.MenuItem WHERE item_name = @name)`
+     so the seed script can be re-run safely without causing duplicate key violations on `UQ_MenuItem_Name`.
+   - Explicit Constraint: No retreat package daily meal allowance quotas will be hardcoded,
+     honoring the open decision on OI-07.
+
+D. Verification Queries (For Post-Seed Audit):
+   - `SELECT COUNT(*) FROM dbo.MenuItem;` (Expected count: 8).
+   - `SELECT category, COUNT(*) FROM dbo.MenuItem GROUP BY category;`
+   - `SELECT COUNT(*) FROM dbo.MenuItem WHERE price = 0;` (Expected: 4).
+   - `SELECT COUNT(*) FROM dbo.MenuItem WHERE price > 0;` (Expected: 4).
+
+
+6. APPLICATION RUNTIME READINESS AUDIT
+--------------------------------------------------------------------------------
+A. Profiles & Datasources:
+   - Default Profile (`dev`): configured in `application.yml` targeting `${DB_NAME:HSWRMS}`.
+   - Dedicated Test Profile (`sqlserver-test`): configured in `application-sqlserver-test.yml`
+     targeting `${SQLSERVER_TEST_DB:HSWRMS_TEST}` with non-destructive `ddl-auto: none`.
+   - Credentials are fully externalized via environment variables:
+     `SQLSERVER_TEST_USERNAME`, `SQLSERVER_TEST_PASSWORD`, `SQLSERVER_TEST_DB`, `SQLSERVER_TEST_HOST`.
+
+B. Startup Behavior & Seed Initialization:
+   - `M6DataInitializer.java` implements `ApplicationRunner` and executes upon Spring Boot startup.
+     It populates default permissions (S38, S39, etc.) and admin account if missing.
+   - For pure JDBC smoke test (`SqlServerJdbcSmokeTest`), Spring Boot auto-configuration is bypassed
+     via `SimpleJdbcConfig`, ensuring zero application beans or runners execute against SQL Server.
+   - For full application runs against `sqlserver-test`, `M6DataInitializer` will safely initialize
+     necessary permission rows.
+
+C. Backend Health & Endpoints:
+   - Base API URL: `http://localhost:8080/api/v1`
+   - KDS Endpoints: `/api/v1/fnb/kds/dashboard-kpis`, `/api/v1/fnb/kds/queue`, `/api/v1/fnb/kds/orders/{id}/status`
+   - Customer Endpoints: `/api/v1/fnb/customer/menu-items`, `/api/v1/fnb/customer/daily-meals`, `/api/v1/fnb/customer/a-la-carte`
+
+
+7. PROPOSED 10-STAGE EXECUTION SEQUENCE (PLAN-ONLY)
+--------------------------------------------------------------------------------
+> [!IMPORTANT]
+> The following sequence is a structured execution plan. NONE of these stages may
+> be performed until explicit human authorization is provided for each gated step.
+
++-------+----------------------------------+------------------------------+---------------------------+-----------------------+
+| Stage | Stage Description                | Prerequisites                | Expected Evidence         | Stop Condition        |
++-------+----------------------------------+------------------------------+---------------------------+-----------------------+
+| 1     | Manual Preflight & Health Check  | SQL Server running           | Output: Mixed Mode active | Mixed Mode disabled   |
+| 2     | Primary DB Isolation Preflight   | Admin SQL connection         | Zero mapping in HSWRMS    | Login mapped to HSWRMS|
+| 3     | Database & Login Provisioning    | Script DryRun verified       | DB & login created clean  | Script error / abort  |
+| 4     | Baseline Schema DDL Application  | Stage 3 completed            | All 37 tables in HSWRMS_T | DDL syntax error      |
+| 5     | Reference / Master Data Seeding  | Stage 4 verified             | Packages, villas seeded   | Reference FK error    |
+| 6     | M4 F&B Menu Catalog Seeding      | Stage 5 verified             | 8 MenuItem rows verified  | Constraint violation  |
+| 7     | Least-Privilege Permission Grant | Stage 6 verified             | CONNECT + DML on tables   | Unwarranted role grant|
+| 8     | Test Environment Vars Configured | Stages 1-7 verified          | Env vars set in memory    | Variables empty/null  |
+| 9     | Limited Smoke Test Execution     | Stage 8 verified             | SqlServerJdbcSmokeTest OK | Connection / auth fail|
+| 10    | Multi-Module Integration / E2E   | Stage 9 verified + PO signoff| Full test suite pass      | Test regression       |
++-------+----------------------------------+------------------------------+---------------------------+-----------------------+
+
+Detailed Stage Descriptions:
+
+- Stage 1: Read-Only Preflight & Health Inspection
+  * Operator runs a read-only query in SSMS/sqlcmd under admin credentials to check
+    Mixed Mode authentication, existing databases, and confirm host readiness.
+  * Stop Condition: If SQL Server is Windows Auth only (`IsIntegratedSecurityOnly == 1`), stop.
+
+- Stage 2: Target Isolation & Safe Preflight
+  * Verify that `hswrms_test_user` has zero access to `HSWRMS` and that `HSWRMS` has
+    guest access disabled (`hasdbaccess = 0`).
+  * Stop Condition: If any cross-database mapping exists, stop immediately.
+
+- Stage 3: Controlled Test Database & Login Provisioning
+  * Operator executes `provision_hswrms_test.ps1 -ServerInstance "localhost" -DryRun` to verify client-side rules.
+  * Upon review, operator executes `provision_hswrms_test.ps1 -ServerInstance "localhost"` with interactive
+    secure password entry.
+  * Stop Condition: If script halts or throws `FAIL CLOSED`, stop.
+
+- Stage 4: Baseline Schema Application (Sanitized for HSWRMS_TEST)
+  * Apply `schema.sql` DDL to `HSWRMS_TEST` ONLY, ensuring lines 18-28 targeting `HSWRMS` are excluded.
+  * Verify: Query `SELECT COUNT(*) FROM HSWRMS_TEST.sys.tables;` confirms expected table inventory.
+  * Stop Condition: If table count does not match expected baseline, stop.
+
+- Stage 5: Reference & Master Data Provisioning
+  * Seed minimum reference data: Roles (`ADMIN`, `CUSTOMER`, `FNB_STAFF`), Retreat Packages, Villa Categories,
+    and Physical Villas required for booking existence.
+  * Stop Condition: Foreign key failure stops execution.
+
+- Stage 6: M4 F&B Menu Catalog Seeding
+  * Execute the proposed idempotent DML for the 8 fictional menu items.
+  * Verify: `SELECT COUNT(*) FROM HSWRMS_TEST.dbo.MenuItem;` returns 8.
+  * Stop Condition: If unique constraint or price check fails, stop.
+
+- Stage 7: Least-Privilege DML Grant to Test User
+  * In `HSWRMS_TEST`, grant `SELECT, INSERT, UPDATE, DELETE` to `hswrms_test_user` on test tables.
+  * Verify: Confirm `hswrms_test_user` has ZERO server roles (`sysadmin = 0`) and ZERO access to `HSWRMS`.
+  * Stop Condition: If administrative permissions are granted, revoke immediately and stop.
+
+- Stage 8: Test-Only Application Connection Configuration
+  * Configure process-scoped environment variables in the test terminal:
+    `$env:SQLSERVER_TEST_USERNAME = "hswrms_test_user"`
+    `$env:SQLSERVER_TEST_PASSWORD = "<TransmittedSecurely>"`
+    `$env:SQLSERVER_TEST_DB = "HSWRMS_TEST"`
+  * Stop Condition: If credentials are null or point to `HSWRMS`, stop.
+
+- Stage 9: Limited JDBC Smoke Test Execution
+  * Run opt-in smoke test:
+    `mvn test "-Dtest=SqlServerJdbcSmokeTest" "-Dspring.profiles.active=sqlserver-test" "-Dhswrms.sqlserver.test.enabled=true"`
+  * Verify: Test completes with exit code 0, asserting `DB_NAME() == 'HSWRMS_TEST'`.
+  * Stop Condition: If test fails or connects to wrong database, stop.
+
+- Stage 10: Multi-Module Integration Testing (M4/M5)
+  * Run integration tests against `HSWRMS_TEST` ONLY after explicit authorization following Stage 9.
+
+
+8. ROLLBACK & RECOVERY CONSIDERATIONS
+--------------------------------------------------------------------------------
+1. Failure in Stage 3 (Database / Login creation):
+   - Database created, login failed: Rerun `provision_hswrms_test.ps1` with `-AllowExistingDb`
+     after correcting password complexity.
+   - Login created, database failed: Rerun with `-AllowExistingLogin`.
+   - Neither situation requires dropping or modifying `HSWRMS`.
+2. Failure in Stage 4, 5, or 6 (DDL / Seeding failure):
+   - Because `HSWRMS_TEST` is completely isolated, a clean recovery is performed by dropping
+     only `HSWRMS_TEST` (`DROP DATABASE [HSWRMS_TEST];`) and repeating from Stage 3.
+   - Primary database `HSWRMS` remains completely untouched.
+3. Test Credential Desynchronization:
+   - If password mismatch occurs (Error 18456), synchronize password using:
+     `ALTER LOGIN [hswrms_test_user] WITH PASSWORD = N'...'`.
+
+
+9. OPEN ISSUES & GOVERNANCE ITEMS
+--------------------------------------------------------------------------------
+- OI-07 (Retreat Package Daily Meal Allowances):
+  Retreat package meal limits per day remain an open PO decision.
+  The provisioning plan does not enforce daily meal quotas, ensuring test runs will
+  not fail due to unapproved quota business rules.
+- Checkout-Day Dining Operational Cutoff:
+  Acknowledged as P3 operational item. F&B orders on checkout day are allowed by date logic.
+  If operational SOP restricts post-checkout dining, a checkout status guard can be scheduled
+  for Phase 5.9.
+
+
+10. EXACT FILES INSPECTED
+--------------------------------------------------------------------------------
+1. `05_Development/database/scripts/provision_hswrms_test.ps1`
+2. `05_Development/database/scripts/draft_provision_hswrms_test.sql`
+3. `05_Development/database/HSWRMS_TEST_PROVISIONING_GUIDE.md`
+4. `05_Development/database/schema.sql`
+5. `05_Development/database/README.md`
+6. `05_Development/backend/src/main/resources/application.yml`
+7. `05_Development/backend/src/test/resources/application-sqlserver-test.yml`
+8. `05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerJdbcSmokeTest.java`
+9. `05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestContextInitializer.java`
+10. `05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidator.java`
+11. `06_Reports/PHASE_5.8.3.54_M4_POST_INTEGRATION_REGRESSION_AUDIT.txt`
+12. `06_Reports/PHASE_5.8.3.55_M4_BOOKING_BOUNDARY_INTEGRATION_REPORT.txt`
+13. `06_Reports/PHASE_5.8.3.56_M4_READINESS_GATE_REVIEW.txt`
+
+
+11. CONCLUSION & FINAL DECISION
+--------------------------------------------------------------------------------
+FINAL ASSESSMENT: PLAN READY FOR HUMAN APPROVAL
+
+Summary of Review:
+- Provisioning script `provision_hswrms_test.ps1` is fully hardened, injection-immune,
+  and parameter-restricted to `HSWRMS_TEST`.
+- Primary database `HSWRMS` is protected by multiple layered fail-closed guards.
+- DDL hazard in `schema.sql` (lines 18-28) has been identified and isolated in Stage 4.
+- Fictional M4 menu seed specification provides complete test coverage without violating OI-07.
+- Staged 10-step sequence guarantees human authorization before each state-changing action.
+
+The team may now review this plan and decide whether to approve Stage 1 Preflight.
+================================================================================
+END OF REPORT — PHASE 5.8.3.57
+================================================================================

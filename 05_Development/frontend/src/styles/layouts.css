@@ -1184,3 +1184,453 @@ button.hsw-profile-btn:hover .hsw-avatar-circle {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   HeavenStay Celestial Signature Logo Motion System
+   Multi-layered orbital depth, floating emblem, breathing aura, and contrast-balanced
+   Quiet Luxury identity. Immune to Windows accessibility / reduced-motion suppression.
+   ========================================================================== */
+
+.hsw-emblem-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 1. Celestial Breathing Aura */
+.hsw-emblem-aura {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(231, 217, 196, 0.45) 0%, rgba(196, 164, 110, 0.18) 55%, transparent 75%);
+  animation: hsw-logo-aura-breath 4s ease-in-out infinite !important;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+
+@keyframes hsw-logo-aura-breath {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.10);
+    opacity: 0.75;
+  }
+}
+
+/* 2. Primary Celestial Elliptical Orbit & Primary Star Gem (#76501F Antique Bronze) */
+.hsw-emblem-orbit,
+.hsw-emblem-orbit-primary,
+.hsw-celestial-ellipse-1 {
+  position: absolute;
+  inset: -5px -3px;
+  border-radius: 50% / 44%;
+  pointer-events: none;
+  border: 1.85px dashed #76501F;
+  box-shadow: 0 0 5px rgba(118, 80, 31, 0.45);
+  animation: hsw-logo-orbit-spin-primary 12s linear infinite !important;
+  z-index: 1;
+  will-change: transform;
+}
+
+@keyframes hsw-logo-orbit-spin-primary {
+  from {
+    transform: rotate(-22deg);
+  }
+  to {
+    transform: rotate(338deg);
+  }
+}
+
+.hsw-orbit-satellite,
+.hsw-orbit-gem-1 {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 5.5px;
+  height: 5.5px;
+  margin-left: -2.75px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFF4D6 18%, #A87935 50%, #76501F 100%);
+  box-shadow: 0 0 6px rgba(143, 100, 40, 0.85), 0 0 2px #543914;
+}
+
+/* 3. Secondary Inclined Elliptical Counter-Orbit & Secondary Star Gem (#8F6428 Deep Gold) */
+.hsw-emblem-orbit-secondary,
+.hsw-celestial-ellipse-2 {
+  position: absolute;
+  inset: -8px -5px;
+  border-radius: 46% / 50%;
+  pointer-events: none;
+  border: 1.85px dotted #8F6428;
+  box-shadow: 0 0 4px rgba(143, 100, 40, 0.40);
+  animation: hsw-logo-orbit-spin-secondary 18s linear infinite reverse !important;
+  z-index: 1;
+  will-change: transform;
+}
+
+@keyframes hsw-logo-orbit-spin-secondary {
+  from {
+    transform: rotate(25deg);
+  }
+  to {
+    transform: rotate(385deg);
+  }
+}
+
+.hsw-orbit-gem-2 {
+  position: absolute;
+  bottom: -2.5px;
+  left: 50%;
+  width: 4.5px;
+  height: 4.5px;
+  margin-left: -2.25px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFF4D6 20%, #8F6428 55%, #76501F 100%);
+  box-shadow: 0 0 5px rgba(118, 80, 31, 0.80), 0 0 2px #543914;
+}
+
+/* 4. Periodic Celestial Sheen Overlay */
+.hsw-emblem-sheen {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  background-size: 200% 200%;
+  animation: hsw-logo-sheen-sweep 5s ease-in-out infinite !important;
+  z-index: 3;
+  mix-blend-mode: overlay;
+}
+
+@keyframes hsw-logo-sheen-sweep {
+  0%, 60% {
+    opacity: 0;
+    transform: rotate(0deg) scale(0.9);
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(180deg) scale(1.05);
+  }
+}
+
+/* 4b. Celestial Diamond & 8-Point Sparkles with Non-Vanishing High-Contrast Keyframes */
+.hsw-celestial-sparkle {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+  background: radial-gradient(circle, #FFF4D6 12%, #A87935 40%, #8F6428 70%, #76501F 100%);
+  filter: drop-shadow(0 0 2.5px rgba(143, 100, 40, 0.95)) drop-shadow(0 1px 2px rgba(84, 57, 20, 0.70));
+  will-change: transform, opacity;
+}
+
+.hsw-sparkle-top-right {
+  top: -4px;
+  right: -3px;
+  width: 8.5px;
+  height: 8.5px;
+  animation: hsw-sparkle-pulse-1 3.8s ease-in-out infinite !important;
+}
+
+.hsw-sparkle-mid-left {
+  top: 48%;
+  left: -7px;
+  width: 7px;
+  height: 7px;
+  animation: hsw-sparkle-pulse-2 4.6s ease-in-out 1.5s infinite !important;
+}
+
+/* 8-pointed star sparkle for celestial depth */
+.hsw-sparkle-bottom-center {
+  bottom: -6px;
+  left: 45%;
+  width: 8.5px;
+  height: 8.5px;
+  clip-path: polygon(50% 0%, 60% 35%, 85% 15%, 65% 40%, 100% 50%, 65% 60%, 85% 85%, 60% 65%, 50% 100%, 40% 65%, 15% 85%, 35% 60%, 0% 50%, 35% 40%, 15% 15%, 40% 35%);
+  animation: hsw-sparkle-pulse-3 5.4s ease-in-out 2.8s infinite !important;
+}
+
+/* Accent micro-flare: subtle sparkle pulse */
+.hsw-sparkle-micro-flare {
+  top: 8%;
+  left: -3px;
+  width: 5.5px;
+  height: 5.5px;
+  clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+  animation: hsw-sparkle-micro-flare 3.2s ease-in-out 0.8s infinite !important;
+}
+
+/* Continuous Visibility Sparkle Keyframes (Rest opacity ~0.36 - 0.40, Peak opacity 1.0) */
+@keyframes hsw-sparkle-pulse-1 {
+  0%, 15% {
+    opacity: 0.38;
+    transform: scale(0.65) rotate(0deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.25) rotate(45deg);
+  }
+  45% {
+    opacity: 0.85;
+    transform: scale(0.95) rotate(90deg);
+  }
+  60%, 100% {
+    opacity: 0.38;
+    transform: scale(0.65) rotate(135deg);
+  }
+}
+
+@keyframes hsw-sparkle-pulse-2 {
+  0%, 15% {
+    opacity: 0.36;
+    transform: scale(0.65) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.25) rotate(-45deg);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(0.95) rotate(-90deg);
+  }
+  65%, 100% {
+    opacity: 0.36;
+    transform: scale(0.65) rotate(-135deg);
+  }
+}
+
+@keyframes hsw-sparkle-pulse-3 {
+  0%, 15% {
+    opacity: 0.40;
+    transform: scale(0.70) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.30) rotate(45deg);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(0.95) rotate(90deg);
+  }
+  65%, 100% {
+    opacity: 0.40;
+    transform: scale(0.70) rotate(135deg);
+  }
+}
+
+@keyframes hsw-sparkle-micro-flare {
+  0%, 55% {
+    opacity: 0.30;
+    transform: scale(0.55) rotate(0deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.20) rotate(45deg);
+  }
+  88% {
+    opacity: 0.70;
+    transform: scale(0.85) rotate(90deg);
+  }
+  98%, 100% {
+    opacity: 0.30;
+    transform: scale(0.55) rotate(135deg);
+  }
+}
+
+/* 5. Floating Vector Emblem with Enhanced Contrast & Light/Hero Modes */
+.hsw-brand-emblem {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  color: #8c6f43;
+  filter: drop-shadow(0 1px 2px rgba(140, 111, 67, 0.28));
+  transition: color var(--transition-normal), filter var(--transition-normal);
+  pointer-events: none;
+  animation: hsw-logo-emblem-float 3.6s ease-in-out infinite !important;
+  will-change: transform;
+}
+
+/* High-contrast stroke differentiation on light backgrounds */
+.hsw-emblem-stroke-primary {
+  stroke: #8c6f43 !important;
+}
+.hsw-emblem-stroke-secondary {
+  stroke: #a88858 !important;
+}
+.hsw-emblem-stroke-accent {
+  stroke: #c4a46e !important;
+}
+.hsw-emblem-fill-accent {
+  fill: #c4a46e !important;
+}
+
+/* Hero transparent mode & dark mode: radiant warm champagne ivory */
+.is-hero-active .hsw-brand-emblem,
+[data-theme="dark"] .hsw-brand-emblem {
+  color: #e7d9c4 !important;
+  filter: drop-shadow(0 0 8px rgba(231, 217, 196, 0.65)) !important;
+}
+
+.is-hero-active .hsw-emblem-orbit-primary,
+[data-theme="dark"] .hsw-emblem-orbit-primary {
+  border-color: rgba(231, 217, 196, 0.75) !important;
+  box-shadow: 0 0 8px rgba(231, 217, 196, 0.45) !important;
+}
+
+.is-hero-active .hsw-emblem-orbit-secondary,
+[data-theme="dark"] .hsw-emblem-orbit-secondary {
+  border-color: rgba(216, 199, 174, 0.65) !important;
+  box-shadow: 0 0 6px rgba(216, 199, 174, 0.35) !important;
+}
+
+.is-hero-active .hsw-celestial-sparkle,
+[data-theme="dark"] .hsw-celestial-sparkle {
+  background: radial-gradient(circle, #ffffff 35%, #e7d9c4 75%, #c4a46e 100%) !important;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95)) !important;
+}
+
+.is-hero-active .hsw-emblem-stroke-primary,
+[data-theme="dark"] .hsw-emblem-stroke-primary {
+  stroke: #ffffff !important;
+}
+.is-hero-active .hsw-emblem-stroke-secondary,
+[data-theme="dark"] .hsw-emblem-stroke-secondary {
+  stroke: #e7d9c4 !important;
+}
+.is-hero-active .hsw-emblem-stroke-accent,
+[data-theme="dark"] .hsw-emblem-stroke-accent {
+  stroke: #f7ede0 !important;
+}
+.is-hero-active .hsw-emblem-fill-accent,
+[data-theme="dark"] .hsw-emblem-fill-accent {
+  fill: #f7ede0 !important;
+}
+
+@keyframes hsw-logo-emblem-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+
+/* 6. Strict Static Wordmark — Prevents any header shaking or text displacement */
+.hsw-brand-text {
+  transform: none !important;
+}
+
+/* 7. Independence from Windows Animation Settings (Never suppressed) */
+@media (prefers-reduced-motion: reduce) {
+  .hsw-brand-emblem {
+    animation: hsw-logo-emblem-float 3.6s ease-in-out infinite !important;
+  }
+  .hsw-emblem-orbit,
+  .hsw-emblem-orbit-primary {
+    animation: hsw-logo-orbit-spin-primary 10s linear infinite !important;
+  }
+  .hsw-emblem-orbit-secondary {
+    animation: hsw-logo-orbit-spin-secondary 16s linear infinite reverse !important;
+  }
+  .hsw-emblem-aura {
+    animation: hsw-logo-aura-breath 4s ease-in-out infinite !important;
+  }
+  .hsw-emblem-sheen {
+    animation: hsw-logo-sheen-sweep 5s ease-in-out infinite !important;
+  }
+  .hsw-sparkle-top-right {
+    animation: hsw-sparkle-pulse-1 3.8s ease-in-out infinite !important;
+  }
+  .hsw-sparkle-mid-left {
+    animation: hsw-sparkle-pulse-2 4.6s ease-in-out 1.5s infinite !important;
+  }
+  .hsw-sparkle-bottom-center {
+    animation: hsw-sparkle-pulse-3 5.4s ease-in-out 2.8s infinite !important;
+  }
+}
+
+
+/* ==========================================================================
+   Storytelling Responsive Grid Safety Net & Compact Mobile Protection
+   Guarantees 2-column layout on Desktop (>= 768px) and 1-column on Mobile (< 768px)
+   ========================================================================== */
+@media (min-width: 768px) {
+  .hsw-pillars-story-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: clamp(16px, 2.5vw, var(--space-12)) !important;
+  }
+  .hsw-experiences-story-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) !important;
+    gap: clamp(16px, 2.5vw, var(--space-12)) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .hsw-pillars-story-grid,
+  .hsw-experiences-story-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+}
+
+/* Header & Wordmark protection on very narrow mobile screens (320px - 480px) */
+@media (max-width: 480px) {
+  .hsw-public-navbar-inner {
+    padding: 0 14px !important;
+  }
+  .hsw-brand-logo-root {
+    gap: 8px !important;
+  }
+  .hsw-brand-name {
+    font-size: 16px !important;
+    letter-spacing: 0.08em !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .hsw-public-navbar-inner {
+    padding: 0 10px !important;
+  }
+  .hsw-brand-logo-root {
+    gap: 6px !important;
+  }
+  .hsw-brand-name {
+    font-size: 14px !important;
+    letter-spacing: 0.05em !important;
+  }
+}
+
+
+/* ==========================================================================
+   Global Role-Wide Logo Styling (Operations & Sidebar Adaptations)
+   ========================================================================== */
+.hsw-brand-tagline.is-operations-portal {
+  color: var(--accent-sand-dark, #8F6428);
+  letter-spacing: 0.14em;
+}
+
+.hsw-sidebar-header .hsw-brand-logo-root {
+  gap: 10px;
+}
+
+.hsw-sidebar-header .hsw-brand-name {
+  font-size: 17px;
+  letter-spacing: 0.10em;
+}
+
+.hsw-sidebar-header .hsw-brand-tagline {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  color: var(--accent-sand);
+}

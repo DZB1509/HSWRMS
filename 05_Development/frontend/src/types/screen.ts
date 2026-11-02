@@ -521,16 +521,6 @@ export const SCREEN_INVENTORY: ScreenMetadata[] = [
     requiredRole: 'admin'
   },
   {
-    number: 51,
-    name: 'Feature Flag Management',
-    module: 'M6 – System Administration',
-    primaryActor: 'Admin',
-    description: 'Allows Admin to enable or disable supported system features or modules using feature flags.',
-    routePath: '/admin/feature-flags',
-    layout: 'manager-admin',
-    requiredRole: 'admin'
-  },
-  {
     number: 52,
     name: 'Permission Matrix',
     module: 'M6 – Permission Management',

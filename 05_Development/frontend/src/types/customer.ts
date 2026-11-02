@@ -1,6 +1,6 @@
 export type BookingStatus = 'upcoming' | 'in_stay' | 'completed' | 'cancelled';
 export type DepositStatus = 'paid' | 'pending' | 'failed' | 'refunded';
-export type DeletionRequestStatus = 'eligible' | 'pending' | 'deferred_active_retreat' | 'completed';
+export type DeletionRequestStatus = 'eligible' | 'pending' | 'deferred_active_retreat' | 'completed' | 'cancelled';
 
 export interface EmergencyContact {
   name: string;
@@ -41,9 +41,9 @@ export interface HealthNotes {
   injuriesOrSurgeries: string;
   mobilityConsiderations: string;
   currentMedications: string;
-  stressLevel: 'mild' | 'moderate' | 'high';
+  stressLevel: 'unspecified' | 'mild' | 'moderate' | 'high';
   treatmentPreferences: string[];
-  therapistNotes: string;
+  therapistNotes?: string;
 }
 
 export interface DietaryProfile {
@@ -141,18 +141,24 @@ export interface RetreatBooking {
 }
 
 export interface CustomerContextType {
-  profile: CustomerProfile;
+  profile: CustomerProfile | null;
   updateProfile: (updated: Partial<CustomerProfile>) => void;
-  wellnessProfile: WellnessProfile;
+  refreshServerProfile: () => Promise<CustomerProfile | null>;
+  isProfileLoading: boolean;
+  wellnessProfile: WellnessProfile | null;
   updateWellnessProfile: (updated: Partial<WellnessProfile>) => void;
   deletionRequest: HealthDataDeletionRequest | null;
-  submitDeletionRequest: (reason: string, acknowledged: boolean) => { success: boolean; status: DeletionRequestStatus; message: string };
-  cancelDeletionRequest: () => void;
+  isDeletionLoading: boolean;
+  deletionError: string | null;
+  refreshDeletionRequests: () => Promise<void>;
+  submitDeletionRequest: (reason: string, acknowledged: boolean) => Promise<{ success: boolean; status: DeletionRequestStatus; message: string }>;
+  cancelDeletionRequest: (id: string) => Promise<void>;
   bookings: RetreatBooking[];
   activeBooking: RetreatBooking | null;
   createBooking: (bookingData: Omit<RetreatBooking, 'id' | 'bookingReference' | 'createdAt'>) => RetreatBooking;
   getBookingById: (idOrReference: string) => RetreatBooking | undefined;
   updateBookingDeposit: (bookingId: string, transactionId: string, status: DepositStatus) => void;
   isLoadingBookings?: boolean;
+  bookingsError?: string | null;
   refreshBookings?: () => Promise<void>;
 }

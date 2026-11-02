@@ -1,26 +1,40 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import type { Role } from '../../../types/auth';
 import type { CapabilityKey } from '../../../types/governance';
 import { useGovernance } from '../../../hooks/useGovernance';
+import { isPermissionAuthorized } from '../../../context/governanceAuthorization';
 import { ShieldAlert, ArrowRight } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
+
+/** Existing landing route per role (verified against the router). */
+const DASHBOARD_BY_ROLE: Record<Role, string> = {
+  customer: '/customer/dashboard',
+  receptionist: '/receptionist/dashboard',
+  therapist: '/therapist/dashboard',
+  fb_staff: '/fb/dashboard',
+  manager: '/manager/dashboard',
+  admin: '/admin/dashboard',
+};
 
 export interface RoleGuardProps {
   children: React.ReactNode;
   allowedRoles?: Role[];
   requiredCapability?: CapabilityKey;
+  requiredPermission?: string;
 }
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   children,
   allowedRoles,
-  requiredCapability
+  requiredCapability,
+  requiredPermission,
 }) => {
-  const { role, isAuthenticated, currentUser } = useAuth();
-  const { hasCapability } = useGovernance();
+  const { role, isAuthenticated, currentUser, hasPermission } = useAuth();
+  const { hasCapability, permissionLoadState } = useGovernance();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Not logged in at all
   if (!isAuthenticated) {
@@ -30,11 +44,20 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // Capability check if specified
   const isCapabilityDenied = requiredCapability && !hasCapability(role, requiredCapability);
 
+  if ((requiredCapability || requiredPermission) && permissionLoadState === 'loading') {
+    return <div role="status" aria-live="polite">Verifying your permissions…</div>;
+  }
+
   // Role check if specified
   const isRoleDenied = allowedRoles && allowedRoles.length > 0 && role && !allowedRoles.includes(role);
 
-  // Unauthorized for role or capability
-  if (isRoleDenied || isCapabilityDenied) {
+  // Permission code check if specified (e.g. S10:V, S11:V)
+  const isPermissionDenied = requiredPermission
+    ? !isPermissionAuthorized(requiredPermission, hasPermission(requiredPermission), permissionLoadState)
+    : false;
+
+  // Unauthorized for role, capability, or permission
+  if (isRoleDenied || isCapabilityDenied || isPermissionDenied) {
     return (
       <div style={{
         maxWidth: '560px',
@@ -63,8 +86,10 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           Access Restricted (RBAC)
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-          Your current session persona is <strong>{currentUser?.name}</strong> with role <code>{role}</code>.
-          This route strictly requires authorization clearance for: {allowedRoles && allowedRoles.length > 0 ? <code>{allowedRoles.join(' / ')}</code> : ''}{requiredCapability ? <span> with capability: <code>{requiredCapability}</code></span> : ''}.
+          {(requiredCapability || requiredPermission) && permissionLoadState === 'error'
+            ? 'Effective permissions could not be verified from the server. Access remains restricted.'
+            : <>Your current session persona is <strong>{currentUser?.name}</strong> with role <code>{role}</code>.</>}
+          This route strictly requires authorization clearance for: {allowedRoles && allowedRoles.length > 0 ? <code>{allowedRoles.join(' / ')}</code> : ''}{requiredCapability ? <span> with capability: <code>{requiredCapability}</code></span> : ''}{requiredPermission ? <span> with permission: <code>{requiredPermission}</code></span> : ''}.
         </p>
         <div style={{
           padding: 'var(--space-3)',
@@ -74,13 +99,14 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           color: 'var(--text-secondary)',
           marginBottom: 'var(--space-6)'
         }}>
-          💡 <em>Tip for Reviewers:</em> Use the floating <strong>Demo Role Switcher</strong> at the bottom right to switch your persona to one of the authorized roles above.
+          You are signed in as <strong>{currentUser?.name}</strong> ({currentUser?.email}) with role <code>{role}</code>.
+          Sign in with an account that has one of the authorized roles above to access this area.
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-3)' }}>
           <Button variant="secondary" onClick={() => window.history.back()}>
             Go Back
           </Button>
-          <Button variant="primary" onClick={() => window.location.href = `/${role}/dashboard`} icon={<ArrowRight size={14} />}>
+          <Button variant="primary" onClick={() => navigate(role ? DASHBOARD_BY_ROLE[role] : '/login', { replace: true })} icon={<ArrowRight size={14} />}>
             Go to My Dashboard
           </Button>
         </div>

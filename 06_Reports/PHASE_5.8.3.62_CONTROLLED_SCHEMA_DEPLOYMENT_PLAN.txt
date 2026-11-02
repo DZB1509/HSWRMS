@@ -1,0 +1,265 @@
+================================================================================
+HSWRMS CONTROLLED TEST SCHEMA DEPLOYMENT PLAN
+PHASE 5.8.3.62 — PRE-EXECUTION AUDIT, TARGET BINDING & VERIFICATION SPECIFICATION
+================================================================================
+Date: 2026-10-28
+Workspace Target: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Pre-Execution Authorization Plan for Dedicated Database [HSWRMS_TEST]
+Execution Status: STRICTLY PLAN & READ-ONLY PREFLIGHT ONLY
+                 (Zero DDL executed; zero data seeded; zero database mutations;
+                 zero Git mutations; zero modifications to schema files)
+================================================================================
+
+1. EXECUTIVE SUMMARY & STRICT SAFETY BOUNDARIES
+--------------------------------------------------------------------------------
+Phase 5.8.3.62 establishes the definitive execution plan and verification suite
+for deploying the approved schema payload into [HSWRMS_TEST], strictly requiring
+explicit human authorization prior to executing any DDL.
+
+STRICT SAFETY CONSTRAINTS FULLY MAINTAINED:
+  [X] Zero DDL, DML, or schema modification commands executed in this phase.
+  [X] Zero data seeded into any table.
+  [X] The authoritative baseline (schema.sql) remains 100% UNTOUCHED (SHA-256 verified).
+  [X] The approved payload (HSWRMS_TEST_schema.sql) remains 100% UNTOUCHED (SHA-256 verified).
+  [X] Migrations V001–V005 are NOT re-run on fresh database initialized with baseline schema.
+  [X] Test runtime user [hswrms_test_user] is PROHIBITED from executing deployment DDL.
+  [X] Neither db_owner nor DDL permissions are granted to the runtime test user.
+  [X] Zero automatic DROP DATABASE or DROP TABLE scripts; destructive actions are banned.
+  [X] Git state remains completely unmutated (zero commit, checkout, stash, or branch switch).
+  [X] Workspace B remains completely untouched.
+  [X] Zero credential or secret exposure.
+
+GATE DECISION: READY FOR EXPLICIT HUMAN APPROVAL.
+
+
+2. FILE INTEGRITY & CRYPTOGRAPHIC HASH CONFIRMATION (SHA-256)
+--------------------------------------------------------------------------------
+Both database schema files were cryptographically hashed and verified:
+
+A. Authoritative Project Baseline:
+   - File Path: `05_Development/database/schema.sql`
+   - File Size: 47,083 bytes (1,221 lines)
+   - SHA-256 Hash: `04E3F1D107DE289B058C53A468E1E8EA92B677D5B53EEAC644D6D7BCECEDF0D6`
+   - Integrity Status: 100% UNTOUCHED since baseline establishment.
+
+B. Dedicated Test Payload:
+   - File Path: `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+   - File Size: 46,206 bytes (1,223 lines)
+   - SHA-256 Hash: `DB643DDBC0E5CF5BE848D1CF6EA33DC51B124B89DFAC0CE327CAEEE0C91E6D70`
+   - Integrity Status: 100% UNTOUCHED since generation in Phase 5.8.3.59.
+   - Parity Status: Verified 100% structural, relational, and trigger parity with baseline.
+
+
+3. LIVE TARGET & EXECUTION IDENTITY VERIFICATION (READ-ONLY INSPECTION)
+--------------------------------------------------------------------------------
+Read-only metadata queries executed against the local Microsoft SQL Server instance
+confirm the following live operational facts:
+
+A. SQL Server Instance Metadata:
+   - Host Binding: `localhost` (Port 1433, TCP listener active).
+   - MachineName: `MYLIFE-MYRULE-1`
+   - ServerName (`@@SERVERNAME`): `MYLIFE-MYRULE-1`
+   - InstanceName: `(default)` (MSSQLSERVER)
+   - ProductVersion: `15.0.2130.3` (Microsoft SQL Server 2019 CU)
+   - Edition: `Express Edition (64-bit)`
+   - Authentication Mode: `IsIntegratedSecurityOnly = 0` (Mixed Mode Authentication enabled).
+
+B. Target Database Status ([HSWRMS_TEST]):
+   - Database ID: 45
+   - State: `ONLINE`
+   - Creation Timestamp: `2026-10-27 16:56:02.727`
+   - Current User Tables (`sys.tables WHERE is_ms_shipped = 0`): `0` (Clean, empty slate).
+
+C. Primary Development Database Status ([HSWRMS]):
+   - Database ID: 44
+   - State: `ONLINE`
+   - Creation Timestamp: `2026-10-05 03:20:56.840`
+   - Guest User Access: `hasdbaccess = 0` (Guest access strictly disabled).
+   - Test User Mappings in [HSWRMS]: `0` (Zero principals mapped; total isolation verified).
+
+D. Execution Identity for Schema Deployment:
+   - Operating Identity: Local Windows Administrative account via Windows Integrated
+     Authentication (`-E`), specifically `MYLIFE-MYRULE-1\ADMIN`.
+   - Engine Role: `IS_SRVROLEMEMBER('sysadmin') = 1` on local SQL Server instance.
+   - Privilege Scope: Has full DDL authorization on `localhost` to create tables,
+     constraints, indexes, triggers, and seed roles inside `HSWRMS_TEST`.
+   - Security Advantage: Zero password transmission over network or CLI arguments;
+     zero credential artifacts stored in repository files.
+
+E. Reconfirmation on Runtime Test Login (`hswrms_test_user`):
+   - Current Privileges: Strictly `CONNECT SQL` at server level; strictly `CONNECT`
+     in database `HSWRMS_TEST`. Zero database roles; zero server roles.
+   - Prohibition: `hswrms_test_user` CANNOT and MUST NOT execute the schema payload.
+   - Least-Privilege DML: After schema deployment and seed data creation, Stage 7 of the
+     overall provisioning plan will grant `hswrms_test_user` only `SELECT, INSERT, UPDATE, DELETE`
+     on `dbo.*` tables in `HSWRMS_TEST`.
+
+
+4. STATIC PAYLOAD SAFETY RECONFIRMATION
+--------------------------------------------------------------------------------
+A static audit of `05_Development/database/generated/HSWRMS_TEST_schema.sql` confirms:
+1. File Header & Target Context:
+   - Line 19 executes: `USE [HSWRMS_TEST]; GO`
+   - Lines 22-29 enforce the Target Verification Guard:
+     ```sql
+     IF DB_NAME() <> N'HSWRMS_TEST'
+     BEGIN
+         PRINT 'CRITICAL TARGET CONTEXT FAILURE: Active database is [' + DB_NAME() + ']; expected [HSWRMS_TEST]. Aborting immediately.';
+         SET NOEXEC ON;
+         THROW 51000, N'CRITICAL TARGET CONTEXT FAILURE: Execution halted because current database is not HSWRMS_TEST.', 1;
+     END
+     GO
+     ```
+2. Production Reference Elimination:
+   - Zero occurrences of `USE [master]`.
+   - Zero occurrences of `USE [HSWRMS]`.
+   - Zero occurrences of `CREATE DATABASE`, `ALTER DATABASE`, or `DROP DATABASE`.
+   - Zero 3-part references to `HSWRMS.dbo.*`.
+3. Object Parity Retained:
+   - 42 User Tables in identical dependency order.
+   - 42 Primary Keys, 56 Foreign Keys, 21 Unique Constraints.
+   - 12 Non-Clustered Indexes.
+   - 3 DML Triggers (`TR_SpaSession_ValidateScheduling`, `TR_FolioItem_RecalculateTotal`,
+     `TR_PaymentTransaction_RecalculateFolioPaid`) properly preceded by `GO`.
+   - 6 Initial Seed Roles in Section 9 (`Customer`, `Receptionist`, `Therapist`,
+     `F&B Staff`, `Manager`, `Admin`).
+
+
+5. PROPOSED CONTROLLED EXECUTION COMMAND SEQUENCE
+--------------------------------------------------------------------------------
+> [!IMPORTANT]
+> The following two-step sequence is the planned deployment procedure.
+> It MUST NOT be executed until explicit human authorization is received.
+
+### Step 1: Pre-Execution Target Assertion (Fail-Fast Verification Query)
+Execute a read-only query asserting machine name and active catalog before piping DDL:
+```powershell
+sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; IF @@SERVERNAME <> N'MYLIFE-MYRULE-1' OR DB_NAME() <> N'HSWRMS_TEST' THROW 52000, 'CRITICAL PRE-CHECK: Target host or database mismatch', 1; PRINT 'PRE-CHECK PASS: Connected to host [' + @@SERVERNAME + '] catalog [' + DB_NAME() + ']. Ready for deployment.';"
+```
+- Expected Output:
+  `PRE-CHECK PASS: Connected to host [MYLIFE-MYRULE-1] catalog [HSWRMS_TEST]. Ready for deployment.`
+- Stop Condition: If exit code is non-zero, abort immediately without running Step 2.
+
+### Step 2: Schema Payload Execution
+Pipe the verified payload into SQLCMD with fail-fast (`-b`) and explicit parameters:
+```powershell
+sqlcmd -S localhost -d HSWRMS_TEST -E -b -i 05_Development/database/generated/HSWRMS_TEST_schema.sql
+```
+- Parameters:
+  * `-S localhost`: Strictly binds network connection to local SQL Server instance.
+  * `-d HSWRMS_TEST`: Explicitly sets database catalog in TDS login packet.
+  * `-E`: Uses authenticated local Windows Admin credentials.
+  * `-b`: Terminates SQLCMD immediately on any T-SQL batch error.
+  * `-i ...`: Targets the approved, sanitized payload.
+
+
+6. READ-ONLY POST-DEPLOYMENT VERIFICATION QUERIES
+--------------------------------------------------------------------------------
+Immediately following execution of Step 2, the operator or agent will run the
+following read-only queries to verify deployment success:
+
+### Verification Query 1: User Table Inventory Count
+```sql
+USE [HSWRMS_TEST];
+SELECT COUNT(*) AS TableCount FROM sys.tables WHERE is_ms_shipped = 0;
+```
+- Expected Result: Exactly `42` tables.
+
+### Verification Query 2: Trigger Inventory Count
+```sql
+USE [HSWRMS_TEST];
+SELECT name, parent_class_desc FROM sys.triggers WHERE is_ms_shipped = 0;
+```
+- Expected Result: Exactly `3` triggers:
+  1. `TR_SpaSession_ValidateScheduling` (on `dbo.SpaSession`)
+  2. `TR_FolioItem_RecalculateTotal` (on `dbo.FolioItem`)
+  3. `TR_PaymentTransaction_RecalculateFolioPaid` (on `dbo.PaymentTransaction`)
+
+### Verification Query 3: Initial Role Seed Count
+```sql
+USE [HSWRMS_TEST];
+SELECT role_name FROM dbo.[Role] ORDER BY role_id;
+```
+- Expected Result: Exactly `6` rows:
+  `Customer`, `Receptionist`, `Therapist`, `F&B Staff`, `Manager`, `Admin`.
+
+### Verification Query 4: M4 Dining Core Tables Existence
+```sql
+USE [HSWRMS_TEST];
+SELECT name FROM sys.tables
+WHERE name IN ('MenuItem', 'Ingredient', 'MenuItemIngredient', 'IngredientBatch', 'MealOrder', 'MealOrderItem')
+ORDER BY name;
+```
+- Expected Result: All `6` M4 F&B dining tables present.
+
+### Verification Query 5: Primary Database [HSWRMS] Zero-Mutation Assertion
+```sql
+USE [HSWRMS];
+SELECT COUNT(*) AS HSWRMS_TestUserMappings
+FROM sys.database_principals
+WHERE name = 'hswrms_test_user' OR sid = SUSER_SID('hswrms_test_user');
+```
+- Expected Result: Exactly `0` mappings. Confirms primary database remained untouched.
+
+
+7. NON-DESTRUCTIVE PARTIAL-FAILURE RECOVERY PLAN
+--------------------------------------------------------------------------------
+If an unforeseen error occurs during execution of `HSWRMS_TEST_schema.sql` (e.g. disk
+exhaustion, syntax fault, or lock timeout):
+
+A. Prohibition on Automatic Destruction:
+   - Automated scripts MUST NOT invoke `DROP DATABASE` or `DROP TABLE`.
+   - Automatic drop routines present intolerable risk if executed against the wrong target.
+
+B. Safe Human-Supervised Recovery Protocol:
+   1. Stop Immediately: Capture the exact SQLCMD error message, line number, and error code.
+   2. Read-Only State Inspection:
+      * Execute: `SELECT DB_NAME(), COUNT(*) FROM HSWRMS_TEST.sys.tables WHERE is_ms_shipped = 0;`
+        to record exactly how many tables were created prior to the failure.
+      * Execute: `SELECT name, create_date FROM sys.databases WHERE name = 'HSWRMS';`
+        to re-confirm that the primary database is 100% intact.
+   3. Root Cause Analysis: Resolve the underlying operating-system or SQL Server issue.
+   4. Scoped Cleanup Options (Subject to Explicit Human Approval):
+      * Option A (Scoped Table Drop): Execute a dedicated script inside `HSWRMS_TEST`
+        dropping foreign key constraints and tables in reverse dependency order without
+        dropping the database container.
+      * Option B (Manual Database Recreation): Under explicit DBA supervision, drop only
+        `HSWRMS_TEST`:
+        `USE [master]; IF DB_ID('HSWRMS_TEST') IS NOT NULL DROP DATABASE [HSWRMS_TEST];`
+        followed by re-provisioning via `provision_hswrms_test.ps1 -AllowExistingLogin`.
+
+
+8. MISSING PRECONDITIONS & FINAL GATE DECISION
+--------------------------------------------------------------------------------
+A. Evaluation of Preconditions:
+   +-----------------------------------------------+-----------------------------------+
+   | Precondition Requirement                      | Status                            |
+   +-----------------------------------------------+-----------------------------------+
+   | 1. SQL Server Instance Running & Port Open    | VERIFIED (localhost:1433, Online) |
+   | 2. Mixed Mode Authentication Active           | VERIFIED (IsIntegratedSecurity=0) |
+   | 3. Target Database HSWRMS_TEST Clean & Empty  | VERIFIED (0 user tables)          |
+   | 4. Primary Database HSWRMS Isolated           | VERIFIED (0 test user mappings)   |
+   | 5. Payload SHA-256 Cryptographic Hash Check   | VERIFIED (DB643DDBC0E5CF5BE...)   |
+   | 6. Baseline schema.sql SHA-256 Hash Check     | VERIFIED (04E3F1D107DE289B...)    |
+   | 7. Deployment Identity Configured             | VERIFIED (Windows Admin via -E)   |
+   | 8. Post-Execution Audit Queries Prepared      | VERIFIED (5 explicit SQL queries) |
+   | 9. Non-Destructive Recovery Protocol Defined  | VERIFIED (Strict human gate)      |
+   | 10. Explicit Human Execution Authorization    | PENDING HUMAN APPROVAL            |
+   +-----------------------------------------------+-----------------------------------+
+
+B. Remaining Preconditions:
+   - Exactly ONE precondition remains: **Explicit Human Approval (Sự phê duyệt rõ ràng từ người dùng)**.
+
+C. Final Decision:
+   **READY FOR EXPLICIT HUMAN APPROVAL**
+
+Summary:
+All technical, cryptographic, security, and operational preparations for deploying
+the schema into [HSWRMS_TEST] are complete.
+
+The agent has stopped and will not execute any DDL until the user provides
+explicit authorization to proceed.
+================================================================================
+END OF REPORT — PHASE 5.8.3.62
+================================================================================
+

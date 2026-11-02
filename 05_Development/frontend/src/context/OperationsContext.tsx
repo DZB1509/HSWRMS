@@ -591,6 +591,7 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         submitDailyResidenceDeclarations,
         markResidenceDeclaration,
         isLoading,
+        refreshDbVillas: syncWithBackend,
         refreshOperationsData: syncWithBackend,
         dismissAlert,
       }}

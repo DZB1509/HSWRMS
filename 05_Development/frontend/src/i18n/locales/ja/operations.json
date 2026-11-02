@@ -33,7 +33,6 @@
     "masterDataManagement": "マスタデータ管理",
     "securityGovernance": "セキュリティ・権限設定",
     "businessParameters": "業務パラメータ",
-    "featureFlags": "機能フラグ",
     "permissionMatrix": "権限マトリクス",
     "managerDelegation": "権限委任設定",
     "sensitiveDataAuditLog": "機密データ監査ログ",
@@ -42,7 +41,7 @@
     "admin": "管理者",
     "delegatedAdministration": "委譲された管理権限",
     "businessParametersDelegated": "ビジネスパラメータ（委譲済）",
-    "featureFlagsDelegated": "機能フラグ（委譲済）"
+    "bookingHistory": "予約履歴"
   },
   "payment": {
     "requiredDeposit": "所要デポジット",
@@ -598,8 +597,6 @@
     "bannerNotice": "このプロトタイプの構成パラメータと権限ルールは、操作デモ目的でクライアント状態において管理されています。本番環境では、認可ポリシーと不変の監査証跡がサーバー側ポリシーエンジンによって強制されます。",
     "kpiParams": "ビジネスパラメータ",
     "kpiParamsSub": "設定済みの運用しきい値",
-    "kpiFlags": "機能フラグ",
-    "kpiFlagsSub": "現在有効なオプションモジュール",
     "kpiDelegations": "マネージャー委譲",
     "kpiDelegationsSub": "マネージャーへの有効な範囲付き委譲",
     "kpiAudit": "監査証跡アクティビティ",
@@ -607,7 +604,6 @@
     "navTitle": "管理機能とガバナンスモジュール",
     "screensScope": "正式な管理者対象画面：画面 10〜12 および 50〜54、56",
     "descParams": "キャンセル期間、返金率、手付金比率、食事選択締め切りルールを設定します。",
-    "descFlags": "ヴィラ内飲食、オンライン追加スパ、法定届出ルーチンなどのオプション機能を安全に切り替えます。",
     "descMatrix": "役割ごとの権限割り当てを確認し、不変のプライバシーおよび最小権限境界を強制します。",
     "descDelegation": "リゾート運営マネージャー（Sarah Jenkins）に厳格に限定された期限付き管理権限を付与します。",
     "descAudit": "健康、身元、財務記録に関連するアクセスイベントの時系列メタデータをレビューします。",
@@ -640,24 +636,6 @@
     "allowedRange": "許容範囲",
     "lastUpdated": "最終更新",
     "resetTitle": "デフォルトにリセット"
-  },
-  "flags": {
-    "pageTitle": "モジュール機能フラグと運用トグル",
-    "systemScope": "システムモジュール",
-    "pageSubtitle": "サポートされている顧客セルフサービスモジュールと法定規制届出ルーチンを安全に有効化または無効化します。",
-    "safetyTitle": "安全性およびプライバシー境界は変更不可",
-    "safetyDesc": "RBACデータ最小化、スパ二重リソース検証、チェックアウト決済チェックなどのセキュリティ不変条件は必須制御であり、機能フラグから除外されています。",
-    "modularTitle": "設定可能な機能モジュール",
-    "activeCount": "有効",
-    "highImpact": "影響度：高",
-    "scope": "適用範囲",
-    "lastModified": "最終変更",
-    "immutableTitle": "不変のコアコントロール（保護されたアーキテクチャ）",
-    "alwaysEnforced": "常に強制適用",
-    "confirmTitle": "影響度の高い機能フラグ変更の確認",
-    "confirmPrompt": "以下のモジュールの運用状態を変更しようとしています：",
-    "confirmAuditNote": "この状態移行はプロトタイプに即座に反映され、機密ガバナンス監査ログにタイムスタンプ付きイベントが追加されます。",
-    "applyToggle": "状態変更を適用"
   },
   "matrix": {
     "pageTitle": "ロールベースアクセス制御（RBAC）権限マトリクス",
@@ -792,24 +770,6 @@
         "desc": "2020年居住法に基づく毎晩の宿泊報告書の自動生成予定時間。"
       }
     },
-    "flags": {
-      "extraSpaOnline": {
-        "name": "Customer Online Extra Spa Booking",
-        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
-      },
-      "extraFnbOnline": {
-        "name": "Customer In-Villa Dining A-la-carte Ordering",
-        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
-      },
-      "residenceExport": {
-        "name": "Nightly Police Residence Declaration Batch",
-        "desc": "スケジュールされた夜間バッチで顧客のチェックイン身元記録を集計します（法定の一時滞在申告義務は常に有効です）。"
-      },
-      "reviewInvites": {
-        "name": "Automated Post-Checkout Review Invitations",
-        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
-      }
-    },
     "permissions": {
       "categories": {
         "experience": "Customer Retreat Experience",
@@ -903,10 +863,6 @@
         "name": "Configure System Business Parameters",
         "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
       },
-      "manageFlags": {
-        "name": "Manage Modular Feature Flags",
-        "desc": "Toggle optional customer self-service modules and automated compliance routines."
-      },
       "viewMatrix": {
         "name": "Inspect System RBAC Permission Matrix",
         "desc": "Review cross-role functional capability allocations and security boundary definitions."
@@ -944,7 +900,6 @@
         "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
         "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
         "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
-        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
         "parameterUpdated": "Successfully updated business parameter value.",
         "permissionUpdated": "Successfully updated permission matrix capability.",
         "delegationCreated": "Successfully created limited delegation record for Manager.",
@@ -995,7 +950,7 @@
     "reactivateAccount": "アカウントを再開",
     "clearanceSectionTitle": "RBAC権限スコープおよびデータ最小化制御",
     "scopeAdminTitle": "完全なシステム管理者権限",
-    "scopeAdminDesc": "ビジネスパラメータ、機能フラグ、RBACマトリクス、委任、監査ログの管理が許可されています。",
+    "scopeAdminDesc": "マスターデータ、ビジネス・運用パラメータ、RBACマトリクス、管理者委任、機密セキュリティ監査ログの管理が許可されています。",
     "scopeAdminMin": "顧客の生体診断データや決済シークレットは直接閲覧できません。",
     "scopeManagerTitle": "業務管理および分析レポート権限",
     "scopeManagerDesc": "売上分析、ヴィラ稼働統計、セラピスト稼働率、システム健全性の閲覧が許可されています。",
@@ -1011,7 +966,8 @@
     "scopeFbMin": "厨房スタッフは食品アレルゲンタグのみ確認可能で、全般的な病歴は一切非公開です（BR-03）。",
     "suspendSuccess": "スタッフアカウントが正常に停止されました。",
     "reactivateSuccess": "スタッフアカウントが再開されました。",
-    "notFound": "スタッフアカウントが見つかりません。"
+    "notFound": "スタッフアカウントが見つかりません。",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "マスターデータ管理",

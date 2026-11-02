@@ -20,6 +20,10 @@ public class BookingClock {
     private final Clock clock;
     private final ZoneId resortZone;
 
+    public BookingClock() {
+        this("Asia/Ho_Chi_Minh");
+    }
+
     @Autowired
     public BookingClock(@Value("${app.resort.timezone:Asia/Ho_Chi_Minh}") String resortTimezone) {
         this(Clock.systemUTC(), ZoneId.of(resortTimezone));

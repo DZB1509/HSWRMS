@@ -7,7 +7,7 @@
     "frontDeskDashboard": "Front Desk Dashboard",
     "dailyArrivals": "Daily Arrivals",
     "villaManagement": "Villa Management",
-    "bookingHistory": "Booking History",
+    "spaManagement": "Spa & Retreat Management",
     "customerServicesFolio": "Customer Services & Folio",
     "manualExtraSpa": "Manual Extra Spa",
     "customerFolioInvoice": "Customer Folio & Invoice",
@@ -33,7 +33,6 @@
     "masterDataManagement": "Master Data Management",
     "securityGovernance": "Security & Governance",
     "businessParameters": "Business Parameters",
-    "featureFlags": "Feature Flags",
     "permissionMatrix": "Permission Matrix",
     "managerDelegation": "Manager Delegation",
     "sensitiveDataAuditLog": "Sensitive Data Audit Log",
@@ -42,7 +41,7 @@
     "admin": "Admin",
     "delegatedAdministration": "Delegated Administration",
     "businessParametersDelegated": "Business Parameters (Delegated)",
-    "featureFlagsDelegated": "Feature Flags (Delegated)"
+    "bookingHistory": "Booking History"
   },
   "payment": {
     "requiredDeposit": "Required Deposit",
@@ -598,8 +597,6 @@
     "bannerNotice": "Configuration parameters and permission rules in this prototype are managed in client state for operational demonstration. In production, authorization policies and immutable audit trails are enforced by server-side policy engines.",
     "kpiParams": "Business Parameters",
     "kpiParamsSub": "Operational thresholds configured",
-    "kpiFlags": "Feature Flags",
-    "kpiFlagsSub": "Optional modules currently active",
     "kpiDelegations": "Manager Delegations",
     "kpiDelegationsSub": "Active scoped delegations to Manager",
     "kpiAudit": "Audit Trail Activity",
@@ -607,7 +604,6 @@
     "navTitle": "Administrative Functions & Governance Modules",
     "screensScope": "Official Administrator Scope: Screens 10–12 & 50–54, 56",
     "descParams": "Configure cancellation windows, refund rates, deposit percentages, and dietary cutoff rules.",
-    "descFlags": "Safely toggle modular services including extra dining, extra spa, and statutory export routines.",
     "descMatrix": "Inspect cross-role capability assignments and enforce immutable privacy & least-privilege boundaries.",
     "descDelegation": "Grant strictly scoped, time-bounded administrative capabilities to Resort Operations Manager (Sarah Jenkins).",
     "descAudit": "Review chronological metadata of access events involving health, identity, and financial records.",
@@ -640,24 +636,6 @@
     "allowedRange": "Allowed Range",
     "lastUpdated": "Updated",
     "resetTitle": "Reset to system default"
-  },
-  "flags": {
-    "pageTitle": "Modular Feature Flags & Operational Toggles",
-    "systemScope": "System Modules",
-    "pageSubtitle": "Safely activate or deactivate supported customer self-service modules and automated regulatory compliance export routines.",
-    "safetyTitle": "Safety & Privacy Boundaries are Non-Toggleable",
-    "safetyDesc": "Core security invariants (such as RBAC data minimization, 2D therapist+room booking validations, and folio settlement checks) are essential architecture controls and are deliberately excluded from feature flag toggles.",
-    "modularTitle": "Configurable Functional Modules",
-    "activeCount": "Active",
-    "highImpact": "High Impact",
-    "scope": "Scope",
-    "lastModified": "Modified",
-    "immutableTitle": "Immutable Core Controls (Protected Architecture)",
-    "alwaysEnforced": "ALWAYS ENFORCED",
-    "confirmTitle": "Confirm High-Impact Feature Change",
-    "confirmPrompt": "You are about to change the operational state of:",
-    "confirmAuditNote": "This state transition will take effect immediately in the prototype and append a timestamped event to the Sensitive Governance Audit Log.",
-    "applyToggle": "Apply State Transition"
   },
   "matrix": {
     "pageTitle": "Role-Based Access Control (RBAC) Permission Matrix",
@@ -792,24 +770,6 @@
         "desc": "Scheduled local time for nightly generation of the temporary residence report required by Vietnam Law on Residence 2020."
       }
     },
-    "flags": {
-      "extraSpaOnline": {
-        "name": "Customer Online Extra Spa Booking",
-        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
-      },
-      "extraFnbOnline": {
-        "name": "Customer In-Villa Dining A-la-carte Ordering",
-        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
-      },
-      "residenceExport": {
-        "name": "Nightly Police Residence Declaration Batch",
-        "desc": "Automatically compiles daily customer check-in identification records at scheduled export time (statutory temporary residence declaration duty remains mandatory)."
-      },
-      "reviewInvites": {
-        "name": "Automated Post-Checkout Review Invitations",
-        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
-      }
-    },
     "permissions": {
       "categories": {
         "experience": "Customer Retreat Experience",
@@ -903,10 +863,6 @@
         "name": "Configure System Business Parameters",
         "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
       },
-      "manageFlags": {
-        "name": "Manage Modular Feature Flags",
-        "desc": "Toggle optional customer self-service modules and automated compliance routines."
-      },
       "viewMatrix": {
         "name": "Inspect System RBAC Permission Matrix",
         "desc": "Review cross-role functional capability allocations and security boundary definitions."
@@ -944,7 +900,6 @@
         "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
         "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
         "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
-        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
         "parameterUpdated": "Successfully updated business parameter value.",
         "permissionUpdated": "Successfully updated permission matrix capability.",
         "delegationCreated": "Successfully created limited delegation record for Manager.",
@@ -995,7 +950,7 @@
     "reactivateAccount": "Reactivate Account",
     "clearanceSectionTitle": "RBAC Clearance Scope & Privacy Minimization",
     "scopeAdminTitle": "Full System Administration Authority",
-    "scopeAdminDesc": "Authorized to manage business parameters, modular feature flags, RBAC matrix, delegation, and security audit log.",
+    "scopeAdminDesc": "Authorized to manage master data, business & operational parameters, RBAC matrix, admin delegation, and security audit logs.",
     "scopeAdminMin": "Does not expose raw Customer medical diagnoses or payment cardholder secrets.",
     "scopeManagerTitle": "Executive Management & Operational Analytics Authority",
     "scopeManagerDesc": "Authorized for high-level executive revenue reporting, villa occupancy statistics, therapist utilization, and system operational health.",
@@ -1011,7 +966,8 @@
     "scopeFbMin": "Kitchen staff sees strictly food allergy tags; general medical notes are completely withheld (BR-03).",
     "suspendSuccess": "Staff account successfully suspended.",
     "reactivateSuccess": "Staff account successfully reactivated.",
-    "notFound": "Staff account record not found."
+    "notFound": "Staff account record not found.",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "Master Data Management",
@@ -1041,5 +997,51 @@
     "nameLabel": "Catalog Display Name",
     "priceLabel": "Published Price (VND)",
     "saveSuccess": "Master data entry updated successfully."
+  },
+  "fnb": {
+    "prepList": {
+      "title": "Daily Meal Prep Queue",
+      "subtitle": "Manage kitchen fulfillment schedule, ingredient volume scaling, and meal handoff for resort customers.",
+      "date": "Target Date",
+      "search": "Search Customer / Villa / Dish / Ingredient",
+      "searchPlaceholder": "e.g., Eleanor Vance, 102, Salmon, Quinoa, Oatmeal...",
+      "allTypes": "All Types",
+      "typeRetreat": "Retreat Meals",
+      "typeExtra": "A-la-carte",
+      "allStatuses": "All Statuses",
+      "dietaryAttentionOnly": "Dietary Attention Only",
+      "resetFilters": "Reset Filters",
+      "colTime": "Time / Period",
+      "colCustomer": "Customer & Villa",
+      "colItems": "Items & Portions",
+      "colAlerts": "Dietary & Allergies",
+      "colStatus": "Status",
+      "colAction": "Action",
+      "details": "Details",
+      "batchScalingTitle": "Batch Ingredient Demand & Recipe Scaling",
+      "batchScalingSubtitle": "Precise unit measurements (g, ml, pcs, slices) scaled for an operational volume of 95–100 servings.",
+      "servingsVolume": "Batch Volume",
+      "servingsCount": "servings",
+      "ingredientName": "Ingredient Name",
+      "unit": "Unit",
+      "perServing": "Per 1 Serving",
+      "scaledTotal": "Total for {{count}} Servings",
+      "stockStatus": "Stock Status",
+      "inStock": "In Stock",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock",
+      "searchRecipePlaceholder": "Filter dishes or ingredients...",
+      "viewRecipe": "View Recipe & Ingredients",
+      "hideRecipe": "Hide Recipe",
+      "totalIngredientsNeeded": "Total {{count}} ingredients required",
+      "orderPortions": "portions"
+    },
+    "status": {
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
   }
 }

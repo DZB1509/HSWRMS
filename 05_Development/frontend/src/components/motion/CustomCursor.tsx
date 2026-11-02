@@ -63,15 +63,15 @@ export const CustomCursor: React.FC = () => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const animate = () => {
+      const finePointer = window.matchMedia('(pointer: fine)').matches;
       const reducedMotion = motionQuery.matches;
 
       // Physics factors:
-      // Reduced motion: instantaneous snapping (factor 1.0)
-      // Operational: crisper, faster trailing
-      // Public: refined organic wellness flow
-      const f1 = reducedMotion ? 1.0 : isOperational ? 0.48 : 0.35;
-      const f2 = reducedMotion ? 1.0 : isOperational ? 0.26 : 0.18;
-      const f3 = reducedMotion ? 1.0 : isOperational ? 0.16 : 0.10;
+      // Desktop fine pointer: full organic 3-bead trailing wellness flow
+      // Reduced motion on non-desktop / coarse pointer: instantaneous snapping
+      const f1 = (reducedMotion && !finePointer) ? 1.0 : isOperational ? 0.48 : 0.35;
+      const f2 = (reducedMotion && !finePointer) ? 1.0 : isOperational ? 0.26 : 0.18;
+      const f3 = (reducedMotion && !finePointer) ? 1.0 : isOperational ? 0.16 : 0.10;
 
       pos1.current.x += (target.current.x - pos1.current.x) * f1;
       pos1.current.y += (target.current.y - pos1.current.y) * f1;
@@ -83,13 +83,13 @@ export const CustomCursor: React.FC = () => {
       pos3.current.y += (target.current.y - pos3.current.y) * f3;
 
       if (bead1Ref.current) {
-        bead1Ref.current.style.transform = `translate3d(${pos1.current.x}px, ${pos1.current.y}px, 0)`;
+        bead1Ref.current.style.translate = `${pos1.current.x}px ${pos1.current.y}px`;
       }
       if (bead2Ref.current) {
-        bead2Ref.current.style.transform = `translate3d(${pos2.current.x}px, ${pos2.current.y}px, 0)`;
+        bead2Ref.current.style.translate = `${pos2.current.x}px ${pos2.current.y}px`;
       }
       if (bead3Ref.current) {
-        bead3Ref.current.style.transform = `translate3d(${pos3.current.x}px, ${pos3.current.y}px, 0)`;
+        bead3Ref.current.style.translate = `${pos3.current.x}px ${pos3.current.y}px`;
       }
 
       rafId = requestAnimationFrame(animate);
@@ -112,7 +112,7 @@ export const CustomCursor: React.FC = () => {
       target.current = { x: e.clientX, y: e.clientY };
 
       if (e.pointerType !== 'touch') {
-        if (!isVisibleRef.current) {
+        if (!isVisibleRef.current || (pos1.current.x < 0 && pos1.current.y < 0)) {
           pos1.current = { x: e.clientX, y: e.clientY };
           pos2.current = { x: e.clientX, y: e.clientY };
           pos3.current = { x: e.clientX, y: e.clientY };
@@ -121,7 +121,7 @@ export const CustomCursor: React.FC = () => {
       }
 
       const targetEl = e.target as HTMLElement | null;
-      if (!targetEl) return;
+      if (!targetEl || typeof targetEl.closest !== 'function') return;
 
       // Preserve native text cursor/caret over editable fields
       if (
@@ -179,7 +179,7 @@ export const CustomCursor: React.FC = () => {
     };
 
     const handleMouseEnter = () => {
-      if (!isTouchingRef.current) {
+      if (!isTouchingRef.current && pos1.current.x >= 0 && pos1.current.y >= 0) {
         setVisible(true);
       }
     };

@@ -58,41 +58,41 @@
 }
 
 .spa-status--confirmed {
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
+  color: var(--text-success);
 }
 
 .spa-status--booked {
-  background: #EEF4F8;
-  border: 1px solid #C6D8E5;
-  color: #1D4460;
+  background: var(--surface-info);
+  border: 1px solid var(--border-info);
+  color: var(--text-info);
 }
 
 .spa-status--progress,
 .spa-status--in_progress {
-  background: #FDF6EC;
-  border: 1px solid #F1D6A8;
-  color: #70480C;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
+  color: var(--text-warning);
 }
 
 .spa-status--completed {
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
+  color: var(--text-success);
 }
 
 .spa-status--cancelled {
-  background: #FCF0EF;
-  border: 1px solid #F6C4C0;
-  color: #8A2820;
+  background: var(--surface-danger);
+  border: 1px solid var(--border-danger);
+  color: var(--text-danger);
 }
 
 .spa-status--noshow,
 .spa-status--no_show {
-  background: #FCF0EF;
-  border: 1px solid #F6C4C0;
-  color: #8A2820;
+  background: var(--surface-danger);
+  border: 1px solid var(--border-danger);
+  color: var(--text-danger);
 }
 
 /* ================================================================
@@ -104,7 +104,7 @@
   padding: 0 1rem 2rem;
 }
 
-/* Hero Header (Intentional dark photo backdrop) */
+/* Hero Header (Intentional photo backdrop with theme-aware gradient overlays) */
 .spa-hero-header {
   position: relative;
   padding: 3.5rem 2.5rem;
@@ -112,6 +112,16 @@
   border-radius: var(--radius-xl);
   margin-bottom: 2rem;
   overflow: hidden;
+  transition: background var(--transition-normal);
+}
+
+[data-theme="dark"] .spa-hero-header {
+  background: linear-gradient(135deg, #141714 0%, #1c221c 50%, #252d26 100%);
+  border: 1px solid var(--border-subtle);
+}
+
+[data-theme="blush"] .spa-hero-header {
+  background: linear-gradient(135deg, #2a1f22 0%, #3d2a2e 50%, #52383e 100%);
 }
 
 .spa-hero-header::before {
@@ -125,7 +135,16 @@
 .spa-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to right, rgba(28, 35, 31, 0.9), rgba(42, 54, 45, 0.65));
+  background: linear-gradient(to right, rgba(28, 35, 31, 0.90), rgba(42, 54, 45, 0.65));
+  transition: background var(--transition-normal);
+}
+
+[data-theme="dark"] .spa-hero-overlay {
+  background: linear-gradient(to right, rgba(20, 23, 20, 0.94), rgba(37, 45, 38, 0.70));
+}
+
+[data-theme="blush"] .spa-hero-overlay {
+  background: linear-gradient(to right, rgba(42, 31, 34, 0.92), rgba(82, 56, 62, 0.65));
 }
 
 .spa-hero-content {
@@ -303,23 +322,54 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 1.15rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: var(--radius-pill);
   color: #FFFFFF;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
 }
 
 .spa-hero-my-sessions-btn:hover {
   background: rgba(255, 255, 255, 0.28);
-  border-color: rgba(255, 255, 255, 0.6);
-  transform: translateY(-1px);
+  border-color: rgba(231, 217, 196, 0.80);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20);
+}
+
+.spa-hero-my-sessions-btn:focus-visible {
+  outline: 2px solid var(--accent-sand);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .spa-hero-my-sessions-btn {
+  background: rgba(216, 199, 174, 0.12);
+  border-color: rgba(216, 199, 174, 0.32);
+  color: #f4f1ea;
+}
+
+[data-theme="dark"] .spa-hero-my-sessions-btn:hover {
+  background: rgba(216, 199, 174, 0.24);
+  border-color: var(--accent-sand);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.50);
+}
+
+[data-theme="blush"] .spa-hero-my-sessions-btn {
+  background: rgba(248, 239, 234, 0.18);
+  border-color: rgba(228, 209, 203, 0.38);
+  color: #ffffff;
+}
+
+[data-theme="blush"] .spa-hero-my-sessions-btn:hover {
+  background: rgba(248, 239, 234, 0.30);
+  border-color: rgba(216, 199, 174, 0.85);
+  box-shadow: 0 4px 14px rgba(155, 107, 112, 0.35);
 }
 
 /* Treatment Sections & Cards */
@@ -345,15 +395,15 @@
 }
 
 .spa-section-badge--included {
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
+  color: var(--text-success);
 }
 
 .spa-section-badge--extra {
-  background: #FDF6EC;
-  border: 1px solid #F1D6A8;
-  color: #70480C;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
+  color: var(--text-warning);
 }
 
 .spa-section-desc {
@@ -418,6 +468,14 @@
     color: #222923;
     text-shadow: var(--shadow-text-desc-hover);
   }
+
+  [data-theme="dark"] .spa-treatment-card:hover .spa-card-title {
+    color: var(--text-primary);
+  }
+
+  [data-theme="dark"] .spa-treatment-card:hover .spa-card-desc {
+    color: var(--text-secondary);
+  }
 }
 
 .spa-card-image {
@@ -462,7 +520,7 @@
   display: inline-flex;
   align-items: center;
   padding: 0.35rem 0.85rem;
-  background: #FFFFFF;
+  background: var(--surface);
   border: 1px solid var(--border-subtle);
   color: var(--accent-forest);
   border-radius: var(--radius-pill);
@@ -759,7 +817,7 @@
   font-family: var(--font-ui);
   font-size: 0.8rem;
   font-weight: 500;
-  color: #204B23;
+  color: var(--text-success, var(--accent-forest));
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -788,9 +846,9 @@
 }
 
 .spa-step-number--done {
-  background: #EDF4EF;
-  border-color: #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success, #EDF4EF);
+  border-color: var(--border-success, #C3DEC8);
+  color: var(--text-success, #204B23);
 }
 
 /* Pinned Treatment Card (Step 1) */
@@ -855,7 +913,7 @@
 }
 
 .spa-pinned-tag--price {
-  background: #FFFFFF;
+  background: var(--surface);
   border: 1px solid var(--border-subtle);
   color: var(--accent-forest);
 }
@@ -1011,7 +1069,7 @@
 
 .spa-treatment-option--active {
   border-color: var(--accent-forest) !important;
-  background: #f2f6f3 !important;
+  background: var(--surface-interactive) !important;
   box-shadow: 0 3px 12px rgba(32, 75, 35, 0.12) !important;
   transform: none !important;
 }
@@ -1172,7 +1230,7 @@
 
 .spa-therapist-option--active {
   border-color: var(--accent-forest) !important;
-  background: #f2f6f3 !important;
+  background: var(--surface-interactive) !important;
   box-shadow: 0 3px 12px rgba(32, 75, 35, 0.12) !important;
   transform: none !important;
 }
@@ -1256,7 +1314,7 @@
 
 .spa-slot-btn--active {
   border: 2px solid var(--accent-forest) !important;
-  background: #EBF3ED !important;
+  background: var(--surface-interactive) !important;
   box-shadow: 0 0 0 1px var(--accent-forest), 0 4px 12px rgba(32, 75, 35, 0.14) !important;
   transform: none !important;
 }
@@ -1469,6 +1527,147 @@
 .spa-confirm-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+[data-theme="dark"] .spa-confirm-btn {
+  background: #3e4a3f;
+  color: #f4f1ea;
+  border-color: #556657;
+}
+
+[data-theme="dark"] .spa-confirm-btn:hover:not(:disabled) {
+  background: #4c5b4d;
+  border-color: var(--accent-sand);
+  color: #ffffff;
+}
+
+[data-theme="blush"] .spa-confirm-btn {
+  background: var(--accent-forest);
+  color: #ffffff;
+  border-color: rgba(201, 162, 126, 0.4);
+}
+
+[data-theme="blush"] .spa-confirm-btn:hover:not(:disabled) {
+  background: var(--accent-forest-hover);
+  color: #ffffff;
+  border-color: var(--accent-sand);
+}
+
+/* Screen 26 — Find Available Candidates Main Action CTA */
+.spa-submit-booking-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
+  background: var(--accent-forest);
+  color: #ffffff;
+  border: 1px solid var(--accent-forest);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
+}
+
+.spa-submit-booking-btn:hover:not(:disabled) {
+  background: var(--accent-forest-hover);
+  border-color: var(--accent-forest-hover);
+  color: #ffffff;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+}
+
+.spa-submit-booking-btn:hover:not(:disabled) svg {
+  transform: translateX(3px);
+  transition: transform 0.2s ease;
+}
+
+.spa-submit-booking-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.spa-submit-booking-btn:focus-visible {
+  outline: 2px solid var(--accent-sand);
+  outline-offset: 2px;
+}
+
+.spa-submit-booking-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .spa-submit-booking-btn {
+  background: #3e4a3f;
+  color: #f4f1ea;
+  border-color: #556657;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .spa-submit-booking-btn:hover:not(:disabled) {
+  background: #4c5b4d;
+  color: #ffffff;
+  border-color: var(--accent-sand);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.50);
+}
+
+[data-theme="blush"] .spa-submit-booking-btn {
+  background: var(--accent-forest);
+  color: #ffffff;
+  border-color: rgba(201, 162, 126, 0.4);
+}
+
+[data-theme="blush"] .spa-submit-booking-btn:hover:not(:disabled) {
+  background: var(--accent-forest-hover);
+  color: #ffffff;
+  border-color: var(--accent-sand);
+  box-shadow: 0 4px 14px rgba(155, 107, 112, 0.28);
+}
+
+/* Screen 26 — Summary Treatment & Charge Elements */
+.spa-summary-treatment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.spa-summary-treatment .spa-summary-label {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.spa-summary-treatment .spa-summary-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.spa-summary-sub {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.spa-summary-charge--included {
+  color: var(--text-success, var(--success)) !important;
+  font-weight: 600;
+}
+
+.spa-summary-charge--extra {
+  color: var(--accent-forest) !important;
+  font-weight: 700;
 }
 
 /* ================================================================
@@ -2049,7 +2248,7 @@
 
 .spa-session-card--prominent {
   border: 2px solid var(--accent-forest) !important;
-  background: #FFFFFF !important;
+  background: var(--surface) !important;
   box-shadow: 0 6px 20px rgba(79, 90, 80, 0.12) !important;
   position: relative;
   overflow: hidden;
@@ -2412,7 +2611,7 @@
 
 .ops-form-section--disabled {
   opacity: 0.55;
-  background: #FAF8F5;
+  background: var(--surface-muted);
   border-style: dashed;
 }
 
@@ -2510,7 +2709,7 @@
 
 .ops-customer-option--active {
   border-color: var(--accent-forest);
-  background: #F1F4F1;
+  background: var(--surface-interactive);
   box-shadow: 0 0 0 1px var(--accent-forest);
 }
 
@@ -2571,7 +2770,7 @@
 
 .ops-treatment-item--active {
   border-color: var(--accent-forest);
-  background: #F1F4F1;
+  background: var(--surface-interactive);
   box-shadow: 0 0 0 1px var(--accent-forest);
 }
 
@@ -2654,7 +2853,7 @@
 
 .ops-slot-item--active {
   border-color: var(--accent-forest);
-  background: #F1F4F1;
+  background: var(--surface-interactive);
   box-shadow: 0 0 0 1px var(--accent-forest);
 }
 
@@ -2773,15 +2972,15 @@
 }
 
 .ops-status-notice--ready {
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
+  color: var(--text-success);
 }
 
 .ops-status-notice--pending {
-  background: #FDF8EE;
-  border: 1px solid #ECD7A8;
-  color: #7A5312;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
+  color: var(--text-warning);
 }
 
 /* RIGHT COLUMN: Sticky Live Booking Summary */
@@ -2877,15 +3076,15 @@
 }
 
 .ops-val-pill--valid {
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
+  color: var(--text-success);
 }
 
 .ops-val-pill--invalid {
-  background: #FDF8EE;
-  border: 1px solid #ECD7A8;
-  color: #7A5312;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
+  color: var(--text-warning);
 }
 
 .ops-confirm-btn {
@@ -2932,15 +3131,15 @@
 }
 
 .ops-booking-result--success {
-  background: #EDF4EF;
-  color: #204B23;
-  border: 1px solid #C3DEC8;
+  background: var(--surface-success);
+  color: var(--text-success);
+  border: 1px solid var(--border-success);
 }
 
 .ops-booking-result--error {
-  background: #FCF0EF;
-  color: #8A2820;
-  border: 1px solid #F6C4C0;
+  background: var(--surface-danger);
+  color: var(--text-danger);
+  border: 1px solid var(--border-danger);
 }
 
 .ops-empty-notice {
@@ -2948,10 +3147,10 @@
   align-items: center;
   gap: 0.6rem;
   padding: 0.75rem 1rem;
-  background: #FDF6EC;
-  border: 1px solid #F1D6A8;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
   border-radius: var(--radius-sm);
-  color: #70480C;
+  color: var(--text-warning);
   font-size: 0.85rem;
 }
 
@@ -3024,21 +3223,21 @@
 }
 
 .therapist-stat-icon--pending {
-  background: #EEF4F8;
-  color: #527086;
-  border: 1px solid #C6D8E5;
+  background: var(--surface-info);
+  color: var(--text-info);
+  border: 1px solid var(--border-info);
 }
 
 .therapist-stat-icon--active {
-  background: #FDF6EC;
-  color: #70480C;
-  border: 1px solid #F1D6A8;
+  background: var(--surface-warning);
+  color: var(--text-warning);
+  border: 1px solid var(--border-warning);
 }
 
 .therapist-stat-icon--done {
-  background: #EDF4EF;
-  color: #204B23;
-  border: 1px solid #C3DEC8;
+  background: var(--surface-success);
+  color: var(--text-success);
+  border: 1px solid var(--border-success);
 }
 
 .therapist-stat-icon--total {
@@ -3631,8 +3830,8 @@
 }
 
 .therapist-agenda-row--in_progress {
-  border-left: 3px solid #A9783B;
-  background: #FCFAF6;
+  border-left: 3px solid var(--warning);
+  background: var(--surface-warning);
 }
 
 .therapist-agenda-row--completed {
@@ -3687,7 +3886,7 @@
   display: flex;
   align-items: center;
   padding: 0.4rem 1.25rem;
-  background: #FAF8F5;
+  background: var(--surface-muted);
   border-bottom: 1px dashed var(--border-subtle);
   gap: 0.75rem;
 }
@@ -3810,8 +4009,8 @@
 }
 
 .therapist-session-card--in_progress {
-  border-left-color: #A9783B;
-  background: #FCFAF6;
+  border-left-color: var(--warning);
+  background: var(--surface-warning);
 }
 
 .therapist-session-card--completed {
@@ -4241,11 +4440,11 @@
 }
 
 /* 2. Three-Tier Health & Alert Cards (Section 7) */
-/* Tier 2: Attention / Consideration (Warm Sand/Amber Tint, DARK Text) */
+/* Tier 2: Attention / Consideration */
 .therapist-card--attention {
-  background: #FDF6EC;
-  border: 1px solid #F1D6A8;
-  border-left: 4px solid #A9783B;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
+  border-left: 4px solid var(--warning);
 }
 
 .therapist-alert-header {
@@ -4256,7 +4455,7 @@
 }
 
 .therapist-card--attention .therapist-alert-header svg {
-  color: #70480C;
+  color: var(--text-warning);
 }
 
 .therapist-alert-title {
@@ -4267,36 +4466,36 @@
 }
 
 .therapist-card--attention .therapist-alert-title {
-  color: #70480C;
+  color: var(--text-warning);
 }
 
 .therapist-card--attention p {
   margin: 0;
   font-family: var(--font-ui);
   font-size: 0.9rem;
-  color: #2B2B2B;
+  color: var(--text-primary);
   line-height: 1.5;
 }
 
-/* Tier 3: Contraindications / Warning (Soft Destructive Tint, DARK Readable Text) */
+/* Tier 3: Contraindications / Warning */
 .therapist-card--warning {
-  background: #FCF0EF;
-  border: 1px solid #F6C4C0;
-  border-left: 4px solid #A24B43;
+  background: var(--surface-danger);
+  border: 1px solid var(--border-danger);
+  border-left: 4px solid var(--danger);
 }
 
 .therapist-card--warning .therapist-alert-header svg {
-  color: #8A2820;
+  color: var(--text-danger);
 }
 
 .therapist-card--warning .therapist-alert-title {
-  color: #8A2820;
+  color: var(--text-danger);
 }
 
 .therapist-contraindication-list {
   margin: 0;
   padding-left: 1.25rem;
-  color: #8A2820;
+  color: var(--text-danger);
   font-family: var(--font-ui);
   font-size: 0.9rem;
   line-height: 1.55;
@@ -4332,16 +4531,16 @@
 }
 
 .therapist-wellness-item--attention {
-  background: #FDF6EC;
-  border: 1px solid #F1D6A8;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
 }
 
 .therapist-wellness-item--attention .therapist-wellness-item-header svg {
-  color: #70480C;
+  color: var(--text-warning);
 }
 
 .therapist-wellness-item--attention .therapist-wellness-label {
-  color: #70480C;
+  color: var(--text-warning);
 }
 
 .therapist-wellness-item--attention li {
@@ -4413,21 +4612,21 @@
 }
 
 .therapist-stress--mild {
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
-  color: #204B23;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
+  color: var(--text-success);
 }
 
 .therapist-stress--moderate {
-  background: #FDF6EC;
-  border: 1px solid #F1D6A8;
-  color: #70480C;
+  background: var(--surface-warning);
+  border: 1px solid var(--border-warning);
+  color: var(--text-warning);
 }
 
 .therapist-stress--high {
-  background: #FCF0EF;
-  border: 1px solid #F6C4C0;
-  color: #8A2820;
+  background: var(--surface-danger);
+  border: 1px solid var(--border-danger);
+  color: var(--text-danger);
 }
 
 .therapist-privacy-notice {
@@ -4591,7 +4790,7 @@
 }
 
 .therapist-btn-destructive:hover:not(:disabled) {
-  background: #FCF0EF;
+  background: var(--surface-danger);
 }
 
 .therapist-btn-destructive:disabled {
@@ -4605,10 +4804,10 @@
   align-items: center;
   text-align: center;
   padding: 1.25rem 1rem;
-  background: #EDF4EF;
-  border: 1px solid #C3DEC8;
+  background: var(--surface-success);
+  border: 1px solid var(--border-success);
   border-radius: var(--radius-sm);
-  color: #204B23;
+  color: var(--text-success);
   gap: 0.25rem;
 }
 

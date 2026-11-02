@@ -32,6 +32,8 @@ export const TextReveal: React.FC<TextRevealProps> = ({
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
+      const targets = el.children.length > 0 ? Array.from(el.children) : el;
+      gsap.set(targets, { opacity: 1, y: 0 });
       gsap.set(el, { opacity: 1, y: 0 });
       return;
     }

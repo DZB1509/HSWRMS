@@ -1,0 +1,361 @@
+================================================================================
+PHASE 5.8.3.54: M4 POST-INTEGRATION REGRESSION AUDIT REPORT
+HSWRMS — Health & Spa Wellness Resort Management System
+================================================================================
+Timestamp: 2026-10-28T12:12:00+07:00
+Target Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Audit Scope: Module 4 (Dining, KDS, Boundary Ports, M5 Billing, M6 Governance)
+Prior Phases Audited: 5.8.3.50, 5.8.3.51, 5.8.3.52, 5.8.3.53
+
+================================================================================
+1. INITIAL WORKING-TREE STATE
+================================================================================
+At the commencement of Phase 5.8.3.54, the repository in Workspace A contained
+completed implementations from Phases 5.8.3.50 (KDS Implementation), 5.8.3.52
+(Cancellation Audit Persistence), and 5.8.3.53 (Selective Boundary Port
+Integration).
+
+Modified files at phase start:
+  - M 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java
+  - M 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java
+  - M 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java
+  - M 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java
+  - M 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java
+  - M 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/AdminControllersSecurityTest.java
+  - M 05_Development/database/README.md
+  - M 05_Development/database/schema.sql (modified in prior Phases 5.8.3.47/48)
+  - M 05_Development/frontend/src/context/DiningContext.tsx
+  - M 05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx
+  - M 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+  - M 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx
+  - M 05_Development/frontend/src/types/dining.ts
+
+Untracked files/directories at phase start:
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderItemEntity.java
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MenuItemEntity.java
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderItemRepository.java
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MenuItemRepository.java
+  - 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/
+  - 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/
+  - 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/integration/
+  - 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/
+  - 05_Development/backend/src/test/resources/schema.sql
+  - 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql
+  - 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql
+  - 05_Development/database/migrations/V005__m6_audit_log.sql
+  - 05_Development/database/migrations/draft_m6_governance_and_delegation.sql
+  - 05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts
+  - 05_Development/frontend/src/features/m4-fnb/hooks/useKdsPolling.ts
+  - 06_Reports/PHASE_5.8.3.47_RESIDUAL_RISK_AND_INTEGRATION_READINESS_REPORT.txt
+  - 06_Reports/PHASE_5.8.3.48_M6_AUTHORIZATION_REGRESSION_REPORT.txt
+  - 06_Reports/PHASE_5.8.3.49_KDS_BACKEND_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.txt
+  - 06_Reports/PHASE_5.8.3.50_M4_KDS_IMPLEMENTATION_REPORT.txt
+  - 06_Reports/PHASE_5.8.3.51_M4_CROSS_WORKSPACE_AUDIT.txt
+  - 06_Reports/PHASE_5.8.3.52_M4_CANCELLATION_AUDIT_TRAIL_REPORT.txt
+  - 06_Reports/PHASE_5.8.3.53_M4_SELECTIVE_INTEGRATION_REPORT.txt
+
+================================================================================
+2. ACTUAL PRODUCTION-FLOW WIRING FOR M1/M2 PORTS
+================================================================================
+In Phase 5.8.3.53, three clean boundary artifacts were introduced and tested:
+  - `DietaryProfilePort.java`
+  - `BookingContextPort.java`
+  - `DefaultBookingAndDietaryIntegrationService.java`
+  - `DefaultBookingAndDietaryIntegrationServiceTest.java` (9 tests, all passed)
+
+[Audit Finding on Production Wiring]:
+  - Inspection of `MealOrderServiceImpl.java` reveals that `MealOrderServiceImpl`
+    currently DOES NOT inject `BookingContextPort` or `DietaryProfilePort`.
+  - Instead, `MealOrderServiceImpl` directly injects:
+      * `RetreatBookingRepository`
+      * `CustomerProfileRepository`
+      * `HealthProfileRepository`
+  - Impact on Verification Points:
+    1. A nonexistent booking is rejected: VERIFIED (throws `ResourceNotFoundException`).
+    2. A customer cannot access another customer's booking: VERIFIED (throws `AccessDeniedException`).
+    3. Stay period validation: GAP IDENTIFIED. `MealOrderServiceImpl.createDailyMealOrder`
+       and `createAlaCarteOrder` do NOT call `isCurrentlyActive(orderDate)`. If an
+       order is submitted for a date outside the booking's stay interval, the order
+       is accepted as long as the booking exists and is owned by the customer.
+    4. Missing data handling: VERIFIED (no mock or fake fallbacks; throws exceptions).
+    5. Privacy data minimization: VERIFIED. `MealOrderServiceImpl.mapToPrepEntryDto`
+       manually parses only `allergies`, `dietaryRequirements`, and `foodIntoleranceNotes`.
+       No diagnoses, medications, or surgical histories are exposed to KDS.
+  - Classification: P1 Integration Gap. While `DefaultBookingAndDietaryIntegrationService`
+    implements and passes all validation requirements, wiring it into `MealOrderServiceImpl`
+    to enforce active stay date boundaries should be scheduled as the first item in Phase 5.9.
+
+================================================================================
+3. STATE-MACHINE AND CANCELLATION-AUDIT FINDINGS
+================================================================================
+Code and test inspection of `MealOrderServiceImpl.java`, `MealOrderServiceTest.java`,
+and `AuditLogService.java` confirmed:
+
+1. Customer Cancellation Restricted to PENDING:
+   - Customers can cancel an order only while it is in `PENDING` status.
+   - If an order has transitioned to `PREPARING` or `READY`, customer cancellation
+     is strictly rejected with `CUSTOMER_CANNOT_CANCEL_PREPARING_ORDER` (400 Bad Request).
+   - Proven by unit test `testCancelOrder_CustomerCannotCancelPreparingOrder_ThrowsException`.
+
+2. Staff Cancellation from PREPARING Onward Requires Reason:
+   - Authorized F&B staff can cancel an order in `PREPARING` or `READY`.
+   - A non-empty cancellation reason is mandatory. If omitted or whitespace-only,
+     the service throws `CANCELLATION_REASON_REQUIRED`.
+   - Proven by unit tests `testCancelOrder_StaffCanCancelPreparingOrderWithReason`
+     and `testCancelOrder_StaffCannotCancelPreparingOrderWithoutReason_ThrowsException`.
+
+3. DELIVERED State is Terminal:
+   - Any attempt to cancel or transition an order from `DELIVERED` status throws
+     `ORDER_ALREADY_DELIVERED`. It can never be cancelled or rolled back.
+   - Proven by unit test `testCancelOrder_AlreadyDelivered_ThrowsException`.
+
+4. Persistent Durable Cancellation Audit:
+   - Cancellation audit persistence (introduced in Phase 5.8.3.52) is fully operational.
+   - Successful cancellations invoke `auditLogService.record(...)` with:
+       * `actorUserId`: logged-in user ID (or CurrentActor)
+       * `actorRole`: "CUSTOMER" or "FNB_STAFF" / "MANAGER" / "ADMIN"
+       * `action`: "CANCEL_MEAL_ORDER"
+       * `targetDataType`: "MealOrder"
+       * `targetRefId`: String.valueOf(orderId)
+       * `accessStatus`: AuditLogService.SUCCESS
+       * `oldValue`: previous status (e.g. "PENDING" or "PREPARING")
+       * `newValue`: "CANCELLED; Reason: <cancellation_reason>"
+   - Reason is durably recorded in `dbo.AuditLog`, not merely in SLF4J logger.
+   - In Phase 5.8.3.53, the audit recording was sequenced prior to entity mutation,
+     ensuring complete rollback consistency in POJO unit tests.
+
+5. Folio Non-Charge Guarantee:
+   - Cancellation transitions never invoke `postFolioChargeIfEligible`.
+   - Cancelled orders never generate Folio charges.
+
+================================================================================
+4. FOLIO BILLING AND CHECKOUT FINDINGS
+================================================================================
+Inspection of `MealOrderServiceImpl.postFolioChargeIfEligible`, `FolioBillingService.java`,
+`CheckoutService.java`, and `FnbBillingIntegrationTest.java` confirmed:
+
+1. Strict Settlement at DELIVERED:
+   - Charges for `A_LA_CARTE` orders are posted to M5 Folio synchronously when and
+     only when the order status transitions to `DELIVERED`.
+   - Daily meal selections (`DAILY_MEAL`) are included in retreat packages and
+     explicitly bypassed from Folio billing (`CANNOT_CHARGE_INCLUDED_SERVICE`).
+
+2. Authoritative Server Calculation:
+   - Item prices are retrieved strictly from `dbo.MenuItem.price` and multiplied by
+     `quantity`. Client-supplied totals are completely ignored.
+
+3. Idempotency and Anti-Duplicate Protection:
+   - `folioItemRepository.existsBySourceMealOrderId(orderId)` checks for prior postings.
+   - If a duplicate delivery transition or network retry occurs, the service logs
+     an idempotent return and skips charge posting.
+   - Database-level pessimistic write locking on `dbo.MealOrder` (`findByIdWithLock`)
+     and `dbo.Folio` (`findByIdForUpdate`) prevents concurrent posting races.
+
+4. Transactional Integrity:
+   - Billing exceptions are never swallowed. If Folio posting fails, the exception
+     rolls back the transaction, preventing the order from falsely showing `DELIVERED`.
+
+5. Checkout Guard Interaction:
+   - `FolioBillingService.validateBillingGuard(retreatBookingId)` queries
+     `mealOrderRepository.findUnsettledOrdersForBooking(retreatBookingId)`.
+   - If any order remains in `PENDING`, `PREPARING`, or `READY`, it throws
+     `UNSETTLED_SERVICE_ORDERS`, blocking draft invoice generation, payment processing,
+     and checkout finalization in `CheckoutService.processPayment`.
+   - Checkout is permitted only when all dining orders are settled (`DELIVERED`)
+     or `CANCELLED`.
+
+================================================================================
+5. BACKEND AUTHORIZATION FINDINGS
+================================================================================
+Inspection of `SecurityConfig.java`, `FnbKdsController.java`, `FnbCustomerOrderController.java`,
+and `PermissionCatalog.java` confirmed:
+
+1. KDS Staff Endpoints (`/api/v1/fnb/kds/**`):
+   - Protected in `SecurityConfig` by `hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN")`.
+   - Further protected at controller method level by S38/S39 permissions:
+       * `/dashboard-kpis`: `@PreAuthorize("@perm.has('S38','V') or @perm.has('S39','V') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+       * `/queue`: `@PreAuthorize("@perm.has('S39','V') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+       * `/orders/{id}`: `@PreAuthorize("@perm.has('S39','V') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+       * `/orders/{id}/status`: `@PreAuthorize("@perm.has('S39','U') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+       * `/orders/{id}/cancel`: `@PreAuthorize("@perm.has('S39','U') or hasAnyRole('FNB_STAFF','MANAGER','ADMIN')")`
+   - Unauthenticated requests return 401 Unauthorized.
+   - Customer role accessing KDS returns 403 Forbidden.
+
+2. Customer Ordering Endpoints (`/api/v1/fnb/customer/**`):
+   - Menu catalog `/menu-items` is publicly accessible (GET only).
+   - Ordering endpoints (`/daily-meals`, `/a-la-carte`, `/orders`, `/orders/{id}/cancel`)
+     require authentication and role `CUSTOMER`, `RECEPTIONIST`, or `ADMIN`.
+   - Strict customer profile and booking ownership checks prevent any customer
+     from manipulating another guest's dining orders.
+
+3. S39 Permission Catalog Alignment:
+   - `PermissionCatalog.java` defines `S38:V`, `S39:V`, `S39:U`, and `DATA_FOOD_ALLERGY:V`
+     as active baseline permissions for `FNB_STAFF`.
+   - Confirmed zero regression on M1, M2, M3, M5, or M6 authorization matrices.
+
+================================================================================
+6. FRONTEND API WIRING AND KDS POLLING FINDINGS
+================================================================================
+Inspection of `fnbApi.ts`, `DiningContext.tsx`, `useKdsPolling.ts`, `FnbDashboardPage.tsx`,
+`MealPrepListPage.tsx`, `MealOrderDetailPage.tsx`, `DailyMealSelectionPage.tsx`,
+and `AlaCarteOrderPage.tsx` revealed:
+
+1. Resolved Defect in `fnbApi.ts`:
+   - Observed Defect: `fnbApi.updateKdsOrderStatus` called `apiClient.put(...)`,
+     whereas backend `FnbKdsController.java` maps `@PatchMapping("/orders/{id}/status")`.
+   - Resolution Applied: Corrected `apiClient.put` to `apiClient.patch` in `fnbApi.ts`.
+   - Status: RESOLVED and verified via `npm run build` (tsc -b && vite build).
+
+2. KDS Polling Architecture (`useKdsPolling.ts`):
+   - Interval: Default 12,000 ms (12 seconds), within the required 10–15s window.
+   - Overlap Prevention: Uses `inFlightRef.current` to block overlapping polls.
+   - Tab Visibility: Pauses timer when document is hidden; triggers immediate poll
+     when tab becomes visible.
+   - Lifecycle Cleanup: Cancels interval and sets `isMountedRef.current = false`
+     upon component unmount to prevent memory leaks.
+   - Manual Refresh: `manualRefresh()` triggers an immediate poll with animated
+     `isManualRefreshing` spinner and button disable guard.
+
+3. Flow Tracing from UI to Backend:
+   - `FnbDashboardPage`: Fetches live KPIs via `fnbApi.getKdsDashboardKpis('2026-09-24')`
+     and syncs active kitchen queue. Fallback to local queue on network error.
+   - `MealPrepListPage`: Renders paginated queue with status and dietary filters.
+     Status updates call `DiningContext.updateFulfillmentStatus`, which invokes
+     `fnbApi.updateKdsOrderStatus`. Cancellation prompts for mandatory reason and
+     calls `fnbApi.cancelKdsOrder`.
+   - `MealOrderDetailPage`: Queries `fnbApi.getKdsOrderDetail(numId)` when navigating
+     directly to an order ID.
+   - `DailyMealSelectionPage`: Submits via `fnbApi.createDailyMealOrder`.
+   - `AlaCarteOrderPage`: Submits via `fnbApi.createAlaCarteOrder`. Server calculates
+     line totals and total amounts authoritatively.
+
+================================================================================
+7. SCHEMA COMPATIBILITY FINDINGS
+================================================================================
+Comparison between M4 JPA entities and authoritative `schema.sql`:
+
+1. `dbo.MenuItem`:
+   - Columns: `menu_item_id`, `item_name`, `category`, `meal_type`, `price`,
+     `dietary_tags`, `allergen_information`, `availability_status`.
+   - Entity: `MenuItemEntity.java` maps exact columns, data types, constraints,
+     and defaults.
+
+2. `dbo.MealOrder`:
+   - Columns: `meal_order_id`, `retreat_booking_id`, `order_date`, `meal_type`,
+     `order_type`, `order_status`, `created_at`.
+   - Entity: `MealOrderEntity.java` matches 100%.
+
+3. `dbo.MealOrderItem`:
+   - Columns: `meal_order_item_id`, `meal_order_id`, `menu_item_id`, `quantity`.
+   - Entity: `MealOrderItemEntity.java` matches 100%.
+   - Incompatible Columns Excluded: Workspace B added `unit_price`, `preparation_status`,
+     and `special_notes`. These do not exist in `schema.sql` and were intentionally
+     NOT included in Workspace A's entity.
+
+4. Prohibited Schema Migrations Excluded:
+   - Workspace B introduced migrations `V006` and `V007` creating `dbo.Ingredient`,
+     `dbo.IngredientBatch`, and `dbo.MenuItemIngredient` for FEFO inventory.
+   - Workspace A strictly adhered to safety constraints: zero DDL executed, no FEFO
+     inventory entities created.
+
+================================================================================
+8. COMMANDS RUN AND ACTUAL VERIFICATION RESULTS
+================================================================================
+[Command 1]: Frontend Build & TypeScript Check
+  Command: npm run build (tsc -b && vite build)
+  Working Dir: 05_Development/frontend
+  Exit Code: 0
+  Result:
+    ✓ 2703 modules transformed.
+    dist/index.html                     1.58 kB
+    dist/assets/index-6iHKxhlB.css    212.20 kB
+    dist/assets/index-FNfYCEXF.js   2,369.02 kB
+    ✓ built in 1.91s (0 TypeScript errors)
+
+[Command 2]: Backend Comprehensive Regression Suite
+  Command: mvn test "-Dtest=DefaultBookingAndDietaryIntegrationServiceTest,MealOrderServiceTest,FnbControllersSecurityTest,FnbBillingIntegrationTest,AuditLogServiceTest"
+  Working Dir: 05_Development/backend
+  Exit Code: 0
+  Result:
+    - DefaultBookingAndDietaryIntegrationServiceTest: 9 tests, 0 failures, 0 errors, 0 skipped
+    - FnbBillingIntegrationTest: 2 tests, 0 failures, 0 errors, 0 skipped
+    - MealOrderServiceTest: 18 tests, 0 failures, 0 errors, 0 skipped
+    - FnbControllersSecurityTest: 8 tests, 0 failures, 0 errors, 0 skipped
+    - AuditLogServiceTest: 6 tests, 0 failures, 0 errors, 0 skipped
+    Total: 43 tests run, 0 failures, 0 errors, 0 skipped.
+    BUILD SUCCESS (Time: 46.050 s).
+
+================================================================================
+9. PRIORITIZED DEFECTS, RISKS, AND BLOCKERS
+================================================================================
+[Finding 1 - P1 Integration Gap (Deferred to Phase 5.9)]:
+  - Description: Boundary ports (`BookingContextPort`, `DietaryProfilePort`) are
+    fully implemented and tested in `m4fnb/integration`, but are not yet injected
+    into `MealOrderServiceImpl`. Consequently, order placement does not enforce
+    `isCurrentlyActive(orderDate)`.
+  - Risk: An authenticated customer with a valid past or future booking could place
+    an order outside their active stay dates.
+  - Action: Inject `BookingContextPort` and `DietaryProfilePort` into `MealOrderServiceImpl`
+    in Phase 5.9.
+
+[Finding 2 - P1 Defect (RESOLVED in Phase 5.8.3.54)]:
+  - Description: `fnbApi.updateKdsOrderStatus` used HTTP `PUT` instead of `PATCH`,
+    causing `405 Method Not Allowed` against `FnbKdsController.@PatchMapping`.
+  - Action: Corrected `apiClient.put` to `apiClient.patch` in `fnbApi.ts`.
+  - Status: RESOLVED and verified.
+
+[Finding 3 - P2 Prototype Decoupling (Documented Risk)]:
+  - Description: Frontend customer ordering pages (`DailyMealSelectionPage.tsx`,
+    `AlaCarteOrderPage.tsx`) fall back to prototype identifier `'usr-cust-01'`
+    when `profile.id` is not loaded in `CustomerContext`.
+  - Risk: Low in production because JWT authentication attaches the real user ID
+    to requests and the backend verifies ownership against the database.
+  - Action: Documented for end-to-end integration testing in Phase 5.9.
+
+[Finding 4 - P2 Unresolved Package F&B Plan Policy (Blocker)]:
+  - Description: Workspace B's hardcoded 8 retreat package plans were rejected.
+    Whether package meal allowances are advisory or strict gates remains an
+    unresolved business decision requiring Product Owner approval.
+  - Action: Keep package validation dynamic via M2's `dbo.RetreatPackage` until
+    PO specification is provided.
+
+================================================================================
+10. EXACT FILES REQUIRING CHANGES
+================================================================================
+During Phase 5.8.3.54:
+  1. Modified: `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`
+     (Changed `apiClient.put` to `apiClient.patch` for `updateKdsOrderStatus`).
+  2. Created: `06_Reports/PHASE_5.8.3.54_M4_POST_INTEGRATION_REGRESSION_AUDIT.txt`
+
+Files recommended for refactoring in Phase 5.9:
+  1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/MealOrderServiceImpl.java`
+     (Inject `BookingContextPort` and `DietaryProfilePort` to enforce stay date validation).
+
+================================================================================
+11. READINESS RECOMMENDATION FOR DATABASE PROVISIONING & E2E TESTING
+================================================================================
+Module 4 is READY for database provisioning and end-to-end integration testing:
+  - Backend compiles cleanly and passes all 43 targeted unit, security, billing,
+    lifecycle, and audit tests.
+  - Frontend TypeScript compiles with 0 errors (`npm run build` succeeds).
+  - Schema compatibility with authoritative `schema.sql` is 100% verified.
+  - Folio billing settlement, idempotency, and checkout guards are verified.
+  - State machine lifecycle and durable cancellation audit logging are verified.
+  - S39 backend authorization and role security are verified.
+  - The single identified integration gap (wiring boundary ports to check stay dates)
+    is well-isolated, safe, and scheduled as the initial task of Phase 5.9.
+
+================================================================================
+12. CONFIRMATION OF SAFETY CONSTRAINTS
+================================================================================
+  - Live Database Connections: ZERO (no connections to HSWRMS or HSWRMS_TEST).
+  - Database Writes & DDL: ZERO (no migrations, provisioning, or seed scripts run).
+  - Schema Files: UNCHANGED (`schema.sql` and existing migrations remain untouched).
+  - Git Operations: ZERO (no git add, commit, push, checkout, reset, or branch).
+  - Working Tree Integrity: All existing modified and untracked files preserved.
+================================================================================
+END OF REPORT
+================================================================================

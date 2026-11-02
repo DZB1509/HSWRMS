@@ -1,0 +1,129 @@
+================================================================================
+HSWRMS - PHASE 5.8.3.73: M4 INTEGRATION FIX COMMIT REPORT
+EXECUTION REPORT FOR APPROVED MODULE 4 FRONTEND-BACKEND CONTRACT FIXES
+================================================================================
+Date: 2026-10-28
+Repository Root: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Branch: feature/hswrms-m1-m6-integration
+Commit Hash: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+Short Hash: 13fcbd3
+Parent Commit: f1757e1c6cbafe70249006444dcc99bfa3fc7eee (Commit 3)
+Execution Status: Successfully Executed & Verified
+
+--------------------------------------------------------------------------------
+1. PRE-COMMIT AUDIT & VERIFICATION
+--------------------------------------------------------------------------------
+A. Environment Preflight:
+   - Working Directory: `E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules`
+   - Repository Root: `E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules`
+   - Active Branch: `feature/hswrms-m1-m6-integration`
+   - Initial HEAD: `f1757e1c6cbafe70249006444dcc99bfa3fc7eee`
+   - Initial Staging Area: Empty (`git diff --cached` output empty)
+   - Working tree strictly matched `PHASE_5.8.3.72_M4_FIX_REVIEW_AND_COMMIT_PREFLIGHT.txt`
+
+B. Staging Execution:
+   - Command executed:
+     `git add 05_Development/frontend/src/context/DiningContext.tsx 05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx 05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts 05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts 05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts`
+   - Staging verification (`git diff --cached --name-status`):
+     M  05_Development/frontend/src/context/DiningContext.tsx
+     M  05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts
+     A  05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts
+     A  05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts
+     A  05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts
+     M  05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+   - Staged File Count: Exactly 6 files. Zero out-of-scope files staged.
+
+--------------------------------------------------------------------------------
+2. COMMIT DETAILS & METADATA
+--------------------------------------------------------------------------------
+- Commit SHA: `13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa`
+- Short SHA: `13fcbd3`
+- Author: `datnthe181883 <datnthe181883@fpt.edu.vn>`
+- AuthorDate: `Wed Oct 28 16:54:46 2026 +0700`
+- Committer: `datnthe181883 <datnthe181883@fpt.edu.vn>`
+- CommitDate: `Wed Oct 28 16:54:46 2026 +0700`
+- Subject:
+  `fix(m4-fnb): align frontend payloads and KDS identifier handling`
+- Full Message Body:
+  ```
+  fix(m4-fnb): align frontend payloads and KDS identifier handling
+
+  - Align daily meal selection payload with CreateDailyMealRequest (retreatBookingId, notes)
+
+  - Align a-la-carte order payload with CreateAlaCarteRequest (retreatBookingId, location, targetTime, notes)
+
+  - Align order cancellation payload with CancelOrderRequest (cancellationReason)
+
+  - Ensure safe numeric ID coercion in KDS views and prevent replace() TypeErrors
+
+  - Implement fail-closed optimistic state rollback on API failures in DiningContext
+
+  - Add contract integration unit tests in m4IntegrationContract.test.ts
+  ```
+
+--------------------------------------------------------------------------------
+3. COMMIT DIFF STATISTICS & FILE INVENTORY
+--------------------------------------------------------------------------------
+Total Files Changed: 6
+Insertions: +511 lines
+Deletions: -55 lines
+
+Detailed File Breakdown:
+1. `05_Development/frontend/src/context/DiningContext.tsx`
+   - Modified (101 changes: +67/-34 lines)
+   - Replaced inline faulty `extractNumericId` with import from `fnbIdUtils`.
+   - Coerced backend prep entry IDs to string (`String(dto.id)`).
+   - Added rollback of optimistic records on failed daily meal and a-la-carte submissions.
+   - Refreshes kitchen queue on remote status update failure.
+2. `05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts`
+   - Modified (61 changes: +42/-19 lines)
+   - Aligned DTO types with Spring Boot backend entity contracts.
+   - Integrated `buildDailyMealOrderPayload`, `buildAlaCarteOrderPayload`, `buildCancelOrderPayload`.
+   - Replaced `{ reason }` with `{ cancellationReason }`.
+3. `05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx`
+   - Modified (2 changes: +1/-1 line)
+   - Coerced detail order ID to string (`id: String(res.id)`).
+4. `05_Development/frontend/src/features/m4-fnb/utils/fnbIdUtils.ts`
+   - Created (23 lines)
+   - Pure utility for numeric extraction without calling `.replace()` on numbers.
+5. `05_Development/frontend/src/features/m4-fnb/utils/fnbPayloadUtils.ts`
+   - Created (117 lines)
+   - Contract serializers and validators for `CreateDailyMealRequest`, `CreateAlaCarteRequest`, and `CancelOrderRequest`.
+6. `05_Development/frontend/src/features/m4-fnb/m4IntegrationContract.test.ts`
+   - Created (262 lines)
+   - 14 regression unit tests validating DTO mappings, validation fail-fast, ID coercion, and state rollback.
+
+--------------------------------------------------------------------------------
+4. POST-COMMIT VERIFICATION & WORKING TREE AUDIT
+--------------------------------------------------------------------------------
+A. Commit Lineage:
+   - Current HEAD: `13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa`
+   - Parent Commit: `f1757e1c6cbafe70249006444dcc99bfa3fc7eee`
+   - Linear History:
+     * `13fcbd3` fix(m4-fnb): align frontend payloads and KDS identifier handling
+     * `f1757e1` feat(m4-fnb): implement kitchen display system, customer dining, and boundary integration
+     * `258c7bd` feat(m6-admin): harden admin widget delegation and register S39 kitchen permissions
+     * `d0a17db` schema(database): align authoritative 42-table schema and test provisioning guide
+     * `46ab465` docs(audit): add M1-M6 integration and provisioning evidence
+
+B. Working Tree & Staging State:
+   - Staging Area: Clean (0 staged files).
+   - Tracked Modified Files: Exactly 0 files remaining.
+   - Untracked Preserved Artifacts (Untouched & Uncommitted):
+     * `05_Development/database/generated/HSWRMS_TEST_schema.sql` (Preserved)
+     * `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql` (Preserved)
+     * `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql` (Preserved)
+     * `05_Development/database/migrations/V005__m6_audit_log.sql` (Preserved)
+     * `05_Development/database/migrations/draft_m6_governance_and_delegation.sql` (Preserved)
+     * Reports in `06_Reports/`
+
+--------------------------------------------------------------------------------
+5. STATUTORY AFFIRMATIONS
+--------------------------------------------------------------------------------
+- Exactly 6 files were staged and committed in Phase 5.8.3.73.
+- No push (`git push`), merge, rebase, cherry-pick or reset was performed.
+- No SQL DDL/DML, migration, provisioning, or seed statements were executed.
+- Database `HSWRMS` remains untouched and untainted.
+- Working tree is clean of uncommitted tracked modifications.
+================================================================================
+

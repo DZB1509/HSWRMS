@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import com.heavenstay.hswrms.security.CustomUserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +36,7 @@ public class VNPayDepositService {
     @Value("${app.vnpay.tmn-code:HEAVENSTAY}")
     private String tmnCode;
 
-    @Value("${app.vnpay.hash-secret:SECRET_VNPAY_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}")
+    @Value("${app.vnpay.hash-secret:}")
     private String hashSecret;
 
     @Value("${app.vnpay.pay-url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}")
@@ -45,8 +46,14 @@ public class VNPayDepositService {
     private String defaultReturnUrl;
 
     public VNPayDepositService(RetreatBookingRepository bookingRepository,
+                               RetreatBookingService bookingService) {
+        this(bookingRepository, bookingService, null, new BookingClock());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public VNPayDepositService(RetreatBookingRepository bookingRepository,
                                RetreatBookingService bookingService,
-                               PaymentTransactionRepository paymentTransactionRepository,
+                               @org.springframework.beans.factory.annotation.Qualifier("m2PaymentTransactionRepository") PaymentTransactionRepository paymentTransactionRepository,
                                BookingClock bookingClock) {
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
@@ -64,6 +71,9 @@ public class VNPayDepositService {
     }
 
     public VNPayDepositInitResult generateDepositUrlWithResult(Integer bookingId, String customReturnUrl, HttpServletRequest request) {
+        if (hashSecret == null || hashSecret.trim().isEmpty()) {
+            throw new BusinessRuleException("VNPay payment gateway is unavailable: merchant hash secret is not configured.");
+        }
         RetreatBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking #" + bookingId + " not found"));
 
@@ -81,15 +91,17 @@ public class VNPayDepositService {
         String txnRef = "HSW_DEP_" + bookingId + "_" + System.currentTimeMillis();
 
         // Create or update PENDING PaymentTransaction record (SRS Data Rule 23)
-        PaymentTransaction txn = new PaymentTransaction();
-        txn.setRetreatBookingId(bookingId);
-        txn.setPaymentType(PaymentTransaction.TYPE_DEPOSIT);
-        txn.setPaymentMethod(PaymentTransaction.METHOD_VNPAY);
-        txn.setTransactionReference(txnRef);
-        txn.setAmountPaid(depositAmount);
-        txn.setPaymentStatus(PaymentTransaction.STATUS_PENDING);
-        txn.setTransactionDate(bookingClock.utcNow());
-        paymentTransactionRepository.save(txn);
+                if (paymentTransactionRepository != null) {
+            PaymentTransaction txn = new PaymentTransaction();
+            txn.setRetreatBookingId(bookingId);
+            txn.setPaymentType(PaymentTransaction.TYPE_DEPOSIT);
+            txn.setPaymentMethod(PaymentTransaction.METHOD_VNPAY);
+            txn.setTransactionReference(txnRef);
+            txn.setAmountPaid(depositAmount);
+            txn.setPaymentStatus(PaymentTransaction.STATUS_PENDING);
+            txn.setTransactionDate(bookingClock != null ? bookingClock.utcNow() : java.time.LocalDateTime.now());
+            paymentTransactionRepository.save(txn);
+        }
 
         Map<String, String> vnpParams = new HashMap<>();
         vnpParams.put("vnp_Version", "2.1.0");
@@ -134,6 +146,12 @@ public class VNPayDepositService {
      * Verifies VNPay signature and processes payment result idempotently.
      */
     public Map<String, String> processIpn(Map<String, String> params) {
+        if (hashSecret == null || hashSecret.trim().isEmpty()) {
+            Map<String, String> err = new HashMap<>();
+            err.put("RspCode", "99");
+            err.put("Message", "VNPay payment gateway is unavailable: merchant hash secret is missing.");
+            return err;
+        }
         Map<String, String> response = new HashMap<>();
         String vnpSecureHash = params.get("vnp_SecureHash");
 
@@ -295,4 +313,19 @@ public class VNPayDepositService {
             throw new RuntimeException("Error calculating HMAC-SHA512", ex);
         }
     }
+
+    public void setHashSecret(String hashSecret) {
+        this.hashSecret = hashSecret;
+    }
+
+    public String generateDepositUrl(Integer bookingId, String customReturnUrl, HttpServletRequest request, CustomUserDetails userDetails) {
+        if (hashSecret == null || hashSecret.trim().isEmpty()) {
+            throw new BusinessRuleException("VNPay payment gateway is unavailable: merchant hash secret is not configured.");
+        }
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking #" + bookingId + " not found"));
+        bookingService.validateBookingAccess(booking, userDetails, "generate payment URL for");
+        return generateDepositUrl(bookingId, customReturnUrl, request);
+    }
+
 }

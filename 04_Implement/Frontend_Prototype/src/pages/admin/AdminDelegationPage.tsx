@@ -25,7 +25,9 @@ export const AdminDelegationPage: React.FC = () => {
   const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
 
   // Form states for new delegation
-  const delegableRules = permissionRules.filter((r) => r.isDelegableToManager);
+  const delegableRules = permissionRules.filter(
+    (r) => r.isDelegableToManager && r.capability !== 'manage_feature_flags'
+  );
   const [selectedCaps, setSelectedCaps] = useState<CapabilityKey[]>(['configure_business_parameters']);
   const [durationHours, setDurationHours] = useState<number>(24);
   const [reason, setReason] = useState<string>('');
@@ -273,19 +275,46 @@ export const AdminDelegationPage: React.FC = () => {
 
       {/* Grant Delegation Modal */}
       {modalOpen && (
-        <div className="hsw-modal-overlay">
-          <div className="hsw-modal-box">
+        <div className="hsw-modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="hsw-modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
             <div className="hsw-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <Users2 size={20} style={{ color: 'var(--accent-forest)' }} />
-                <h3 className="hsw-modal-title">
-                  {t('operations.delegation.modalTitle', 'Grant Limited Operational Delegation')}
-                </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  backgroundColor: 'var(--accent-sand-soft, #f2ede5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent-forest, #4f5a50)'
+                }}>
+                  <Users2 size={20} />
+                </div>
+                <div>
+                  <h3 className="hsw-modal-title">
+                    {t('operations.delegation.modalTitle', 'Grant Limited Operational Delegation')}
+                  </h3>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Compliance with BR-06 role boundary & audit policy
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                aria-label="Close"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
                 <X size={18} />
               </button>
@@ -293,21 +322,42 @@ export const AdminDelegationPage: React.FC = () => {
 
             <form onSubmit={handleCreateSubmit}>
               {/* Recipient fixed to Sarah Jenkins (Manager) */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   {t('operations.delegation.delegateeLabel', 'Designated Delegatee')}
                 </label>
-                <div style={{ padding: 'var(--space-2) var(--space-3)', backgroundColor: '#faf9f6', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}>
-                  <strong>Sarah Jenkins</strong> — Resort Operations Manager (<code>usr-mgr-01</code>)
+                <div style={{
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--bg-canvas, #faf9f6)',
+                  border: '1px solid var(--border-subtle, #e5e2dc)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <strong style={{ color: 'var(--text-primary)' }}>Sarah Jenkins</strong>
+                    <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>— Resort Operations Manager</span>
+                  </div>
+                  <code style={{
+                    fontSize: '11px',
+                    backgroundColor: '#ffffff',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-subtle, #e5e2dc)',
+                    color: 'var(--accent-forest, #4f5a50)',
+                    fontWeight: 600
+                  }}>usr-mgr-01</code>
                 </div>
               </div>
 
               {/* Scoped Capabilities Checkboxes */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   {t('operations.delegation.selectCapsLabel', 'Select Delegable Capabilities (Whitelisted Scope Only)')}
                 </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {delegableRules.map((r) => {
                     const checked = selectedCaps.includes(r.capability);
                     return (
@@ -316,25 +366,26 @@ export const AdminDelegationPage: React.FC = () => {
                         style={{
                           display: 'flex',
                           alignItems: 'flex-start',
-                          gap: 'var(--space-2)',
-                          padding: 'var(--space-2)',
+                          gap: '12px',
+                          padding: '12px 14px',
                           backgroundColor: checked ? '#f4faf6' : '#faf9f6',
-                          border: checked ? '1px solid var(--accent-forest)' : '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer'
+                          border: checked ? '1.5px solid var(--accent-forest, #4f5a50)' : '1px solid var(--border-subtle, #e5e2dc)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
                         }}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => handleToggleCapability(r.capability)}
-                          style={{ marginTop: '2px' }}
+                          style={{ marginTop: '2px', accentColor: 'var(--accent-forest, #4f5a50)', width: '16px', height: '16px', cursor: 'pointer' }}
                         />
-                        <div>
-                          <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', display: 'block' }}>
+                        <div style={{ flex: 1 }}>
+                          <strong style={{ fontSize: '12px', color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>
                             {t(r.nameKey, r.defaultName)}
                           </strong>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>
                             {t(r.descriptionKey, r.defaultDescription)}
                           </span>
                         </div>
@@ -345,14 +396,24 @@ export const AdminDelegationPage: React.FC = () => {
               </div>
 
               {/* Duration Select */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   {t('operations.delegation.durationLabel', 'Delegation Active Window Duration')}
                 </label>
                 <select
                   value={durationHours}
                   onChange={(e) => setDurationHours(Number(e.target.value))}
-                  style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    fontSize: '12px',
+                    border: '1px solid var(--border-strong, #c8c4bc)',
+                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
                 >
                   <option value={8}>8 Hours (Single Shift Coverage)</option>
                   <option value={24}>24 Hours (Next Day Operations)</option>
@@ -362,8 +423,8 @@ export const AdminDelegationPage: React.FC = () => {
               </div>
 
               {/* Justification Reason */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   {t('operations.delegation.reasonLabel', 'Operational Justification (Mandatory for Audit Trail)')}
                 </label>
                 <textarea
@@ -373,18 +434,29 @@ export const AdminDelegationPage: React.FC = () => {
                   rows={3}
                   style={{
                     width: '100%',
-                    padding: 'var(--space-2)',
-                    fontSize: 'var(--text-xs)',
-                    border: '1px solid var(--border-medium)',
-                    borderRadius: 'var(--radius-sm)',
+                    padding: '10px 12px',
+                    fontSize: '12px',
+                    border: '1px solid var(--border-strong, #c8c4bc)',
+                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    color: 'var(--text-primary)',
                     fontFamily: 'inherit',
-                    resize: 'vertical'
+                    resize: 'vertical',
+                    outline: 'none',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
 
               {formError && (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', marginBottom: 'var(--space-3)' }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: 'var(--danger)',
+                  backgroundColor: 'var(--danger-bg, #fcf0ef)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  marginBottom: '16px'
+                }}>
                   {formError}
                 </div>
               )}

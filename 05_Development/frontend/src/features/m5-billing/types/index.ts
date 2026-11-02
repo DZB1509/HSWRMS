@@ -1,0 +1,308 @@
+export type ChargeCategory = 'PACKAGE' | 'SPA' | 'FNB';
+export type FolioStatus = 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'CLOSED';
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
+export type PaymentStatus = 'PENDING' | 'SUCCESSFUL' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+export type PaymentMethod = 'CASH' | 'VNPAY' | 'CARD' | 'VIETQR_BANK_TRANSFER';
+
+export interface FolioItemResponse {
+  folioItemId: number;
+  folioId: number;
+  chargeCategory: ChargeCategory;
+  description: string;
+  amount: number;
+  chargedAt: string;
+  sourceBookingId?: number | null;
+  sourceSpaSessionId?: number | null;
+  sourceMealOrderId?: number | null;
+  isVoided?: boolean;
+  voidedAdjustmentRequestId?: number | null;
+  adjustedAmount?: number;
+  payableAmount?: number;
+}
+
+export type AdjustmentType = 'VOID' | 'CREDIT_NOTE';
+export type AdjustmentStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+export interface CreateAdjustmentRequest {
+  folioItemId: number;
+  reason: string;
+  requestedAmount?: number;
+}
+
+export interface AdjustmentDecisionRequest {
+  decision: 'APPROVE' | 'REJECT';
+  rejectionReason?: string;
+}
+
+export interface AdjustmentResponse {
+  adjustmentRequestId: number;
+  folioItemId: number;
+  folioId: number;
+  retreatBookingId: number;
+  sourceMealOrderId?: number | null;
+  adjustmentType: AdjustmentType;
+  requestedAmount: number;
+  reason: string;
+  status: AdjustmentStatus;
+  requestedByUserId: number;
+  requestedAt: string;
+  approvedByUserId?: number | null;
+  approvedAt?: string | null;
+  rejectionReason?: string | null;
+  creditNoteId?: number | null;
+  creditNoteNumber?: string | null;
+}
+
+export interface CreditNoteResponse {
+  creditNoteId: number;
+  creditNoteNumber: string;
+  invoiceId: number;
+  folioItemId: number;
+  adjustmentRequestId: number;
+  amount: number;
+  taxAmount: number;
+  finalCreditAmount: number;
+  issuedAt: string;
+  issuedByUserId: number;
+  status?: string;
+  refundAmount?: number;
+}
+
+export interface SettleRefundRequest {
+  refundMethod: string;
+  refundTransactionReference: string;
+  notes?: string;
+}
+
+export interface FolioResponse {
+  folioId: number;
+  retreatBookingId: number;
+  bookingReference: string;
+  customerName: string;
+  villaNumber: string;
+  totalCharges: number;
+  totalPaid: number;
+  balanceDue: number;
+  folioStatus: FolioStatus;
+  closedAt?: string | null;
+  depositPaid?: number;
+  depositAmount?: number;
+  packagePrice?: number;
+  packageOutstanding?: number;
+  extraSpaCharges?: number;
+  extraFnbCharges?: number;
+  subtotal?: number;
+  finalAmount?: number;
+  vatRate?: number;
+  estimatedTax?: number;
+  estimatedAmountDue?: number;
+  invoiceId?: number;
+  invoiceStatus?: string;
+  canGenerateInvoice: boolean;
+  hasUnsettledOrders: boolean;
+  unsettledOrdersWarning?: string | null;
+  items: FolioItemResponse[];
+  creditNotesTotal?: number;
+  pendingRefundTotal?: number;
+}
+
+export interface PostChargeRequest {
+  retreatBookingId: number;
+  chargeCategory: ChargeCategory;
+  description: string;
+  amount: number;
+  sourceBookingId?: number;
+  sourceSpaSessionId?: number;
+  sourceMealOrderId?: number;
+}
+
+export interface InvoiceResponse {
+  invoiceId: number;
+  folioId: number;
+  retreatBookingId: number;
+  invoiceNumber: string;
+  bookingReference?: string;
+  customerName?: string;
+  villaNumber?: string;
+  checkInDate?: string | null;
+  checkOutDate?: string | null;
+  packageCharges?: number;
+  depositDeducted?: number;
+  packageOutstanding?: number;
+  spaCharges?: number;
+  fnbCharges?: number;
+  vatRate?: number;
+  subtotalAmount: number;
+  taxAmount: number;
+  finalAmount: number;
+  amountPaid?: number;
+  amountDue?: number;
+  zeroBalance?: boolean;
+  invoiceStatus: InvoiceStatus;
+  issuedDate?: string | null;
+  items: FolioItemResponse[];
+  creditNotesTotal?: number;
+  pendingRefundTotal?: number;
+}
+
+export interface PaymentRequest {
+  paymentMethod: PaymentMethod;
+  amount: number;
+  paymentType?: string;
+  transactionReference?: string;
+  idempotencyKey?: string;
+  cardLast4?: string;
+}
+
+export interface PaymentResponse {
+  transactionId: number;
+  invoiceId?: number;
+  retreatBookingId?: number;
+  paymentType: 'DEPOSIT' | 'FINAL' | 'FINAL_PAYMENT';
+  paymentMethod: string;
+  transactionReference: string;
+  amountPaid: number;
+  paymentStatus: PaymentStatus;
+  transactionDate: string;
+  paymentUrl?: string;
+  qrImageUrl?: string;
+  qrPayload?: string;
+  transferContent?: string;
+  message?: string;
+}
+
+export interface VietQrResponse {
+  qrImageUrl: string;
+  qrPayload: string;
+  bankBin: string;
+  bankName: string;
+  accountNumber: string;
+  accountNo?: string;
+  accountName: string;
+  amount: number;
+  transferContent: string;
+  content?: string;
+  transactionReference?: string | null;
+  invoiceId?: number;
+  bookingId?: number;
+  invoiceNumber?: string;
+  paymentType?: string | null;
+  paymentStatus?: string | null;
+  message?: string;
+}
+
+export interface VnpayPaymentUrlResponse {
+  paymentUrl: string;
+  transactionReference: string;
+  invoiceId: number;
+  amount: number;
+  orderInfo: string;
+  paymentStatus: string;
+}
+
+export interface InvoicePaymentStatus {
+  invoiceId: number;
+  invoiceStatus: string;
+  paymentStatus: 'NONE' | 'PENDING' | 'SUCCESSFUL' | 'FAILED';
+  transactionReference: string | null;
+}
+
+export interface FinalizeCheckoutResponse {
+  invoiceId: number;
+  bookingId: number;
+  bookingReference: string;
+  bookingStatus: string;
+  folioStatus: string;
+  invoiceStatus: string;
+  villaId?: number;
+  villaNumber?: string;
+  villaStatus?: string;
+  totalSettled: number;
+  completedAt: string;
+  message: string;
+  zeroBalanceSettlement?: boolean;
+  invoiceNumber?: string;
+}
+
+export interface CustomerReviewRequest {
+  retreatBookingId: number;
+  overallRating: number;
+  comments?: string;
+  roomRating?: number;
+  spaRating?: number;
+  diningRating?: number;
+}
+
+export interface CustomerReviewResponse {
+  reviewId: number;
+  retreatBookingId: number;
+  overallRating: number;
+  comments?: string;
+  roomRating?: number;
+  spaRating?: number;
+  diningRating?: number;
+  submittedAt: string;
+}
+
+export interface RevenueAnalytics {
+  totalRevenue: number;
+  packageRevenue: number;
+  spaRevenue: number;
+  fnbRevenue: number;
+  outstandingBalance: number;
+  fromDate?: string;
+  toDate?: string;
+  categoryBreakdown: {
+    name: string;
+    value: number;
+    color: string;
+  }[];
+  dailySeries?: {
+    date: string;
+    packageRevenue: number;
+    spaRevenue: number;
+    fnbRevenue: number;
+    totalRevenue: number;
+  }[];
+}
+
+export interface OccupancyAnalytics {
+  totalVillas: number;
+  occupiedCount: number;
+  reservedCount: number;
+  readyCount: number;
+  cleaningCount: number;
+  maintenanceCount: number;
+  occupancyRate: number;
+  fromDate?: string;
+  toDate?: string;
+  villaDetails: {
+    villaId: number;
+    villaNumber: string;
+    category: string;
+    status: string;
+    customerName?: string | null;
+    bookingReference?: string | null;
+  }[];
+}
+
+export interface TherapistUtilization {
+  totalTherapists: number;
+  totalScheduledSessions: number;
+  completedSessions: number;
+  noShowSessions: number;
+  cancelledSessions: number;
+  totalBookedHours: number;
+  fromDate?: string;
+  toDate?: string;
+  therapistDetails: {
+    therapistId: number;
+    name: string;
+    sessionsCount: number;
+    completedCount: number;
+    noShowCount: number;
+    cancelledCount: number;
+    bookedMinutes: number;
+    bookedHours: number;
+  }[];
+}

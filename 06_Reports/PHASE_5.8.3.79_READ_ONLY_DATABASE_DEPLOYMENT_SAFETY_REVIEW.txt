@@ -1,0 +1,263 @@
+================================================================================
+HSWRMS PHASE 5.8.3.79 — READ-ONLY DATABASE DEPLOYMENT SAFETY REVIEW
+================================================================================
+Timestamp: 2026-10-28T18:12:00+07:00
+Workspace: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Baseline HEAD: c2d2d6b01cb757319b3d4805b8b0262a261ca111
+Execution Mode: STRICTLY READ-ONLY AUDIT & REVIEW (ZERO EXECUTION / ZERO MUTATION)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & VERIFICATION OBJECTIVE
+--------------------------------------------------------------------------------
+Phase 5.8.3.79 performs an exhaustive, evidence-based read-only review of:
+1. The dedicated schema payload (`HSWRMS_TEST_schema.sql`) and target guards.
+2. Spring Boot application startup behavior, component lifecycles, and side effects.
+3. Database runtime permissions required by `hswrms_test_user`.
+4. The controlled, non-destructive deployment and verification sequence.
+
+Strict Boundaries Honored During This Phase:
+- Zero SQL commands executed (zero queries via SQLCMD, ADO.NET, JDBC, or PowerShell).
+- Zero schema deployments, migrations, provisioning, DML, seed, or permission grants.
+- Zero application startup against SQL Server.
+- Zero source code or configuration edits.
+- Zero Git staging, commit, push, merge, rebase, reset, clean, or deletion.
+- Primary database `HSWRMS` completely untouched.
+
+Final Verdict: SAFE TO PRESENT FOR HUMAN APPROVAL
+
+--------------------------------------------------------------------------------
+2. PART A — SCHEMA PAYLOAD & TARGET GUARD AUDIT
+--------------------------------------------------------------------------------
+Files Inspected:
+- `05_Development/database/schema.sql` (Authoritative baseline, 1,221 lines)
+- `05_Development/database/generated/HSWRMS_TEST_schema.sql` (Dedicated payload, 1,223 lines)
+- `05_Development/database/scripts/provision_hswrms_test.ps1`
+- `06_Reports/PHASE_5.8.3.62_CONTROLLED_SCHEMA_DEPLOYMENT_PLAN.txt`
+
+Key Findings:
+
+2.1 Database Context Switching & Production Reference Elimination:
+    - Authoritative baseline (`schema.sql`, lines 18-28):
+      Contains `USE [master]; GO IF DB_ID(N'HSWRMS') IS NULL CREATE DATABASE [HSWRMS]; GO USE [HSWRMS]; GO`.
+      Executing `schema.sql` directly would switch into `[master]` and divert DDL into `[HSWRMS]`.
+    - Dedicated test payload (`HSWRMS_TEST_schema.sql`, lines 19-30):
+      Replaces the production setup block with:
+        Line 19: `USE [HSWRMS_TEST];`
+        Line 20: `GO`
+        Line 23: `IF DB_NAME() <> N'HSWRMS_TEST'`
+        Line 25: `PRINT 'CRITICAL TARGET CONTEXT FAILURE: Active database is [' + DB_NAME() + ']; expected [HSWRMS_TEST]. Aborting immediately.';`
+        Line 26: `SET NOEXEC ON;`
+        Line 27: `THROW 51000, N'CRITICAL TARGET CONTEXT FAILURE: Execution halted because current database is not HSWRMS_TEST.', 1;`
+        Line 29: `END`
+        Line 30: `GO`
+    - Full-text scan of `HSWRMS_TEST_schema.sql`:
+      * ZERO occurrences of `USE [master]`.
+      * ZERO occurrences of `USE [HSWRMS]` (outside comment header at line 3 and line 1222 print statement).
+      * ZERO occurrences of `CREATE DATABASE`, `ALTER DATABASE`, or `DROP DATABASE`.
+      * ZERO 3-part or 4-part cross-database identifiers (`HSWRMS.dbo.*` or `master.sys.*`).
+    - Finding: The payload CANNOT switch to or modify `master` or `HSWRMS`.
+
+2.2 Reliability of the Database-Target Guard:
+    - SQLCMD Batch Behavior:
+      When invoked with `-b` (`On error exit`), `THROW 51000` causes SQLCMD to immediately abort execution and exit with errorlevel 1.
+    - Server Session State (`SET NOEXEC ON`):
+      Even if SQLCMD were invoked without `-b`, `SET NOEXEC ON` at line 26 compiles but does NOT execute any statement in any subsequent batch on that connection. There is no `SET NOEXEC OFF` in the file.
+    - Finding: The guard is doubly fail-closed at both client (SQLCMD) and server session levels.
+
+2.3 SQLCMD Directives, Dynamic SQL, and Error Handling:
+    - SQLCMD Directives: Grep for `^\s*:[a-zA-Z]` (`:r`, `:setvar`, `:connect`, `!!`) returned 0 matches.
+    - Dynamic SQL: Grep for `sp_executesql`, `EXEC `, `EXECUTE ` returned 0 matches.
+    - Error handling: All statements are standard declarative DDL.
+    - Finding: Zero bypass mechanisms exist.
+
+2.4 Parity with Authoritative Schema and Migrations:
+    - Object counts: Exactly 42 tables, 42 PKs, 56 FKs, 21 unique constraints, 12 indexes, 3 triggers, and 6 baseline roles in Section 9.
+    - Migrations Relationship: Migrations `V003` (M2 retreat booking fields), `V004` (M5 customer review ratings), and `V005` (M6 audit log) are already fully incorporated into the authoritative baseline schema (`d0a17db`). Re-running them on `HSWRMS_TEST` is not required.
+
+2.5 Fail-Fast Pre-Check in Deployment Plan:
+    - Plan Section 5 specifies a pre-execution verification query:
+      `sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; IF @@SERVERNAME <> N'MYLIFE-MYRULE-1' OR DB_NAME() <> N'HSWRMS_TEST' THROW 52000, 'CRITICAL PRE-CHECK: Target host or database mismatch', 1; PRINT 'PRE-CHECK PASS: Connected to host [' + @@SERVERNAME + '] catalog [' + DB_NAME() + ']. Ready for deployment.';"`
+    - Verifies both instance host name and database catalog prior to piping the schema script.
+
+--------------------------------------------------------------------------------
+3. PART B — APPLICATION STARTUP SIDE EFFECTS & RUNTIME LIFECYCLES
+--------------------------------------------------------------------------------
+Files Inspected:
+- `05_Development/backend/src/main/resources/application.yml`
+- `05_Development/backend/src/test/resources/application-sqlserver-test.yml`
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/DevAccountBootstrap.java`
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/M5DataInitializer.java`
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/M6DataInitializer.java`
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestContextInitializer.java`
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerTestConfigValidator.java`
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/integration/SqlServerJdbcSmokeTest.java`
+
+Key Findings:
+
+3.1 Component Execution Under `sqlserver-test` Profile:
+    - `DevAccountBootstrap` (`@Profile("dev")`, lines 41-42):
+      INACTIVE under `sqlserver-test` (only active when `dev` profile is active).
+    - `M5DataInitializer` (`@ConditionalOnProperty(name = "app.seed.demo-data", havingValue = "true")`, line 50):
+      INACTIVE by default (`app.seed.demo-data: false` in both `application.yml` line 76 and `application-sqlserver-test.yml` line 49).
+    - `M6DataInitializer` (`@Component`, `@Order(50)`, lines 30-31):
+      ACTIVE UNCONDITIONALLY. Lacks `@Profile` or `@ConditionalOnProperty`. Runs whenever the full Spring ApplicationContext starts.
+    - `SqlServerTestContextInitializer`:
+      ACTIVE under `sqlserver-test`. Validates credentials and prevents execution if username is blank, `sa`, or targets `HSWRMS`.
+    - `SqlServerJdbcSmokeTest.SimpleJdbcConfig`:
+      Uses an isolated test configuration (`webEnvironment = NONE`) that completely bypasses Spring Boot auto-configuration, EntityManager, JPA, and all ApplicationRunner beans. `M6DataInitializer` DOES NOT run during `SqlServerJdbcSmokeTest`.
+
+3.2 Startup Database Write Operations:
+    - During `SqlServerJdbcSmokeTest`: ZERO database writes occur (read-only metadata check).
+    - During full Spring Boot application startup:
+      * `M6DataInitializer.run()` executes within `@Transactional`.
+      * Tables queried: `dbo.[Role]`, `dbo.[Permission]`, `dbo.[RolePermission]`, `dbo.[SystemConfiguration]`.
+      * Tables written to:
+        - `dbo.[Permission]`: inserts missing baseline permission records.
+        - `dbo.[RolePermission]`: inserts default role-permission bindings.
+        - `dbo.[SystemConfiguration]`: inserts 6 default business parameter records.
+        - `dbo.[Role]`: inserts canonical roles if missing (none are missing if Section 9 seed was applied).
+
+3.3 Safety of Startup Against an Empty `HSWRMS_TEST`:
+    - CRITICAL FINDING: The application CANNOT start safely against an empty `HSWRMS_TEST`.
+    - If `HSWRMS_TEST` has 0 tables:
+      * `spring.jpa.hibernate.ddl-auto: none` prevents Hibernate from creating tables.
+      * `M6DataInitializer` attempts `roleRepo.findByRoleNameIgnoreCase(...)`.
+      * SQL Server throws Error 208 (`Invalid object name 'Role'`).
+      * The unhandled exception causes the Spring ApplicationContext to fail startup immediately.
+    - Conclusion: Schema deployment MUST precede any full application startup against `HSWRMS_TEST`.
+
+3.4 Safeguards Against Accidental `HSWRMS` Target, `sa` Login, and Seeding:
+    - Accidental `HSWRMS` target:
+      * `SqlServerTestContextInitializer` runs before DataSource initialization.
+      * `SqlServerTestConfigValidator.validateDatabaseTarget(...)` throws `IllegalStateException("SAFETY VIOLATION: Target database is configured as 'HSWRMS'...")`.
+      * `SqlServerJdbcSmokeTest` asserts that connected `DB_NAME()` equals `HSWRMS_TEST` and does not equal `HSWRMS`.
+    - Accidental `sa` login:
+      * `SqlServerTestConfigValidator.validate(username, ...)` explicitly checks `"sa".equalsIgnoreCase(username.trim())` and throws `IllegalStateException`.
+    - Accidental demo seeding:
+      * `DevAccountBootstrap` is restricted to profile `dev`.
+      * `M5DataInitializer` is gated on `app.seed.demo-data: true` (default `false`).
+
+3.5 Schema Auto-Creation Mechanisms:
+    - `application.yml` line 28: `spring.jpa.hibernate.ddl-auto: none`.
+    - `application-sqlserver-test.yml` line 30: `spring.jpa.hibernate.ddl-auto: none`.
+    - `pom.xml`: Zero references to Flyway or Liquibase.
+    - Finding: Schema cannot be created or modified implicitly.
+
+--------------------------------------------------------------------------------
+4. PART C — RUNTIME PERMISSION REQUIREMENTS AUDIT
+--------------------------------------------------------------------------------
+Subject: Proposed permissions for `hswrms_test_user` in database `HSWRMS_TEST`.
+
+4.1 Evaluation of `db_datareader` and `db_datawriter`:
+    - Entity ID Generation: All 32 JPA entities use `@GeneratedValue(strategy = GenerationType.IDENTITY)`. Identity generation uses table column definitions; no database sequence permissions (`ALTER SEQUENCE`, `NEXT VALUE FOR`) are required.
+    - Stored Procedures & Functions: The backend contains 0 stored procedure calls and 0 user-defined function calls. No `EXECUTE` permissions are required.
+    - Triggers: The 3 triggers (`TR_SpaSession_ValidateScheduling`, `TR_FolioItem_RecalculateTotal`, `TR_PaymentTransaction_RecalculateFolioPaid`) execute on tables owned by `dbo`. Ownership chaining allows triggers to read and update target tables when fired by DML from `db_datawriter`.
+    - Schedulers & Jobs: Perform standard `SELECT` and `UPDATE` on `dbo.User`, `dbo.RightDelegation`, `dbo.SpaSession`. Fully covered by `db_datareader` and `db_datawriter`.
+    - `M6DataInitializer`: Performs `SELECT` and `INSERT` on `Role`, `Permission`, `RolePermission`, `SystemConfiguration`. Fully covered by `db_datareader` and `db_datawriter`.
+
+4.2 Permission Sufficiency Verdict:
+    - Membership in `db_datareader` and `db_datawriter` inside `[HSWRMS_TEST]` is strictly necessary and completely sufficient for all application and integration test operations.
+    - Elevated privileges (`db_owner`, `ddladmin`, `sysadmin`) are strictly prohibited and unnecessary.
+    - Current State Warning: `hswrms_test_user` currently has only `CONNECT` in `[HSWRMS_TEST]`. It cannot run full application tests until `db_datareader` and `db_datawriter` are granted.
+
+--------------------------------------------------------------------------------
+5. PART D — CONTROLLED DEPLOYMENT SEQUENCE PROPOSAL
+--------------------------------------------------------------------------------
+> [!IMPORTANT]
+> The following sequence is proposed for human review. Zero commands have been executed.
+> No command in this sequence drops, truncates, or recreates either database.
+
+### Step 1: Pre-Execution Instance & Target State Verification
+- Type: READ-ONLY
+- Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+- Command:
+  ```powershell
+  sqlcmd -S localhost -d master -E -b -Q "SET NOCOUNT ON; SELECT @@SERVERNAME AS [ServerName], DB_NAME(DB_ID(N'HSWRMS_TEST')) AS [TestDb], (SELECT state_desc FROM sys.databases WHERE name = N'HSWRMS_TEST') AS [TestDbState], (SELECT COUNT(*) FROM HSWRMS_TEST.sys.tables WHERE is_ms_shipped = 0) AS [UserTableCount];"
+  ```
+- Expected Effect: Confirms `ServerName = MYLIFE-MYRULE-1`, `TestDb = HSWRMS_TEST`, `TestDbState = ONLINE`, `UserTableCount = 0`.
+- Failure Condition: Mismatched server name, database offline, or existing tables present -> Stop.
+
+### Step 2: Schema Payload Deployment to `HSWRMS_TEST` Only
+- Type: MUTATING (DDL)
+- Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+- Command:
+  ```powershell
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -i 05_Development/database/generated/HSWRMS_TEST_schema.sql
+  ```
+- Expected Effect: Creates 42 tables, 56 FKs, 21 UQs, 12 indexes, 3 triggers, and 6 baseline roles in `HSWRMS_TEST`.
+- Failure Condition: Any T-SQL error terminates SQLCMD immediately (`-b`).
+
+### Step 3: Verification of Deployed Database Objects
+- Type: READ-ONLY
+- Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+- Command:
+  ```powershell
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; SELECT (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0) AS [TableCount], (SELECT COUNT(*) FROM sys.triggers WHERE is_ms_shipped = 0) AS [TriggerCount], (SELECT COUNT(*) FROM dbo.[Role]) AS [RoleCount];"
+  ```
+- Expected Effect: Exactly `TableCount = 42`, `TriggerCount = 3`, `RoleCount = 6`.
+- Failure Condition: Any count mismatch -> Stop.
+
+### Step 4: Least-Privilege DML Grant for `hswrms_test_user`
+- Type: MUTATING (DCL / Security)
+- Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+- Command:
+  ```powershell
+  sqlcmd -S localhost -d HSWRMS_TEST -E -b -Q "SET NOCOUNT ON; ALTER ROLE db_datareader ADD MEMBER [hswrms_test_user]; ALTER ROLE db_datawriter ADD MEMBER [hswrms_test_user];"
+  ```
+- Expected Effect: Grants DML access (`SELECT, INSERT, UPDATE, DELETE`) to `hswrms_test_user` in `HSWRMS_TEST`.
+- Failure Condition: Error on `ALTER ROLE` -> Stop.
+
+### Step 5: Read-Only Verification of Login Isolation & Effective Roles
+- Type: READ-ONLY
+- Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+- Command:
+  ```powershell
+  sqlcmd -S localhost -d master -E -b -Q "SET NOCOUNT ON; SELECT p.name, IS_SRVROLEMEMBER('sysadmin', p.name) AS [IsSysadmin], (SELECT COUNT(*) FROM HSWRMS.sys.database_principals WHERE name = 'hswrms_test_user') AS [HswrmsAccess], (SELECT STRING_AGG(r.name, ', ') FROM HSWRMS_TEST.sys.database_role_members m JOIN HSWRMS_TEST.sys.database_principals r ON m.role_principal_id = r.principal_id JOIN HSWRMS_TEST.sys.database_principals u ON m.member_principal_id = u.principal_id WHERE u.name = 'hswrms_test_user') AS [TestDbRoles];"
+  ```
+- Expected Effect: `IsSysadmin = 0`, `HswrmsAccess = 0` (zero access to primary `HSWRMS`), `TestDbRoles = db_datareader, db_datawriter`.
+- Failure Condition: Any access to primary `HSWRMS` or sysadmin role -> Stop.
+
+### Step 6: Controlled Opt-In Smoke Test Execution
+- Type: READ-ONLY TEST RUN (Tests JDBC connectivity, version, and database name)
+- Identity: Runtime test user `hswrms_test_user` via Maven
+- Command:
+  ```powershell
+  $env:SQLSERVER_TEST_USERNAME = "hswrms_test_user"
+  # $env:SQLSERVER_TEST_PASSWORD supplied securely by operator
+  $env:SQLSERVER_TEST_DB = "HSWRMS_TEST"
+  $env:HSWRMS_ENABLE_SQLSERVER_TEST = "true"
+  mvn test -f 05_Development/backend/pom.xml -Dtest=SqlServerJdbcSmokeTest -Dspring.profiles.active=sqlserver-test -Dhswrms.sqlserver.test.enabled=true
+  ```
+- Expected Effect: Test `SqlServerJdbcSmokeTest` executes and passes (exit code 0).
+- Failure Condition: Test assertion failure or exit code != 0 -> Stop.
+
+### Step 7: Post-Test Zero-Mutation Audit on Primary Database `[HSWRMS]`
+- Type: READ-ONLY
+- Identity: Windows Administrator (`MYLIFE-MYRULE-1\ADMIN` via `-E`)
+- Command:
+  ```powershell
+  sqlcmd -S localhost -d HSWRMS -E -b -Q "SET NOCOUNT ON; SELECT COUNT(*) AS [TestUserPrincipalsInHswrms] FROM sys.database_principals WHERE name = 'hswrms_test_user'; SELECT name, modify_date FROM sys.tables WHERE modify_date > DATEADD(minute, -30, GETDATE());"
+  ```
+- Expected Effect: `TestUserPrincipalsInHswrms = 0`; 0 tables modified in `HSWRMS` in the last 30 minutes.
+- Failure Condition: Any principal or table modification found in `HSWRMS` -> Alert.
+
+--------------------------------------------------------------------------------
+6. PART E — FINAL VERDICT & PREREQUISITES
+--------------------------------------------------------------------------------
+VERDICT: SAFE TO PRESENT FOR HUMAN APPROVAL
+
+Prerequisites for Execution (Awaiting User Action):
+1. Explicit human approval to execute Steps 1–7 sequentially.
+2. Operator provides test password for `hswrms_test_user` in session environment variable
+   `$env:SQLSERVER_TEST_PASSWORD` prior to Step 6.
+3. Microsoft SQL Server instance `MYLIFE-MYRULE-1` remains running on `localhost:1433`.
+
+Blockers: ZERO technical blockers identified. All safety boundaries, least-privilege
+guarantees, target guards, and isolation invariants have been verified.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3.79
+================================================================================
+

@@ -37,7 +37,7 @@ export const ManagerAdminLayout: React.FC = () => {
               type="button"
               className="hsw-ops-mobile-toggle"
               onClick={toggleSidebar}
-              aria-label={sidebarOpen ? t('operations.common.closeMenu', 'Close menu') : t('operations.common.openMenu', 'Open menu')}
+              aria-label={sidebarOpen ? t('operations.common.closeMenu', 'Đóng menu') : t('operations.common.openMenu', 'Mở menu')}
             >
               {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -63,8 +63,8 @@ export const ManagerAdminLayout: React.FC = () => {
               <ShieldAlert size={13} />
               <span>
                 {role === 'admin'
-                  ? t('topbar.adminClearance', 'Administrator Clearance')
-                  : t('topbar.managerScope', 'Manager Limited Scope')}
+                  ? t('topbar.adminClearance', 'Thẩm Quyền Quản Trị Viên')
+                  : t('topbar.managerScope', 'Phạm Vi Giới Hạn Của Quản Lý')}
               </span>
             </div>
 
@@ -75,12 +75,12 @@ export const ManagerAdminLayout: React.FC = () => {
 
             {/* 3. Filter Scope */}
             <Button variant="secondary" size="sm" icon={<Filter size={13} />}>
-              {t('topbar.filterScope', 'Filter Scope')}
+              {t('topbar.filterScope', 'Phạm Vi Lọc')}
             </Button>
 
             {/* 4. Export */}
             <Button variant="tertiary" size="sm" icon={<Download size={13} />}>
-              {t('topbar.export', 'Export')}
+              {t('topbar.export', 'Xuất Dữ Liệu')}
             </Button>
           </div>
         </header>

@@ -13,7 +13,7 @@ import java.time.ZoneOffset;
  * <p>Ownership of this table between M2 (deposit) and M5 (final payment) is the unresolved
  * Open Item OI-04. When M5 publishes a payment service this entity should be replaced by it.
  */
-@Entity
+@Entity(name = "M2DepositPaymentTransaction")
 @Table(name = "PaymentTransaction", schema = "dbo")
 public class PaymentTransaction {
 
@@ -35,6 +35,12 @@ public class PaymentTransaction {
 
     @Column(name = "retreat_booking_id")
     private Integer retreatBookingId;
+
+    // The shared table also contains the M5 invoice target. Keep M2 deposit
+    // writes from owning that value while exposing the real nullable column to
+    // Hibernate schema generation for this duplicate table mapping.
+    @Column(name = "invoice_id", insertable = false, updatable = false)
+    private Integer invoiceId;
 
     @Column(name = "payment_type", nullable = false, length = 20)
     private String paymentType = TYPE_DEPOSIT;

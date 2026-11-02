@@ -1,11 +1,6 @@
 # SOFTWARE DEVELOPMENT PROJECT SPECIFICATION
 
-**Course:** ISP392 - Software Development Project  
-**Project Title:** HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM  
-**Project Acronym:** HSWRMS  
-**Team Structure:** 6 Students / 6 Modules  
-**Domain Application:** Hospitality, Wellness Tourism, Healthcare, E-Commerce  
-**Revision:** HSWRMS Project Specification Ver2 - October 2026
+**Course:** ISP392 - Software Development Project**Project Title:** HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM**Project Acronym:** HSWRMS**Team Structure:** 6 Students / 6 Modules**Domain Application:** Hospitality, Wellness Tourism, Healthcare, E-Commerce**Revision:** HSWRMS Project Specification Ver2 - October 2026
 
 > This revision updates the September 2026 baseline to align the Project Specification with the current SRS, Business Flows, Use Case Diagrams, Screen Flow and agreed module behavior.
 
@@ -16,6 +11,7 @@ Traditional Property Management Systems mainly support standard hotel operations
 **HEAVENSTAY WELLNESS RESORT MANAGEMENT SYSTEM (HSWRMS)** is an integrated system for a fictional wellness resort. It supports the Customer journey from registration and retreat booking through check-in, treatment scheduling, personalized F&B, checkout, payment, review and reporting.
 
 HSWRMS must:
+
 - prevent scheduling conflicts for both Therapist/Yoga Instructor and Treatment Room;
 - protect health, allergy, dietary and residence-identification data using role-based access;
 - automatically coordinate Spa/Therapy scheduling and recovery while keeping final Customer/Receptionist confirmation;
@@ -34,6 +30,7 @@ HSWRMS integrates with the following external services.
 **Purpose:** Process supported online payment transactions for retreat deposits and final checkout.
 
 **Main interactions:**
+
 - HSWRMS sends payment amount and transaction/order information to VNPay.
 - VNPay returns the payment result to HSWRMS.
 - HSWRMS records the confirmed transaction against the related booking or invoice.
@@ -44,6 +41,7 @@ HSWRMS integrates with the following external services.
 **Purpose:** Support account notifications and Spa/Therapy session communication.
 
 **Main interactions:**
+
 - send email OTP for account verification;
 - synchronize confirmed or changed Spa/Therapy sessions to the Customer calendar;
 - send T-24h informational reminder;
@@ -73,6 +71,7 @@ HSWRMS remains the source of truth for scheduling decisions and session status.
 8. **Admin:** Manages staff accounts, approved master data, system parameters, feature flags, permission configuration, limited delegation and audit/security administration.
 
 ### External Systems
+
 - **VNPay Payment Gateway**
 - **Calendar & Notification Services**
 - **Google Identity**
@@ -109,6 +108,7 @@ The project is organized into **6 interconnected modules**. Each module has a pr
 - **UC15 - Record Session Attendance & Outcome:** As the assigned Therapist/Yoga Instructor, I want to record the final session outcome as Completed or No-Show.
 
 **Supporting behavior:**
+
 - Customer/Receptionist may provide treatment and preferred day/time constraints but does not manually choose Therapist or Treatment Room.
 - HSWRMS revalidates the selected candidate before commit and reserves Therapist + Treatment Room atomically.
 - Extra Spa/Therapy services use the same scheduling engine and applicable charges are posted to the Customer Folio.
@@ -126,6 +126,7 @@ The project is organized into **6 interconnected modules**. Each module has a pr
 - **UC20 - Enforce F&B Health-Data Minimization:** HSWRMS exposes only food-related allergy/dietary information required for meal preparation and hides unrelated medical history.
 
 **Supporting behavior:**
+
 - HSWRMS recalculates ingredient and related menu availability based on quantity, expiry and condition.
 - Ingredient usage updates remaining quantity and may change menu availability.
 - Daily meals and extra a-la-carte items use the same meal-order fulfillment process where applicable.
@@ -139,6 +140,7 @@ The project is organized into **6 interconnected modules**. Each module has a pr
 - **UC25 - View Occupancy & Therapist Utilization Reports:** As a Manager, I want to view permitted occupancy and Therapist-utilization information and export supported report data where available.
 
 **Checkout rules:**
+
 - Villa/facility inspection occurs before the final invoice is locked.
 - Approved Villa/Facility charges are posted to the Customer Folio before final payment.
 - Checkout is blocked while required Spa, F&B, Villa/Facility or other outstanding charges remain unresolved.
@@ -149,11 +151,10 @@ The project is organized into **6 interconnected modules**. Each module has a pr
 ### Module 6 - System Administration & Permission Management
 
 - **UC26 - Configure Business Parameters:** As an Admin, I want to configure approved system parameters such as cancellation windows, refund percentages and other supported rules.
-- **UC27 - Toggle Feature Flags:** As an Admin, I want to enable or disable approved functionality by module.
-- **UC28 - Configure Permission Matrix:** As an Admin, I want to configure detailed permissions by role, screen and action.
-- **UC29 - Delegate Limited Admin Rights:** As an Admin, I want to grant or revoke a limited subset of administrative capabilities for Manager without granting full Admin authority.
-- **UC30 - View Sensitive-Data Audit Log:** As an Admin, I want to review sensitive-data access and security-relevant events.
-- **UC31 - View System Overview Dashboard:** As an Admin or authorized Manager, I want to view system-level operational information according to granted access.
+- **UC27 - Configure Permission Matrix:** As an Admin, I want to configure detailed permissions by role, screen and action.
+- **UC28 - Delegate Limited Admin Rights:** As an Admin, I want to grant or revoke a limited subset of administrative capabilities for Manager without granting full Admin authority.
+- **UC29 - View Sensitive-Data Audit Log:** As an Admin, I want to review sensitive-data access and security-relevant events.
+- **UC30 - View System Overview Dashboard:** As an Admin or authorized Manager, I want to view system-level operational information according to granted access.
 
 ## 5. Business Rules (Strict Constraints)
 
@@ -177,25 +178,20 @@ Students must continue to research and document the legal, hospitality, wellness
 
 ### A. Legal Compliance & Data Protection
 
-1. **Vietnam personal-data protection requirements (as referenced by the supplied project baseline)**  
-   Focus areas: sensitive health data, explicit consent, access control and appropriate protection.  
-   Project application: Health/Diet data requires explicit consent, must not use default-checked consent and must be protected appropriately.
-
-2. **Law on Residence 2020 (Luật Cư trú 2020)**  
-   Focus area: temporary-residence information for resort Customers.  
+1. **Vietnam personal-data protection requirements (as referenced by the supplied project baseline)**Focus areas: sensitive health data, explicit consent, access control and appropriate protection.Project application: Health/Diet data requires explicit consent, must not use default-checked consent and must be protected appropriately.
+2. **Law on Residence 2020 (Luật Cư trú 2020)**
+   Focus area: temporary-residence information for resort Customers.
    Project application: check-in collects required residence-identification information; access is restricted and protected at rest.
 
 ### B. Hospitality & Wellness Domain Operations
 
-3. **Global Wellness Institute (GWI) Standards / Wellness Taxonomy**  
-   Project application: Retreat Package and wellness-service terminology should reflect the wellness-tourism domain rather than generic hotel wording.
-
-4. **Guest/Customer Folio & Night Audit Practices (AHLEI-oriented research)**  
+3. **Global Wellness Institute (GWI) Standards / Wellness Taxonomy**Project application: Retreat Package and wellness-service terminology should reflect the wellness-tourism domain rather than generic hotel wording.
+4. **Guest/Customer Folio & Night Audit Practices (AHLEI-oriented research)**
    Project application: operational service charges are posted to a central Customer Folio and consolidated during checkout.
 
 ### C. Technical Synthesis
 
-5. **Encryption, Authorization and Concurrency Research**  
+5. **Encryption, Authorization and Concurrency Research**
    Focus areas: protection of sensitive data at rest, backend RBAC, transactional resource reservation, scheduling concurrency, payment confirmation and auditability.
 
 ## 7. Module Integration Summary
@@ -207,11 +203,11 @@ The six modules form one end-to-end resort journey:
 **Module 6** operates across the system to control permissions, configuration, auditability and management visibility.
 
 Key integrations:
+
 - **M1 <-> M6:** account roles, permission model and controlled administration;
 - **M2 / M5 <-> VNPay:** retreat deposit and supported final online payment;
 - **M3 <-> Calendar & Notification Services:** calendar synchronization, confirmation lifecycle and schedule-change notifications;
 - **M2 + M3 + M4 + Villa/Facility inspection -> M5:** charges are aggregated into the Customer Folio and final invoice;
 - **M4:** ingredient usage updates inventory availability and may affect Customer-facing menu availability.
-
 
 **End of HSWRMS Project Specification Ver2**

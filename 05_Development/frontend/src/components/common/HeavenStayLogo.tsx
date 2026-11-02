@@ -1,11 +1,19 @@
 import React from 'react';
 
 export interface HeavenStayLogoProps {
-  /** 'public' -> 'WELLNESS RESORT', 'customer' -> 'CỔNG KHÁCH HÀNG', 'compact' -> no subtitle */
-  variant?: 'public' | 'customer' | 'compact';
+  /**
+   * 'public' -> 'WELLNESS RESORT',
+   * 'customer' -> 'CỔNG KHÁCH HÀNG',
+   * 'operations' -> 'HỆ THỐNG VẬN HÀNH',
+   * 'compact' -> no subtitle,
+   * 'mark' -> emblem mark only without text
+   */
+  variant?: 'public' | 'customer' | 'operations' | 'compact' | 'mark';
+  /** Optional custom subtitle overriding the variant default */
+  subtitle?: string;
   /** True when rendered over the transparent hero navbar */
   isHeroActive?: boolean;
-  /** Size token: 'sm' (24px mark), 'md' (30px mark, default), 'lg' (40px mark) */
+  /** Size token: 'sm' (28px mark), 'md' (38px mark, default), 'lg' (48px mark) */
   size?: 'sm' | 'md' | 'lg';
   /** Optional custom class name */
   className?: string;
@@ -15,9 +23,11 @@ export interface HeavenStayLogoProps {
  * HeavenStay Brand Emblem & Wordmark Component
  * Inspired by Image A: botanical leaf sprig, celestial sun rays, 4-point sparkle star, and coastal waves.
  * Web-optimized SVG emblem + luxury serif wordmark designed for quiet luxury resort identity.
+ * Global shared component across Public, Customer, Operational (Admin/Manager/Receptionist/Therapist/Kitchen), and Auth.
  */
 export const HeavenStayLogo: React.FC<HeavenStayLogoProps> = ({
   variant = 'public',
+  subtitle,
   isHeroActive = false,
   size = 'md',
   className = '',
@@ -28,15 +38,21 @@ export const HeavenStayLogo: React.FC<HeavenStayLogoProps> = ({
     lg: { width: 48, height: 48 },
   }[size];
 
-  const subtitleText = {
+  const defaultSubtitle = {
     public: 'WELLNESS RESORT',
     customer: 'CỔNG KHÁCH HÀNG',
+    operations: 'HỆ THỐNG VẬN HÀNH',
     compact: '',
-  }[variant];
+    mark: '',
+  }[variant] || '';
+
+  const subtitleText = subtitle !== undefined ? subtitle : defaultSubtitle;
 
   const ariaLabel =
     variant === 'customer'
       ? 'HeavenStay — Cổng Khách Hàng'
+      : variant === 'operations'
+      ? 'HeavenStay — Hệ Thống Vận Hành'
       : 'HeavenStay Wellness Resort';
 
   return (
@@ -44,8 +60,24 @@ export const HeavenStayLogo: React.FC<HeavenStayLogoProps> = ({
       className={`hsw-brand-logo-root ${isHeroActive ? 'is-hero-active' : ''} ${className}`}
       aria-label={ariaLabel}
     >
-      {/* Refined Vector Emblem inspired by Image A */}
-      <svg
+      {/* Refined Vector Emblem with Celestial Luxury Orbital System */}
+      <div className="hsw-emblem-wrap">
+        <div className="hsw-emblem-aura" aria-hidden="true" />
+        {/* Celestial Elliptical Orbit 1 - Antique Bronze dashed arc (#76501F) */}
+        <div className="hsw-emblem-orbit hsw-emblem-orbit-primary hsw-celestial-ellipse-1" aria-hidden="true">
+          <div className="hsw-orbit-satellite hsw-orbit-gem-1" />
+        </div>
+        {/* Celestial Elliptical Orbit 2 - Deep Gold dotted arc (#8F6428) */}
+        <div className="hsw-emblem-orbit-secondary hsw-celestial-ellipse-2" aria-hidden="true">
+          <div className="hsw-orbit-gem-2" />
+        </div>
+        <div className="hsw-emblem-sheen" aria-hidden="true" />
+        {/* Strategic Celestial Sparkles with Staggered Rhythmic Pulsing & Micro-Flare */}
+        <div className="hsw-celestial-sparkle hsw-sparkle-top-right" aria-hidden="true" />
+        <div className="hsw-celestial-sparkle hsw-sparkle-mid-left" aria-hidden="true" />
+        <div className="hsw-celestial-sparkle hsw-sparkle-bottom-center" aria-hidden="true" />
+        <div className="hsw-celestial-sparkle hsw-sparkle-micro-flare" aria-hidden="true" />
+        <svg
         className="hsw-brand-emblem"
         width={markDimensions.width}
         height={markDimensions.height}
@@ -199,16 +231,21 @@ export const HeavenStayLogo: React.FC<HeavenStayLogoProps> = ({
           className="hsw-emblem-stroke-secondary"
         />
       </svg>
-
-      {/* Brand Text Block */}
-      <div className="hsw-brand-text">
-        <span className="hsw-brand-name">HEAVENSTAY</span>
-        {subtitleText ? (
-          <span className={`hsw-brand-tagline ${variant === 'customer' ? 'is-customer-portal' : ''}`}>
-            {subtitleText}
-          </span>
-        ) : null}
       </div>
+
+      {/* Brand Text Block (omitted only when variant === 'mark') */}
+      {variant !== 'mark' && (
+        <div className="hsw-brand-text">
+          <span className="hsw-brand-name">HEAVENSTAY</span>
+          {subtitleText ? (
+            <span
+              className={`hsw-brand-tagline ${variant === 'customer' ? 'is-customer-portal' : ''} ${variant === 'operations' ? 'is-operations-portal' : ''}`}
+            >
+              {subtitleText}
+            </span>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 };

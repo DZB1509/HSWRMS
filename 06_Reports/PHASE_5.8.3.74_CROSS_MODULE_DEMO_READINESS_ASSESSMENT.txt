@@ -1,0 +1,284 @@
+================================================================================
+HSWRMS - PHASE 5.8.3.74: CROSS-MODULE DEMO READINESS ASSESSMENT
+END-TO-END BUSINESS FLOW EVALUATION, STATIC INTEGRATION AUDIT & READINESS GATE
+================================================================================
+Date: 2026-10-28
+Repository Root: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Current Branch: feature/hswrms-m1-m6-integration
+Current Commit HEAD: 13fcbd3bc666c77d0799cc0a97d2cd4c897a94fa
+Assessment Status: Completed
+Demo Readiness Gate Decision: CONDITIONALLY READY — SPECIFIC BLOCKERS REMAIN
+
+--------------------------------------------------------------------------------
+1. BASELINE & REPOSITORY STATE
+--------------------------------------------------------------------------------
+A. Working Tree State:
+   - Branch: `feature/hswrms-m1-m6-integration` (ahead of isp-origin by 4 commits)
+   - Current HEAD: `13fcbd3` (Parent: `f1757e1`)
+   - Completed Baseline Commits:
+     * Commit 1 (`d0a17db`): Authoritative 42-table schema.sql and README.md
+     * Commit 2 (`258c7bd`): M6 Admin governance hardening & S39 permission catalog
+     * Commit 3 (`f1757e1`): M4 F&B / KDS baseline implementation & boundary adapters
+     * Commit 4 (`13fcbd3`): M4 frontend-backend contract fix & numeric ID safety
+   - Staging Area: Clean (0 staged files, `git diff --cached` is empty)
+   - Tracked Working Tree: Clean (0 modified tracked files)
+   - Preserved Untracked Artifacts (Intact & Untouched):
+     * `05_Development/database/generated/HSWRMS_TEST_schema.sql`
+     * `05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql`
+     * `05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql`
+     * `05_Development/database/migrations/V005__m6_audit_log.sql`
+     * `05_Development/database/migrations/draft_m6_governance_and_delegation.sql`
+     * 25 historical reports in `06_Reports/`
+
+--------------------------------------------------------------------------------
+2. CRITICAL END-TO-END DEMO FLOWS (CODE-BACKED EVIDENCE)
+--------------------------------------------------------------------------------
+
+Flow 1: M1 — Authentication, Role-Based Access Control & Navigation
+- Scope: Multi-persona login, JWT token issuance, client-side route guarding, and dev role switching.
+- Code Evidence:
+  * Backend: `AuthController.java`, `AuthService.java`, `JwtTokenProvider.java`, `DevAccountBootstrap.java`.
+  * Frontend: `authApi.ts`, `AuthProvider.tsx`, `RoleGuard.tsx`, `RoleSwitcher.tsx`, `LoginPage.tsx`.
+- Concrete Flow:
+  1. User navigates to `/login` or uses dev `RoleSwitcher` pill.
+  2. Submits credentials (e.g. `customer@heavenstay.dev` / `DevDemo123!`).
+  3. Backend returns JWT with claims (`userId`, `email`, `fullName`, `roles`).
+  4. Frontend stores token, initializes `AuthContext`, and redirects to role dashboard
+     (`/customer/dashboard`, `/receptionist/dashboard`, `/therapist/dashboard`, `/fb/dashboard`, `/manager/dashboard`, `/admin/dashboard`).
+  5. Route navigation is protected by `RoleGuard.tsx`.
+
+Flow 2: M2 — Retreat Package Catalog & Booking Flow
+- Scope: Public package browsing, pricing calculation, reservation draft, and receptionist check-in.
+- Code Evidence:
+  * Backend: `RetreatPackageController.java`, `RetreatBookingController.java`, `ReceptionistOperationController.java`, `RetreatBookingService.java`.
+  * Frontend: `RetreatListPage.tsx`, `RetreatDetailPage.tsx`, `RetreatBookingPage.tsx`, `CheckInPage.tsx`, `retreatBookingApi.ts`.
+- Concrete Flow:
+  1. Guest browses packages at `/retreats` (public GET).
+  2. Selects package and dates at `/customer/retreat-booking`, calculates estimate via `/api/v1/retreat-packages/calculate`.
+  3. Submits `CreateBookingRequest` creating booking draft in `PENDING` status.
+  4. Guest generates VNPay deposit URL or Receptionist confirms check-in via `/api/v1/receptionist/check-in`
+     transitioning booking to `CHECKED_IN` and assigning physical villa.
+
+Flow 3: M3 — Spa Treatment Scheduling, Bundling & Therapist Execution
+- Scope: Indivisible candidate generation, reservation persistence, attendance confirmation, and clinical notes.
+- Code Evidence:
+  * Backend: `SpaBookingController.java`, `TherapistController.java`, `SpaSessionService.java`, `SchedulingEngineService.java`, `DefaultCustomerStayAdapter.java`.
+  * Frontend: `SpaTreatmentListPage.tsx`, `SpaBookingPage.tsx`, `SpaAlternativeSlotsPage.tsx`, `TherapistDashboardPage.tsx`, `TherapistSessionDetailPage.tsx`, `spaApi.ts`.
+- Concrete Flow:
+  1. Guest views treatments at `/customer/spa-treatments`.
+  2. Submits preferred slot to `/api/v1/spa/candidates`, receiving atomic bundles (Time + Qualified Therapist + Compatible Room).
+  3. Confirms reservation via `/api/v1/spa/sessions` linking `retreatBookingId`.
+  4. Extra treatment charges trigger `DefaultBillingAdapter.postCharge` to M5 Folio.
+  5. Therapist logs in, views schedule at `/therapist/dashboard`, views allergy/precaution notes via `/api/v1/therapist/sessions/{id}`, and completes session.
+
+Flow 4: M4 — Dining, Customer Meal Orders & Kitchen Display System (KDS)
+- Scope: Daily meal preferences, a-la-carte ordering, KDS prep queue, status updates, and cancellation.
+- Code Evidence:
+  * Backend: `FnbCustomerOrderController.java`, `FnbKdsController.java`, `MealOrderServiceImpl.java`, `DefaultBookingAndDietaryIntegrationService.java`.
+  * Frontend: `DietaryMenuPage.tsx`, `DailyMealSelectionPage.tsx`, `AlaCarteOrderPage.tsx`, `FnbDashboardPage.tsx`, `MealPrepListPage.tsx`, `MealOrderDetailPage.tsx`, `DiningContext.tsx`, `fnbApi.ts`.
+- Concrete Flow:
+  1. Guest selects daily meals at `/customer/dining/daily-selection` or places an a-la-carte order at `/customer/dining/a-la-carte`.
+  2. Backend validates active retreat booking via `DefaultBookingAndDietaryIntegrationService`, calculates server-side pricing, and creates `MealOrderEntity`.
+  3. Order appears on staff KDS queue at `/fb/prep-list` via `/api/v1/fnb/kds/queue`.
+  4. Kitchen staff transitions status: `PENDING` -> `PREPARING` -> `READY` -> `DELIVERED`.
+  5. On `DELIVERED`, `MealOrderServiceImpl` posts charge to M5 Folio billing.
+  6. If cancelled, mandatory `cancellationReason` is audited in `MealOrderAuditTrail`.
+
+Flow 5: M5 — Folio Billing, Line Items, Consolidated Invoice & Checkout
+- Scope: Multi-module folio aggregation (Package, Spa, Dining), payments, checkout release, and reviews.
+- Code Evidence:
+  * Backend: `FolioBillingController.java`, `CheckoutController.java`, `CustomerReviewController.java`, `FolioBillingService.java`, `M5DataInitializer.java`.
+  * Frontend: `FolioInvoicePage.tsx`, `FinalPaymentPage.tsx`, `CheckoutConfirmationPage.tsx`, `ReviewRatingPage.tsx`, `FolioContext.tsx`, `billingApi.ts`.
+- Concrete Flow:
+  1. Guest or Receptionist views stay folio at `/customer/folio/{bookingId}` or `/receptionist/daily-arrivals`.
+  2. Folio aggregates stay base price, extra spa session charges, and delivered dining charges.
+  3. Generates consolidated invoice via `/api/v1/billing/folios/{bookingId}/invoice`.
+  4. Final payment processes outstanding balance to zero.
+  5. Receptionist completes checkout via `/api/v1/receptionist/checkout`, updating booking to `COMPLETED` and releasing villa inventory.
+  6. Customer submits review at `/customer/reviews`.
+
+Flow 6: M6 — Administrative Governance, Parameter Tuning, Delegation & Audit
+- Scope: Business parameter updates, temporary managerial delegation, permission matrix, and immutable audit logs.
+- Code Evidence:
+  * Backend: `AdminParameterController.java`, `AdminDelegationController.java`, `AdminAuditLogController.java`, `AdminDashboardController.java`, `PermissionMatrixService.java`.
+  * Frontend: `AdminDashboardPage.tsx`, `BusinessParametersPage.tsx`, `AdminDelegationPage.tsx`, `SensitiveAuditLogPage.tsx`, `GovernanceContext.tsx`.
+- Concrete Flow:
+  1. Admin logs in (`admin@heavenstay.dev`), visits `/admin/dashboard`.
+  2. Modifies system parameters (e.g. VAT rate, checkout grace period) at `/admin/parameters`.
+  3. Grants temporary right delegation to Manager at `/admin/delegation` with strict time window (`validFrom`, `validUntil`).
+  4. Inspects tamper-evident audit logs at `/admin/audit-logs` recording all sensitive actions.
+
+--------------------------------------------------------------------------------
+3. TARGETED STATIC INTEGRATION AUDIT
+--------------------------------------------------------------------------------
+
+A. Booking Relationship & ID Flow (M2 <-> M3 <-> M4 <-> M5):
+   - M2 Primary Key: `dbo.RetreatBooking.retreat_booking_id` (INT IDENTITY).
+   - M3 Foreign Key: `dbo.SpaSession.retreat_booking_id` (INT, nullable for standalone walk-ins).
+   - M4 Foreign Key: `dbo.MealOrder.retreat_booking_id` (INT NOT NULL).
+   - M5 Foreign Key: `dbo.Folio.retreat_booking_id` (INT NOT NULL, UNIQUE).
+   - Verification:
+     * Frontend resolvers (`bookingResolver.ts`, `fnbIdUtils.ts`) strictly resolve positive integer IDs.
+     * All backend entity associations use `Integer` / `Long` foreign keys mapping to `retreat_booking_id`.
+     * Zero synthetic ID guessing; fail-closed behavior verified.
+
+B. Persistence vs. Mock State Verification:
+   - Backend contains zero in-memory collections; all controllers delegate to Spring Data JPA repositories.
+   - Frontend contexts (`CustomerContext`, `SpaContext`, `DiningContext`, `FolioContext`, `GovernanceContext`)
+     support hybrid operation: when backend is online and booking ID is present, they communicate directly with
+     real REST endpoints. When backend calls fail, `DiningContext` and `FolioContext` roll back optimistic state
+     and present visible error banners, eliminating false-success illusions.
+
+C. Financial Idempotency & Server-Authoritative Pricing:
+   - M4 Dining: Client sends only `{ menuItemId, quantity }`. Backend calculates line items and total from `dbo.MenuItem.price`.
+   - M5 Billing: `FolioBillingService.postFolioCharge` uses `source_type` and `source_reference_id` to prevent duplicate billing charges.
+   - Folio finalization locks the invoice: once generated, line items cannot be mutated.
+
+--------------------------------------------------------------------------------
+4. DEFECT & RISK RANKING (P0 / P1 / P2 / P3)
+--------------------------------------------------------------------------------
+
+[P1-01] ROLE AUTHORITY MISMATCH FOR DEDICATED F&B STAFF PERSONA
+- Severity: P1 (High — Demo Workflow Blocker for F&B Staff Persona)
+- Affected Module: M1 (Identity/Bootstrap) & M4 (Kitchen Display System Authorization)
+- Specific Locations:
+  * `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/DevAccountBootstrap.java` (line 66)
+  * `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java` (line 153)
+  * `05_Development/backend/src/main/java/com/heavenstay/hswrms/security/CustomUserDetails.java` (line 27)
+  * `05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/FnbKdsController.java` (lines 39, 51, 67, 77, 92)
+- Direct Evidence:
+  * `DevAccountBootstrap` seeds the role with name `"F&B Staff"`.
+  * When `fbstaff@heavenstay.dev` logs in, `AuthService.login()` reads `Role.getRoleName()` = `"F&B Staff"`.
+  * `CustomUserDetails` transforms this into authority `"ROLE_F&B STAFF"`.
+  * `SecurityConfig` and `FnbKdsController` check `hasAnyRole("FNB_STAFF", "MANAGER", "ADMIN")`, which requires authority `"ROLE_FNB_STAFF"`.
+  * String comparison fails: `"ROLE_F&B STAFF"` != `"ROLE_FNB_STAFF"`.
+- Status: Confirmed by static code review.
+- Impact on Demo:
+  * When demonstrating as `fbstaff@heavenstay.dev`, accessing `/api/v1/fnb/kds/**` yields **HTTP 403 Forbidden**.
+  * Workaround for demo: Managers (`manager@heavenstay.dev`) and Admins (`admin@heavenstay.dev`) CAN access KDS because their roles match `ROLE_MANAGER` and `ROLE_ADMIN`. However, the dedicated chef/kitchen staff persona fails.
+- Minimal Remediation:
+  * Normalize role authority in `CustomUserDetails.java`: if role is `"F&B Staff"`, map to `"ROLE_FNB_STAFF"`. Alternatively, add `"F&B STAFF"` to `SecurityConfig` and `FnbKdsController` role checks.
+
+[P1-02] DATABASE SCHEMA NOT AUTOMATICALLY CREATED IN DEV/PROD
+- Severity: P1 (High — Deployment & Live Demo Prerequisite)
+- Affected Module: Infrastructure / Database
+- Specific Locations:
+  * `05_Development/backend/src/main/resources/application.yml` (line 29: `ddl-auto: none`)
+- Direct Evidence:
+  * The backend has no Flyway/Liquibase dependency in `pom.xml`.
+  * In non-test profiles (`dev` and `prod`), `ddl-auto: none` prevents Hibernate from creating or modifying tables.
+  * If Spring Boot starts against a fresh SQL Server database without running `schema.sql` first, startup crashes with table missing errors.
+- Status: Confirmed by configuration review.
+- Impact on Demo:
+  * Live demo requires manual execution of `05_Development/database/schema.sql` on SQL Server prior to backend startup.
+- Minimal Remediation:
+  * Run `schema.sql` via `sqlcmd` on the target database, and set `SEED_DEMO_DATA=true` to populate initial stay data.
+
+[P2-01] VNPAY SANDBOX CREDENTIAL DEPENDENCY IN CHECKOUT
+- Severity: P2 (Medium — Flow Dependency)
+- Affected Module: M2 (Deposit) & M5 (Final Payment)
+- Specific Locations:
+  * `05_Development/backend/src/main/resources/application.yml` (lines 83-87)
+  * `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/VNPayDepositService.java`
+- Direct Evidence:
+  * If `VNPAY_HASH_SECRET` is blank and `app.vnpay.mock-auto-confirm=false`, VNPay URL generation fails.
+- Status: Confirmed by code review.
+- Impact on Demo:
+  * Online payment simulation fails unless `app.vnpay.mock-auto-confirm=true` is set in demo configuration.
+- Minimal Remediation:
+  * Ensure `VNPAY_MOCK_AUTO_CONFIRM=true` is set in the demo environment variables so VNPay payments auto-confirm seamlessly.
+
+[P2-02] DEFAULT ROLE PERMISSION MATRIX UNPOPULATED IN SCHEMA.SQL
+- Severity: P2 (Medium — Governance Sub-feature Dependency)
+- Affected Module: M6 (Admin / Permission Matrix)
+- Specific Locations:
+  * `05_Development/database/schema.sql` (line 1024: `dbo.RolePermission` table created without INSERT seeds)
+  * `05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/security/PermissionEvaluator.java`
+- Direct Evidence:
+  * `PermissionCatalog.java` defines the theoretical matrix, but `schema.sql` does not seed `dbo.RolePermission`.
+  * Endpoints relying exclusively on `@perm.has(...)` without role fallbacks deny access to non-admin users until Admin explicitly saves permissions in Screen 53.
+- Status: Confirmed by static code review.
+- Impact on Demo:
+  * Non-admin roles may experience permission denials on custom-delegated screens until matrix is populated.
+- Minimal Remediation:
+  * Seed standard role permissions or execute Screen 53 "Save Matrix" once during demo preparation.
+
+[P3-01] CROSS-ORIGIN RESOURCE SHARING (CORS) IN HOSTED TOPOLOGIES
+- Severity: P3 (Low — Configuration Prerequisite for Cloud Hosting)
+- Affected Module: Security / Network
+- Specific Locations:
+  * `05_Development/backend/src/main/resources/application.yml` (line 58)
+- Direct Evidence:
+  * `cors.allowed-origins` defaults to `http://localhost:5173,http://localhost:4173`.
+  * If frontend is hosted on Vercel (`https://*.vercel.app`), API calls fail CORS preflight unless `CORS_ALLOWED_ORIGINS` is configured.
+- Status: Confirmed by static code review.
+- Impact on Demo:
+  * Zero impact on local demo (`localhost`). Critical only if deploying frontend to Vercel and backend to a remote server.
+- Minimal Remediation:
+  * Set `CORS_ALLOWED_ORIGINS=*` or specify Vercel domain in deployment environment variables.
+
+--------------------------------------------------------------------------------
+5. DATABASE & DEPLOYMENT ASSESSMENT
+--------------------------------------------------------------------------------
+
+A. Database Schema & Migration Status:
+   - Authoritative Baseline: `05_Development/database/schema.sql` (42 tables).
+   - Compatibility: Entity classes across M1, M2, M3, M4, M5, and M6 match `schema.sql` column-for-column.
+   - Status of Untracked Migrations:
+     * `V003__m2_retreat_booking_schema_reconciliation.sql`: Redundant with `schema.sql` on a fresh database.
+     * `V004__m5_customer_review_category_ratings.sql`: Redundant with `schema.sql`.
+     * `V005__m6_audit_log.sql`: Redundant with `schema.sql`.
+     * `draft_m6_governance_and_delegation.sql`: Draft migration for incremental DB upgrades.
+   - Recommendation: For demo setup, apply `schema.sql` directly to a clean database. Do not run V003-V005 on a database initialized with `schema.sql`.
+
+B. Deployment Architecture Evaluation:
+   - Frontend:
+     * Technology: React 19 + TypeScript + Vite.
+     * Production artifact: Static bundle in `dist/` (HTML, JS, CSS).
+     * Hosting target: Fully compatible with Vercel, Netlify, Cloudflare Pages, or AWS S3.
+     * Config: `VITE_API_BASE_URL` pointing to backend host.
+   - Backend:
+     * Technology: Java 17 + Spring Boot 3.3.4 (Uber-JAR).
+     * Hosting target: Cannot be hosted directly on Vercel (Vercel is serverless/Node.js-only).
+     * Recommended hosting: Docker container on AWS ECS, GCP Cloud Run, Render, Railway, or local JVM.
+   - Database:
+     * Technology: Microsoft SQL Server 2022.
+     * Hosting target: AWS RDS for SQL Server, Azure SQL, Docker on cloud VM, or local SQL Server.
+
+--------------------------------------------------------------------------------
+6. DEMO READINESS GATE DECISION
+--------------------------------------------------------------------------------
+DECISION: CONDITIONALLY READY — SPECIFIC BLOCKERS REMAIN
+
+Justification:
+- All 6 core module screens and backend services are implemented, compiled, and covered by passing unit tests (41 FE tests, 406 BE tests).
+- A complete cross-module business flow (Booking -> Spa -> Dining -> Folio -> Checkout) is architecturally viable.
+- However, two practical blockers must be addressed before an end-to-end demo can succeed:
+  1. The F&B Staff role mismatch (`ROLE_F&B STAFF` vs `ROLE_FNB_STAFF`) prevents the dedicated chef persona from operating the KDS queue (workaround: Manager/Admin can demo KDS).
+  2. The target database must be provisioned with `schema.sql` and configured with demo seed flags (`app.seed.demo-data=true`, `app.vnpay.mock-auto-confirm=true`).
+
+--------------------------------------------------------------------------------
+7. TOP 5 ACTIONABLE NEXT STEPS (RANKED BY PRACTICAL IMPACT)
+--------------------------------------------------------------------------------
+1. Fix F&B Staff Role Mapping in CustomUserDetails:
+   Normalize role string in `CustomUserDetails.java` so that `"F&B Staff"` emits authority `"ROLE_FNB_STAFF"`. This unblocks `fbstaff@heavenstay.dev` for live KDS queue operations.
+2. Provision Test SQL Server Database with schema.sql:
+   Execute `05_Development/database/schema.sql` on a dedicated local or cloud SQL Server instance to establish the authoritative 42 tables.
+3. Configure Demo Environment Properties:
+   In `application-dev.yml` (or environment variables), set:
+   `SEED_DEMO_DATA=true` (seeds Eleanor Vance stay HSW-88192) and
+   `VNPAY_MOCK_AUTO_CONFIRM=true` (enables simulated deposit & folio payments).
+4. Reconcile Untracked Database Migrations:
+   Formally review and reconcile untracked migration files (`V003`, `V004`, `V005`, `draft_m6`) with the baseline commit history.
+5. Perform Guided End-to-End Rehearsal:
+   Execute a complete dry run: Customer logs in -> Books retreat -> Books spa -> Submits meal order -> Chef fulfills on KDS -> Receptionist views folio -> Completes checkout.
+
+--------------------------------------------------------------------------------
+8. STATUTORY AFFIRMATIONS
+--------------------------------------------------------------------------------
+- No source code or tests were modified in Phase 5.8.3.74.
+- No Git staging, committing, pushing, merging, or rebasing was performed.
+- No SQL statements (DDL/DML, migration, provisioning, or seed) were executed.
+- Database `HSWRMS` remains completely untouched.
+================================================================================
+

@@ -4,12 +4,15 @@ import { useDining } from '../../context/DiningContext';
 import type { DietaryMenuItem, MealPeriod, LocalizedString } from '../../types/dining';
 import { Search, Info, AlertCircle, CalendarCheck, Coffee } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { useCustomer } from '../../context/CustomerContext';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 
-export const DietaryMenuPage: React.FC = () => {
+const DietaryMenuPageForIdentity: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const { menuItems, getDietaryProjection } = useDining();
+  const { profile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -19,7 +22,7 @@ export const DietaryMenuPage: React.FC = () => {
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
 
-  const customerId = 'usr-cust-01';
+  const customerId = profile?.id ?? '';
   const dietaryInfo = getDietaryProjection(customerId);
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -267,4 +270,9 @@ export const DietaryMenuPage: React.FC = () => {
       )}
     </div>
   );
+};
+
+export const DietaryMenuPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  return <DietaryMenuPageForIdentity key={currentUser?.id ?? 'anonymous'} />;
 };

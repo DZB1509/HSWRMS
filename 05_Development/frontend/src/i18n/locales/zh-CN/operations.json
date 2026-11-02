@@ -33,7 +33,6 @@
     "masterDataManagement": "主数据管理",
     "securityGovernance": "安全与权限管理",
     "businessParameters": "业务参数设置",
-    "featureFlags": "功能开关",
     "permissionMatrix": "权限配置矩阵",
     "managerDelegation": "管理权委派",
     "sensitiveDataAuditLog": "敏感数据审计日志",
@@ -42,7 +41,7 @@
     "admin": "管理员",
     "delegatedAdministration": "委托行政权限",
     "businessParametersDelegated": "业务参数（已委托）",
-    "featureFlagsDelegated": "功能开关（已委托）"
+    "bookingHistory": "预订历史"
   },
   "payment": {
     "requiredDeposit": "预订所需定金",
@@ -598,8 +597,6 @@
     "bannerNotice": "本原型中的配置参数和权限规则仅在客户端状态下管理，用于操作演示。在生产环境中，授权策略和不可篡改的审计追踪由服务器端策略引擎强制执行。",
     "kpiParams": "业务参数",
     "kpiParamsSub": "已配置的运营阈值",
-    "kpiFlags": "功能开关",
-    "kpiFlagsSub": "当前启用的可选模块",
     "kpiDelegations": "经理委托",
     "kpiDelegationsSub": "授予经理的有效范围委托",
     "kpiAudit": "审计活动",
@@ -607,7 +604,6 @@
     "navTitle": "行政职能与治理模块",
     "screensScope": "官方管理员范围：屏幕 10–12 与 50–54、56",
     "descParams": "配置取消窗口、退款比例、定金比例及膳食预选截止规则。",
-    "descFlags": "安全切换可选模块，包括别墅点餐、在线加订水疗及法定报备程序。",
     "descMatrix": "检查跨角色权限分配，强制执行不可更改的隐私与最小权限边界。",
     "descDelegation": "向度假村运营经理（Sarah Jenkins）授予严格限定范围和时效的行政能力。",
     "descAudit": "审查涉及健康、身份及财务记录的按时间顺序记录的访问元数据。",
@@ -640,24 +636,6 @@
     "allowedRange": "允许范围",
     "lastUpdated": "更新于",
     "resetTitle": "重置为默认值"
-  },
-  "flags": {
-    "pageTitle": "模块化功能开关与操作切换",
-    "systemScope": "系统模块",
-    "pageSubtitle": "安全启用或停用受支持的宾客自助服务模块及法定监管报备自动流程。",
-    "safetyTitle": "安全与隐私边界不可切换",
-    "safetyDesc": "核心安全不变量（如RBAC数据最小化、双维度水疗匹配验证及结账结算检查）是强制性架构控制，已被特意排除在功能开关之外。",
-    "modularTitle": "可配置的功能模块",
-    "activeCount": "已启用",
-    "highImpact": "高影响",
-    "scope": "范围",
-    "lastModified": "修改时间",
-    "immutableTitle": "不可更改的核心控制（受保护架构）",
-    "alwaysEnforced": "始终强制执行",
-    "confirmTitle": "确认高影响功能开关变更",
-    "confirmPrompt": "您即将更改以下模块的运营状态：",
-    "confirmAuditNote": "此状态切换将立即在原型中生效，并向敏感治理审计日志添加一条带时间戳的事件。",
-    "applyToggle": "应用状态切换"
   },
   "matrix": {
     "pageTitle": "基于角色的访问控制（RBAC）权限矩阵",
@@ -792,24 +770,6 @@
         "desc": "根据2020年居住法每晚自动生成暂住报告的计划时间。"
       }
     },
-    "flags": {
-      "extraSpaOnline": {
-        "name": "Customer Online Extra Spa Booking",
-        "desc": "Allows checked-in Customers to book supplementary Spa treatments directly from their portal (in addition to Receptionist manual booking)."
-      },
-      "extraFnbOnline": {
-        "name": "Customer In-Villa Dining A-la-carte Ordering",
-        "desc": "Allows Customers to order extra a-la-carte nourishing dishes and wellness tonics directly charged to Villa Folio."
-      },
-      "residenceExport": {
-        "name": "Nightly Police Residence Declaration Batch",
-        "desc": "在计划的导出时间自动汇总每日客户入住登记身份记录（法定的暂住申报职责依然强制有效）。"
-      },
-      "reviewInvites": {
-        "name": "Automated Post-Checkout Review Invitations",
-        "desc": "Triggers optional post-checkout wellness review and rating prompt to Customer after invoice settlement and departure."
-      }
-    },
     "permissions": {
       "categories": {
         "experience": "Customer Retreat Experience",
@@ -903,10 +863,6 @@
         "name": "Configure System Business Parameters",
         "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
       },
-      "manageFlags": {
-        "name": "Manage Modular Feature Flags",
-        "desc": "Toggle optional customer self-service modules and automated compliance routines."
-      },
       "viewMatrix": {
         "name": "Inspect System RBAC Permission Matrix",
         "desc": "Review cross-role functional capability allocations and security boundary definitions."
@@ -944,7 +900,6 @@
         "folioSettlementRecorded": "Recorded VNPay terminal transaction reference for final checkout folio settlement.",
         "delegationGranted": "Granted temporary parameter configuration delegation to Manager Sarah Jenkins.",
         "residenceBatchExported": "Generated Law on Residence compliance export package (24 active resident records).",
-        "featureFlagToggled": "Updated feature flag status to ENABLED with global customer scope.",
         "parameterUpdated": "Successfully updated business parameter value.",
         "permissionUpdated": "Successfully updated permission matrix capability.",
         "delegationCreated": "Successfully created limited delegation record for Manager.",
@@ -995,7 +950,7 @@
     "reactivateAccount": "重新激活账户",
     "clearanceSectionTitle": "RBAC权限范围与数据最小化控制",
     "scopeAdminTitle": "系统全面管理权限",
-    "scopeAdminDesc": "有权配置业务参数、模块化功能开关、RBAC矩阵、权限委派及敏感安全审计日志。",
+    "scopeAdminDesc": "有权管理基础主数据（Master Data）、业务与运营参数、RBAC权限矩阵、管理委派及敏感安全审计日志。",
     "scopeAdminMin": "不接触客户原始医疗诊断或支付凭证秘钥。",
     "scopeManagerTitle": "运营管理与分析报表权限",
     "scopeManagerDesc": "有权查看高管收入报表、别墅入住率统计、理疗师利用率及系统综合运行健康度。",
@@ -1011,7 +966,8 @@
     "scopeFbMin": "后厨人员仅能查看食品过敏原标签；通用医疗病史完全不可见（BR-03）。",
     "suspendSuccess": "员工账户已成功暂停。",
     "reactivateSuccess": "员工账户已成功重新激活。",
-    "notFound": "未找到员工账户记录。"
+    "notFound": "未找到员工账户记录。",
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
   },
   "masterData": {
     "title": "主数据目录管理",

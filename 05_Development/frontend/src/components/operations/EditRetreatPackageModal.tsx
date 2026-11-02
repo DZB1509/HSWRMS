@@ -1,0 +1,202 @@
+import React, { useState, useEffect } from 'react';
+import { X, Package, Moon, DollarSign, Target, Utensils, Sparkles, FileText } from 'lucide-react';
+import type { RetreatPackageItem, SpaStatus } from '../../types/spaManagement';
+import { formatVND } from '../../i18n';
+import { Button } from '../common/Button';
+
+interface EditRetreatPackageModalProps {
+  isOpen: boolean;
+  pkg: RetreatPackageItem | null;
+  onClose: () => void;
+  onSave: (updated: RetreatPackageItem) => void;
+}
+
+export const EditRetreatPackageModal: React.FC<EditRetreatPackageModalProps> = ({
+  isOpen,
+  pkg,
+  onClose,
+  onSave,
+}) => {
+  const [formData, setFormData] = useState<RetreatPackageItem | null>(null);
+  const [priceInput, setPriceInput] = useState<string>('');
+
+  useEffect(() => {
+    if (pkg) {
+      setFormData({ ...pkg });
+      setPriceInput(String(pkg.basePrice || 0));
+    }
+  }, [pkg]);
+
+  if (!isOpen || !formData) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <div className="hsw-modal-backdrop" onClick={onClose}>
+      <div
+        className="hsw-modal-card"
+        style={{ maxWidth: '800px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="hsw-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              backgroundColor: 'rgba(197, 160, 89, 0.15)', color: '#9E7A24',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Package size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>Chỉnh Sửa Gói Nghỉ Dưỡng & Trị Liệu</h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Mã Gói: <strong>{formData.packageCode}</strong> — HSWRMS Retreat Packages Master V3
+              </p>
+            </div>
+          </div>
+          <button type="button" className="hsw-modal-close-btn" onClick={onClose} aria-label="Đóng">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                Tên Gói Trị Liệu / Nghỉ Dưỡng *
+              </label>
+              <input
+                type="text"
+                className="hsw-input"
+                value={formData.packageName}
+                onChange={(e) => setFormData({ ...formData, packageName: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                <Target size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+                Mục Tiêu Sức Khỏe (Wellness Goal) *
+              </label>
+              <input
+                type="text"
+                className="hsw-input"
+                value={formData.wellnessGoal}
+                onChange={(e) => setFormData({ ...formData, wellnessGoal: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                <Moon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+                Thời Lượng Lưu Trú (Đêm) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                className="hsw-input"
+                value={formData.durationNights}
+                onChange={(e) => setFormData({ ...formData, durationNights: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                <DollarSign size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+                Giá Gói Trọn Gói (VND/khách) *
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="hsw-input"
+                value={priceInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPriceInput(val);
+                  const parsed = Number(val.replace(/[^0-9]/g, ''));
+                  setFormData({ ...formData, basePrice: parsed });
+                }}
+                placeholder="Nhập giá gói (VNĐ)..."
+                required
+              />
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                {formatVND(formData.basePrice)} / khách / gói
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+              <Sparkles size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+              Chi Tiết Quyền Lợi Trị Liệu (Mapped Treatment IDs & Sessions)
+            </label>
+            <textarea
+              className="hsw-input"
+              rows={4}
+              value={formData.includedTreatments}
+              onChange={(e) => setFormData({ ...formData, includedTreatments: e.target.value })}
+              placeholder="VD: SPA-MASS-03 (02 buổi - 75p), SPA-BODY-01 (01 buổi - 45p)..."
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+              <Utensils size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+              Kế Hoạch Dinh Dưỡng Đi Kèm (F&B Plan Module 4)
+            </label>
+            <textarea
+              className="hsw-input"
+              rows={3}
+              value={formData.dietaryPlan}
+              onChange={(e) => setFormData({ ...formData, dietaryPlan: e.target.value })}
+              placeholder="Chế độ ăn Plant-based, nước ép giải độc, quy định số bữa ăn..."
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#B7791F' }}>
+              <FileText size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '4px' }} />
+              Quy Tắc Tính Phí Phát Sinh (Extra Charge Policy - Rule 21)
+            </label>
+            <textarea
+              className="hsw-input"
+              rows={2}
+              value={formData.extraChargePolicy || ''}
+              onChange={(e) => setFormData({ ...formData, extraChargePolicy: e.target.value })}
+              placeholder="ĐÃ BAO GỒM các buổi quy định. Khách đặt thêm ngoài danh mục hoặc số buổi tính Extra ghi nợ Folio..."
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Trạng Thái:</label>
+            <select
+              className="hsw-input"
+              style={{ width: '180px' }}
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as SpaStatus })}
+            >
+              <option value="ACTIVE">Hoạt động (ACTIVE)</option>
+              <option value="INACTIVE">Tạm ngừng (INACTIVE)</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <Button variant="secondary" type="button" onClick={onClose}>
+              Hủy
+            </Button>
+            <Button variant="primary" type="submit">
+              Lưu Gói Nghỉ Dưỡng
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

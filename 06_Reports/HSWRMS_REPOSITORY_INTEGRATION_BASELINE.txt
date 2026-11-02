@@ -1,0 +1,440 @@
+================================================================================
+HSWRMS — REPOSITORY INTEGRATION BASELINE & AUDIT REPORT
+PRE-MERGE CONSOLIDATION, ARCHITECTURAL RECONCILIATION & MERGE PLANNING
+================================================================================
+Date: 2026-10-28
+Operating Mode: STRICTLY READ-ONLY AUDIT (Zero merges, zero commits, zero code
+                mutations, zero database executions, zero deployment triggers)
+Authoritative Integration Workspace:
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Isolated Reference Snapshot (Workspace B - Do Not Merge Directly):
+  E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-bo-sung-module-4\HSWRMS-audit-all-modules
+================================================================================
+
+1. WORKSPACE & REPOSITORY TOPOLOGY VERIFICATION
+--------------------------------------------------------------------------------
+A. Workspace Topology:
+   - Command Working Directory:
+     E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+   - Git Top-Level Directory:
+     E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/HSWRMS-audit-all-modules
+   - Git Common Directory (.git):
+     E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/Fall26_ISP392_IS2005_G1/.git/worktrees/HSWRMS-audit-all-modules
+   - Topology Nature:
+     The authoritative workspace is an active Git worktree linked to the primary
+     repository repository at E:/FU_Learning/5.Spring2025_Semester5/ISP392_Ver2/Fall26_ISP392_IS2005_G1.
+   - Reference Workspace B (HSWRMS-audit-bo-sung-module-4):
+     Verified as an extracted unlinked snapshot directory. Prior audit
+     (Phase 5.8.3.51) established that Workspace B possesses a severed .git
+     pointer and contains architectural and schema drift (ingredient inventory,
+     premature folio billing). Per instructions, Workspace B is strictly
+     excluded from Git operations and will not be used as a merge source.
+
+B. Active Branch & HEAD State:
+   - Checked-Out Branch: feature/hswrms-m1-m6-integration
+   - Current HEAD Commit: 46ab465a1dbfbccfd027d6fa4f4eaab0e9818998
+   - Commit Subject: docs(audit): add M1-M6 integration and provisioning evidence
+   - Tracked Upstream: isp-origin/feature/hswrms-m1-m6-integration
+   - Synchronization State: Exactly in sync with remote ref (ahead 0, behind 0).
+
+
+2. WORKING TREE STATE PRE-FETCH AND POST-FETCH
+--------------------------------------------------------------------------------
+A. Staging Area State:
+   - Staged Files: 0 files (Index is completely clean).
+
+B. Tracked Uncommitted Modifications (13 files):
+   These changes represent the verified deliverables of Phases 5.8.3.47 to
+   5.8.3.62 (KDS implementation, boundary port integration, M6 governance,
+   and test schema alignment). These MUST be preserved:
+   1. 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java
+      (+9 lines: S38/S39 KDS authority mapping and permissions)
+   2. 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderEntity.java
+      (+19 lines: JPA column mappings for kitchen state tracking)
+   3. 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderRepository.java
+      (+12 lines: KDS kitchen queue query methods)
+   4. 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/AdminDashboardController.java
+      (+1 line, -1 line: metrics alignment)
+   5. 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/PermissionCatalog.java
+      (+1 line: S38/S39 kitchen management permission registration)
+   6. 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/AdminControllersSecurityTest.java
+      (+104 lines: Regression tests for S38/S39 role access)
+   7. 05_Development/database/README.md
+      (+92 lines, -18 lines: Database provisioning guidelines and schema manifest)
+   8. 05_Development/database/schema.sql
+      (+95 lines, -6 lines: Alignment of 42-table schema baseline)
+   9. 05_Development/frontend/src/context/DiningContext.tsx
+      (+244 lines, -28 lines: Real-time KDS state synchronization)
+   10. 05_Development/frontend/src/pages/fb/FnbDashboardPage.tsx
+      (+72 lines, -12 lines: Kitchen queue metrics and live updates)
+   11. 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+      (+100 lines, -4 lines: Order preparation progression)
+   12. 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx
+      (+61 lines, -1 lines: Batch prep list rendering)
+   13. 05_Development/frontend/src/types/dining.ts
+      (+7 lines: TypeScript definitions for KDS order lifecycle)
+   Net Tracked Diff: 13 files changed, 748 insertions(+), 70 deletions(-).
+
+C. Untracked Files and Artifacts (31 entries):
+   - M4 Backend Production Code:
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/controller/
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/dto/
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MealOrderItemEntity.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/entity/MenuItemEntity.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/integration/
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MealOrderItemRepository.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/repository/MenuItemRepository.java
+     * 05_Development/backend/src/main/java/com/heavenstay/hswrms/m4fnb/service/
+   - M4 Backend Unit & Integration Tests:
+     * 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/controller/
+     * 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/integration/
+     * 05_Development/backend/src/test/java/com/heavenstay/hswrms/m4fnb/service/
+     * 05_Development/backend/src/test/resources/schema.sql
+   - Database Migrations & Preflight Payloads:
+     * 05_Development/database/generated/HSWRMS_TEST_schema.sql
+     * 05_Development/database/migrations/V003__m2_retreat_booking_schema_reconciliation.sql
+     * 05_Development/database/migrations/V004__m5_customer_review_category_ratings.sql
+     * 05_Development/database/migrations/V005__m6_audit_log.sql
+     * 05_Development/database/migrations/draft_m6_governance_and_delegation.sql
+   - M4 Frontend Client & Hooks:
+     * 05_Development/frontend/src/features/m4-fnb/api/fnbApi.ts
+     * 05_Development/frontend/src/features/m4-fnb/hooks/useKdsPolling.ts
+   - Phase Audit & Readiness Reports (Phases 5.8.3.47 through 5.8.3.62):
+     * 16 detailed txt audit reports documenting residual risk, authorization preflight,
+       KDS architecture, selective integration, and provisioning safety.
+
+D. Working Tree Status After Fetch:
+   - Exactly identical to pre-fetch state. Git fetch updated only remote-tracking
+     references (refs/remotes/isp-origin/*). Zero files were modified, overwritten,
+     or staged.
+
+
+3. REMOTE CONFIGURATION & FETCH EXECUTION AUDIT
+--------------------------------------------------------------------------------
+A. Configured Git Remotes:
+   1. Remote 'isp-origin':
+      - Fetch URL: https://gitlab.com/manhnc2/fal26-isp392-is2005-g1.git
+      - Push URL:  https://gitlab.com/manhnc2/fal26-isp392-is2005-g1.git
+      - Refspec:   +refs/heads/*:refs/remotes/isp-origin/*
+      - Role:      Authoritative team collaboration repository (GitLab).
+   2. Remote 'origin':
+      - Fetch URL: https://github.com/DZB1509/HSWRMS.git
+      - Push URL:  https://github.com/DZB1509/HSWRMS.git
+      - Refspec:   +refs/heads/*:refs/remotes/origin/*
+      - Role:      Personal / secondary GitHub mirror.
+
+B. Fetch Execution Results:
+   - Command: git fetch isp-origin
+     Result: SUCCESS (Exit Code 0).
+     Updated Remote Refs:
+       * d173542..52a6bd9  dat-nguyen-gia -> isp-origin/dat-nguyen-gia
+       * 7829f12..127269a  thao-product   -> isp-origin/thao-product
+       * a28cec9..9161888  vinhpt1        -> isp-origin/vinhpt1
+   - Command: git fetch origin
+     Result: SUCCESS (Exit Code 0).
+     Status: All references up-to-date (origin/main at e006d02).
+   - Security Audit:
+     Zero credentials, passwords, personal access tokens, or basic auth secrets
+     are stored in Git remote URLs or git configuration.
+
+
+4. COMPLETE BRANCH & COMMIT TOPOLOGY MAP
+--------------------------------------------------------------------------------
+A. Local Branches:
+   - feature/hswrms-m1-m6-integration (HEAD, 46ab465):
+     The unified integration baseline. 41 commits ahead of isp-origin/main.
+   - NTDatZB (ff9f44b):
+     Checked out in primary worktree Fall26_ISP392_IS2005_G1. 100% incorporated
+     into integration branch (ahead 30, behind 0).
+   - audit-all-modules (c6fc509):
+     Local audit branch. Behind feature branch by 18 commits; 1 commit ahead
+     (c6fc509) which is bit-for-bit identical to 42aacd7 already in feature branch.
+   - backup-main-before-hswrms (4bd3b35):
+     Legacy backup branch. 82 behind feature branch.
+   - main (e006d02):
+     Local tracking of origin/main. 55 commits behind feature branch.
+   - sync/global-ui-freeze (b88291d):
+     UI freeze branch. Fully merged into isp-origin/main (commit 582cab3).
+   - test-m1-m3 (f656469):
+     Early exploratory branch from 2026-10-12. Superseded by main.
+
+B. Remote-Tracking Branches vs feature/hswrms-m1-m6-integration:
+   +---------------------------------------+---------------+-----------------+----------------------------------------+
+   | Remote-Tracking Branch                | Ahead of Feat | Behind Feat (New| Commit HEAD & Summary                  |
+   |                                       | (Feat Ahead)  | Commits to Audit|                                        |
+   +---------------------------------------+---------------+-----------------+----------------------------------------+
+   | isp-origin/main                       | 41            | 0               | 582cab3 Merge sync/global-ui-freeze    |
+   | origin/main                           | 55            | 0               | e006d02 fix: align retreat cards       |
+   | isp-origin/NTDatZB                    | 30            | 0               | ff9f44b Reconcile treatment schema     |
+   | isp-origin/DucHoangM1                 | 31            | 3               | 1d9750e docs(m1): update handoff       |
+   | isp-origin/dat-nguyen-gia             | 41            | 8               | 52a6bd9 fix bug db cannot save customer|
+   | isp-origin/thao-product               | 31            | 55              | 127269a refactor into MealOrderEntity  |
+   | isp-origin/vinhpt1                    | 31            | 19              | 9161888 modify villa room config       |
+   | isp-origin/vinhpt                     | 82            | 3               | 1c359fc Update code to branch vinhpt   |
+   | isp-origin/XH                         | 41            | 3               | 2dfb34e test: configure dbo schema     |
+   | isp-origin/XH4                        | 82            | 6               | e1f2ef5 Update project documentation   |
+   | isp-origin/backup-main-before-hswrms  | 82            | 4               | 4bd3b35 Add README files for folders   |
+   +---------------------------------------+---------------+-----------------+----------------------------------------+
+
+
+5. INVENTORY OF UNINTEGRATED COMMITS & CODE CHANGES
+--------------------------------------------------------------------------------
+A. Branch isp-origin/DucHoangM1 (Module 1 — Identity, SSO, Health Deletion):
+   - Commits Pending Integration (3 commits):
+     * 1d9750e (2026-10-21): docs(m1): update handoff for 2026-10-21 finalization
+     * 4f2db9b (2026-10-20): feat(m1): Facebook SSO flow, SSO ticket/linking, email
+       delivery adapters, frontend auth updates
+     * bc9100a (2026-10-20): feat(m1): Screen #9 health-data deletion request
+       (customer_profile ownership, contract 5.4)
+   - Scope of Changes:
+     * Backend: HealthDataDeletionRequestController, HealthDataDeletionRequestService,
+       HealthDataDeletionRequestEntity, Facebook SSO provider, SsoLinkRequest DTOs,
+       SsoTicketService, SsoUserInfoDiagnosticsService, and comprehensive unit tests.
+     * Database: _reviewed_m1_deletion_request_customer_profile.sql (migration).
+     * Frontend: SsoCallbackPage.tsx, authApi.ts, LoginPage.tsx, RegisterPage.tsx.
+   - Conflict Assessment:
+     * In-memory 3-way merge test (`git merge-tree`) shows EXACTLY 0 CONFLICTS.
+     * Clean, highly modular, fully isolated to M1 package. Ready for merge.
+
+B. Branch isp-origin/dat-nguyen-gia (Module 2 — Retreat Booking & Receptionist Operations):
+   - Commits Pending Integration (8 commits, 3 critical new bugfixes):
+     * 52a6bd9 (2026-10-27 22:21): fix bug db can not save customer information
+     * aacfd2f (2026-10-26 22:58): fix bug customer can not book room and added a
+       feature for receptionists to check booking history
+     * 3cc1a46 (2026-10-26 11:57): update code
+     * d173542 (2026-10-19): fix(database): fix UTF-8 encoding across all seed scripts
+     * d2d36de (2026-10-19): feat(database): execute schema and seeds into SQL Server
+     * 4bd4ecd (2026-10-19): feat(m2-booking): implement full Module 2 backend/frontend
+     * 1619ebe (2026-10-18): feat(database): import database schema from vinhpt1
+     * 230dbfe (2026-10-18): docs(m2): add detailed implementation plan for module 2
+   - Scope of Changes:
+     * Receptionist Operations: ReceptionistBookingResponse, ReceptionistBookingsPage.tsx,
+       expanded ReceptionistOperationService for booking history inspection.
+     * Persistence Bugfixes: CustomerIdentityPort, JdbcCustomerIdentityAdapter to fix
+       customer profile auto-creation upon booking.
+     * Payment: Introduced PaymentTransaction entity in com.heavenstay.hswrms.m2booking.
+   - Conflict Assessment:
+     * Direct 3-way merge test reveals 123 CONFLICT MARKERS across SecurityConfig,
+       RetreatBookingController, RetreatBookingService, and schema.sql.
+     * Root Cause: Earlier M2 baseline was already adapted into feature branch via
+       commit 8f90ab0. Member Dat continued commit progression on a pre-integration base.
+     * Merge Strategy: DO NOT blanket merge. Must surgically port the new fixes from
+       commits 3cc1a46, aacfd2f, and 52a6bd9.
+
+C. Branch isp-origin/vinhpt1 (Module 2/6 — Villa Inventory, Admin Delegation, Modals):
+   - Commits Pending Integration (19 commits):
+     * 9161888 (2026-10-28 09:47): modify villa room configuration
+     * b34357b (2026-10-27 19:33): comit
+     * Earlier commits (a28cec9 down to 0141519): early incremental commits.
+   - Scope of Changes in Latest Commits:
+     * Backend: VillaInventoryController.java (+77 lines), updates to M6DataInitializer.
+     * Frontend: EditVillaModal.tsx (+567 lines), VillaManagementPage.tsx (+277 lines),
+       AdminDelegationPage.tsx (+399 lines).
+   - Conflict Assessment:
+     * Direct 3-way merge test reveals 236 CONFLICT MARKERS across 20+ shared files!
+     * Root Cause: Branch vinhpt1 merged early DucHoangM1 on Oct 18 and diverged heavily
+       from the central design token system and SecurityConfig.
+     * Merge Strategy: DO NOT blanket merge. Must cherry-pick/port only the new features:
+       VillaInventoryController.java, EditVillaModal.tsx, and VillaManagementPage room config.
+
+D. Branch isp-origin/thao-product (Module 4 — F&B Dining & KDS):
+   - Commits Pending Integration (55 commits):
+     * Latest Commits on 2026-10-28: 127269a, cc6f8ac, c9323cf, d61363b, 1394e23,
+       886e212, 93d6114.
+   - Scope of Changes:
+     * Introduced V006 and V007 migrations (ingredient inventory, batch FEFO).
+     * Refactored into MealOrderEntity.
+     * Premature folio billing on PENDING state.
+   - Conflict & Readiness Assessment:
+     * Direct 3-way merge test reveals 18 CONFLICT MARKERS and introduces P0 stop-ship
+       architectural violations (audited in Phase 5.8.3.51).
+     * Selective Integration Already Performed in Workspace A:
+       Phases 5.8.3.50, 5.8.3.53, and 5.8.3.55 already extracted clean KDS, booking
+       boundary port, and strict DELIVERED billing rules into Workspace A uncommitted tree.
+     * Decision: REJECT blanket merge of thao-product. Workspace A implementation is superior.
+
+E. Branch isp-origin/XH (Module 5 — Billing, Folio, Invoicing, Analytics):
+   - Commits Pending Integration: 2dfb34e, 62e72e6, ebaddc7.
+   - Scope & Status:
+     * Module 5 was already adapted and stabilized in feature/hswrms-m1-m6-integration via
+       commits f7610f9, 6e71a90, f269183, 06a3943, and 42aacd7.
+     * Direct merge would produce 182 conflict markers due to refactored DTOs and repositories.
+     * Decision: XH functional scope is ALREADY 100% INTEGRATED into the feature branch.
+
+
+6. ARCHITECTURAL INVENTORY ACROSS MODULES M1–M6
+--------------------------------------------------------------------------------
+A. Frontend Layer:
+   - Tooling: Vite 8.3.0, React 19.2.8, TypeScript ~6.0.2, React Router DOM 7.18.4.
+   - Routing: Comprehensive central router at app/router/index.tsx with 8 distinct
+     functional layouts and role guards (Customer, Receptionist, Therapist, F&B Staff,
+     Manager, Admin).
+   - API Client: Standardized fetch client in api/client/apiClient.ts supporting JWT
+     injection, unified error responses (AppApiError), and dynamic VITE_API_BASE_URL.
+   - Design System: Global CSS token system, responsive layouts, i18n support
+     (en, vi, fr, ja, zh-CN).
+
+B. Backend Layer (Modular Monolith):
+   - Runtime: Spring Boot 3.3.4, Java 17, Microsoft SQL Server JDBC Driver (mssql-jdbc).
+   - Security: Stateless JWT authentication (io.jsonwebtoken 0.12.6), Spring Security 6,
+     custom JwtAuthenticationFilter, PermissionEvaluator (@perm.has(code, action)).
+   - Architecture: Clean package-by-feature modular monolith (common, config, integration,
+     m1identity, m2booking, m3spa, m4fnb, m5billing, m6admin).
+
+C. Database Layer (SQL Server):
+   - Authoritative Baseline: 05_Development/database/schema.sql defining 42 tables in `dbo`.
+   - Datasource: Configured in application.yml with externalized environment variables
+     (DB_HOST, DB_PORT, DB_NAME=HSWRMS, DB_USERNAME, DB_PASSWORD).
+   - Test Database Payload: Generated dedicated script HSWRMS_TEST_schema.sql (46 KB)
+     pre-validated for clean, safe idempotency against testdb/HSWRMS_TEST.
+
+D. Inter-Module Integration Status:
+   - M1 -> M2: Customer authentication & profile linked to retreat booking.
+   - M2 -> M3: Spa session scheduling strictly bound to retreat booking stay dates.
+   - M2 -> M4: BookingContextPort validates stay dates before meal orders can be placed.
+   - M2 -> M5: Retreat booking deposit and room charges posted to guest Folio.
+   - M3 -> M5: Extra spa treatments posted to guest Folio via DefaultBillingAdapter.
+   - M4 -> M5: A la carte meal charges posted to Folio ONLY upon DELIVERED status.
+   - M6 -> All: Central PermissionCatalog enforces permission checks (S01 to S53);
+     AuditLog records sensitive operations across all modules.
+
+E. Test Infrastructure:
+   - Backend: 44 test classes spanning all modules (Surefire verified in prior phases).
+   - Frontend: 9 test suites covering KDS queue safety, billing calculations, and M6 admin APIs.
+
+
+7. RISK & DEPENDENCY MATRIX
+--------------------------------------------------------------------------------
+1. Risk R-01: Working Tree Uncommitted Data Loss
+   - Description: Workspace A holds 13 modified and 31 untracked files representing
+     Phases 5.8.3.50–62 (KDS, booking boundary, M6 authorization). Any switch/reset/clean
+     would cause irreversible loss of verified work.
+   - Mitigation: Create a baseline commit on feature/hswrms-m1-m6-integration BEFORE
+     any cherry-pick or merge operations.
+
+2. Risk R-02: PaymentTransaction Dual-Entity Collision (OI-04)
+   - Description: Both m2booking (dat-nguyen-gia) and m5billing (XH/integration)
+     define JPA entities mapping table `dbo.PaymentTransaction`.
+   - Impact: Potential Hibernate entity duplicate registration or mapping mismatch.
+   - Mitigation: Maintain m5billing's PaymentTransactionEntity as the single authoritative
+     JPA entity for dbo.PaymentTransaction. Provide an M2 payment port/service to record
+     deposits without duplicating the entity.
+
+3. Risk R-03: Merge Conflict Explosion on Unmanaged Branch Merges
+   - Description: Attempting `git merge` on vinhpt1 (236 conflicts), dat-nguyen-gia
+     (123 conflicts), or XH (182 conflicts) will destroy codebase stability.
+   - Mitigation: Strictly prohibit `git merge <branch>`. Apply selective surgical
+     cherry-picks and manual reconciliation only.
+
+4. Risk R-04: Ingredient Inventory Schema Drift (thao-product / Workspace B)
+   - Description: thao-product introduces tables Ingredient, IngredientBatch, and
+     MenuItemIngredient (V007), violating the project rule to use availability_status only.
+   - Mitigation: Keep Workspace A's clean MenuItem availability model. Reject V006/V007.
+
+
+8. STEP-BY-STEP MERGE & INTEGRATION PLAN
+--------------------------------------------------------------------------------
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| Step | Source Branch / Commit    | Scope of Changes to Take          | Projected Conflicts| Verification Test Suite               |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| 0    | Working Tree Baseline     | Commit uncommitted M4 KDS, M6     | None (Local)       | mvn test -Dtest=Fnb*,Admin*           |
+|      | (HSWRMS-audit-all-modules)| governance & test schema files    |                    | npm run build                         |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| 1    | isp-origin/DucHoangM1     | Health data deletion (bc9100a),   | 0 conflicts        | mvn test -Dtest=*Sso*,*Deletion*      |
+|      | (bc9100a, 4f2db9b)        | Facebook SSO & ticket flow        | (Verified in tree) | npm run build                         |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| 2    | isp-origin/dat-nguyen-gia | Reconcile new M2 fixes:           | Manageable         | mvn test -Dtest=RetreatBooking*,      |
+|      | (3cc1a46, aacfd2f, 52a6bd9| 1. Customer save bugfix (52a6bd9) | (Surgical port,    |                 Receptionist*         |
+|      |                           | 2. Booking room fix (aacfd2f)     | avoid blanket merge| npm run build                         |
+|      |                           | 3. ReceptionistBookingsPage.tsx   | of 123 conflicts)  |                                       |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| 3    | isp-origin/vinhpt1        | Selective port of villa features: | High if unmanaged; | mvn test -Dtest=Villa*,Admin*         |
+|      | (9161888, b34357b)        | 1. VillaInventoryController.java  | 0 in isolation     | npm run build                         |
+|      |                           | 2. EditVillaModal.tsx             | (Port new files)   |                                       |
+|      |                           | 3. VillaManagementPage room config|                    |                                       |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| 4    | isp-origin/thao-product   | Retain Workspace A KDS logic.     | Reconcile text only| mvn test -Dtest=MealOrder*,Fnb*       |
+|      | (selective content only)  | Optionally import Vietnamese dish |                    | npm run build                         |
+|      |                           | titles & Retreat Package meal data|                    |                                       |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+| 5    | Consolidated Baseline     | Full cross-module test & build:   | None               | mvn clean test (All 44+ test classes) |
+|      |                           | Backend + Frontend + Mock E2E     |                    | npm run build && npm run lint         |
++------+---------------------------+-----------------------------------+--------------------+---------------------------------------+
+
+
+9. TEST GAPS & DEPLOYMENT GAPS
+--------------------------------------------------------------------------------
+A. Testing Gaps:
+   1. Live Database Integration: Tests currently run primarily against H2 and
+      mock repositories. Real SQL Server test execution awaits approved execution
+      of HSWRMS_TEST_schema.sql.
+   2. Cross-Module E2E Flow Automation: Lack of automated Cypress or Playwright
+      integration tests exercising the full guest journey:
+      Registration -> Retreat Booking -> Deposit -> Check-in -> Spa Booking ->
+      Dining Order -> Folio Charge -> Final Payment -> Review.
+   3. Frontend Coverage for M1/M2: Existing frontend tests focus on M4, M5, and M6.
+      M1 Auth forms and M2 Booking forms lack unit test specs.
+
+B. Deployment Gaps:
+   1. Vercel SPA Client Routing: 05_Development/frontend lacks a root `vercel.json`
+      specifying rewrite rules (`"rewrites": [{"source": "/(.*)", "destination": "/index.html"}]`),
+      which is required to prevent 404 errors on deep routes in production.
+   2. Backend Production Containerization: Missing multi-stage Dockerfile and
+      docker-compose orchestration for containerized cloud deployment.
+   3. CORS Production Profile: application.yml currently allows localhost:5173
+      and localhost:4173; needs production Vercel domain injection via env var.
+
+
+10. ACTION ITEM PRIORITIZATION (P0 / P1 / P2)
+--------------------------------------------------------------------------------
+A. Priority P0 (Immediate Pre-Merge Blockers):
+   - [P0-1] Commit working tree baseline on feature/hswrms-m1-m6-integration to
+            guarantee zero data loss of Phases 5.8.3.50–62 deliverables.
+   - [P0-2] Merge DucHoangM1 (bc9100a, 4f2db9b) for Screen #9 Health Deletion and SSO.
+   - [P0-3] Surgically port M2 fixes from dat-nguyen-gia (52a6bd9, aacfd2f, 3cc1a46).
+   - [P0-4] Reconcile PaymentTransaction entity ownership between M2 and M5.
+   - [P0-5] Authorize and execute test database provisioning on HSWRMS_TEST.
+
+B. Priority P1 (Essential Integration & Demo Quality):
+   - [P1-1] Port VillaInventoryController and EditVillaModal from vinhpt1.
+   - [P1-2] Add vercel.json rewrite configuration to 05_Development/frontend.
+   - [P1-3] Run full Maven test suite and frontend typecheck/build.
+   - [P1-4] Conduct manual E2E verification of customer journey through all 6 modules.
+
+C. Priority P2 (Polishing & Handover Deliverables):
+   - [P2-1] Containerize backend with production Dockerfile.
+   - [P2-2] Establish Playwright E2E smoke tests for demo rehearsals.
+   - [P2-3] Finalize multi-language translations (vi, en) across all screens.
+
+
+11. ACTIONS REQUIRING EXPLICIT USER APPROVAL
+--------------------------------------------------------------------------------
+Before initiating Phase 2 (Integration Execution), the following actions require
+explicit approval from the user:
+  [ ] APPROVAL 1: Stage and commit the 13 modified and 31 untracked files in
+      HSWRMS-audit-all-modules working tree to lock in the Phase 5.8.3 baseline.
+  [ ] APPROVAL 2: Execute git merge of DucHoangM1 (verified 0 conflicts).
+  [ ] APPROVAL 3: Authorize surgical cherry-pick/porting of dat-nguyen-gia commits
+      (52a6bd9, aacfd2f, 3cc1a46) and reconcile PaymentTransaction entity.
+  [ ] APPROVAL 4: Authorize porting of vinhpt1 villa room configuration assets.
+  [ ] APPROVAL 5: Authorize controlled execution of HSWRMS_TEST_schema.sql
+      against SQL Server test instance for integration test verification.
+
+
+12. FINAL GATE RECOMMENDATION & DECISION
+--------------------------------------------------------------------------------
+FINAL DECISION: >>> CONDITIONALLY READY <<<
+
+Justification:
+The repository topology is fully verified, remotes are clean and successfully fetched,
+branch differences and commit histories are rigorously audited, and conflict risks
+are precisely identified.
+
+Advancement to the integration phase is approved SUBJECT TO obtaining explicit
+user authorization for Step 0 (committing the working tree baseline) and executing
+the surgical merge plan without unmanaged blanket merges.
+
+================================================================================
+END OF REPORT — PHASE 5.8.3 REPOSITORY INTEGRATION BASELINE
+================================================================================
+

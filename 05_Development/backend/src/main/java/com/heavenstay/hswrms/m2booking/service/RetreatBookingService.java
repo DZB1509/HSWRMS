@@ -16,6 +16,8 @@ import com.heavenstay.hswrms.m2booking.repository.ResidenceRecordRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository;
 import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
+import com.heavenstay.hswrms.security.CustomUserDetails;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,7 +48,69 @@ public class RetreatBookingService {
                                  VillaCategoryRepository villaCategoryRepository,
                                  VillaAvailabilityService availabilityService,
                                  ResidenceRecordRepository residenceRecordRepository,
-                                 PaymentTransactionRepository paymentTransactionRepository,
+                                 com.heavenstay.hswrms.m1identity.repository.CustomerProfileRepository customerProfileRepository) {
+        this(bookingRepository, packageRepository, villaCategoryRepository, availabilityService, residenceRecordRepository,
+             null,
+             new CustomerIdentityPort() {
+                 @Override
+                 public java.util.Optional<Integer> findProfileIdByUserId(int userId) {
+                     return customerProfileRepository.findByUserId(userId).map(com.heavenstay.hswrms.m1identity.entity.CustomerProfile::getCustomerProfileId);
+                 }
+                 @Override
+                 public java.util.Optional<CustomerContact> findContact(int customerProfileId) {
+                     return customerProfileRepository.findById(customerProfileId).map(cp -> new CustomerContact(
+                         cp.getCustomerProfileId(), cp.getUser() != null ? cp.getUser().getUserId() : 0,
+                         cp.getUser() != null ? cp.getUser().getFullName() : null,
+                         cp.getUser() != null ? cp.getUser().getEmail() : null,
+                         cp.getUser() != null ? cp.getUser().getPhoneNumber() : null
+                     ));
+                 }
+                 @Override
+                 public java.util.Map<Integer, CustomerContact> findContacts(java.util.Collection<Integer> ids) {
+                     java.util.Map<Integer, CustomerContact> map = new java.util.HashMap<>();
+                     if (ids != null) {
+                         for (Integer id : ids) {
+                             findContact(id).ifPresent(c -> map.put(id, c));
+                         }
+                     }
+                     return map;
+                 }
+                 @Override
+                 public java.util.List<CustomerContact> searchCustomers(String query, int limit) {
+                     return java.util.Collections.emptyList();
+                 }
+                 @Override
+                 public boolean hasHealthProfile(int customerProfileId) {
+                     return false;
+                 }
+                 @Override
+                 public int getOrCreateCustomerProfile(String fullName, String email, String phone) {
+                     return 1;
+                 }
+                 @Override
+                 public java.util.Optional<CustomerFullDetails> findFullDetails(int customerProfileId) {
+                     return java.util.Optional.empty();
+                 }
+                 @Override
+                 public java.util.Optional<CustomerHealthSummary> findHealthProfile(int customerProfileId) {
+                     return java.util.Optional.empty();
+                 }
+                 @Override
+                 public void updateCustomerContactAndProfile(int customerProfileId, String fullName, String phone, String emergencyContact) {}
+             },
+             new BookingPolicyService(),
+             new BookingClock(),
+             new BookingAuditService(null)
+        );
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RetreatBookingService(RetreatBookingRepository bookingRepository,
+                                 RetreatPackageRepository packageRepository,
+                                 VillaCategoryRepository villaCategoryRepository,
+                                 VillaAvailabilityService availabilityService,
+                                 ResidenceRecordRepository residenceRecordRepository,
+                                 @org.springframework.beans.factory.annotation.Qualifier("m2PaymentTransactionRepository") PaymentTransactionRepository paymentTransactionRepository,
                                  CustomerIdentityPort customerIdentityPort,
                                  BookingPolicyService bookingPolicyService,
                                  BookingClock bookingClock,
@@ -130,7 +194,7 @@ public class RetreatBookingService {
 
         RetreatBooking saved = bookingRepository.save(booking);
 
-        bookingAuditService.record(
+        if (bookingAuditService != null) bookingAuditService.record(
                 actorUserId != null ? actorUserId : 1,
                 "CREATE_BOOKING",
                 "RetreatBooking #" + saved.getRetreatBookingId(),
@@ -230,7 +294,7 @@ public class RetreatBookingService {
 
         RetreatBooking updated = bookingRepository.save(booking);
 
-        bookingAuditService.record(
+        if (bookingAuditService != null) bookingAuditService.record(
                 actorUserId != null ? actorUserId : 1,
                 "UPDATE_BOOKING",
                 "RetreatBooking #" + bookingId,
@@ -269,8 +333,7 @@ public class RetreatBookingService {
         RetreatBooking updated = bookingRepository.save(booking);
 
         // Cancel pending payment transactions
-        List<PaymentTransaction> txns = paymentTransactionRepository
-                .findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT);
+        List<PaymentTransaction> txns = paymentTransactionRepository != null ? paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT) : java.util.Collections.emptyList();
 
         for (PaymentTransaction txn : txns) {
             if (PaymentTransaction.STATUS_PENDING.equalsIgnoreCase(txn.getPaymentStatus())) {
@@ -279,7 +342,7 @@ public class RetreatBookingService {
             }
         }
 
-        bookingAuditService.record(
+        if (bookingAuditService != null) bookingAuditService.record(
                 actorUserId != null ? actorUserId : 1,
                 "CANCEL_BOOKING",
                 "RetreatBooking #" + bookingId + " (RefundPct: " + refundPct + "%)",
@@ -307,7 +370,7 @@ public class RetreatBookingService {
 
         RetreatBooking saved = bookingRepository.save(booking);
 
-        bookingAuditService.record(
+        if (bookingAuditService != null) bookingAuditService.record(
                 1,
                 "CONFIRM_DEPOSIT",
                 "RetreatBooking #" + bookingId + " Txn: " + txnRef,
@@ -343,8 +406,7 @@ public class RetreatBookingService {
         res.setHasResidenceRecord(hasResidence);
 
         // Enrich with deposit transaction details
-        List<PaymentTransaction> txns = paymentTransactionRepository
-                .findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(entity.getRetreatBookingId(), PaymentTransaction.TYPE_DEPOSIT);
+        List<PaymentTransaction> txns = paymentTransactionRepository != null ? paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(entity.getRetreatBookingId(), PaymentTransaction.TYPE_DEPOSIT) : java.util.Collections.emptyList();
 
         if (!txns.isEmpty()) {
             PaymentTransaction preferred = txns.stream()
@@ -359,4 +421,89 @@ public class RetreatBookingService {
 
         return res;
     }
+
+    public BookingSummaryResponse createBooking(CreateBookingRequest request, CustomUserDetails userDetails) {
+        Integer profileId = resolveCustomerProfileId(userDetails);
+        Integer actorUserId = userDetails != null ? userDetails.getUserId() : null;
+        return createBooking(request, profileId, actorUserId);
+    }
+
+    public List<BookingSummaryResponse> getCustomerBookings(CustomUserDetails userDetails) {
+        Integer profileId = resolveCustomerProfileId(userDetails);
+        return getCustomerBookings(profileId);
+    }
+
+    public BookingSummaryResponse getBookingDetail(Integer bookingId, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Authentication required to view booking.");
+        }
+        boolean customer = userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_CUSTOMER"));
+        if (customer) {
+            Integer profileId = resolveCustomerProfileId(userDetails);
+            RetreatBooking ownedBooking = bookingRepository
+                    .findByRetreatBookingIdAndCustomerProfileId(bookingId, profileId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found"));
+            return toSummaryResponse(ownedBooking);
+        }
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found"));
+        validateBookingAccess(booking, userDetails, "view");
+        return toSummaryResponse(booking);
+    }
+
+    public BookingSummaryResponse cancelBooking(Integer bookingId, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Authentication required to cancel booking.");
+        }
+        RetreatBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking #" + bookingId + " not found"));
+        validateBookingAccess(booking, userDetails, "cancel");
+        Integer profileId = isStaffOrAdmin(userDetails) ? null : resolveCustomerProfileId(userDetails);
+        Integer actorUserId = userDetails != null ? userDetails.getUserId() : null;
+        return cancelBooking(bookingId, profileId, actorUserId);
+    }
+
+    public Integer resolveCustomerProfileId(CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUserId() == null) {
+            throw new AccessDeniedException("Authentication required.");
+        }
+        return customerIdentityPort.findProfileIdByUserId(userDetails.getUserId())
+                .orElseThrow(() -> new AccessDeniedException("Access denied: Customer profile not found for user #" + userDetails.getUserId()));
+    }
+
+    private boolean isStaffOrAdmin(CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getAuthorities() == null) return false;
+        return userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_RECEPTIONIST")
+                            || a.getAuthority().equalsIgnoreCase("ROLE_ADMIN"));
+    }
+
+
+    public void validateBookingAccess(RetreatBooking booking, CustomUserDetails userDetails, String action) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Authentication required to " + action + " booking.");
+        }
+        boolean isStaffOrAdmin = userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_RECEPTIONIST") || role.equals("ROLE_MANAGER") || role.equals("ROLE_ADMIN"));
+        if (isStaffOrAdmin) {
+            return;
+        }
+
+        boolean isCustomer = userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_CUSTOMER"));
+        if (isCustomer) {
+            Integer myProfileId = resolveCustomerProfileId(userDetails);
+            if (!booking.getCustomerProfileId().equals(myProfileId)) {
+                throw new AccessDeniedException("Access denied: You do not have permission to " + action + " booking #" + booking.getRetreatBookingId());
+            }
+            return;
+        }
+
+        throw new AccessDeniedException("Access denied: Insufficient permissions to " + action + " booking.");
+    }
+
 }

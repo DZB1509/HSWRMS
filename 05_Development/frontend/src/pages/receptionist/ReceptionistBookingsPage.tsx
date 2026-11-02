@@ -540,6 +540,54 @@ export const ReceptionistBookingsPage: React.FC = () => {
                             <Eye size={13} /> Chi Tiết
                           </button>
 
+                          {b.bookingStatus === 'CHECKED_IN' && (
+                            <button
+                              onClick={() => {
+                                const targetId = b.retreatBookingId || (b as any).bookingId || (b as any).id || b.bookingReference;
+                                navigate(`/receptionist/folio/${targetId}`);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '6px 10px',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid #1565c0',
+                                backgroundColor: '#1565c0',
+                                color: '#ffffff',
+                                fontWeight: 600,
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Folio & Check-out <ArrowRight size={11} />
+                            </button>
+                          )}
+
+                          {b.bookingStatus === 'COMPLETED' && (
+                            <button
+                              onClick={() => {
+                                const targetId = b.retreatBookingId || (b as any).bookingId || (b as any).id || b.bookingReference;
+                                navigate(`/receptionist/folio/${targetId}`);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '6px 10px',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid var(--border-subtle)',
+                                backgroundColor: '#f8fafc',
+                                color: 'var(--accent-forest)',
+                                fontWeight: 600,
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Xem Folio <ArrowRight size={11} />
+                            </button>
+                          )}
+
                           {b.bookingStatus === 'CONFIRMED' && (
                             <button
                               onClick={() => navigate(`/receptionist/check-in/${b.bookingReference}`)}
@@ -833,6 +881,34 @@ export const ReceptionistBookingsPage: React.FC = () => {
                       icon={<ArrowRight size={14} />}
                     >
                       Tiến Hành Check-In
+                    </Button>
+                  )}
+
+                  {detailData.bookingStatus === 'CHECKED_IN' && (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        const targetId = detailData.retreatBookingId || (detailData as any).bookingId || (detailData as any).id || detailData.bookingReference;
+                        handleCloseDetail();
+                        navigate(`/receptionist/folio/${targetId}`);
+                      }}
+                      icon={<ArrowRight size={14} />}
+                    >
+                      Folio & Check-out
+                    </Button>
+                  )}
+
+                  {detailData.bookingStatus === 'COMPLETED' && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        const targetId = detailData.retreatBookingId || (detailData as any).bookingId || (detailData as any).id || detailData.bookingReference;
+                        handleCloseDetail();
+                        navigate(`/receptionist/folio/${targetId}`);
+                      }}
+                      icon={<ArrowRight size={14} />}
+                    >
+                      Xem Bảng Kê Folio
                     </Button>
                   )}
 

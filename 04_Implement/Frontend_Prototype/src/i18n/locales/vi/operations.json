@@ -624,7 +624,7 @@
     "ruleBr06Title": "BR-06: Giới Hạn Quyền Tối Thiểu Cho Quản Lý",
     "ruleBr06Desc": "Quản lý chỉ có quyền xem báo cáo phân tích tổng hợp. Quản lý không bao giờ tự động nhận toàn quyền Quản trị viên trừ khi được ủy quyền có giới hạn.",
     "descStaff": "Quản lý tài khoản nhân viên, quyền hạn vai trò, trạng thái làm việc và ranh giới bảo mật RBAC (Màn hình 10 & 11).",
-    "descMasterData": "Quản trị danh mục gói tĩnh dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12)."
+    "descMasterData": "Quản trị danh mục gói nghỉ dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12)."
   },
   "params": {
     "pageTitle": "Tham Số Vận Hành & Định Mức Nghiệp Vụ",
@@ -903,8 +903,8 @@
         "desc": "Điều chỉnh tỷ lệ cọc, thời hạn hủy phòng, tỷ lệ hoàn trả và giờ chốt thực đơn ăn uống."
       },
       "manageFlags": {
-        "name": "Quản Lý Cờ Tính Năng Mô-đun",
-        "desc": "Bật/tắt các dịch vụ tự phục vụ bổ sung và quy trình báo cáo tự động của hệ thống."
+        "name": "Cấu Hình Quy Trình Tự Động Hóa",
+        "desc": "Kích hoạt và quản lý các quy trình vận hành tự động và báo cáo của hệ thống."
       },
       "viewMatrix": {
         "name": "Xem Ma Trận Phân Quyền Vai Trò (RBAC)",
@@ -943,7 +943,7 @@
         "folioSettlementRecorded": "Ghi nhận mã giao dịch thanh toán VNPay cho quyết toán hóa đơn trả phòng.",
         "delegationGranted": "Cấp quyền ủy quyền cấu hình tham số tạm thời cho Quản lý Sarah Jenkins.",
         "residenceBatchExported": "Tạo gói kết xuất khai báo tạm trú theo Luật Cư trú (24 hồ sơ khách lưu trú).",
-        "featureFlagToggled": "Cập nhật trạng thái cờ tính năng sang BẬT trên phạm vi toàn hệ thống.",
+        "featureFlagToggled": "Cập nhật cấu hình tham số vận hành trên phạm vi toàn hệ thống.",
         "parameterUpdated": "Đã cập nhật giá trị tham số vận hành nghiệp vụ thành công.",
         "permissionUpdated": "Đã cập nhật quyền hạn trong ma trận phân quyền thành công.",
         "delegationCreated": "Đã tạo ủy quyền giới hạn mới cho Quản lý.",
@@ -994,7 +994,7 @@
     "reactivateAccount": "Kích hoạt lại tài khoản",
     "clearanceSectionTitle": "Phạm Vi Quyền Hạn RBAC & Tối Thiểu Hóa Dữ Liệu",
     "scopeAdminTitle": "Quản Trị Toàn Quyền Hệ Thống",
-    "scopeAdminDesc": "Ủy quyền cấu hình tham số kinh doanh, cờ tính năng, phân quyền RBAC và phân tích log truy cập nhạy cảm.",
+    "scopeAdminDesc": "Toàn quyền quản lý dữ liệu danh mục gốc (Master Data), cấu hình tham số kinh doanh & vận hành, phân quyền ma trận RBAC, ủy quyền điều hành và giám sát nhật ký kiểm toán bảo mật nhạy cảm.",
     "scopeAdminMin": "Không hiển thị chẩn đoán y tế thô của Khách Hàng hoặc bí mật thanh toán.",
     "scopeManagerTitle": "Quản Lý Vận Hành & Phân Tích Báo Cáo",
     "scopeManagerDesc": "Ủy quyền xem báo cáo doanh thu tổng hợp, công suất phòng villa, hiệu suất chuyên viên trị liệu và tổng quan sức khỏe hệ thống.",
@@ -1010,18 +1010,19 @@
     "scopeFbMin": "Đầu bếp chỉ thấy các thẻ cảnh báo dị ứng món ăn; không thấy tiền sử bệnh tật hay ghi chú thể chất (BR-03).",
     "suspendSuccess": "Tài khoản nhân viên đã được tạm dừng thành công.",
     "reactivateSuccess": "Tài khoản nhân viên đã được kích hoạt lại thành công.",
-    "notFound": "Không tìm thấy hồ sơ tài khoản nhân viên."
+    "notFound": "Không tìm thấy hồ sơ tài khoản nhân viên.",
+    "adminClearanceListTitle": "Các Phân Hệ Quyền Hạn Quản Trị Trực Thuộc:"
   },
   "masterData": {
     "title": "Quản Lý Dữ Liệu Danh Mục Cốt Lõi",
-    "subtitle": "Quản trị danh mục gói tĩnh dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).",
+    "subtitle": "Quản trị danh mục gói nghỉ dưỡng, dịch vụ spa trị liệu và phân loại biệt thự nghỉ dưỡng theo chuẩn wellness (Màn hình 12).",
     "wellnessTaxonomyBadge": "Chuẩn Phân Loại Wellness GWI",
     "wellnessTaxonomyNotice": "Danh mục dữ liệu cốt lõi sử dụng thuật ngữ chăm sóc sức khỏe chuẩn mực (chống chỉ định thể chất, phương thức trị liệu, không gian biệt thự). Mọi thay đổi có hiệu lực ngay trong quy trình vận hành M1–M5.",
-    "tabRetreats": "Gói Tĩnh Dưỡng Retreat",
+    "tabRetreats": "Gói Nghỉ Dưỡng Retreat",
     "tabSpa": "Dịch Vụ Spa & Trị Liệu",
     "tabVillas": "Phân Loại Biệt Thự Villa",
     "searchPlaceholder": "Tìm kiếm dữ liệu danh mục...",
-    "colPackage": "Gói Tĩnh Dưỡng",
+    "colPackage": "Gói Nghỉ Dưỡng",
     "colTheme": "Chủ Đề Trọng Tâm",
     "colDuration": "Thời Lượng",
     "colBasePrice": "Giá Gói Cơ Bản",

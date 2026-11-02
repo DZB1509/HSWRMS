@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
+import { useAuth } from '../../app/providers/AuthProvider';
 import type { DietaryMenuItem, LocalizedString } from '../../types/dining';
 import { AlertCircle, Minus, Plus, ShoppingBag, Info, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
+import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
+import { buildAmanoiDiningNotes, type DiningServiceLocation } from '../../utils/diningServiceHelper';
 
 interface CartItem {
   menuItem: DietaryMenuItem;
@@ -14,10 +17,10 @@ interface CartItem {
   notes: string;
 }
 
-export const AlaCarteOrderPage: React.FC = () => {
+const AlaCarteOrderPageForIdentity: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
   const { menuItems, getDietaryProjection, createAlaCarteOrder } = useDining();
-  const { activeBooking } = useCustomer();
+  const { activeBooking, profile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -27,11 +30,17 @@ export const AlaCarteOrderPage: React.FC = () => {
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
 
-  const customerId = 'usr-cust-01';
+  const customerId = profile?.id ?? '';
   const dietaryInfo = getDietaryProjection(customerId);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('IN_VILLA');
+  const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
+  const [customNotes, setCustomNotes] = useState('');
+
 
   const extraItems = menuItems.filter((item) => item.isExtra);
 
@@ -65,25 +74,49 @@ export const AlaCarteOrderPage: React.FC = () => {
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.menuItem.price || 0) * item.quantity, 0);
 
-  const handleSubmit = () => {
-    if (!activeBooking || cart.length === 0) return;
+  const handleToggleTag = (tag: string) => {
+    setSelectedWellnessTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
 
-    createAlaCarteOrder({
+  const handleSubmit = async () => {
+    if (!activeBooking || cart.length === 0 || isSubmitting) return;
+    setSubmitError(null); setIsSubmitting(true);
+
+    const locationLabel = diningLocation === 'IN_VILLA'
+      ? `In-Villa (${activeBooking.villaNumber || 'Villa'})`
+      : 'Dining Pavilion';
+
+    const orderNotes = buildAmanoiDiningNotes(
+      diningLocation,
+      selectedWellnessTags,
+      customNotes,
+      activeBooking.villaNumber
+    );
+
+    try {
+    await createAlaCarteOrder({
       bookingId: activeBooking.id,
       customerId,
+      location: locationLabel,
       lines: cart.map((c) => ({
         id: `L-${Date.now()}-${c.menuItem.id}`,
         menuItemId: c.menuItem.id,
         quantity: c.quantity,
         unitPrice: c.menuItem.price || 0,
-        notes: c.notes,
+        notes: c.notes ? `${orderNotes} | ${c.notes}` : orderNotes,
       })),
       totalAmount,
     });
 
     setOrderSuccess(true);
     setCart([]);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'The server did not confirm the order.');
+    } finally { setIsSubmitting(false); }
   };
+
 
   if (!activeBooking) {
     return (
@@ -331,11 +364,26 @@ export const AlaCarteOrderPage: React.FC = () => {
                 </div>
               ))}
 
+              {/* Amanoi Luxury Wellness Dining Venue & Requests */}
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                <AmanoiDiningLocationPicker
+                  location={diningLocation}
+                  onLocationChange={setDiningLocation}
+                  selectedTags={selectedWellnessTags}
+                  onToggleTag={handleToggleTag}
+                  customNotes={customNotes}
+                  onCustomNotesChange={setCustomNotes}
+                  villaNumber={activeBooking.villaNumber}
+                  lang={currentLang === 'vi' ? 'vi' : 'en'}
+                />
+              </div>
+
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'baseline',
+
                   marginTop: 'var(--space-2)',
                   paddingTop: 'var(--space-2)',
                   borderTop: '1px solid var(--border-subtle)',
@@ -379,14 +427,21 @@ export const AlaCarteOrderPage: React.FC = () => {
                 className="hsw-btn hsw-btn-primary"
                 style={{ width: '100%', marginTop: 'var(--space-3)' }}
                 onClick={handleSubmit}
+                disabled={isSubmitting}
                 id="btn-submit-alacarte-order"
               >
                 {t('dining.extra.submit', 'Confirm & Send Order')}
               </button>
+              {submitError && <p role="alert" style={{ color: 'var(--danger)' }}>{submitError}</p>}
             </div>
           )}
         </aside>
       </div>
     </div>
   );
+};
+
+export const AlaCarteOrderPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  return <AlaCarteOrderPageForIdentity key={currentUser?.id ?? 'anonymous'} />;
 };
