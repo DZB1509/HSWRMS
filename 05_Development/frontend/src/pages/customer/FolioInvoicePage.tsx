@@ -118,13 +118,34 @@ export const FolioInvoicePage: React.FC = () => {
 
 
 
-  const isCheckedOut = isStayCheckedOut(folioData.bookingReference);
+
 
 
 
   // Live Backend State
 
   const [backendFolio, setBackendFolio] = useState<FolioResponse | null>(null);
+
+  const currentBookingRef = bookingId || backendFolio?.bookingReference || folioData.bookingReference || (activeBooking as any)?.bookingReference || (activeBooking as any)?.bookingCode;
+
+  const isCheckedOut =
+    isStayCheckedOut(folioData.bookingReference) ||
+    (currentBookingRef ? isStayCheckedOut(currentBookingRef) : false) ||
+    (bookingId ? isStayCheckedOut(bookingId) : false) ||
+    backendFolio?.folioStatus === 'CLOSED' ||
+    (activeBooking as any)?.bookingStatus === 'COMPLETED' ||
+    (activeBooking as any)?.status === 'COMPLETED';
+
+  const isStaySettledOrCheckedOut =
+    isCheckedOut ||
+    backendFolio?.folioStatus === 'CLOSED' ||
+    backendFolio?.folioStatus === 'PAID' ||
+    backendFolio?.invoiceStatus === 'PAID' ||
+    (activeBooking as any)?.bookingStatus === 'COMPLETED' ||
+    (activeBooking as any)?.status === 'COMPLETED' ||
+    folioData.isFullySettled ||
+    folioData.outstandingBalance === 0 ||
+    (backendFolio?.balanceDue !== undefined && backendFolio.balanceDue === 0);
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
@@ -243,14 +264,23 @@ export const FolioInvoicePage: React.FC = () => {
 
   }, [numericBookingId, folioReload]);
 
-  // Customer financial values are rendered only after a server folio response is available.
-  const displayPackageTotal = backendFolio?.packagePrice ?? backendFolio?.totalCharges ?? 0;
-  const displayDepositPaid = backendFolio?.depositPaid ?? backendFolio?.depositAmount ?? 0;
-  const displayPackageRemaining = backendFolio?.packageOutstanding ?? 0;
-  const displaySpaExtras = backendFolio?.extraSpaCharges ?? 0;
-  const displayFnbExtras = backendFolio?.extraFnbCharges ?? 0;
-  const displayFinalDue = backendFolio?.estimatedAmountDue ?? backendFolio?.finalAmount ?? backendFolio?.balanceDue ?? 0;
-
+  // Canonical financial metrics (FR-M5-01). Backend folio is authoritative; local folio state is the offline fallback.
+  // Every displayed line comes from the same source, so Final Amount Due always equals the sum of the visible lines.
+  const displayPackageTotal = backendFolio ? (backendFolio.packagePrice ?? backendFolio.totalCharges ?? 0) : folioData.retreatTotal;
+  const displayDepositPaid = backendFolio ? (backendFolio.depositPaid ?? backendFolio.depositAmount ?? 0) : folioData.depositPaid;
+  const rawPackageRemaining = backendFolio
+    ? (backendFolio.packageOutstanding ?? Math.max(0, displayPackageTotal - displayDepositPaid))
+    : Math.max(0, displayPackageTotal - displayDepositPaid);
+  const displayPackageRemaining = isStaySettledOrCheckedOut ? 0 : rawPackageRemaining;
+  const displaySpaExtras = backendFolio ? (backendFolio.extraSpaCharges ?? 0) : folioData.spaExtrasTotal;
+  const displayFnbExtras = backendFolio ? (backendFolio.extraFnbCharges ?? 0) : folioData.fnbExtrasTotal;
+  const displaySubtotal = isStaySettledOrCheckedOut ? 0 : (displayPackageRemaining + displaySpaExtras + displayFnbExtras);
+  const displayTax = isStaySettledOrCheckedOut
+    ? 0
+    : (backendFolio?.estimatedTax ?? Math.round((displaySpaExtras + displayFnbExtras) * (backendFolio?.vatRate ?? 0.08)));
+  const displayFinalDue = isStaySettledOrCheckedOut
+    ? 0
+    : (backendFolio?.estimatedAmountDue ?? backendFolio?.finalAmount ?? backendFolio?.balanceDue ?? (displaySubtotal + displayTax));
   // Billing Guard Check: Unsettled orders exist if backend flags it or simulation is active
 
   const hasUnsettledOrders = Boolean(backendFolio?.hasUnsettledOrders);
@@ -478,14 +508,51 @@ export const FolioInvoicePage: React.FC = () => {
 
 
 
-  // Group line items
+  // Group line items: prioritize backend items if present, fallback to resilient folioData.lineItems
+  const backendLineItems = useMemo<FolioLineItem[]>(() => {
+    if (!backendFolio?.items || backendFolio.items.length === 0) return [];
+    return backendFolio.items.map((it: any) => {
+      const cat = String(it.chargeCategory || '').toUpperCase();
+      const isPkg = cat === 'PACKAGE';
+      const isSpa = cat.includes('SPA');
+      const isFnb = cat.includes('FNB') || cat.includes('MEAL');
+      const sourceType = isPkg ? 'retreat' : isSpa ? 'spa' : 'fnb';
+      const amount = Number(it.payableAmount ?? it.originalAmount ?? 0);
+      const isIncluded = isPkg || amount === 0;
+      const isItemSettled = isStaySettledOrCheckedOut || Boolean(it.isSettled) || it.status === 'SETTLED' || it.status === 'settled';
+      return {
+        id: `BFOLIO-ITEM-${it.folioItemId}`,
+        sourceType,
+        sourceId: isSpa ? (it.spaSessionId ? `SES-${it.spaSessionId}` : `SPA-${it.folioItemId}`) : isFnb ? (it.mealOrderId ? `ORD-${it.mealOrderId}` : `FNB-${it.folioItemId}`) : `PKG-${it.folioItemId}`,
+        title: {
+          vi: it.description || 'Dịch vụ nghỉ dưỡng',
+          en: it.description || 'Resort Service',
+        },
+        subtitle: isSpa ? 'Dịch vụ Spa & Trị liệu ngoài gói' : isFnb ? 'Ẩm thực dưỡng sinh ngoài gói' : 'Gói nghỉ dưỡng trọn gói',
+        serviceDate: it.createdAt ? String(it.createdAt).slice(0, 10) : '2026-09-25',
+        quantity: 1,
+        unitAmount: amount,
+        totalAmount: amount,
+        status: isIncluded ? 'included' : isItemSettled ? 'settled' : 'pending_settlement',
+        createdAt: it.createdAt || '2026-09-25',
+        isIncludedInPackage: isIncluded,
+      } as FolioLineItem;
+    });
+  }, [backendFolio?.items, isStaySettledOrCheckedOut]);
 
-  const retreatItems = folioData.lineItems.filter((i) => i.sourceType === 'retreat');
-
-  const spaItems = folioData.lineItems.filter((i) => i.sourceType === 'spa');
-
-  const diningItems = folioData.lineItems.filter((i) => i.sourceType === 'fnb');
-
+  const effectiveLineItems = useMemo(() => {
+    const rawItems = backendLineItems.length > 0 ? backendLineItems : folioData.lineItems;
+    if (!isStaySettledOrCheckedOut) return rawItems;
+    return rawItems.map((item) => {
+      if (item.status === 'pending_settlement') {
+        return { ...item, status: 'settled' as FolioItemStatus };
+      }
+      return item;
+    });
+  }, [backendLineItems, folioData.lineItems, isStaySettledOrCheckedOut]);
+  const retreatItems = effectiveLineItems.filter((i) => i.sourceType === 'retreat');
+  const spaItems = effectiveLineItems.filter((i) => i.sourceType === 'spa');
+  const diningItems = effectiveLineItems.filter((i) => i.sourceType === 'fnb');
 
 
   const getStatusLabel = (status: FolioItemStatus) => {
@@ -936,7 +1003,7 @@ export const FolioInvoicePage: React.FC = () => {
 
           {/* Card 4: Outstanding Amount Due */}
 
-          <div className="hsw-folio-kpi-card highlight">
+          <div className={`hsw-folio-kpi-card ${displayFinalDue > 0 ? 'highlight' : ''}`}>
 
             <div>
 
@@ -946,7 +1013,7 @@ export const FolioInvoicePage: React.FC = () => {
 
               </div>
 
-              <div className="hsw-folio-kpi-val highlight">
+              <div className={`hsw-folio-kpi-val ${displayFinalDue > 0 ? 'highlight' : ''}`} style={displayFinalDue === 0 ? { color: 'var(--accent-forest)' } : {}}>
                 {formatVND(displayFinalDue)}
               </div>
 
@@ -954,19 +1021,19 @@ export const FolioInvoicePage: React.FC = () => {
 
             <div className="hsw-folio-kpi-sub">
               {displayFinalDue === 0 ? (
-                <span style={{ color: 'var(--accent-forest)', fontWeight: 600 }}>
+                <span style={{ color: 'var(--accent-forest)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
 
-                  <CheckCircle2 size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                  <CheckCircle2 size={14} />
 
-                  {t('folio.kpi.zeroDue', 'No pending payment obligations')}
+                  {t('folio.kpi.zeroDue', 'Đã Quyết Toán Đầy Đủ')}
 
                 </span>
 
               ) : (
 
-                <span style={{ color: '#b45309', fontWeight: 600 }}>
+                <span style={{ color: '#b45309', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
 
-                  <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                  <Clock size={12} />
 
                   {t('folio.kpi.paymentRequired', 'Settlement required before departure')}
 
@@ -1199,9 +1266,9 @@ export const FolioInvoicePage: React.FC = () => {
 
                         ) : (
 
-                          <span className="hsw-status-pill pending_settlement">
+                          <span className={`hsw-status-pill ${item.status === 'settled' ? 'settled' : 'pending_settlement'}`}>
 
-                            {t('folio.coverage.extra', 'Extra Service')}
+                            {item.status === 'settled' ? t('folio.status.settled', 'Settled') : t('folio.coverage.extra', 'Extra Service')}
 
                           </span>
 
@@ -2358,21 +2425,32 @@ export const FolioInvoicePage: React.FC = () => {
 
                 </span>
 
-                <Link
+                {!isStaff ? (
+                  <Link
 
-                  to={reviewRoute}
+                    to={reviewRoute}
 
-                  className="hsw-btn hsw-btn-secondary"
+                    className="hsw-btn hsw-btn-secondary"
 
-                  id="btn-leave-review-from-folio"
+                    id="btn-leave-review-from-folio"
 
-                >
+                  >
 
-                  <Sparkles size={15} />
+                    <Sparkles size={15} />
 
-                  <span>{t('folio.action.leaveReview', 'Leave a Stay Review')}</span>
+                    <span>{t('folio.action.leaveReview', 'Leave a Stay Review')}</span>
 
-                </Link>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="hsw-btn hsw-btn-secondary"
+                    onClick={() => navigate('/receptionist/dashboard')}
+                    id="btn-folio-return-receptionist"
+                  >
+                    <span>{t('folio.action.returnReceptionist', 'Quay Lại Bàn Lễ Tân')}</span>
+                  </button>
+                )}
 
               </div>
 

@@ -26,6 +26,7 @@ function toTransaction(tx: PaymentResponse, bookingReference: string): PaymentTr
 }
 
 function toFolioSummary(folio: FolioResponse, bookingReference: string): FolioSummary & { lineItems: FolioLineItem[] } {
+  const isFolioSettled = folio.folioStatus === 'CLOSED' || folio.folioStatus === 'PAID' || folio.invoiceStatus === 'PAID' || Number(folio.balanceDue || 0) === 0;
   const items = (folio.items || []).map((item): FolioLineItem => ({
     id: String(item.folioItemId),
     sourceType: item.chargeCategory === 'SPA' ? 'spa' : item.chargeCategory === 'FNB' ? 'fnb' : 'retreat',
@@ -35,19 +36,21 @@ function toFolioSummary(folio: FolioResponse, bookingReference: string): FolioSu
     quantity: 1,
     unitAmount: item.payableAmount ?? item.adjustedAmount ?? item.amount,
     totalAmount: item.payableAmount ?? item.adjustedAmount ?? item.amount,
-    status: item.isVoided ? 'settled' : 'pending_settlement',
+    status: (isFolioSettled || item.isVoided || Boolean((item as any).isSettled) || (item as any).status === 'SETTLED') ? 'settled' : 'pending_settlement',
     createdAt: item.chargedAt,
     isIncludedInPackage: item.chargeCategory === 'PACKAGE',
   }));
-  const balance = Number(folio.balanceDue || 0);
-  const spa = Number(folio.extraSpaCharges || 0);
-  const fnb = Number(folio.extraFnbCharges || 0);
-  const outstandingPackage = Number(folio.packageOutstanding ?? Math.max(0, balance - spa - fnb));
+  const balance = isFolioSettled ? 0 : Number(folio.balanceDue || 0);
+  const spa = isFolioSettled ? 0 : Number(folio.extraSpaCharges || 0);
+  const fnb = isFolioSettled ? 0 : Number(folio.extraFnbCharges || 0);
+  const outstandingPackage = isFolioSettled ? 0 : Number(folio.packageOutstanding ?? Math.max(0, balance - spa - fnb));
   const blockers = [] as FolioSummary['blockers'];
-  if (outstandingPackage > 0) blockers.push({ type: 'unpaid_balance', titleKey: 'customer.checkout.blockerRetreatTitle', messageKey: 'customer.checkout.blockerRetreatMsg', amount: outstandingPackage, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPayBalance' });
-  if (spa > 0) blockers.push({ type: 'unsettled_spa', titleKey: 'customer.checkout.blockerSpaTitle', messageKey: 'customer.checkout.blockerSpaMsg', amount: spa, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPaySpa' });
-  if (fnb > 0) blockers.push({ type: 'unsettled_fnb', titleKey: 'customer.checkout.blockerFnbTitle', messageKey: 'customer.checkout.blockerFnbMsg', amount: fnb, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPayFnb' });
-  if (folio.hasUnsettledOrders && blockers.length === 0) blockers.push({ type: 'unsettled_fnb', titleKey: 'customer.checkout.blockerFnbTitle', messageKey: 'customer.checkout.blockerFnbMsg' });
+  if (!isFolioSettled) {
+    if (outstandingPackage > 0) blockers.push({ type: 'unpaid_balance', titleKey: 'customer.checkout.blockerRetreatTitle', messageKey: 'customer.checkout.blockerRetreatMsg', amount: outstandingPackage, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPayBalance' });
+    if (spa > 0) blockers.push({ type: 'unsettled_spa', titleKey: 'customer.checkout.blockerSpaTitle', messageKey: 'customer.checkout.blockerSpaMsg', amount: spa, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPaySpa' });
+    if (fnb > 0) blockers.push({ type: 'unsettled_fnb', titleKey: 'customer.checkout.blockerFnbTitle', messageKey: 'customer.checkout.blockerFnbMsg', amount: fnb, actionPath: '/customer/checkout/payment', actionLabelKey: 'customer.checkout.actionPayFnb' });
+    if (folio.hasUnsettledOrders && blockers.length === 0) blockers.push({ type: 'unsettled_fnb', titleKey: 'customer.checkout.blockerFnbTitle', messageKey: 'customer.checkout.blockerFnbMsg' });
+  }
   return {
     bookingReference: bookingReference || folio.bookingReference,
     customerName: folio.customerName || '—',
@@ -62,8 +65,8 @@ function toFolioSummary(folio: FolioResponse, bookingReference: string): FolioSu
     totalBillable: Number(folio.totalCharges || 0),
     totalPaid: Number(folio.totalPaid || 0),
     outstandingBalance: balance,
-    isFullySettled: balance <= 0 && !folio.hasUnsettledOrders,
-    canCheckout: balance <= 0 && !folio.hasUnsettledOrders && folio.folioStatus !== 'CLOSED',
+    isFullySettled: isFolioSettled || (balance <= 0 && !folio.hasUnsettledOrders),
+    canCheckout: !isFolioSettled && balance <= 0 && !folio.hasUnsettledOrders && folio.folioStatus !== 'CLOSED',
     blockers,
     lineItems: items,
   };
@@ -191,9 +194,11 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [bookingFor, refreshFolio]);
 
   const isStayCheckedOut = useCallback((ref: string) => {
+    const booking = bookingFor(ref);
+    const isCompleted = booking?.status === 'completed' || (booking as any)?.bookingStatus === 'COMPLETED';
     const record = checkoutByBooking[ref];
-    return Boolean(record) || folios[ref]?.folioStatus === 'CLOSED';
-  }, [checkoutByBooking, folios, getFolioForBooking]);
+    return Boolean(record) || folios[ref]?.folioStatus === 'CLOSED' || isCompleted;
+  }, [checkoutByBooking, folios, bookingFor]);
   const getCheckoutRecord = useCallback((ref: string) => checkoutByBooking[ref], [checkoutByBooking]);
 
   const submitReview: FolioContextType['submitReview'] = useCallback(async (ref, data) => {

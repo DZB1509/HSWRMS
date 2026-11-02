@@ -954,22 +954,16 @@ public class FolioBillingService {
 
 
 
-        if (!"CLOSED".equalsIgnoreCase(folio.getFolioStatus())) {
-
-            if (invoice != null && "PAID".equalsIgnoreCase(invoice.getInvoiceStatus())) {
-
+        if ("CLOSED".equalsIgnoreCase(folio.getFolioStatus()) ||
+            (invoice != null && "PAID".equalsIgnoreCase(invoice.getInvoiceStatus()))) {
+            folio.setBalanceDue(BigDecimal.ZERO);
+            if (!"CLOSED".equalsIgnoreCase(folio.getFolioStatus())) {
                 folio.setFolioStatus("PAID");
-
-            } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
-
-                folio.setFolioStatus("PARTIALLY_PAID");
-
-            } else {
-
-                folio.setFolioStatus("OPEN");
-
             }
-
+        } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
+            folio.setFolioStatus("PARTIALLY_PAID");
+        } else {
+            folio.setFolioStatus("OPEN");
         }
 
         folioRepository.save(folio);
@@ -1146,6 +1140,21 @@ public class FolioBillingService {
 
 
 
+        boolean isSettled = "CLOSED".equalsIgnoreCase(folio.getFolioStatus())
+                || "PAID".equalsIgnoreCase(folio.getFolioStatus())
+                || (invoice != null && "PAID".equalsIgnoreCase(invoice.getInvoiceStatus()))
+                || (booking.getBookingStatus() != null && "COMPLETED".equalsIgnoreCase(booking.getBookingStatus()));
+
+        if (isSettled) {
+            dto.setBalanceDue(BigDecimal.ZERO);
+            dto.setEstimatedAmountDue(BigDecimal.ZERO);
+            dto.setFinalAmount(BigDecimal.ZERO);
+            dto.setPackageOutstanding(BigDecimal.ZERO);
+            dto.setHasUnsettledOrders(false);
+            dto.setUnsettledOrdersWarning(null);
+            dto.setCanGenerateInvoice(false);
+        }
+
         dto.setItems(items.stream().map(this::mapToFolioItemResponse).collect(Collectors.toList()));
 
         return dto;
@@ -1156,7 +1165,7 @@ public class FolioBillingService {
 
     public FolioItemResponseDTO mapToFolioItemResponse(FolioItemEntity item) {
 
-        return new FolioItemResponseDTO(
+        FolioItemResponseDTO dto = new FolioItemResponseDTO(
 
                 item.getFolioItemId(),
 
@@ -1185,6 +1194,21 @@ public class FolioBillingService {
                 item.getPayableAmount()
 
         );
+
+        boolean isSettled = (item.getFolio() != null && (
+                "CLOSED".equalsIgnoreCase(item.getFolio().getFolioStatus()) ||
+                "PAID".equalsIgnoreCase(item.getFolio().getFolioStatus())
+        )) || (item.getPayableAmount() != null && item.getPayableAmount().compareTo(BigDecimal.ZERO) == 0);
+
+        if (isSettled) {
+            dto.setIsSettled(true);
+            dto.setStatus("SETTLED");
+        } else {
+            dto.setIsSettled(false);
+            dto.setStatus("PENDING");
+        }
+
+        return dto;
 
     }
 

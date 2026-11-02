@@ -385,6 +385,7 @@ public class CheckoutService {
 
         folio.setFolioStatus("CLOSED");
         folio.setClosedAt(LocalDateTime.now());
+        folio.setBalanceDue(BigDecimal.ZERO);
         folioRepository.save(folio);
 
         booking.setBookingStatus("COMPLETED");
@@ -413,6 +414,7 @@ public class CheckoutService {
         if (allInvoicePayments.add(creditNotes).compareTo(invoice.getFinalAmount()) >= 0) {
             invoice.setInvoiceStatus("PAID");
             folio.setFolioStatus("PAID");
+            folio.setBalanceDue(BigDecimal.ZERO);
         } else {
             invoice.setInvoiceStatus("ISSUED");
             folio.setFolioStatus("PARTIALLY_PAID");

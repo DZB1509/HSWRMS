@@ -469,16 +469,43 @@ export const CheckoutConfirmationPage: React.FC = () => {
 
           {/* Actions: Review is optional (Rule 5 & 28) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            <Link
-              to={reviewRoute}
-              className="hsw-btn hsw-btn-retreat-primary"
-              style={{ width: '100%', justifyContent: 'center' }}
-              id="btn-leave-stay-review"
-            >
-              <Heart size={16} />
-              <span>{t('checkout.btnLeaveReview', 'Leave a Stay Review (Optional)')}</span>
-              <ArrowRight size={16} />
-            </Link>
+            {!isStaff ? (
+              <Link
+                to={reviewRoute}
+                className="hsw-btn hsw-btn-retreat-primary"
+                style={{ width: '100%', justifyContent: 'center' }}
+                id="btn-leave-stay-review"
+              >
+                <Heart size={16} />
+                <span>{t('checkout.btnLeaveReview', 'Leave a Stay Review (Optional)')}</span>
+                <ArrowRight size={16} />
+              </Link>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <button
+                  type="button"
+                  className="hsw-btn hsw-btn-retreat-primary"
+                  onClick={() => navigate('/receptionist/dashboard')}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  id="btn-receptionist-return-dashboard"
+                >
+                  <CheckCircle2 size={16} />
+                  <span>{t('checkout.staffCompleteReturn', 'Hoàn Tất & Về Bàn Lễ Tân')}</span>
+                  <ArrowRight size={16} />
+                </button>
+                <div style={{
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                  textAlign: 'center',
+                  padding: '6px 12px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid #e2e8f0',
+                }}>
+                  {t('checkout.reviewInviteSentStaff', 'Lời mời đánh giá kỳ nghỉ đã được gửi tự động qua email cho khách hàng.')}
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
               <button
@@ -516,7 +543,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
             </Link>
 
             <Link
-              to="/customer/dashboard"
+              to={isStaff ? '/receptionist/dashboard' : '/customer/dashboard'}
               style={{
                 fontSize: 'var(--text-xs)',
                 color: 'var(--text-secondary)',
@@ -524,7 +551,7 @@ export const CheckoutConfirmationPage: React.FC = () => {
                 textDecoration: 'none',
               }}
             >
-              {t('checkout.returnHome', 'Return to Sanctuary Dashboard')}
+              {isStaff ? t('checkout.returnReceptionistDashboard', 'Quay lại Bàn Tiếp Tân') : t('checkout.returnHome', 'Return to Sanctuary Dashboard')}
             </Link>
           </div>
         </div>
