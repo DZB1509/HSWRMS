@@ -59,7 +59,9 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
         catch (error) { const m = toMsg(error, 'Could not record consent.'); setSaveError(m); showToast(m, 'error'); return; }
       }
       if (!isCurrentIdentity()) return;
-      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: splitList(dietary.allergies), foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: splitList(dietary.dietaryRestrictions), therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null });
+      const allergenItems = splitList(dietary.allergies);
+      const requirementItems = splitList(dietary.dietaryRestrictions);
+      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: allergenItems, foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: requirementItems, therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null, allergiesDeclarationState: allergenItems.length > 0 ? 'DECLARED' : undefined, dietaryRequirementsDeclarationState: requirementItems.length > 0 ? 'DECLARED' : undefined });
       if (!isCurrentIdentity()) return;
       const saved = (await getMyHealthProfile()).data;
       if (!isCurrentIdentity()) return;

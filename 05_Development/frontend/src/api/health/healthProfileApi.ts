@@ -1,5 +1,8 @@
 import { apiClient } from '../client/apiClient';
 
+/** Explicit customer declaration state for allergies / dietary requirements. */
+export type HealthDeclarationState = 'NOT_DECLARED' | 'EXPLICITLY_NONE' | 'DECLARED';
+
 /** Backend HealthProfileResponse for GET/PUT /api/v1/customers/me/health-profile. */
 export interface HealthProfileData {
   healthProfileId: number | null;
@@ -14,6 +17,9 @@ export interface HealthProfileData {
   therapyPreferences: string[];
   dislikedIngredients: string | null;
   kitchenNotes: string | null;
+  allergiesDeclarationState: HealthDeclarationState | null;
+  dietaryRequirementsDeclarationState: HealthDeclarationState | null;
+  isComplete: boolean;
   hasConsented: boolean;
 }
 
@@ -38,6 +44,8 @@ export interface UpdateHealthProfileBody {
   therapyCode?: string;
   dislikedIngredients?: string | null;
   kitchenNotes?: string | null;
+  allergiesDeclarationState?: HealthDeclarationState;
+  dietaryRequirementsDeclarationState?: HealthDeclarationState;
 }
 
 export const getMyHealthProfile = (): Promise<HealthProfileApiSuccess> =>
