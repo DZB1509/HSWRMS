@@ -94,6 +94,7 @@ export const MySpaSessions: React.FC = () => {
         ? 'SCHEDULED'
         : fs.status.toUpperCase()) as BackendSpaSessionStatus,
       confirmationStatus: (fs.status === 'confirmed' ? 'CONFIRMED' : 'PENDING') as BackendSpaConfirmationStatus,
+      scheduleVersion: 1,
       customerNote: fs.customerSpecialRequest,
     }));
   }, [backendSessions, fallbackSessions, currentLang]);
