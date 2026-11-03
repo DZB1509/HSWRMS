@@ -12,6 +12,8 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import { Container } from '../../components/common/Container';
 import { useFolio } from '../../context/FolioContext';
@@ -39,12 +41,14 @@ export const FinalPaymentPage: React.FC = () => {
 
   const isStaff = role === 'receptionist' || role === 'manager' || role === 'admin';
   const requestedBookingId = bookingId || searchParams.get('bookingId');
-  const customerBookingId = resolveCustomerBookingId(requestedBookingId, bookings);
+  const parsedFromRequest = parseBookingId(requestedBookingId);
+  const customerBookingId = parsedFromRequest ?? resolveCustomerBookingId(requestedBookingId, bookings);
   const customerBooking = bookings.find(booking => Number(booking.id) === customerBookingId);
-  const folioData = getFolioForBooking(role === 'customer' ? customerBooking?.bookingReference : bookingId);
+  const folioData = getFolioForBooking(role === 'customer' ? customerBooking?.bookingReference || (parsedFromRequest ? `HSW-880${parsedFromRequest < 10 ? '0' : ''}${parsedFromRequest}` : undefined) : bookingId);
 
   const numericBookingId = useMemo(() => {
-    if (role === 'customer') return customerBookingId;
+    if (parsedFromRequest) return parsedFromRequest;
+    if (role === 'customer' && customerBookingId) return customerBookingId;
     const fromParam = parseBookingId(bookingId);
     if (fromParam) return fromParam;
     const queryParam = searchParams.get('bookingId');
@@ -53,7 +57,7 @@ export const FinalPaymentPage: React.FC = () => {
     const matched = bookings.find(b => b.bookingReference === bookingId || String(b.id) === bookingId);
     if (matched && Number(matched.id) > 0) return Number(matched.id);
     return null;
-  }, [role, customerBookingId, bookingId, searchParams, bookings]);
+  }, [parsedFromRequest, role, customerBookingId, bookingId, searchParams, bookings]);
 
   const queryInvoiceId = searchParams.get('invoiceId');
   const initialInvoiceId = useMemo(() => {
@@ -453,6 +457,37 @@ export const FinalPaymentPage: React.FC = () => {
       } else {
         setPaymentError('Không thể thực hiện thanh toán: Thiếu hóa đơn hợp lệ từ máy chủ.');
       }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSimulatePayment = async (outcome: 'SUCCESS' | 'FAILED') => {
+    setIsProcessing(true);
+    setPaymentError(null);
+    try {
+      const invId = targetInvoiceId;
+      if (!invId) {
+        setPaymentError('Không có mã hóa đơn hợp lệ để thanh toán.');
+        return;
+      }
+      if (selectedMethod === 'VNPAY' && vnpayData?.transactionReference) {
+        await billingApi.simulateVnpay(vnpayData.transactionReference, outcome === 'SUCCESS' ? 'SUCCESS' : 'FAILED');
+      } else {
+        await billingApi.payInvoice(invId, {
+          paymentMethod: selectedMethod,
+          amount: amountToPay,
+        });
+      }
+      const tx = vnpayData?.transactionReference || vietQrData?.transactionReference || `TXN-SIM-${Date.now()}`;
+      const invoiceSuffix = `&invoiceId=${invId}`;
+      navigate(
+        isStaff && bookingId
+          ? `/receptionist/checkout/${bookingId}/payment-result?txId=${tx}${invoiceSuffix}`
+          : `/customer/checkout/payment-result?txId=${tx}${invoiceSuffix}`
+      );
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Lỗi khi giả lập thanh toán.');
     } finally {
       setIsProcessing(false);
     }
@@ -1053,6 +1088,55 @@ export const FinalPaymentPage: React.FC = () => {
                       : `Confirm Handover of ${formatVND(amountToPay)}`}
                   </span>
                 </button>
+
+{/* Dev / Demo Simulation Control */}
+                {!isZeroBalance && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '14px 18px',
+                      backgroundColor: '#f0fdf4',
+                      border: '1.5px dashed #22c55e',
+                      borderRadius: '10px',
+                      textAlign: 'center',
+                    }}
+                    id="simulation-payment-box"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px', color: '#15803d', fontWeight: 600, fontSize: '13px' }}>
+                      <Sparkles size={16} />
+                      <span>Công Cụ Kiểm Thử & Giả Lập Thanh Toán (Dev / Demo):</span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#4b5563', margin: '0 0 10px', lineHeight: 1.4 }}>
+                      Quét mã QR ở trên hoặc bấm nút dưới đây để giả lập kết quả thanh toán thành công tức thì:
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSimulatePayment('SUCCESS')}
+                        disabled={isProcessing || !targetInvoiceId}
+                        className="hsw-btn"
+                        style={{
+                          backgroundColor: '#16a34a',
+                          color: '#ffffff',
+                          fontWeight: 600,
+                          fontSize: '13px',
+                          padding: '8px 18px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)',
+                        }}
+                        id="btn-simulate-payment-success"
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>⚡ Giả lập thanh toán thành công</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="button"
