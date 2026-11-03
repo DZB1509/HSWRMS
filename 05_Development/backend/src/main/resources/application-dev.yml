@@ -1,4 +1,4 @@
-﻿# Local Developer Override Profile
+# Local Developer Override Profile
 # Run with: --spring.profiles.active=dev
 
 logging:
@@ -16,7 +16,7 @@ spring:
   datasource:
     url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:12345678}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:

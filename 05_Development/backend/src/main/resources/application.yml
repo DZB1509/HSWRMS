@@ -14,9 +14,9 @@ spring:
     default: sqlserver
 
   datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
-    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:}}
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hikari:
       maximum-pool-size: 10
@@ -112,7 +112,7 @@ app:
     account-name: ${VIETQR_ACCOUNT_NAME:HEAVENSTAY RESORT}
     template: ${VIETQR_TEMPLATE:compact2}
     api-url: ${VIETQR_API_URL:https://img.vietqr.io/image}
-    webhook-secret: ${VIETQR_WEBHOOK_SECRET:}
+    webhook-secret: ${VIETQR_WEBHOOK_SECRET:SECRET_VIETQR_KEY_FOR_DEVELOPMENT_ONLY_HSWRMS}
 
   seed:
     demo-data: ${SEED_DEMO_DATA:false}
