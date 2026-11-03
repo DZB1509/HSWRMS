@@ -1,4 +1,5 @@
 package com.heavenstay.hswrms.m1identity.dto;
+import com.heavenstay.hswrms.m1identity.entity.HealthDeclarationState;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -47,6 +48,10 @@ public class UpdateHealthProfileRequest {
     @Size(max = 2000, message = "Kitchen notes must not exceed 2000 characters")
     private String kitchenNotes;
 
+    private HealthDeclarationState allergiesDeclarationState;
+
+    private HealthDeclarationState dietaryRequirementsDeclarationState;
+
     public String getCurrentHealthCondition() { return currentHealthCondition; }
     public void setCurrentHealthCondition(String v) { this.currentHealthCondition = v; }
 
@@ -82,4 +87,10 @@ public class UpdateHealthProfileRequest {
 
     public String getKitchenNotes() { return kitchenNotes; }
     public void setKitchenNotes(String v) { this.kitchenNotes = v; }
+
+    public HealthDeclarationState getAllergiesDeclarationState() { return allergiesDeclarationState; }
+    public void setAllergiesDeclarationState(HealthDeclarationState allergiesDeclarationState) { this.allergiesDeclarationState = allergiesDeclarationState; }
+
+    public HealthDeclarationState getDietaryRequirementsDeclarationState() { return dietaryRequirementsDeclarationState; }
+    public void setDietaryRequirementsDeclarationState(HealthDeclarationState dietaryRequirementsDeclarationState) { this.dietaryRequirementsDeclarationState = dietaryRequirementsDeclarationState; }
 }

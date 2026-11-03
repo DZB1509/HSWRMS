@@ -1,4 +1,5 @@
 package com.heavenstay.hswrms.m1identity.dto;
+import com.heavenstay.hswrms.m1identity.entity.HealthDeclarationState;
 
 import java.util.List;
 
@@ -21,6 +22,9 @@ public class HealthProfileResponse {
     private String dislikedIngredients;
     private String kitchenNotes;
     private boolean hasConsented;
+    private HealthDeclarationState allergiesDeclarationState;
+    private HealthDeclarationState dietaryRequirementsDeclarationState;
+    private boolean isComplete;
 
     public Integer getHealthProfileId() { return healthProfileId; }
     public void setHealthProfileId(Integer healthProfileId) { this.healthProfileId = healthProfileId; }
@@ -60,4 +64,28 @@ public class HealthProfileResponse {
 
     public boolean isHasConsented() { return hasConsented; }
     public void setHasConsented(boolean hasConsented) { this.hasConsented = hasConsented; }
+
+    public HealthDeclarationState getAllergiesDeclarationState() {
+        return allergiesDeclarationState;
+    }
+
+    public void setAllergiesDeclarationState(HealthDeclarationState allergiesDeclarationState) {
+        this.allergiesDeclarationState = allergiesDeclarationState;
+    }
+
+    public HealthDeclarationState getDietaryRequirementsDeclarationState() {
+        return dietaryRequirementsDeclarationState;
+    }
+
+    public void setDietaryRequirementsDeclarationState(HealthDeclarationState dietaryRequirementsDeclarationState) {
+        this.dietaryRequirementsDeclarationState = dietaryRequirementsDeclarationState;
+    }
+
+    public boolean isComplete() {
+        return isComplete;
+    }
+
+    public void setComplete(boolean isComplete) {
+        this.isComplete = isComplete;
+    }
 }

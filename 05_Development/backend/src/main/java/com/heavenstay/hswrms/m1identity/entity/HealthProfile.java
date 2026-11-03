@@ -30,8 +30,19 @@ public class HealthProfile {
     @Column(name = "allergies", columnDefinition = "NVARCHAR(MAX)")
     private String allergies;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "allergies_declaration_state", nullable = false, length = 20)
+    private HealthDeclarationState allergiesDeclarationState = HealthDeclarationState.NOT_DECLARED;
+
     @Column(name = "dietary_requirements", columnDefinition = "NVARCHAR(MAX)")
     private String dietaryRequirements;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dietary_requirements_declaration_state", nullable = false, length = 20)
+    private HealthDeclarationState dietaryRequirementsDeclarationState = HealthDeclarationState.NOT_DECLARED;
+
+    @Column(name = "is_complete", nullable = false)
+    private boolean isComplete = false;
 
     @Column(name = "treatment_safety_notes", columnDefinition = "NVARCHAR(MAX)")
     private String treatmentSafetyNotes;
@@ -87,6 +98,8 @@ public class HealthProfile {
     public HealthProfile(CustomerProfile customerProfile) {
         this.customerProfile = customerProfile;
         this.anonymizationStatus = "IDENTIFIABLE";
+        this.allergiesDeclarationState = HealthDeclarationState.NOT_DECLARED;
+        this.dietaryRequirementsDeclarationState = HealthDeclarationState.NOT_DECLARED;
     }
 
     @PrePersist
@@ -101,11 +114,26 @@ public class HealthProfile {
         if (this.anonymizationStatus == null) {
             this.anonymizationStatus = "IDENTIFIABLE";
         }
+        if (this.allergiesDeclarationState == null) {
+            this.allergiesDeclarationState = HealthDeclarationState.NOT_DECLARED;
+        }
+        if (this.dietaryRequirementsDeclarationState == null) {
+            this.dietaryRequirementsDeclarationState = HealthDeclarationState.NOT_DECLARED;
+        }
     }
 
     @PreUpdate
     public void onPreUpdate() {
         this.updatedAt = Instant.now();
+        if (this.anonymizationStatus == null) {
+            this.anonymizationStatus = "IDENTIFIABLE";
+        }
+        if (this.allergiesDeclarationState == null) {
+            this.allergiesDeclarationState = HealthDeclarationState.NOT_DECLARED;
+        }
+        if (this.dietaryRequirementsDeclarationState == null) {
+            this.dietaryRequirementsDeclarationState = HealthDeclarationState.NOT_DECLARED;
+        }
     }
 
     // Getters and Setters
@@ -134,12 +162,28 @@ public class HealthProfile {
         this.allergies = allergies;
     }
 
+    public HealthDeclarationState getAllergiesDeclarationState() {
+        return allergiesDeclarationState;
+    }
+
+    public void setAllergiesDeclarationState(HealthDeclarationState allergiesDeclarationState) {
+        this.allergiesDeclarationState = allergiesDeclarationState;
+    }
+
     public String getDietaryRequirements() {
         return dietaryRequirements;
     }
 
     public void setDietaryRequirements(String dietaryRequirements) {
         this.dietaryRequirements = dietaryRequirements;
+    }
+
+    public HealthDeclarationState getDietaryRequirementsDeclarationState() {
+        return dietaryRequirementsDeclarationState;
+    }
+
+    public void setDietaryRequirementsDeclarationState(HealthDeclarationState dietaryRequirementsDeclarationState) {
+        this.dietaryRequirementsDeclarationState = dietaryRequirementsDeclarationState;
     }
 
     public String getTreatmentSafetyNotes() {
@@ -205,6 +249,14 @@ public class HealthProfile {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public boolean isComplete() {
+        return isComplete;
+    }
+
+    public void setComplete(boolean complete) {
+        isComplete = complete;
     }
 
     @Override

@@ -24,9 +24,12 @@ public class ConsentService {
     public static final String HEALTH_DATA_POLICY_VERSION = "v1.2";
     private final UserRepository userRepository;
     private final ConsentRecordRepository consentRecordRepository;
-    public ConsentService(UserRepository userRepository, ConsentRecordRepository consentRecordRepository) {
+    private final HealthProfileCompletionService completionService;
+    public ConsentService(UserRepository userRepository, ConsentRecordRepository consentRecordRepository,
+                          HealthProfileCompletionService completionService) {
         this.userRepository = userRepository;
         this.consentRecordRepository = consentRecordRepository;
+        this.completionService = completionService;
     }
     public static final class GrantResult {
         private final ConsentRecordResponse response;
@@ -50,6 +53,9 @@ public class ConsentService {
         Optional<ConsentRecord> active = findActive(userId, consentType);
         if (active.isPresent()) { return new GrantResult(toResponse(active.get()), false); }
         ConsentRecord saved = consentRecordRepository.save(new ConsentRecord(user, consentType, policyVersionFor(consentType)));
+        if (HEALTH_DATA_PROCESSING.equals(consentType)) {
+            completionService.recalculateForUser(user.getUserId());
+        }
         return new GrantResult(toResponse(saved), true);
     }
     @Transactional
@@ -59,7 +65,11 @@ public class ConsentService {
         ConsentRecord active = findActive(userId, consentType).orElseThrow(() -> new BusinessRuleException("CONSENT_NOT_ACTIVE", "No active consent for type " + consentType + "."));
         active.setConsentStatus("REVOKED");
         active.setRevokedAt(Instant.now());
-        return toResponse(consentRecordRepository.save(active));
+        ConsentRecord saved = consentRecordRepository.save(active);
+        if (HEALTH_DATA_PROCESSING.equals(consentType)) {
+            completionService.recalculateForUser(userId);
+        }
+        return toResponse(saved);
     }
     @Transactional(readOnly = true)
     public boolean hasActiveConsent(Integer userId, String consentType) {

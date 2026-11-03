@@ -1,11 +1,13 @@
 package com.heavenstay.hswrms.m1identity.service;
 
+import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m1identity.dto.HealthProfileResponse;
 import com.heavenstay.hswrms.m1identity.dto.UpdateHealthProfileRequest;
 import com.heavenstay.hswrms.m1identity.entity.CustomerProfile;
 import com.heavenstay.hswrms.m1identity.entity.DietaryRequirement;
 import com.heavenstay.hswrms.m1identity.entity.FoodAllergy;
+import com.heavenstay.hswrms.m1identity.entity.HealthDeclarationState;
 import com.heavenstay.hswrms.m1identity.entity.HealthProfile;
 import com.heavenstay.hswrms.m1identity.entity.HealthProfileTherapyPreference;
 import com.heavenstay.hswrms.m1identity.entity.User;
@@ -31,6 +33,7 @@ public class HealthProfileService {
     private final HealthProfileTherapyPreferenceRepository therapyPreferenceRepository;
     private final ConsentService consentService;
     private final com.heavenstay.hswrms.m6admin.service.AuditLogService auditLogService;
+    private final HealthProfileCompletionService completionService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public HealthProfileService(UserRepository userRepository,
@@ -40,7 +43,8 @@ public class HealthProfileService {
                                 DietaryRequirementRepository dietaryRequirementRepository,
                                 HealthProfileTherapyPreferenceRepository therapyPreferenceRepository,
                                 ConsentService consentService,
-                                @org.springframework.beans.factory.annotation.Autowired(required = false) com.heavenstay.hswrms.m6admin.service.AuditLogService auditLogService) {
+                                @org.springframework.beans.factory.annotation.Autowired(required = false) com.heavenstay.hswrms.m6admin.service.AuditLogService auditLogService,
+                                HealthProfileCompletionService completionService) {
         this.userRepository = userRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.healthProfileRepository = healthProfileRepository;
@@ -49,17 +53,7 @@ public class HealthProfileService {
         this.therapyPreferenceRepository = therapyPreferenceRepository;
         this.consentService = consentService;
         this.auditLogService = auditLogService;
-    }
-
-    public HealthProfileService(UserRepository userRepository,
-                                CustomerProfileRepository customerProfileRepository,
-                                HealthProfileRepository healthProfileRepository,
-                                FoodAllergyRepository foodAllergyRepository,
-                                DietaryRequirementRepository dietaryRequirementRepository,
-                                HealthProfileTherapyPreferenceRepository therapyPreferenceRepository,
-                                ConsentService consentService) {
-        this(userRepository, customerProfileRepository, healthProfileRepository, foodAllergyRepository,
-                dietaryRequirementRepository, therapyPreferenceRepository, consentService, null);
+        this.completionService = completionService;
     }
 
     @Transactional(readOnly = true)
@@ -81,6 +75,13 @@ public class HealthProfileService {
         User user = loadUser(userId);
         CustomerProfile customerProfile = loadOrCreateCustomerProfile(user);
         HealthProfile profile = healthProfileRepository.findByCustomerProfileId(customerProfile.getCustomerProfileId()).orElseGet(() -> healthProfileRepository.save(new HealthProfile(customerProfile)));
+        if (profile.getAllergiesDeclarationState() == null) {
+            profile.setAllergiesDeclarationState(HealthDeclarationState.NOT_DECLARED);
+        }
+        if (profile.getDietaryRequirementsDeclarationState() == null) {
+            profile.setDietaryRequirementsDeclarationState(HealthDeclarationState.NOT_DECLARED);
+        }
+        validateDeclarationStates(profile, request);
         if (request.getCurrentHealthCondition() != null) { profile.setCurrentHealthCondition(norm(request.getCurrentHealthCondition())); }
         if (request.getInjurySurgeryHistory() != null) { profile.setInjurySurgeryHistory(norm(request.getInjurySurgeryHistory())); }
         if (request.getMobilityJointNotes() != null) { profile.setMobilityJointNotes(norm(request.getMobilityJointNotes())); }
@@ -89,16 +90,20 @@ public class HealthProfileService {
         if (request.getFoodIntoleranceNotes() != null) { profile.setFoodIntoleranceNotes(norm(request.getFoodIntoleranceNotes())); }
         if (request.getDislikedIngredients() != null) { profile.setDislikedIngredients(norm(request.getDislikedIngredients())); }
         if (request.getKitchenNotes() != null) { profile.setKitchenNotes(norm(request.getKitchenNotes())); }
+        if (request.getAllergiesDeclarationState() != null) { profile.setAllergiesDeclarationState(request.getAllergiesDeclarationState()); }
+        if (request.getDietaryRequirementsDeclarationState() != null) { profile.setDietaryRequirementsDeclarationState(request.getDietaryRequirementsDeclarationState()); }
         HealthProfile saved = healthProfileRepository.save(profile);
         if (request.getFoodAllergies() != null) { replaceAllergies(saved, request.getFoodAllergies()); }
         if (request.getDietaryRequirements() != null) { replaceRequirements(saved, request.getDietaryRequirements()); }
         if (request.getTherapyPreferences() != null) { replaceTherapies(saved, request.getTherapyPreferences(), request.getTherapyCode()); }
         HealthProfile updated = healthProfileRepository.save(saved);
+        completionService.recalculateForUser(userId);
         if (auditLogService != null) {
             auditLogService.record(userId, "CUSTOMER", "Update Sensitive Health Profile", "DATA_HEALTH_FULL",
                     String.valueOf(updated.getHealthProfileId()), com.heavenstay.hswrms.m6admin.service.AuditLogService.SUCCESS, null, null);
         }
-        return toResponse(updated, true);
+        boolean consented = consentService.hasActiveConsent(userId, ConsentService.HEALTH_DATA_PROCESSING);
+        return toResponse(updated, consented);
     }
     private void replaceAllergies(HealthProfile profile, List<String> names) {
         foodAllergyRepository.deleteByHealthProfileHealthProfileId(profile.getHealthProfileId());
@@ -150,6 +155,9 @@ public class HealthProfileService {
         r.setDietaryRequirements(List.of());
         r.setTherapyPreferences(List.of());
         r.setHasConsented(consented);
+        r.setAllergiesDeclarationState(HealthDeclarationState.NOT_DECLARED);
+        r.setDietaryRequirementsDeclarationState(HealthDeclarationState.NOT_DECLARED);
+        r.setComplete(false);
         return r;
     }
     private HealthProfileResponse toResponse(HealthProfile p, boolean consented) {
@@ -167,6 +175,57 @@ public class HealthProfileService {
         r.setDietaryRequirements(p.getDietaryRequirementsList() != null ? p.getDietaryRequirementsList().stream().map(DietaryRequirement::getRequirementName).toList() : List.of());
         r.setTherapyPreferences(p.getTherapyPreferences() != null ? p.getTherapyPreferences().stream().map(HealthProfileTherapyPreference::getPreferenceLabel).toList() : List.of());
         r.setHasConsented(consented);
+        r.setAllergiesDeclarationState(p.getAllergiesDeclarationState() == null ? HealthDeclarationState.NOT_DECLARED : p.getAllergiesDeclarationState());
+        r.setDietaryRequirementsDeclarationState(p.getDietaryRequirementsDeclarationState() == null ? HealthDeclarationState.NOT_DECLARED : p.getDietaryRequirementsDeclarationState());
+        r.setComplete(p.isComplete());
         return r;
+    }
+
+    private void validateDeclarationStates(HealthProfile profile, UpdateHealthProfileRequest request) {
+        if (request == null) {
+            return;
+        }
+
+        HealthDeclarationState allergiesState = request.getAllergiesDeclarationState();
+        HealthDeclarationState dietaryState = request.getDietaryRequirementsDeclarationState();
+
+        if (allergiesState != null) {
+            List<String> effectiveAllergies = request.getFoodAllergies() != null
+                    ? request.getFoodAllergies()
+                    : (profile.getFoodAllergies() == null ? List.of()
+                    : profile.getFoodAllergies().stream().map(FoodAllergy::getAllergenName).toList());
+            if (!areStateAndItemsValid(allergiesState, effectiveAllergies)) {
+                throw new BusinessRuleException("HEALTH_PROFILE_DECLARATION_INVALID",
+                        "Invalid allergies declaration state and item combination.");
+            }
+        }
+        if (dietaryState != null) {
+            List<String> effectiveDietary = request.getDietaryRequirements() != null
+                    ? request.getDietaryRequirements()
+                    : (profile.getDietaryRequirementsList() == null ? List.of()
+                    : profile.getDietaryRequirementsList().stream().map(DietaryRequirement::getRequirementName).toList());
+            if (!areStateAndItemsValid(dietaryState, effectiveDietary)) {
+                throw new BusinessRuleException("HEALTH_PROFILE_DECLARATION_INVALID",
+                        "Invalid dietary requirements declaration state and item combination.");
+            }
+        }
+    }
+
+    private boolean areStateAndItemsValid(HealthDeclarationState state, List<String> items) {
+        List<String> safeItems = items == null ? List.of() : items;
+        List<String> nonBlank = safeItems.stream()
+                .filter(i -> i != null && !i.trim().isEmpty())
+                .toList();
+
+        if (state == HealthDeclarationState.NOT_DECLARED) {
+            return nonBlank.isEmpty();
+        }
+        if (state == HealthDeclarationState.EXPLICITLY_NONE) {
+            return nonBlank.isEmpty();
+        }
+        if (state == HealthDeclarationState.DECLARED) {
+            return !nonBlank.isEmpty() && nonBlank.size() == safeItems.size();
+        }
+        return false;
     }
 }

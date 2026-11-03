@@ -30,6 +30,8 @@ class ConsentServiceTest {
     private UserRepository userRepository;
     @Mock
     private ConsentRecordRepository consentRecordRepository;
+    @Mock
+    private HealthProfileCompletionService completionService;
     @InjectMocks
     private ConsentService consentService;
     private User user(Integer userId) {
@@ -108,4 +110,31 @@ class ConsentServiceTest {
         assertEquals(1, history.size());
         assertEquals("TO_SERVICE", history.get(0).getConsentType());
     }
+    @Test
+    @DisplayName("Granting health consent recalculates completion")
+    void grant_healthConsent_recalculatesCompletion() {
+        User user = user(205);
+        when(userRepository.findById(205)).thenReturn(Optional.of(user));
+        when(consentRecordRepository.findFirstByUserUserIdAndConsentTypeOrderByGrantedAtDesc(205, "HEALTH_DATA_PROCESSING")).thenReturn(Optional.empty());
+        when(consentRecordRepository.save(any(ConsentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        consentService.grantConsent(205, grantRequest("HEALTH_DATA_PROCESSING"));
+
+        org.mockito.Mockito.verify(completionService).recalculateForUser(205);
+    }
+
+    @Test
+    @DisplayName("Revoking health consent recalculates completion")
+    void revoke_healthConsent_recalculatesCompletion() {
+        User user = user(205);
+        ConsentRecord active = new ConsentRecord(user, "HEALTH_DATA_PROCESSING", "v1.2");
+        when(userRepository.findById(205)).thenReturn(Optional.of(user));
+        when(consentRecordRepository.findFirstByUserUserIdAndConsentTypeOrderByGrantedAtDesc(205, "HEALTH_DATA_PROCESSING")).thenReturn(Optional.of(active));
+        when(consentRecordRepository.save(any(ConsentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        consentService.revokeConsent(205, "HEALTH_DATA_PROCESSING");
+
+        org.mockito.Mockito.verify(completionService).recalculateForUser(205);
+    }
+
 }
