@@ -372,6 +372,18 @@ CREATE TABLE dbo.HealthProfile (
 
     kitchen_notes           NVARCHAR(MAX) NULL,
 
+    allergies_declaration_state VARCHAR(20) NOT NULL
+
+        CONSTRAINT DF_HealthProfile_AllergiesDeclState DEFAULT ('NOT_DECLARED'),
+
+    dietary_requirements_declaration_state VARCHAR(20) NOT NULL
+
+        CONSTRAINT DF_HealthProfile_DietaryDeclState DEFAULT ('NOT_DECLARED'),
+
+    is_complete             BIT NOT NULL
+
+        CONSTRAINT DF_HealthProfile_IsComplete DEFAULT (0),
+
     anonymization_status    VARCHAR(20) NOT NULL
 
         CONSTRAINT DF_HealthProfile_AnonStatus DEFAULT ('IDENTIFIABLE'),
@@ -400,7 +412,15 @@ CREATE TABLE dbo.HealthProfile (
 
     CONSTRAINT CK_HealthProfile_StressLevel
 
-        CHECK (stress_fatigue_level IS NULL OR stress_fatigue_level IN ('mild','moderate','high'))
+        CHECK (stress_fatigue_level IS NULL OR stress_fatigue_level IN ('mild','moderate','high')),
+
+    CONSTRAINT CK_HealthProfile_AllergiesDeclState
+
+        CHECK (allergies_declaration_state IN ('NOT_DECLARED','EXPLICITLY_NONE','DECLARED')),
+
+    CONSTRAINT CK_HealthProfile_DietaryDeclState
+
+        CHECK (dietary_requirements_declaration_state IN ('NOT_DECLARED','EXPLICITLY_NONE','DECLARED'))
 
 );
 
