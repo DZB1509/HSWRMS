@@ -10,7 +10,9 @@ BEGIN TRANSACTION;
 PRINT N'>>> Bắt đầu tạo dữ liệu các phòng giả định phục vụ kiểm thử Module 5...';
 
 -- 1. Dọn dẹp dữ liệu cũ của các booking 10, 11, 12, 13 (nếu có)
-DELETE FROM dbo.PaymentTransaction WHERE retreat_booking_id IN (10, 11, 12, 13);
+DELETE FROM dbo.PaymentTransaction WHERE retreat_booking_id IN (10, 11, 12, 13) 
+    OR invoice_id IN (SELECT invoice_id FROM dbo.Invoice WHERE folio_id IN (SELECT folio_id FROM dbo.Folio WHERE retreat_booking_id IN (10, 11, 12, 13)));
+DELETE FROM dbo.CreditNote WHERE invoice_id IN (SELECT invoice_id FROM dbo.Invoice WHERE folio_id IN (SELECT folio_id FROM dbo.Folio WHERE retreat_booking_id IN (10, 11, 12, 13)));
 DELETE FROM dbo.Invoice WHERE folio_id IN (SELECT folio_id FROM dbo.Folio WHERE retreat_booking_id IN (10, 11, 12, 13));
 DELETE FROM dbo.FolioItem WHERE folio_id IN (SELECT folio_id FROM dbo.Folio WHERE retreat_booking_id IN (10, 11, 12, 13));
 DELETE FROM dbo.Folio WHERE retreat_booking_id IN (10, 11, 12, 13);
@@ -111,11 +113,11 @@ INSERT INTO dbo.MealOrder (
 );
 DECLARE @mealId10 INT = SCOPE_IDENTITY();
 
--- Booking 13: 1 đơn F&B PREPARING (Billing Guard chặn thanh toán)
+-- Booking 13: 1 đơn F&B DELIVERED (Dịch vụ phụ trội ngoài gói chưa thanh toán, sẽ quyết toán tại Final Invoice)
 INSERT INTO dbo.MealOrder (
     retreat_booking_id, order_date, meal_type, order_type, order_status, created_at, special_instructions
 ) VALUES (
-    13, CAST(GETDATE() AS DATE), N'LUNCH', 'A_LA_CARTE', 'PREPARING', SYSUTCDATETIME(), N'Giao tại Villa V301 - Đang chuẩn bị'
+    13, CAST(GETDATE() AS DATE), N'LUNCH', 'A_LA_CARTE', 'DELIVERED', SYSUTCDATETIME(), N'Giao tại Villa V301 - Đã giao phòng'
 );
 DECLARE @mealId13 INT = SCOPE_IDENTITY();
 
