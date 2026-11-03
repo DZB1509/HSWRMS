@@ -7,11 +7,13 @@ import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentRoomStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentStatus;
 import com.heavenstay.hswrms.m3spa.port.SpaNotificationPort;
+import com.heavenstay.hswrms.m3spa.port.SpaCalendarPort;
 import com.heavenstay.hswrms.m3spa.repository.*;
 import com.heavenstay.hswrms.m3spa.service.SpaDispatchOutboxWorker;
 import com.heavenstay.hswrms.m3spa.service.SpaScheduleAuditEventListener;
 import com.heavenstay.hswrms.m3spa.service.event.SpaScheduleAcceptedEvent;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,13 +77,39 @@ public class SpaDispatchOutboxTest {
     @MockBean
     private SpaNotificationPort mockNotificationPort;
 
+    @MockBean
+    private SpaCalendarPort mockCalendarPort;
+
     private SpaSession session;
     private SpaTreatment treatment;
     private Therapist therapist;
     private TreatmentRoom room;
 
+    @AfterEach
+    public void cleanCommittedOutboxFixture() {
+        if (session == null || session.getSpaSessionId() == null) return;
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            outboxRepository.deleteAll(outboxRepository.findBySessionIdOrderByCreatedAtAsc(session.getSpaSessionId()));
+            historyRepository.deleteAll(historyRepository.findBySessionIdOrderByCreatedAtAsc(session.getSpaSessionId()));
+            sessionRepository.deleteById(session.getSpaSessionId());
+            qualificationRepository.deleteAll(qualificationRepository.findAll().stream()
+                    .filter(q -> q.getTherapist() != null && therapist != null
+                            && q.getTherapist().getTherapistId().equals(therapist.getTherapistId()))
+                    .toList());
+            compatibilityRepository.deleteAll(compatibilityRepository.findAll().stream()
+                    .filter(c -> c.getTreatmentRoom() != null && room != null
+                            && c.getTreatmentRoom().getRoomId().equals(room.getRoomId()))
+                    .toList());
+            if (therapist != null) therapistRepository.delete(therapist);
+            if (room != null) roomRepository.delete(room);
+            if (treatment != null) treatmentRepository.delete(treatment);
+        });
+    }
+
     @BeforeEach
     public void setUp() {
+        when(mockCalendarPort.createOrUpdateCalendarEvent(any())).thenReturn("calendar-event-test");
+        when(mockCalendarPort.cancelCalendarEvent(any(), anyString())).thenReturn(true);
         treatment = new SpaTreatment("Aromatherapy", 60, BigDecimal.valueOf(140), TreatmentStatus.ACTIVE);
         treatment = treatmentRepository.save(treatment);
 
@@ -111,6 +139,7 @@ public class SpaDispatchOutboxTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DisplayName("BR-M3-14: Notification provider failure retains failed outbox record, and worker successfully retries")
     public void testProviderFailureFollowedBySuccessfulRetry() {
         // Mock notification failure initially
@@ -127,19 +156,29 @@ public class SpaDispatchOutboxTest {
                 "sarah.guest@heavenstay.com", "Sarah Guest"
         );
 
-        auditEventListener.onScheduleAccepted(event);
+        TransactionTemplate businessTransaction = new TransactionTemplate(transactionManager);
+        businessTransaction.executeWithoutResult(status -> auditEventListener.onScheduleAccepted(event));
+        verify(mockNotificationPort, never()).sendScheduleChangeNotification(any(), anyString(), anyString(), anyString());
 
         List<SpaDispatchOutboxEntity> outboxItems = outboxRepository.findBySessionIdOrderByCreatedAtAsc(session.getSpaSessionId());
         assertEquals(2, outboxItems.size(), "Should have 1 CALENDAR and 1 EMAIL outbox record");
 
         SpaDispatchOutboxEntity emailOutbox = outboxItems.stream()
                 .filter(o -> "EMAIL".equals(o.getChannel())).findFirst().orElseThrow();
-        assertEquals("FAILED", emailOutbox.getStatus(), "Initial notification failure must mark status FAILED");
-        assertEquals(1, emailOutbox.getRetryCount(), "Retry count must be incremented to 1");
+        assertEquals("PENDING", emailOutbox.getStatus(), "Business commit only enqueues the notification");
+        assertEquals(0, emailOutbox.getRetryCount(), "No attempt occurs before the worker claims the entry");
+
+        int failedAttempt = outboxWorker.processPendingOutboxDispatches();
+        assertEquals(1, failedAttempt, "Calendar succeeds while the failed email is excluded from the success count");
+        SpaDispatchOutboxEntity failedOutbox = outboxRepository.findById(emailOutbox.getOutboxId()).orElseThrow();
+        assertEquals("FAILED", failedOutbox.getStatus());
+        assertEquals(1, failedOutbox.getRetryCount());
 
         // Repair notification provider
         when(mockNotificationPort.sendScheduleChangeNotification(any(), anyString(), anyString(), anyString()))
                 .thenReturn(true);
+        failedOutbox.setNextAttemptAt(LocalDateTime.now().minusSeconds(1));
+        outboxRepository.saveAndFlush(failedOutbox);
 
         // Run worker sweep to retry pending/failed dispatches
         int processed = outboxWorker.processPendingOutboxDispatches();
@@ -205,6 +244,7 @@ public class SpaDispatchOutboxTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DisplayName("BR-M3-14: Independent failure: Calendar succeeds, Notification fails; on retry only Notification runs")
     public void testIndependentFailureOfCalendarAndSmtpDispatch() {
         // Notification throws exception; Calendar runs in decoupled mode (succeeds)
@@ -221,18 +261,28 @@ public class SpaDispatchOutboxTest {
                 "guest@heavenstay.com", "Guest"
         );
 
-        auditEventListener.onScheduleAccepted(event);
+        TransactionTemplate businessTransaction = new TransactionTemplate(transactionManager);
+        businessTransaction.executeWithoutResult(status -> auditEventListener.onScheduleAccepted(event));
+        verify(mockNotificationPort, never()).sendScheduleChangeNotification(any(), anyString(), anyString(), anyString());
 
         List<SpaDispatchOutboxEntity> outboxItems = outboxRepository.findBySessionIdOrderByCreatedAtAsc(session.getSpaSessionId());
         SpaDispatchOutboxEntity calOutbox = outboxItems.stream().filter(o -> "CALENDAR".equals(o.getChannel())).findFirst().orElseThrow();
         SpaDispatchOutboxEntity emailOutbox = outboxItems.stream().filter(o -> "EMAIL".equals(o.getChannel())).findFirst().orElseThrow();
 
-        assertEquals("SENT", calOutbox.getStatus(), "Calendar outbox should succeed");
-        assertEquals("FAILED", emailOutbox.getStatus(), "Email outbox should fail");
-        assertTrue(emailOutbox.getLastError().contains("SMTP transport timeout"));
+        assertEquals("PENDING", calOutbox.getStatus(), "Calendar remains queued until worker execution");
+        assertEquals("PENDING", emailOutbox.getStatus(), "Email remains queued until worker execution");
+
+        outboxWorker.processPendingOutboxDispatches();
+        SpaDispatchOutboxEntity firstCalendarResult = outboxRepository.findById(calOutbox.getOutboxId()).orElseThrow();
+        SpaDispatchOutboxEntity firstEmailResult = outboxRepository.findById(emailOutbox.getOutboxId()).orElseThrow();
+        assertEquals("SENT", firstCalendarResult.getStatus(), "Calendar succeeds independently in the worker");
+        assertEquals("FAILED", firstEmailResult.getStatus(), "Email provider failure is persisted by the worker");
+        assertTrue(firstEmailResult.getLastError().contains("SMTP transport timeout"));
 
         // Now fix notification using doReturn to avoid throwing during stubbing
         doReturn(true).when(mockNotificationPort).sendScheduleChangeNotification(any(), anyString(), anyString(), anyString());
+        firstEmailResult.setNextAttemptAt(LocalDateTime.now().minusSeconds(1));
+        outboxRepository.saveAndFlush(firstEmailResult);
 
         outboxWorker.processPendingOutboxDispatches();
 
@@ -424,7 +474,7 @@ public class SpaDispatchOutboxTest {
 
         SpaDispatchOutboxEntity after5th = outboxRepository.findById(item.getOutboxId()).orElseThrow();
         assertEquals(5, after5th.getRetryCount(), "Retry count must reach maxRetries (5)");
-        assertEquals("FAILED", after5th.getStatus());
+        assertEquals("FINAL_FAILURE", after5th.getStatus());
 
         // Even if provider recovers now, exhausted entry (retryCount == 5) must NOT be claimed or dispatched
         reset(mockNotificationPort);
@@ -465,5 +515,6 @@ public class SpaDispatchOutboxTest {
 
         assertTrue(histories.isEmpty(), "Rolled-back transaction must not leave schedule history records");
         assertTrue(outboxes.isEmpty(), "Rolled-back transaction must not leave orphan outbox records");
+        verify(mockNotificationPort, never()).sendScheduleChangeNotification(any(), anyString(), anyString(), anyString());
     }
 }

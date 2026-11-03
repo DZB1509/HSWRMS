@@ -148,6 +148,10 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
     @Autowired
 
+    private SpaDispatchOutboxRepository outboxRepository;
+
+    @Autowired
+
     private SchedulingEngineService schedulingEngineService;
 
     @Autowired
@@ -179,6 +183,10 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
     @BeforeEach
 
     public void setupFixtures() {
+
+        timelineScheduler.setClock(Clock.systemDefaultZone());
+
+        outboxRepository.deleteAll();
 
         sessionRepository.deleteAll();
 
@@ -529,10 +537,35 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
         assertTrue(reschedEx.getMessage().contains("Cannot reschedule a session belonging to another retreat booking"));
 
         // Verify listCustomerSessions(2) isolates records: Customer 2 sees 0 sessions
-
         List<SpaSessionDto> customer2Sessions = spaSessionService.listCustomerSessions(2);
-
         assertTrue(customer2Sessions.isEmpty(), "Customer 2 must not see Customer 1's sessions in their personal list!");
+
+        // Customer 2 attempts to schedule a session specifying Customer 1's retreat booking (bookingId=101)
+        ConfirmReservationRequest reqCrossBooking = new ConfirmReservationRequest(
+                massageTreatment.getTreatmentId(),
+                qualifiedTherapist.getTherapistId(),
+                compatibleRoom.getRoomId(),
+                start.plusHours(4),
+                end.plusHours(4),
+                101,
+                null
+        );
+        reqCrossBooking.setBookingSource(BookingSource.RECEPTIONIST);
+        BusinessRuleException crossBookingEx = assertThrows(BusinessRuleException.class, () ->
+                spaSessionService.confirmReservation(reqCrossBooking, 2, false)
+        );
+        assertTrue(crossBookingEx.getMessage().contains("Cannot book a spa session for another customer's retreat booking"));
+
+        // Single session detail verification: Customer 2 cannot view Customer 1's session
+        BusinessRuleException getEx = assertThrows(BusinessRuleException.class, () ->
+                spaSessionService.getCustomerSessionById(session.getSpaSessionId(), 2, false)
+        );
+        assertTrue(getEx.getMessage().contains("Session does not belong to the current customer stay"));
+
+        // But Staff (isStaff=true) CAN view the session
+        SpaSessionDto staffView = spaSessionService.getCustomerSessionById(session.getSpaSessionId(), 2, true);
+        assertNotNull(staffView);
+        assertEquals(session.getSpaSessionId(), staffView.getSpaSessionId());
 
     }
 
@@ -940,7 +973,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         assertTrue(exhaustedResult.getAlternatives().isEmpty(), "When horizon is 0, alternative candidates must be empty!");
 
-        // 4. Session cancellation endpoint transitions session entity to CANCELLED / DECLINED
+        // 4. Cancellation changes the session lifecycle without impersonating an attendance decline
 
         SpaSession scheduledSession = new SpaSession(
 
@@ -964,7 +997,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         assertEquals(SpaSessionStatus.CANCELLED, cancelledSession.getSessionStatus());
 
-        assertEquals(SpaConfirmationStatus.DECLINED, cancelledSession.getConfirmationStatus());
+        assertEquals(SpaConfirmationStatus.PENDING, cancelledSession.getConfirmationStatus());
 
         SpaSession inDb = sessionRepository.findById(scheduledSession.getSpaSessionId()).orElseThrow();
 
@@ -1116,7 +1149,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         assertEquals(SpaSessionStatus.CANCELLED, res1.getSessionStatus());
 
-        assertEquals(SpaConfirmationStatus.DECLINED, res1.getConfirmationStatus());
+        assertEquals(SpaConfirmationStatus.PENDING, res1.getConfirmationStatus());
 
         // Repeated cancellation must safely return cancelled DTO without throwing exception
 
@@ -1124,7 +1157,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         assertEquals(SpaSessionStatus.CANCELLED, res2.getSessionStatus());
 
-        assertEquals(SpaConfirmationStatus.DECLINED, res2.getConfirmationStatus());
+        assertEquals(SpaConfirmationStatus.PENDING, res2.getConfirmationStatus());
 
     }
 
@@ -1374,19 +1407,19 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         // Customer searches replacements, rejects all offered alternatives, and explicitly declines
 
-        // Existing session transitions to CANCELLED and DECLINED
+        // Existing session transitions to CANCELLED; attendance confirmation remains a separate state
 
         SpaSessionDto cancelledDto = spaSessionService.cancelSession(existingSessionId, 1);
 
         assertEquals(SpaSessionStatus.CANCELLED, cancelledDto.getSessionStatus());
 
-        assertEquals(SpaConfirmationStatus.DECLINED, cancelledDto.getConfirmationStatus());
+        assertEquals(SpaConfirmationStatus.PENDING, cancelledDto.getConfirmationStatus());
 
         SpaSession inDb = sessionRepository.findById(existingSessionId).orElseThrow();
 
         assertEquals(SpaSessionStatus.CANCELLED, inDb.getSessionStatus());
 
-        assertEquals(SpaConfirmationStatus.DECLINED, inDb.getConfirmationStatus());
+        assertEquals(SpaConfirmationStatus.PENDING, inDb.getConfirmationStatus());
 
         // A COMPLETED session cannot be cancelled even on exhaustion
 
@@ -1472,7 +1505,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         assertEquals(SpaSessionStatus.CANCELLED, cancelled.getSessionStatus());
 
-        assertEquals(SpaConfirmationStatus.DECLINED, cancelled.getConfirmationStatus());
+        assertEquals(SpaConfirmationStatus.PENDING, cancelled.getConfirmationStatus());
 
         assertFalse(sessionRepository.hasOverlappingSession(
 
@@ -1772,7 +1805,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
     @Test
 
-    @DisplayName("BR-M3-10.1: Eligible pending session in T-1h reminder window receives reminder dispatch and records reminderSentAt")
+    @DisplayName("BR-M3-10.1: Eligible pending session in the T-75m checkpoint window is durably queued")
 
     public void testBR10_EligiblePendingSessionInReminderWindowReceivesReminderDispatch() {
 
@@ -1814,7 +1847,17 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         SpaSession evaluated = sessionRepository.findById(pending.getSpaSessionId()).orElseThrow();
 
-        assertNotNull(evaluated.getReminderSentAt(), "reminderSentAt must be populated after successful reminder dispatch!");
+        assertNull(evaluated.getReminderSentAt(), "Queueing a reminder must not claim provider delivery");
+
+        SpaDispatchOutboxEntity queuedReminder = outboxRepository.findBySessionIdOrderByCreatedAtAsc(
+                        pending.getSpaSessionId()).stream()
+                .filter(entry -> "REMINDER_T75M".equals(entry.getChangeType()))
+                .findFirst().orElseThrow();
+
+        assertEquals("PENDING", queuedReminder.getStatus(), "Reminder is queued for post-commit provider processing");
+
+        assertEquals("spa:" + pending.getSpaSessionId() + ":schedule:1:REMINDER_T75M",
+                queuedReminder.getIdempotencyKey());
 
         assertEquals(SpaConfirmationStatus.PENDING, evaluated.getConfirmationStatus(), "Confirmation status remains PENDING awaiting Customer action");
 
@@ -1924,7 +1967,7 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
     @Test
 
-    @DisplayName("BR-M3-10.4: Duplicate reminder prevention across repeated scheduler executions and application restarts")
+    @DisplayName("BR-M3-10.4: Duplicate reminder prevention across repeated scheduler executions")
 
     public void testBR10_DuplicateReminderPreventionAcrossRepeatedRuns() {
 
@@ -1946,42 +1989,33 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
 
         session = sessionRepository.save(session);
 
-        // Run 1: Reminder dispatched
+        // Run 1: Reminder checkpoint is durably queued.
 
         timelineScheduler.dispatchUpcomingSessionReminders();
 
-        SpaSession run1 = sessionRepository.findById(session.getSpaSessionId()).orElseThrow();
+        List<SpaDispatchOutboxEntity> firstRun = outboxRepository.findBySessionIdOrderByCreatedAtAsc(session.getSpaSessionId());
 
-        LocalDateTime firstSentAt = run1.getReminderSentAt();
+        assertEquals(1, firstRun.size(), "First run must persist exactly one checkpoint");
 
-        assertNotNull(firstSentAt, "First run must record reminderSentAt");
+        assertEquals("PENDING", firstRun.get(0).getStatus());
+
+        assertNull(sessionRepository.findById(session.getSpaSessionId()).orElseThrow().getReminderSentAt(),
+                "Queueing must not record delivery");
 
         // Run 2: Immediate repeated scheduler execution
 
         timelineScheduler.dispatchUpcomingSessionReminders();
 
-        SpaSession run2 = sessionRepository.findById(session.getSpaSessionId()).orElseThrow();
+        List<SpaDispatchOutboxEntity> secondRun = outboxRepository.findBySessionIdOrderByCreatedAtAsc(session.getSpaSessionId());
 
-        assertEquals(firstSentAt, run2.getReminderSentAt(), "Repeated scheduler execution must NOT re-dispatch or mutate reminderSentAt!");
+        assertEquals(1, secondRun.size(), "Repeated scheduler execution must not duplicate the checkpoint");
+
+        assertEquals(firstRun.get(0).getIdempotencyKey(), secondRun.get(0).getIdempotencyKey());
 
         // Run 3: Simulating application restart / separate context query
 
-        List<SpaSession> candidates = sessionRepository.findSessionsDueForReminder(
-
-                SpaSessionStatus.SCHEDULED,
-
-                SpaConfirmationStatus.PENDING,
-
-                LocalDateTime.now(),
-
-                LocalDateTime.now().plusMinutes(75)
-
-        );
-
-        final Long sessionCheckId = session.getSpaSessionId();
-        boolean containsSession = candidates.stream().anyMatch(s -> s.getSpaSessionId().equals(sessionCheckId));
-
-        assertFalse(containsSession, "Session with reminderSentAt != null must be excluded from due reminders query!");
+        assertTrue(outboxRepository.existsByIdempotencyKey(firstRun.get(0).getIdempotencyKey()),
+                "The durable idempotency record remains available after another scheduler run");
 
     }
 
@@ -2227,7 +2261,11 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
                 assertEquals(SpaSessionStatus.SCHEDULED, session.getSessionStatus(), "Offset " + offset + "m must remain SCHEDULED");
             } else if (offset == 75 || offset == 65) {
                 // Inside reminder window (<=75m and >60m), before deadline (>60m)
-                assertNotNull(session.getReminderSentAt(), "Offset " + offset + "m MUST receive reminder");
+                assertNull(session.getReminderSentAt(), "Offset " + offset + "m is queued, not synchronously delivered");
+
+                assertTrue(outboxRepository.existsByIdempotencyKey(
+                                "spa:" + sId + ":schedule:1:REMINDER_T75M"),
+                        "Offset " + offset + "m MUST persist its T-75m checkpoint");
                 assertEquals(SpaConfirmationStatus.PENDING, session.getConfirmationStatus(), "Offset " + offset + "m must remain PENDING for customer confirmation");
                 assertEquals(SpaSessionStatus.SCHEDULED, session.getSessionStatus(), "Offset " + offset + "m must remain SCHEDULED");
             } else {
@@ -2602,8 +2640,13 @@ public class SpaAuthoritativeAcceptanceEvidenceTest {
         timelineScheduler.dispatchUpcomingSessionReminders();
 
         SpaSession evaluated = sessionRepository.findById(sId).orElseThrow();
-        assertEquals(SpaReminderStatus.SENT, evaluated.getReminderStatus(), "Catch-up reminder must be dispatched");
-        assertNotNull(evaluated.getReminderSentAt(), "reminderSentAt must be populated upon recovery");
+        assertNull(evaluated.getReminderSentAt(), "Catch-up queueing must not claim email delivery");
+
+        assertTrue(outboxRepository.existsByIdempotencyKey(
+                        "spa:" + sId + ":schedule:1:REMINDER_T75M"),
+                "Catch-up within the T-75m window must persist the checkpoint");
+
+        assertEquals("PENDING", outboxRepository.findBySessionIdOrderByCreatedAtAsc(sId).get(0).getStatus());
         assertEquals(SpaConfirmationStatus.PENDING, evaluated.getConfirmationStatus(), "Guest still has 10 minutes to confirm attendance");
 
         // Reset clock

@@ -58,7 +58,7 @@ public class TherapistRecoveryScheduler {
                 log.info("[THERAPIST RECOVERY SWEEP] Executing recovery for SpaSession #{} (Therapist #{})",
                         session.getSpaSessionId(), session.getTherapist() != null ? session.getTherapist().getTherapistId() : "N/A");
 
-                RecoveryResultDto result = sessionRecoveryService.attemptSameTimeRecovery(session.getSpaSessionId());
+                RecoveryResultDto result = sessionRecoveryService.attemptSameTimeRecovery(session.getSpaSessionId(), true);
                 processed++;
 
                 log.info("[THERAPIST RECOVERY SWEEP] Session #{} recovery complete: recovered={}, preservedTime={}, consentRequired={}, message='{}'",

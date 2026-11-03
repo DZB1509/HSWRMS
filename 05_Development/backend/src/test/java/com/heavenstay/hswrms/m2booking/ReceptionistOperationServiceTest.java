@@ -5,13 +5,13 @@ import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m2booking.dto.BookingCalculationResponse;
 import com.heavenstay.hswrms.m2booking.dto.BookingSummaryResponse;
 import com.heavenstay.hswrms.m2booking.dto.WalkInBookingRequest;
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
+import com.heavenstay.hswrms.m5billing.port.CreateDepositTransactionCommand;
+import com.heavenstay.hswrms.m5billing.port.PaymentTransactionPort;
 import com.heavenstay.hswrms.m2booking.entity.PhysicalVilla;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
 import com.heavenstay.hswrms.m2booking.entity.VillaCategory;
 import com.heavenstay.hswrms.m2booking.service.CustomerIdentityPort;
-import com.heavenstay.hswrms.m2booking.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m2booking.repository.PhysicalVillaRepository;
 import com.heavenstay.hswrms.m2booking.repository.ResidenceRecordRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
@@ -56,7 +56,7 @@ public class ReceptionistOperationServiceTest {
     private VillaCategoryRepository villaCategoryRepository;
 
     @Mock
-    private PaymentTransactionRepository paymentTransactionRepository;
+    private PaymentTransactionPort paymentTransactionPort;
 
     @Mock
     private VillaAvailabilityService availabilityService;
@@ -85,7 +85,7 @@ public class ReceptionistOperationServiceTest {
                 residenceRecordRepository,
                 packageRepository,
                 villaCategoryRepository,
-                paymentTransactionRepository,
+                paymentTransactionPort,
                 availabilityService,
                 customerIdentityPort,
                 bookingClock,
@@ -160,7 +160,7 @@ public class ReceptionistOperationServiceTest {
         assertEquals(555, response.getRetreatBookingId());
         assertEquals("CHECKED_IN", response.getBookingStatus());
         assertEquals(15, response.getCustomerProfileId());
-        verify(paymentTransactionRepository).save(any(PaymentTransaction.class));
+        verify(paymentTransactionPort).createDepositTransaction(any(CreateDepositTransactionCommand.class));
         verify(bookingAuditService).record(eq(2), eq("WALK_IN_CHECK_IN"), anyString(), eq("SUCCESS"));
     }
 
@@ -224,6 +224,19 @@ public class ReceptionistOperationServiceTest {
 
         assertTrue(ex.getMessage().contains("Cannot change status of Villa"));
         verify(physicalVillaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Villa status audit records the supplied authenticated actor ID")
+    void villaStatusAuditUsesAuthenticatedActorId() {
+        when(physicalVillaRepository.findByIdForUpdate(201)).thenReturn(Optional.of(mockVilla));
+        when(bookingRepository.existsByAssignedVilla_VillaIdAndBookingStatus(201, "CHECKED_IN"))
+                .thenReturn(false);
+        when(physicalVillaRepository.save(mockVilla)).thenReturn(mockVilla);
+
+        receptionistService.updateVillaStatus(201, PhysicalVilla.MAINTENANCE, null, 842);
+
+        verify(bookingAuditService).record(842, "UPDATE_VILLA_STATUS", "Villa V-101 -> MAINTENANCE", "SUCCESS");
     }
 
     @Test

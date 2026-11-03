@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface CustomerProfileRepository extends JpaRepository<CustomerProfile, Integer> {
 
-    @Query("SELECT cp FROM CustomerProfile cp WHERE cp.user.userId = :userId")
+    @Query("SELECT cp FROM CustomerProfile cp LEFT JOIN FETCH cp.user WHERE cp.user.userId = :userId")
     Optional<CustomerProfile> findByUserId(@Param("userId") Integer userId);
 
     @Query("SELECT cp FROM CustomerProfile cp JOIN FETCH cp.user WHERE cp.customerProfileId = :customerProfileId")

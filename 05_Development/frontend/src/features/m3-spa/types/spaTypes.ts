@@ -211,7 +211,7 @@ export interface BackendSpaSession {
   sessionStatus: BackendSpaSessionStatus;
 
   confirmationStatus: BackendSpaConfirmationStatus;
-
+  scheduleVersion: number;
   customerNote?: string;
 
   reminderStatus?: 'PENDING' | 'CLAIMED' | 'SENT' | 'RETRYABLE_FAILURE' | null;
@@ -240,13 +240,13 @@ export interface TherapistSessionDetail {
   customerFirstName: string;
 
   treatmentSafetyNotes: string;
-
+  mobilityJointNotes?: string;
   relevantPrecautions: string[];
 
   sessionStatus: BackendSpaSessionStatus;
 
   confirmationStatus: BackendSpaConfirmationStatus;
-
+  scheduleVersion: number;
   customerNote?: string;
 
 }

@@ -1406,6 +1406,10 @@ CREATE TABLE dbo.SpaSession (
 
     external_calendar_event_id VARCHAR(255) NULL,
 
+    schedule_version    INT NOT NULL CONSTRAINT DF_SpaSession_ScheduleVersion DEFAULT (1),
+
+    recovery_attempted_version INT NULL,
+
     created_at          DATETIME2(0) NOT NULL
 
         CONSTRAINT DF_SpaSession_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -2939,13 +2943,15 @@ BEGIN
         idempotency_key        VARCHAR(150) NOT NULL,
         claimed_at             DATETIME2(0) NULL,
         claimed_by             VARCHAR(100) NULL,
+        next_attempt_at        DATETIME2(0) NULL,
+        schedule_version       INT NOT NULL CONSTRAINT DF_SpaDispatchOutbox_schedule_version DEFAULT (1),
         created_at             DATETIME2(0) NOT NULL CONSTRAINT DF_SpaDispatchOutbox_created_at DEFAULT (SYSUTCDATETIME()),
         processed_at           DATETIME2(0) NULL,
 
         CONSTRAINT UQ_SpaDispatchOutbox_IdempotencyKey UNIQUE (idempotency_key),
         CONSTRAINT FK_SpaDispatchOutbox_SpaSession FOREIGN KEY (session_id)
             REFERENCES dbo.SpaSession (spa_session_id),
-        CONSTRAINT CK_SpaDispatchOutbox_Status CHECK (status IN ('PENDING', 'PROCESSING', 'SENT', 'FAILED')),
+        CONSTRAINT CK_SpaDispatchOutbox_Status CHECK (status IN ('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'FINAL_FAILURE', 'AMBIGUOUS', 'SKIPPED', 'SUPERSEDED')),
         CONSTRAINT CK_SpaDispatchOutbox_Channel CHECK (channel IN ('CALENDAR', 'EMAIL'))
     );
 END;
@@ -2975,6 +2981,16 @@ IF NOT EXISTS (
 )
 BEGIN
     CREATE INDEX IX_SpaDispatchOutbox_claim ON dbo.SpaDispatchOutbox (status, retry_count, claimed_at);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.SpaDispatchOutbox') AND name = N'IX_SpaDispatchOutbox_RetryDue'
+)
+BEGIN
+    CREATE INDEX IX_SpaDispatchOutbox_RetryDue
+        ON dbo.SpaDispatchOutbox (status, retry_count, next_attempt_at, claimed_at);
 END;
 GO
 

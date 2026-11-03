@@ -179,7 +179,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
     if (!selectedCandidate) return;
 
     // Navigate to Screen 28 (Final Confirmation)
-    navigate('/customer/spa/confirm', {
+    navigate('/customer/spa/confirmation', {
       state: {
         selectedCandidate,
         treatmentId,

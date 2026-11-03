@@ -58,7 +58,7 @@ public class TherapistStatusRecoveryListener {
         for (SpaSession session : affectedSessions) {
             try {
                 log.info("[AUTOMATED RECOVERY ORCHESTRATION] Invoking attemptSameTimeRecovery for SpaSession #{}", session.getSpaSessionId());
-                RecoveryResultDto result = sessionRecoveryService.attemptSameTimeRecovery(session.getSpaSessionId());
+                RecoveryResultDto result = sessionRecoveryService.attemptSameTimeRecovery(session.getSpaSessionId(), true);
                 log.info("[AUTOMATED RECOVERY ORCHESTRATION] Recovery completed for SpaSession #{}: recovered={}, preservedTime={}, consentRequired={}, message='{}'",
                         session.getSpaSessionId(), result.isRecovered(), result.isPreservedSameTime(), result.isRequiresCustomerConsent(), result.getMessage());
             } catch (Exception ex) {

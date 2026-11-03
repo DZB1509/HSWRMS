@@ -13,112 +13,37 @@ import org.springframework.stereotype.Component;
  * without fabricating live cloud or calendar credentials.
  */
 @Component
-public class DefaultSpaNotificationAdapter implements SpaNotificationPort {
+public class DefaultSpaNotificationAdapter implements SpaNotificationOutcomeAware {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultSpaNotificationAdapter.class);
 
     @Override
+    public SpaProviderResult sendScheduleChangeNotificationResult(SpaSession session, String customerEmail,
+                                                                  String customerName, String changeDetails) {
+        log.info("[SPA NOTIFICATION SUPPRESSED] No email transport is configured; schedule notice for session #{} was not delivered.",
+                session != null ? session.getSpaSessionId() : null);
+        return SpaProviderResult.suppressed("No email transport configured; logging is not delivery");
+    }
+
+    @Override
+    public SpaProviderResult sendTimelineReminder(SpaSession session, String customerEmail,
+                                                   String customerName, String checkpoint) {
+        log.info("[SPA REMINDER SUPPRESSED] No email transport is configured; checkpoint {} for session #{} was not delivered.",
+                checkpoint, session != null ? session.getSpaSessionId() : null);
+        return SpaProviderResult.suppressed("No email transport configured; logging is not delivery");
+    }
+
+    @Override
     public boolean sendAppointmentReminder(SpaSession session, String customerEmail, String customerName) {
-        if (session == null) {
-            log.warn("Cannot send spa appointment reminder: session is null");
-            return false;
-        }
-
-        try {
-            String treatmentName = "Spa Treatment";
-            try {
-                if (session.getTreatment() != null && session.getTreatment().getTreatmentName() != null) {
-                    treatmentName = session.getTreatment().getTreatmentName();
-                }
-            } catch (Exception ignored) {
-            }
-
-            String practitionerName = "Assigned Specialist";
-            try {
-                if (session.getTherapist() != null && session.getTherapist().getDisplayName() != null) {
-                    practitionerName = session.getTherapist().getDisplayName();
-                }
-            } catch (Exception ignored) {
-            }
-
-            String roomName = "Treatment Suite";
-            try {
-                if (session.getTreatmentRoom() != null && session.getTreatmentRoom().getRoomName() != null) {
-                    roomName = session.getTreatmentRoom().getRoomName();
-                }
-            } catch (Exception ignored) {
-            }
-            String resolvedEmail = customerEmail != null && !customerEmail.isBlank() ? customerEmail : "guest@heavenstay.com";
-            String resolvedName = customerName != null && !customerName.isBlank() ? customerName : "Valued Guest";
-
-            log.info("[SPA T-1h REMINDER DISPATCH] -> Guest: {} <{}> | Session #{}: {} at {} | Specialist: {} | Suite: {} | Action: Customer confirmation requested via /api/v1/spa/sessions/{}/confirm-attendance",
-                    resolvedName,
-                    resolvedEmail,
-                    session.getSpaSessionId(),
-                    treatmentName,
-                    session.getScheduledStartAt(),
-                    practitionerName,
-                    roomName,
-                    session.getSpaSessionId());
-
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to dispatch spa appointment reminder for session #{}: {}", session.getSpaSessionId(), e.getMessage());
-            return false;
-        }
+        log.info("[SPA REMINDER SUPPRESSED] No email transport is configured; session #{} was not delivered.",
+                session != null ? session.getSpaSessionId() : null);
+        return false;
     }
 
     @Override
     public boolean sendScheduleChangeNotification(SpaSession session, String customerEmail, String customerName, String changeDetails) {
-        if (session == null) {
-            log.warn("Cannot send spa schedule change notification: session is null");
-            return false;
-        }
-
-        try {
-            String treatmentName = "Spa Treatment";
-            try {
-                if (session.getTreatment() != null && session.getTreatment().getTreatmentName() != null) {
-                    treatmentName = session.getTreatment().getTreatmentName();
-                }
-            } catch (Exception ignored) {
-            }
-
-            String practitionerName = "Assigned Specialist";
-            try {
-                if (session.getTherapist() != null && session.getTherapist().getDisplayName() != null) {
-                    practitionerName = session.getTherapist().getDisplayName();
-                }
-            } catch (Exception ignored) {
-            }
-
-            String roomName = "Treatment Suite";
-            try {
-                if (session.getTreatmentRoom() != null && session.getTreatmentRoom().getRoomName() != null) {
-                    roomName = session.getTreatmentRoom().getRoomName();
-                }
-            } catch (Exception ignored) {
-            }
-
-            String resolvedEmail = customerEmail != null && !customerEmail.isBlank() ? customerEmail : "guest@heavenstay.com";
-            String resolvedName = customerName != null && !customerName.isBlank() ? customerName : "Valued Guest";
-            String details = changeDetails != null ? changeDetails : "Schedule updated";
-
-            log.info("[SPA SCHEDULE CHANGE NOTIFICATION] -> Guest: {} <{}> | Session #{}: {} | Time: {}-{} | Specialist: {} | Suite: {} | Details: {}",
-                    resolvedName,
-                    resolvedEmail,
-                    session.getSpaSessionId(),
-                    treatmentName,
-                    session.getScheduledStartAt(),
-                    session.getScheduledEndAt(),
-                    practitionerName,
-                    roomName,
-                    details);
-
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to dispatch spa schedule change notification for session #{}: {}", session.getSpaSessionId(), e.getMessage());
-            return false;
-        }
+        log.info("[SPA NOTICE SUPPRESSED] No email transport is configured; session #{} was not delivered.",
+                session != null ? session.getSpaSessionId() : null);
+        return false;
     }
 }

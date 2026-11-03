@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -38,12 +40,13 @@ import java.util.Optional;
  * {@code AuthService.registerGuest}.</p>
  *
  * <p>Idempotent: never overwrites an existing password/status; only adds
- * missing role/profile/consent rows. Runs only under {@code dev} (the default
- * profile in application.yml) — production must run a non-dev profile so no
- * demo account is ever created there.</p>
+ * missing role/profile/consent rows. Runs only when the dev profile and an
+ * explicit local/demo bootstrap opt-in are both active.</p>
  */
 @Component
-@Profile("dev")
+@Profile({"local", "demo"})
+@ConditionalOnProperty(name = "app.demo.bootstrap-enabled", havingValue = "true")
+@Order(0)
 public class DevAccountBootstrap implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevAccountBootstrap.class);
@@ -59,7 +62,7 @@ public class DevAccountBootstrap implements ApplicationRunner {
     private record RoleSeed(String canonicalName, List<String> aliases, String description) {
     }
 
-    /** One demo login per role; only the customer seed gets a profile + consent. */
+    /** Demo logins; Customer seeds get profiles + consent. */
     private record AccountSeed(String email, String fullName, String roleName, boolean customer) {
     }
 
@@ -74,6 +77,7 @@ public class DevAccountBootstrap implements ApplicationRunner {
 
     private static final List<AccountSeed> ACCOUNT_SEEDS = List.of(
             new AccountSeed("customer@heavenstay.dev", "Demo Customer", "Customer", true),
+            new AccountSeed("customer-b@heavenstay.dev", "Synthetic Customer B", "Customer", true),
             new AccountSeed("receptionist@heavenstay.dev", "Demo Receptionist", "Receptionist", false),
             new AccountSeed("therapist@heavenstay.dev", "Demo Therapist", "Therapist", false),
             new AccountSeed("fbstaff@heavenstay.dev", "Demo F&B Staff", "F&B Staff", false),
@@ -109,8 +113,7 @@ public class DevAccountBootstrap implements ApplicationRunner {
         try {
             seedRoles();
             int created = seedAccounts();
-            log.info("HSWRMS dev demo accounts ready ({} newly created). Password for all: {}",
-                    created, DEMO_PASSWORD);
+            log.info("HSWRMS dev demo accounts ready ({} newly created).", created);
             for (AccountSeed seed : ACCOUNT_SEEDS) {
                 log.info("  login ready: {} ({})", seed.email(), seed.roleName());
             }

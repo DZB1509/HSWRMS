@@ -161,7 +161,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/customer/bookings/**").hasAnyRole("CUSTOMER", "MANAGER", "ADMIN")
 
                         // Therapist operations from M3
-                        .requestMatchers("/api/v1/therapist/**").hasAnyRole("THERAPIST", "MANAGER", "ADMIN")
+                        // Operational status updates for therapists from M3/M6: MANAGER, ADMIN, RECEPTIONIST
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/therapist/*/status").hasAnyRole("MANAGER", "ADMIN", "RECEPTIONIST")
+
+                        // Therapist clinical & schedule operations from M3 (Screens 31, 32, 33): THERAPIST only
+                        .requestMatchers("/api/v1/therapist/**").hasRole("THERAPIST")
 
                         // Customer and receptionist SPA operations from M3
                         .requestMatchers("/api/v1/spa/**").hasAnyRole("CUSTOMER", "RECEPTIONIST", "MANAGER", "ADMIN")

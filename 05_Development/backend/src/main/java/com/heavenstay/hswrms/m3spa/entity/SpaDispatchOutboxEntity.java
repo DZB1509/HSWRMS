@@ -40,6 +40,12 @@ public class SpaDispatchOutboxEntity {
     @Column(name = "claimed_by", length = 100)
     private String claimedBy;
 
+    @Column(name = "next_attempt_at")
+    private LocalDateTime nextAttemptAt;
+
+    @Column(name = "schedule_version", nullable = false)
+    private int scheduleVersion = 1;
+
     @Column(name = "retry_count", nullable = false)
     private int retryCount = 0;
 
@@ -237,5 +243,13 @@ public class SpaDispatchOutboxEntity {
     public void setClaimedBy(String claimedBy) {
         this.claimedBy = claimedBy;
     }
+
+    public LocalDateTime getNextAttemptAt() { return nextAttemptAt; }
+
+    public void setNextAttemptAt(LocalDateTime nextAttemptAt) { this.nextAttemptAt = nextAttemptAt; }
+
+    public int getScheduleVersion() { return scheduleVersion; }
+
+    public void setScheduleVersion(int scheduleVersion) { this.scheduleVersion = scheduleVersion; }
 }
 

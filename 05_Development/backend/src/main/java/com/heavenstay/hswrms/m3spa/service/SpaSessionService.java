@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,9 +97,25 @@ public class SpaSessionService {
      */
     @Transactional
     public SpaSessionDto confirmReservation(ConfirmReservationRequest req, Integer authenticatedUserId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isStaff = auth == null || auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RECEPTIONIST") || a.getAuthority().equals("ROLE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"));
+        return confirmReservation(req, authenticatedUserId, isStaff);
+    }
+
+    @Transactional
+    public SpaSessionDto confirmReservation(ConfirmReservationRequest req, Integer authenticatedUserId, boolean isStaff) {
         Integer resolvedBookingId;
         StayContextDto stay = null;
-        if (req.getRetreatBookingId() != null) {
+        if (!isStaff && authenticatedUserId != null) {
+            stay = customerStayPort.getActiveStayForUser(authenticatedUserId)
+                    .orElseThrow(() -> new BusinessRuleException("No active retreat stay found for current user."));
+            if (req.getRetreatBookingId() != null && !req.getRetreatBookingId().equals(stay.getBookingId())) {
+                throw new BusinessRuleException("Unauthorized: Cannot book a spa session for another customer's retreat booking.");
+            }
+            resolvedBookingId = stay.getBookingId();
+            req.setBookingSource(BookingSource.CUSTOMER);
+        } else if (req.getRetreatBookingId() != null) {
             Integer bId = req.getRetreatBookingId();
             stay = customerStayPort.getStayById(bId)
                     .orElseThrow(() -> new ResourceNotFoundException("Retreat Booking", "bookingId", bId));
@@ -145,16 +163,23 @@ public class SpaSessionService {
             throw new BusinessRuleException("Treatment Room is not compatible with the selected Spa Treatment.");
         }
 
-        // 5. Concurrency Check: Verify Interval Non-Overlap
+        // 5. Concurrency Check: Verify Interval Non-Overlap with mandatory 15-minute buffer (BR-SPA-02)
         Long excludeSessionId = req.getRescheduleSessionId();
-        boolean hasConflict = sessionRepository.hasOverlappingSession(
+        boolean therapistBusy = sessionRepository.hasOverlappingSession(
                 therapist.getTherapistId(),
+                null,
+                req.getScheduledStartAt(),
+                req.getScheduledEndAt(),
+                excludeSessionId
+        );
+        boolean roomBusy = sessionRepository.hasOverlappingSession(
+                null,
                 room.getRoomId(),
                 req.getScheduledStartAt(),
                 req.getScheduledEndAt(),
                 excludeSessionId
         );
-        if (hasConflict) {
+        if (therapistBusy || roomBusy) {
             throw new ConflictException("Scheduling conflict: Therapist or Treatment Room is already reserved for this time interval.");
         }
 
@@ -191,6 +216,8 @@ public class SpaSessionService {
             existingSession.setScheduledEndAt(req.getScheduledEndAt());
             existingSession.setSessionStatus(SpaSessionStatus.SCHEDULED);
             existingSession.setConfirmationStatus(SpaConfirmationStatus.PENDING);
+            existingSession.incrementScheduleVersion();
+            existingSession.setRecoveryAttemptedVersion(null);
             existingSession.resetReminderState();
             if (req.getCustomerNote() != null) {
                 existingSession.setCustomerNote(req.getCustomerNote());
@@ -260,7 +287,7 @@ public class SpaSessionService {
 
         if (authenticatedUserId != null) {
             Optional<StayContextDto> stayOpt = customerStayPort.getActiveStayForUser(authenticatedUserId);
-            if (stayOpt.isPresent() && !session.getRetreatBookingId().equals(stayOpt.get().getBookingId())) {
+            if (stayOpt.isEmpty() || !session.getRetreatBookingId().equals(stayOpt.get().getBookingId())) {
                 throw new BusinessRuleException("Unauthorized: Cannot modify a session belonging to another customer.");
             }
         }
@@ -307,7 +334,7 @@ public class SpaSessionService {
 
         if (authenticatedUserId != null) {
             Optional<StayContextDto> stayOpt = customerStayPort.getActiveStayForUser(authenticatedUserId);
-            if (stayOpt.isPresent() && !session.getRetreatBookingId().equals(stayOpt.get().getBookingId())) {
+            if (stayOpt.isEmpty() || !session.getRetreatBookingId().equals(stayOpt.get().getBookingId())) {
                 throw new BusinessRuleException("Unauthorized: Cannot cancel a session belonging to another customer.");
             }
         }
@@ -323,7 +350,6 @@ public class SpaSessionService {
 
         String prevSessionStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
         session.setSessionStatus(SpaSessionStatus.CANCELLED);
-        session.setConfirmationStatus(SpaConfirmationStatus.DECLINED);
         SpaSession updated = sessionRepository.save(session);
 
         StayDetails stayInfo = resolveStayDetails(updated.getRetreatBookingId());
@@ -339,6 +365,75 @@ public class SpaSessionService {
         ));
 
         return toDto(updated, "Customer", true);
+    }
+
+    /** Customer declines the scheduled session without cancelling it. Recovery is queued by the persisted lifecycle state. */
+    @Transactional
+    public SpaSessionDto declineAttendance(Long sessionId, Integer authenticatedUserId) {
+        SpaSession session = sessionRepository.findByIdWithLock(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
+
+        if (authenticatedUserId != null) {
+            Optional<StayContextDto> stayOpt = customerStayPort.getActiveStayForUser(authenticatedUserId);
+            if (stayOpt.isEmpty() || !session.getRetreatBookingId().equals(stayOpt.get().getBookingId())) {
+                throw new BusinessRuleException("Unauthorized: Cannot decline a session belonging to another customer.");
+            }
+        }
+        if (session.getSessionStatus() != SpaSessionStatus.SCHEDULED
+                || session.getConfirmationStatus() != SpaConfirmationStatus.PENDING) {
+            throw new BusinessRuleException("Only a scheduled session awaiting confirmation can be declined.");
+        }
+
+        session.setConfirmationStatus(SpaConfirmationStatus.DECLINED);
+        session.setSessionStatus(SpaSessionStatus.RESCHEDULING);
+        session.setRecoveryAttemptedVersion(null);
+        SpaSession updated = sessionRepository.save(session);
+
+        StayDetails stayInfo = resolveStayDetails(updated.getRetreatBookingId());
+        publishScheduleEvent(new SpaScheduleAcceptedEvent(
+                updated, "ATTENDANCE_DECLINED", "PENDING", "DECLINED",
+                updated.getScheduledStartAt(), updated.getScheduledStartAt(),
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTherapist() != null ? updated.getTherapist().getTherapistId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                updated.getTreatmentRoom() != null ? updated.getTreatmentRoom().getRoomId() : null,
+                authenticatedUserId, "CUSTOMER", "Customer declined attendance; recovery requested",
+                stayInfo.email, stayInfo.name
+        ));
+        return toDto(updated, "Customer", true);
+    }
+
+    /**
+     * Get a single session by ID for customer confirmation or detail view.
+     */
+    @Transactional(readOnly = true)
+    public SpaSessionDto getCustomerSessionById(Long sessionId, Integer authenticatedUserId) {
+        return getCustomerSessionById(sessionId, authenticatedUserId, false);
+    }
+
+    @Transactional(readOnly = true)
+    public SpaSessionDto getCustomerSessionById(Long sessionId, Integer authenticatedUserId, boolean isStaff) {
+        SpaSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
+
+        if (!isStaff && authenticatedUserId != null) {
+            Optional<StayContextDto> stayOpt = customerStayPort.getActiveStayForUser(authenticatedUserId);
+            if (stayOpt.isEmpty() || !session.getRetreatBookingId().equals(stayOpt.get().getBookingId())) {
+                throw new BusinessRuleException("Unauthorized: Session does not belong to the current customer stay.");
+            }
+        }
+
+        StayContextDto stay = null;
+        if (session.getRetreatBookingId() != null && customerStayPort != null) {
+            try {
+                stay = customerStayPort.getStayById(session.getRetreatBookingId()).orElse(null);
+            } catch (Exception ignored) {
+            }
+        }
+        String guestName = stay != null && stay.getCustomerName() != null ? stay.getCustomerName() : "Valued Guest";
+        boolean isIncluded = stay != null && stay.getPackageId() != null
+                && customerStayPort.isTreatmentIncludedInPackage(stay.getPackageId(), session.getTreatment().getTreatmentId());
+        return toDto(session, guestName, isIncluded);
     }
 
     /**
@@ -419,11 +514,13 @@ public class SpaSessionService {
         dto.setScheduledStartAt(session.getScheduledStartAt());
         dto.setScheduledEndAt(session.getScheduledEndAt());
         dto.setRoomName(session.getTreatmentRoom().getRoomName());
-        dto.setCustomerFirstName(safetyNotes.getCustomerFirstName());
-        dto.setTreatmentSafetyNotes(safetyNotes.getTreatmentSafetyNotes());
-        dto.setRelevantPrecautions(safetyNotes.getRelevantPrecautions());
+        dto.setCustomerFirstName(safetyNotes != null ? safetyNotes.getCustomerFirstName() : null);
+        dto.setTreatmentSafetyNotes(safetyNotes != null ? safetyNotes.getTreatmentSafetyNotes() : null);
+        dto.setMobilityJointNotes(safetyNotes != null ? safetyNotes.getMobilityJointNotes() : null);
+        dto.setRelevantPrecautions(safetyNotes != null && safetyNotes.getRelevantPrecautions() != null ? safetyNotes.getRelevantPrecautions() : Collections.emptyList());
         dto.setSessionStatus(session.getSessionStatus());
         dto.setConfirmationStatus(session.getConfirmationStatus());
+        dto.setScheduleVersion(session.getScheduleVersion());
         dto.setCustomerNote(session.getCustomerNote());
         return dto;
     }
@@ -541,6 +638,7 @@ public class SpaSessionService {
         dto.setBookingSource(s.getBookingSource());
         dto.setSessionStatus(s.getSessionStatus());
         dto.setConfirmationStatus(s.getConfirmationStatus());
+        dto.setScheduleVersion(s.getScheduleVersion());
         dto.setCustomerNote(s.getCustomerNote());
         dto.setReminderStatus(s.getReminderStatus());
         dto.setReminderClaimedAt(s.getReminderClaimedAt());

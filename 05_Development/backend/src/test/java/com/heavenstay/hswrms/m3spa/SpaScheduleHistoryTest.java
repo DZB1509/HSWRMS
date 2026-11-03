@@ -9,20 +9,31 @@ import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentRoomStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentStatus;
 import com.heavenstay.hswrms.m3spa.repository.*;
+import com.heavenstay.hswrms.m3spa.service.SpaDispatchOutboxWorker;
 import com.heavenstay.hswrms.m3spa.service.SpaSessionService;
+import com.heavenstay.hswrms.m3spa.port.SpaCalendarPort;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Automated verification for BR-M3-14 (Accepted Change History & Notifications).
@@ -46,6 +57,18 @@ public class SpaScheduleHistoryTest {
     private SpaScheduleHistoryRepository historyRepository;
 
     @Autowired
+    private SpaDispatchOutboxRepository outboxRepository;
+
+    @Autowired
+    private SpaDispatchOutboxWorker outboxWorker;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @MockBean
+    private SpaCalendarPort calendarPort;
+
+    @Autowired
     private TherapistRepository therapistRepository;
 
     @Autowired
@@ -65,9 +88,38 @@ public class SpaScheduleHistoryTest {
     private Therapist therapist2;
     private TreatmentRoom room1;
     private TreatmentRoom room2;
+    private final Set<Long> testSessionIds = new HashSet<>();
+
+    @AfterEach
+    public void cleanCommittedHistoryFixture() {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            for (Long sessionId : testSessionIds) {
+                outboxRepository.deleteAll(outboxRepository.findBySessionIdOrderByCreatedAtAsc(sessionId));
+                historyRepository.deleteAll(historyRepository.findBySessionIdOrderByCreatedAtAsc(sessionId));
+                sessionRepository.deleteById(sessionId);
+            }
+            qualificationRepository.deleteAll(qualificationRepository.findAll().stream()
+                    .filter(q -> q.getTherapist() != null
+                            && ((therapist1 != null && q.getTherapist().getTherapistId().equals(therapist1.getTherapistId()))
+                                || (therapist2 != null && q.getTherapist().getTherapistId().equals(therapist2.getTherapistId()))))
+                    .toList());
+            compatibilityRepository.deleteAll(compatibilityRepository.findAll().stream()
+                    .filter(c -> c.getTreatmentRoom() != null
+                            && ((room1 != null && c.getTreatmentRoom().getRoomId().equals(room1.getRoomId()))
+                                || (room2 != null && c.getTreatmentRoom().getRoomId().equals(room2.getRoomId()))))
+                    .toList());
+            if (therapist1 != null) therapistRepository.delete(therapist1);
+            if (therapist2 != null) therapistRepository.delete(therapist2);
+            if (room1 != null) roomRepository.delete(room1);
+            if (room2 != null) roomRepository.delete(room2);
+            if (treatment != null) treatmentRepository.delete(treatment);
+        });
+        testSessionIds.clear();
+    }
 
     @BeforeEach
     public void setUp() {
+        when(calendarPort.createOrUpdateCalendarEvent(any())).thenReturn("calendar-history-test");
         treatment = new SpaTreatment("Aromatherapy Bliss", 60, BigDecimal.valueOf(150), TreatmentStatus.ACTIVE);
         treatment = treatmentRepository.save(treatment);
 
@@ -92,7 +144,8 @@ public class SpaScheduleHistoryTest {
     }
 
     @Test
-    @DisplayName("BR-M3-14: Initial reservation creates exactly 1 audit history record and attaches calendar event")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("BR-M3-14: Initial reservation commits history/outbox before asynchronous calendar dispatch")
     public void testInitialReservationCreatesHistoryAndCalendarEvent() {
         LocalDateTime start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime end = start.plusMinutes(60);
@@ -109,6 +162,7 @@ public class SpaScheduleHistoryTest {
 
         SpaSessionDto booked = spaSessionService.confirmReservation(req, 1);
         assertNotNull(booked.getSpaSessionId());
+        testSessionIds.add(booked.getSpaSessionId());
 
         List<SpaScheduleHistory> historyList = historyRepository.findBySessionIdOrderByCreatedAtAsc(booked.getSpaSessionId());
         assertEquals(1, historyList.size(), "Initial reservation must create exactly 1 audit history entry!");
@@ -119,11 +173,22 @@ public class SpaScheduleHistoryTest {
         assertEquals(start, entry.getNewStartAt());
         assertEquals(therapist1.getTherapistId(), entry.getNewTherapistId());
         assertEquals(room1.getRoomId(), entry.getNewRoomId());
-        assertNotNull(entry.getExternalCalendarId(), "Calendar reference must be recorded in history");
+
+        List<SpaDispatchOutboxEntity> queued = outboxRepository.findBySessionIdOrderByCreatedAtAsc(booked.getSpaSessionId());
+        assertEquals(2, queued.size(), "Business transaction must atomically persist Calendar and Email outbox work");
+        assertTrue(queued.stream().allMatch(item -> "PENDING".equals(item.getStatus())));
+        assertNull(entry.getExternalCalendarId(), "No external calendar reference exists before worker dispatch");
 
         SpaSession persistedSession = sessionRepository.findById(booked.getSpaSessionId()).orElseThrow();
-        assertNotNull(persistedSession.getExternalCalendarEventId(), "Calendar reference must be attached to the session");
-        assertEquals(entry.getExternalCalendarId(), persistedSession.getExternalCalendarEventId());
+        assertNull(persistedSession.getExternalCalendarEventId(), "Reservation must not dispatch Calendar synchronously");
+
+        outboxWorker.processPendingOutboxDispatches("history-test-worker");
+
+        SpaScheduleHistory dispatchedHistory = historyRepository.findBySessionIdOrderByCreatedAtAsc(booked.getSpaSessionId()).get(0);
+        SpaSession dispatchedSession = sessionRepository.findById(booked.getSpaSessionId()).orElseThrow();
+        assertNotNull(dispatchedHistory.getExternalCalendarId(), "Calendar reference is recorded only after worker success");
+        assertNotNull(dispatchedSession.getExternalCalendarEventId(), "Calendar reference is attached after worker success");
+        assertEquals(dispatchedHistory.getExternalCalendarId(), dispatchedSession.getExternalCalendarEventId());
     }
 
     @Test
@@ -142,6 +207,7 @@ public class SpaScheduleHistoryTest {
                 "Initial note"
         );
         SpaSessionDto initial = spaSessionService.confirmReservation(req1, 1);
+        testSessionIds.add(initial.getSpaSessionId());
 
         // Reschedule to afternoon with therapist2 and room2
         LocalDateTime start2 = start1.plusHours(4);
@@ -192,6 +258,7 @@ public class SpaScheduleHistoryTest {
                 "Booking for confirmation"
         );
         SpaSessionDto booked = spaSessionService.confirmReservation(req, 1);
+        testSessionIds.add(booked.getSpaSessionId());
 
         // Attendance confirmation
         spaSessionService.confirmAttendance(booked.getSpaSessionId(), 1);

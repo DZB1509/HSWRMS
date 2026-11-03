@@ -1,16 +1,18 @@
 package com.heavenstay.hswrms.m2booking;
 
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
-import com.heavenstay.hswrms.m2booking.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m2booking.service.BookingClock;
 import com.heavenstay.hswrms.m2booking.service.RetreatBookingService;
 import com.heavenstay.hswrms.m2booking.service.VNPayDepositService;
+import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.port.CreateDepositTransactionCommand;
+import com.heavenstay.hswrms.m5billing.port.PaymentTransactionPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,7 +37,7 @@ public class VNPayDepositServiceTest {
     private RetreatBookingService bookingService;
 
     @Mock
-    private PaymentTransactionRepository paymentTransactionRepository;
+    private PaymentTransactionPort paymentTransactionPort;
 
     @Mock
     private BookingClock bookingClock;
@@ -49,7 +51,7 @@ public class VNPayDepositServiceTest {
         vnPayDepositService = new VNPayDepositService(
                 bookingRepository,
                 bookingService,
-                paymentTransactionRepository,
+                paymentTransactionPort,
                 bookingClock
         );
         ReflectionTestUtils.setField(vnPayDepositService, "hashSecret", SECRET);
@@ -78,12 +80,12 @@ public class VNPayDepositServiceTest {
         String txnRef = "HSW_DEP_100_1729000000";
         Map<String, String> params = vnPayDepositService.createSignedCallbackParams(txnRef, new BigDecimal("1000000"), "00");
 
-        PaymentTransaction txn = new PaymentTransaction();
+        PaymentResponseDTO txn = new PaymentResponseDTO();
         txn.setRetreatBookingId(100);
         txn.setAmountPaid(new BigDecimal("3000000")); // Expected 3,000,000 VND
-        txn.setPaymentStatus(PaymentTransaction.STATUS_PENDING);
+        txn.setPaymentStatus("PENDING");
 
-        when(paymentTransactionRepository.findByReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
+        when(paymentTransactionPort.findByTransactionReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
 
         Map<String, String> result = vnPayDepositService.processIpn(params);
 
@@ -93,25 +95,26 @@ public class VNPayDepositServiceTest {
     }
 
     @Test
-    @DisplayName("Fix B8, B9: Valid checksum confirms deposit and updates status to SUCCESSFUL")
+    @DisplayName("Fix B8, B9: Valid checksum confirms deposit and updates status to SUCCESSFUL via M5 port")
     void testValidPaymentCallbackConfirmsBooking() {
         String txnRef = "HSW_DEP_100_1729000000";
         Map<String, String> params = vnPayDepositService.createSignedCallbackParams(txnRef, new BigDecimal("3000000"), "00");
 
-        PaymentTransaction txn = new PaymentTransaction();
+        PaymentResponseDTO txn = new PaymentResponseDTO();
         txn.setRetreatBookingId(100);
+        txn.setTransactionReference(txnRef);
         txn.setAmountPaid(new BigDecimal("3000000"));
-        txn.setPaymentStatus(PaymentTransaction.STATUS_PENDING);
+        txn.setPaymentStatus("PENDING");
 
-        when(paymentTransactionRepository.findByReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
-        when(bookingClock.utcNow()).thenReturn(LocalDateTime.now());
+        when(paymentTransactionPort.findByTransactionReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
+        LocalDateTime now = LocalDateTime.now();
+        when(bookingClock.utcNow()).thenReturn(now);
 
         Map<String, String> result = vnPayDepositService.processIpn(params);
 
         assertEquals("00", result.get("RspCode"));
         assertEquals("Confirm Success", result.get("Message"));
-        assertEquals(PaymentTransaction.STATUS_SUCCESSFUL, txn.getPaymentStatus());
-        verify(paymentTransactionRepository).save(txn);
+        verify(paymentTransactionPort).updatePaymentStatus(txnRef, "SUCCESSFUL", now);
         verify(bookingService).confirmBookingDeposit(eq(100), eq(new BigDecimal("3000000")), eq(txnRef));
     }
 
@@ -121,17 +124,70 @@ public class VNPayDepositServiceTest {
         String txnRef = "HSW_DEP_100_1729000000";
         Map<String, String> params = vnPayDepositService.createSignedCallbackParams(txnRef, new BigDecimal("3000000"), "00");
 
-        PaymentTransaction txn = new PaymentTransaction();
+        PaymentResponseDTO txn = new PaymentResponseDTO();
         txn.setRetreatBookingId(100);
         txn.setAmountPaid(new BigDecimal("3000000"));
-        txn.setPaymentStatus(PaymentTransaction.STATUS_SUCCESSFUL); // Already processed!
+        txn.setPaymentStatus("SUCCESSFUL"); // Already processed!
 
-        when(paymentTransactionRepository.findByReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
+        when(paymentTransactionPort.findByTransactionReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
 
         Map<String, String> result = vnPayDepositService.processIpn(params);
 
         assertEquals("00", result.get("RspCode"));
         assertEquals("Order already confirmed", result.get("Message"));
         verify(bookingService, never()).confirmBookingDeposit(any(), any(), any());
+        verify(paymentTransactionPort, never()).updatePaymentStatus(anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("APP-04: Failed callback records FAILED status via M5 port")
+    void testFailedPaymentCallbackRecordsFailure() {
+        String txnRef = "HSW_DEP_100_1729000000";
+        Map<String, String> params = vnPayDepositService.createSignedCallbackParams(txnRef, new BigDecimal("3000000"), "24"); // 24 = user cancelled
+
+        PaymentResponseDTO txn = new PaymentResponseDTO();
+        txn.setRetreatBookingId(100);
+        txn.setTransactionReference(txnRef);
+        txn.setAmountPaid(new BigDecimal("3000000"));
+        txn.setPaymentStatus("PENDING");
+
+        when(paymentTransactionPort.findByTransactionReferenceForUpdate(txnRef)).thenReturn(Optional.of(txn));
+        LocalDateTime now = LocalDateTime.now();
+        when(bookingClock.utcNow()).thenReturn(now);
+
+        Map<String, String> result = vnPayDepositService.processIpn(params);
+
+        assertEquals("00", result.get("RspCode"));
+        assertEquals("Payment Failure Recorded", result.get("Message"));
+        verify(paymentTransactionPort).updatePaymentStatus(txnRef, "FAILED", now);
+        verify(bookingService, never()).confirmBookingDeposit(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("APP-04: Generating deposit payment URL creates PENDING transaction via M5 port")
+    void testGenerateDepositUrlCreatesPendingTransaction() {
+        RetreatBooking booking = new RetreatBooking();
+        booking.setRetreatBookingId(200);
+        booking.setBookingStatus("PENDING");
+        booking.setDepositAmount(new BigDecimal("1500000"));
+
+        when(bookingRepository.findById(200)).thenReturn(Optional.of(booking));
+        when(bookingClock.utcNow()).thenReturn(LocalDateTime.now());
+
+        VNPayDepositService.VNPayDepositInitResult res = vnPayDepositService.generateDepositUrlWithResult(200, null, null);
+
+        assertNotNull(res.paymentUrl());
+        assertNotNull(res.transactionReference());
+        assertTrue(res.transactionReference().startsWith("HSW_DEP_200_"));
+
+        ArgumentCaptor<CreateDepositTransactionCommand> captor = ArgumentCaptor.forClass(CreateDepositTransactionCommand.class);
+        verify(paymentTransactionPort).createDepositTransaction(captor.capture());
+
+        CreateDepositTransactionCommand captured = captor.getValue();
+        assertEquals(200, captured.retreatBookingId());
+        assertEquals("VNPAY", captured.paymentMethod());
+        assertEquals("PENDING", captured.paymentStatus());
+        assertEquals(new BigDecimal("1500000"), captured.amountPaid());
+        assertEquals(res.transactionReference(), captured.transactionReference());
     }
 }

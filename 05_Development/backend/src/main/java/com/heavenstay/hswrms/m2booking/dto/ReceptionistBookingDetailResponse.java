@@ -1,7 +1,7 @@
 package com.heavenstay.hswrms.m2booking.dto;
 
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
 import com.heavenstay.hswrms.m2booking.service.CustomerIdentityPort;
+import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ public class ReceptionistBookingDetailResponse extends ReceptionistBookingRespon
     private CustomerIdentityPort.CustomerFullDetails customerProfile;
     private ResidenceRecordResponse residenceRecord;
     private CustomerIdentityPort.CustomerHealthSummary healthProfile;
-    private List<PaymentTransaction> paymentTransactions;
+    private List<PaymentResponseDTO> paymentTransactions;
 
     public ReceptionistBookingDetailResponse() {
     }
@@ -39,11 +39,11 @@ public class ReceptionistBookingDetailResponse extends ReceptionistBookingRespon
         this.healthProfile = healthProfile;
     }
 
-    public List<PaymentTransaction> getPaymentTransactions() {
+    public List<PaymentResponseDTO> getPaymentTransactions() {
         return paymentTransactions;
     }
 
-    public void setPaymentTransactions(List<PaymentTransaction> paymentTransactions) {
+    public void setPaymentTransactions(List<PaymentResponseDTO> paymentTransactions) {
         this.paymentTransactions = paymentTransactions;
     }
 }

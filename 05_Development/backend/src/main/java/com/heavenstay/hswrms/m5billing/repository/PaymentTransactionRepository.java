@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,22 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
         if (bookingId == null || bookingId > Integer.MAX_VALUE) return Collections.emptyList();
         return findByRetreatBookingId(bookingId.intValue());
     }
+
+    @Query("SELECT pt FROM PaymentTransactionEntity pt WHERE pt.retreatBooking.retreatBookingId = :bookingId AND pt.paymentType = :paymentType ORDER BY pt.transactionId DESC")
+    List<PaymentTransactionEntity> findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(
+            @Param("bookingId") Integer bookingId,
+            @Param("paymentType") String paymentType);
+
+    @Query("SELECT pt FROM PaymentTransactionEntity pt WHERE pt.retreatBooking.retreatBookingId IN :bookingIds AND pt.paymentType = :paymentType")
+    List<PaymentTransactionEntity> findByRetreatBookingIdInAndPaymentType(
+            @Param("bookingIds") Collection<Integer> bookingIds,
+            @Param("paymentType") String paymentType);
+
+    @Query("SELECT pt FROM PaymentTransactionEntity pt WHERE pt.retreatBooking.retreatBookingId = :bookingId AND pt.paymentType = :paymentType AND pt.paymentStatus = :paymentStatus")
+    List<PaymentTransactionEntity> findByRetreatBookingIdAndPaymentTypeAndPaymentStatus(
+            @Param("bookingId") Integer bookingId,
+            @Param("paymentType") String paymentType,
+            @Param("paymentStatus") String paymentStatus);
 
     @Query("SELECT SUM(pt.amountPaid) FROM PaymentTransactionEntity pt WHERE pt.invoice.invoiceId = :invoiceId AND pt.paymentStatus = 'SUCCESSFUL'")
     BigDecimal sumSuccessfulPaymentsForInvoice(@Param("invoiceId") Long invoiceId);

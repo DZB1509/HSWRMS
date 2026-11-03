@@ -11,28 +11,59 @@
 - **JDK 17** (must be installed on the developer machine)
 - **Node.js**
 - **npm**
-- **Microsoft SQL Server**
+- **Microsoft SQL Server** (optional when running in `local` H2 mode; required for `sqlserver`/`dev` SQL Server mode)
 
 *(Note: A standalone Maven installation is NOT required. The repository includes the standard Maven Wrapper (`.\mvnw.cmd` on Windows, `./mvnw` on macOS/Linux) which provides the pinned Maven runtime automatically. Do not modify system-level PATH or JAVA_HOME automatically.)*
 
 ### Running the Backend
-1. Open a terminal in `05_Development/backend`:
-   * **Windows (Command Prompt / PowerShell):**
-     ```powershell
-     cd 05_Development/backend
-     .\mvnw.cmd spring-boot:run
-     ```
-   * **macOS / Linux:**
-     ```bash
-     cd 05_Development/backend
-     ./mvnw spring-boot:run
-     ```
-2. The server starts on `http://localhost:8080`.
-3. Verify connectivity:
-   ```bash
-   curl http://localhost:8080/api/v1/health
-   # Returns: {"status":"UP","service":"HSWRMS Modular Monolith Backend",...}
-   ```
+
+#### Step 1: Configure Mandatory JWT Secret
+`JwtTokenProvider` strictly validates that the JWT signing key is configured with **at least 32 UTF-8 bytes** (256 bits). If missing, empty, or under 32 bytes, backend startup fails immediately with `IllegalStateException: JWT_SECRET must be configured with at least 32 UTF-8 bytes.`.
+To comply with the Zero Secrets Rule, secrets must never be hardcoded in code or committed in configuration files.
+
+* **Windows (PowerShell) — Generate & set in current session without printing the secret:**
+  ```powershell
+  $bytes = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+  $env:JWT_SECRET = [Convert]::ToBase64String($bytes)
+  ```
+
+* **Verify Secret Length (without revealing the secret value):**
+  ```powershell
+  [System.Text.Encoding]::UTF8.GetByteCount($env:JWT_SECRET)
+  # Output must be >= 32 (e.g. 44 bytes for a 32-byte Base64 key)
+  ```
+
+* **macOS / Linux (Bash / Zsh):**
+  ```bash
+  export JWT_SECRET=$(openssl rand -base64 32)
+  # Verify length without printing secret:
+  printf "%s" "$JWT_SECRET" | wc -c
+  ```
+
+#### Step 2: Start the Spring Boot Backend
+Open a terminal in `05_Development/backend`:
+
+* **Windows (PowerShell):**
+  ```powershell
+  cd 05_Development/backend
+  .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local,dev"
+  ```
+
+* **macOS / Linux:**
+  ```bash
+  cd 05_Development/backend
+  ./mvnw spring-boot:run -Dspring-boot.run.profiles=local,dev
+  ```
+
+*(Profile notes: `local` activates the fast in-memory H2 database with automatic schema initialization; `dev` enables developer logging, console OTP logging via `DevEmailDeliveryAdapter`, and simulation endpoints).*
+
+#### Step 3: Verify Connectivity
+The server starts on `http://localhost:8080`.
+```bash
+curl http://localhost:8080/api/v1/health
+# Returns: {"timestamp":"...","service":"HSWRMS Modular Monolith Backend","status":"UP"}
+```
 
 ### Running the Frontend
 1. Open a terminal in `05_Development/frontend`:
@@ -162,7 +193,8 @@ Before pushing any commit to GitHub:
    *Must output 0 TypeScript errors and successfully bundle.*
 3. **Zero Secrets Rule:**
    * Never commit database passwords, JWT secrets, or VNPay credentials.
-   * Put local secrets in `application-dev.yml` or environment variables (both are git-ignored).
+   * Provide secrets strictly via local environment variables (e.g. `$env:JWT_SECRET`).
+   * Never commit local credentials into tracked files (`application-dev.yml` and `application.yml` are tracked in Git).
 4. **Git Scope Check:**
    * Ensure no files under `04_Implement/` or root requirement folders were accidentally modified.
    * Check `git status --short`.

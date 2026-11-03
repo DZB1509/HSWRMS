@@ -1,12 +1,16 @@
 package com.heavenstay.hswrms.m3spa.scheduler;
 
+import com.heavenstay.hswrms.m3spa.config.SpaOutboxProperties;
+import com.heavenstay.hswrms.m3spa.entity.SpaDispatchOutboxEntity;
 import com.heavenstay.hswrms.m3spa.entity.SpaSession;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 import com.heavenstay.hswrms.m3spa.port.CustomerStayPort;
-import com.heavenstay.hswrms.m3spa.port.SpaNotificationPort;
 import com.heavenstay.hswrms.m3spa.port.StayContextDto;
+import com.heavenstay.hswrms.m3spa.repository.SpaDispatchOutboxRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaSessionRepository;
+import com.heavenstay.hswrms.m3spa.service.SessionRecoveryService;
+import com.heavenstay.hswrms.m3spa.dto.response.RecoveryResultDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,173 +22,150 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-/**
- * M3 Spa Session Timeline, Reminder & Confirmation Deadline Scheduler.
- *
- * Implements:
- * 1. BR-M3-10: T-1h reminder dispatch:
- *    Approximately 1 hour before scheduledStartAt (window: [now, now + 75m]),
- *    dispatches reminder requesting Customer attendance confirmation via SpaNotificationPort.
- *    Persists reminderSentAt to prevent duplicate sends across runs, restarts, and concurrency.
- *
- * 2. T-60m attendance confirmation deadline enforcement:
- *    If a session remains in PENDING confirmation status at T-60m before scheduledStartAt:
- *    - confirmation_status -> EXPIRED
- *    - session_status -> RESCHEDULING
- *
- * Preserves OI-02: Exponential backoff, retry counts, and dead-letter escalations
- * remain unresolved and are not hard-coded.
- * Preserves OI-03: Email is the primary channel; external calendar sync remains decoupled.
- */
+/** Durable M3 reminder checkpoint, confirmation deadline, and recovery orchestration. */
 @Component
 public class SessionTimelineScheduler {
-
     private static final Logger log = LoggerFactory.getLogger(SessionTimelineScheduler.class);
 
     private final SpaSessionRepository sessionRepository;
-    private final SpaNotificationPort notificationPort;
+    private final SpaDispatchOutboxRepository outboxRepository;
+    private final SpaOutboxProperties outboxProperties;
     private final CustomerStayPort customerStayPort;
+    private final SessionRecoveryService recoveryService;
     private Clock clock = Clock.systemDefaultZone();
-
-    public SessionTimelineScheduler(SpaSessionRepository sessionRepository) {
-        this(sessionRepository, null, null);
-    }
 
     @Autowired
     public SessionTimelineScheduler(SpaSessionRepository sessionRepository,
-                                    @Autowired(required = false) SpaNotificationPort notificationPort,
-                                    @Autowired(required = false) CustomerStayPort customerStayPort) {
+                                   SpaDispatchOutboxRepository outboxRepository,
+                                   SpaOutboxProperties outboxProperties,
+                                   @Autowired(required = false) CustomerStayPort customerStayPort,
+                                   SessionRecoveryService recoveryService) {
         this.sessionRepository = sessionRepository;
-        this.notificationPort = notificationPort;
+        this.outboxRepository = outboxRepository;
+        this.outboxProperties = outboxProperties;
         this.customerStayPort = customerStayPort;
+        this.recoveryService = recoveryService;
     }
 
-    /**
-     * Set a custom clock for deterministic testing of time-sensitive workflows.
-     */
     public void setClock(Clock clock) {
         this.clock = clock;
     }
 
-    /**
-     * Periodic check for upcoming sessions due for T-1h confirmation reminder.
-     * Runs every 60 seconds.
-     *
-     * Advance reminder window: [now, now + 75 minutes] (~1 hour before appointment with 15-minute tolerance).
-     * Filters strictly by:
-     * - session_status = SCHEDULED
-     * - confirmation_status = PENDING
-     * - reminder_sent_at IS NULL
-     */
+    /** Enqueues the due timeline notice into the transactional outbox; no provider is called here. */
     @Scheduled(fixedRate = 60000)
+    @Transactional
     public void dispatchUpcomingSessionReminders() {
         LocalDateTime now = LocalDateTime.now(clock);
-        // BR-M3-10: T-1h confirmation reminder window [T-75m, T-60m].
-        // Strictly precedes T-60m expiration deadline (scheduledStartAt <= now.plusMinutes(60)).
-        // windowStart = now.plusMinutes(60) (exclusive), windowEnd = now.plusMinutes(75) (inclusive).
-        LocalDateTime windowStart = now.plusMinutes(60);
-        LocalDateTime windowEnd = now.plusMinutes(75);
+        List<SpaSession> candidates = sessionRepository.findScheduledSessionsStartingBetween(now, now.plusHours(24));
+        for (SpaSession session : candidates) {
+            String checkpoint = dueCheckpoint(session, now);
+            if (checkpoint == null) continue;
 
-        List<SpaSession> reminderCandidates = sessionRepository.findSessionsDueForReminder(
-                SpaSessionStatus.SCHEDULED,
-                SpaConfirmationStatus.PENDING,
-                now,
-                windowStart,
-                windowEnd
-        );
+            String idempotencyKey = "spa:" + session.getSpaSessionId() + ":schedule:" + session.getScheduleVersion()
+                    + ":" + checkpoint;
+            if (outboxRepository.existsByIdempotencyKey(idempotencyKey)) continue;
 
-        for (SpaSession session : reminderCandidates) {
-            // Concern A: Multi-instance atomic claim with 2-minute lease expiration for crash recovery and UUID claim-token fencing.
-            LocalDateTime leaseExpiresAt = now.plusMinutes(2);
-            String claimToken = UUID.randomUUID().toString();
-            int claimed = sessionRepository.claimSessionForReminder(session.getSpaSessionId(), now, leaseExpiresAt, claimToken);
-            if (claimed == 0) {
-                log.info("SpaSession #{} already claimed by another scheduler instance; skipping.", session.getSpaSessionId());
-                continue;
-            }
-
-            String customerEmail = null;
-            String customerName = "Valued Guest";
-
-            if (session.getRetreatBookingId() != null && customerStayPort != null) {
-                try {
-                    Optional<StayContextDto> stayOpt = customerStayPort.getStayById(session.getRetreatBookingId());
-                    if (stayOpt.isPresent()) {
-                        StayContextDto stay = stayOpt.get();
-                        if (stay.getCustomerName() != null && !stay.getCustomerName().isBlank()) {
-                            customerName = stay.getCustomerName();
-                        }
-                        if (stay.getCustomerEmail() != null && !stay.getCustomerEmail().isBlank()) {
-                            customerEmail = stay.getCustomerEmail();
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.warn("Could not retrieve customer details for booking #{}: {}", session.getRetreatBookingId(), ex.getMessage());
-                }
-            }
-
-            log.info("Dispatching T-1h confirmation reminder for SpaSession #{} (scheduled: {})",
-                    session.getSpaSessionId(), session.getScheduledStartAt());
-
-            boolean sent = false;
-            try {
-                if (notificationPort != null) {
-                    sent = notificationPort.sendAppointmentReminder(session, customerEmail, customerName);
-                } else {
-                    log.info("No SpaNotificationPort configured; defaulting reminder dispatch to logged success.");
-                    sent = true;
-                }
-            } catch (Exception ex) {
-                log.error("Exception dispatching reminder for SpaSession #{}: {}", session.getSpaSessionId(), ex.getMessage());
-                sent = false;
-            }
-
-            if (sent) {
-                int sentCount = sessionRepository.recordReminderSent(session.getSpaSessionId(), now, claimToken);
-                if (sentCount > 0) {
-                    log.info("T-1h reminder recorded successfully for SpaSession #{}", session.getSpaSessionId());
-                } else {
-                    log.warn("T-1h reminder sent for SpaSession #{} with token {}, but claim lease was superseded/fenced.",
-                            session.getSpaSessionId(), claimToken);
-                }
-            } else {
-                int releaseCount = sessionRepository.releaseReminderClaim(session.getSpaSessionId(), claimToken);
-                if (releaseCount > 0) {
-                    log.warn("Failed to dispatch reminder for SpaSession #{}. Releasing claim for retry.",
-                            session.getSpaSessionId());
-                } else {
-                    log.warn("Failed to dispatch reminder for SpaSession #{}, but claim lease was already superseded/fenced.",
-                            session.getSpaSessionId());
-                }
-            }
+            StayContextDto stay = resolveStay(session.getRetreatBookingId());
+            String email = stay == null ? null : stay.getCustomerEmail();
+            String name = stay == null ? null : stay.getCustomerName();
+            SpaDispatchOutboxEntity reminder = new SpaDispatchOutboxEntity(
+                    null, session.getSpaSessionId(), "EMAIL", email, name,
+                    checkpoint, checkpointDescription(checkpoint), null, idempotencyKey);
+            reminder.setScheduleVersion(session.getScheduleVersion());
+            reminder.setMaxRetries(outboxProperties.getMaxAttempts());
+            outboxRepository.save(reminder);
+            log.info("Enqueued {} for SpaSession #{} at schedule version {}.",
+                    checkpoint, session.getSpaSessionId(), session.getScheduleVersion());
         }
     }
 
-    /**
-     * Periodic check for expired confirmations (T-60m deadline).
-     * Runs every 60 seconds.
-     */
+    private String dueCheckpoint(SpaSession session, LocalDateTime now) {
+        LocalDateTime start = session.getScheduledStartAt();
+        if (start == null || !start.isAfter(now)) return null;
+        SpaConfirmationStatus confirmation = session.getConfirmationStatus();
+
+        if (!now.isBefore(start.minusHours(24)) && now.isBefore(start.minusHours(2))) {
+            return "REMINDER_T24H";
+        }
+        if (confirmation == SpaConfirmationStatus.PENDING
+                && !now.isBefore(start.minusHours(2)) && now.isBefore(start.minusMinutes(75))) {
+            return "REMINDER_T2H";
+        }
+        if (confirmation == SpaConfirmationStatus.PENDING
+                && !now.isBefore(start.minusMinutes(75)) && now.isBefore(start.minusMinutes(60))) {
+            return "REMINDER_T75M";
+        }
+        if (confirmation == SpaConfirmationStatus.CONFIRMED
+                && !now.isBefore(start.minusMinutes(15)) && now.isBefore(start)) {
+            return "REMINDER_T15M";
+        }
+        return null;
+    }
+
+    private String checkpointDescription(String checkpoint) {
+        return switch (checkpoint) {
+            case "REMINDER_T24H" -> "Information reminder 24 hours before the session";
+            case "REMINDER_T2H" -> "Primary attendance confirmation request 2 hours before the session";
+            case "REMINDER_T75M" -> "Final confirmation reminder before the T-60m deadline";
+            case "REMINDER_T15M" -> "Upcoming-session reminder for a confirmed session";
+            default -> checkpoint;
+        };
+    }
+
+    private StayContextDto resolveStay(Integer bookingId) {
+        if (bookingId == null || customerStayPort == null) return null;
+        try {
+            Optional<StayContextDto> result = customerStayPort.getStayById(bookingId);
+            return result.orElse(null);
+        } catch (RuntimeException ex) {
+            log.warn("Customer contact lookup unavailable for Spa booking #{}; reminder remains queued without a recipient.", bookingId);
+            return null;
+        }
+    }
+
+    /** T-60m deadline transition. Recovery runs in a separate transaction after this update commits. */
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void processConfirmationDeadlines() {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime deadlineThreshold = now.plusMinutes(60);
+        List<SpaSession> candidates = sessionRepository.findPendingSessionsPastDeadline(
+                SpaSessionStatus.SCHEDULED, SpaConfirmationStatus.PENDING, deadlineThreshold);
 
-        List<SpaSession> expiredCandidates = sessionRepository.findPendingSessionsPastDeadline(
-                SpaSessionStatus.SCHEDULED,
-                SpaConfirmationStatus.PENDING,
-                deadlineThreshold
-        );
-
-        for (SpaSession session : expiredCandidates) {
-            log.info("Session #{} reached T-60m confirmation deadline with PENDING status. Transitioning to EXPIRED / RESCHEDULING.",
-                    session.getSpaSessionId());
-
+        for (SpaSession session : candidates) {
+            if (session.getScheduledStartAt() == null) continue;
             session.setConfirmationStatus(SpaConfirmationStatus.EXPIRED);
             session.setSessionStatus(SpaSessionStatus.RESCHEDULING);
+            session.setRecoveryAttemptedVersion(null);
             sessionRepository.save(session);
+            log.info("SpaSession #{} reached T-60m; persisted EXPIRED/RESCHEDULING for recovery.",
+                    session.getSpaSessionId());
         }
+    }
+
+    /** Durable catch-up for declined/expired triggers, including a restart between commit and recovery. */
+    @Scheduled(fixedRate = 30000)
+    public int processPendingRecoveryRequests() {
+        List<SpaSession> candidates = sessionRepository.findSessionsAwaitingRecovery();
+        int attempted = 0;
+        for (SpaSession candidate : candidates) {
+            try {
+                if (candidate.getScheduledStartAt() == null || !candidate.getScheduledStartAt().isAfter(LocalDateTime.now(clock))) {
+                    recoveryService.markRecoveryNotApplicableAfterStart(candidate.getSpaSessionId(),
+                            candidate.getScheduleVersion(), LocalDateTime.now(clock));
+                    continue;
+                }
+                RecoveryResultDto result = recoveryService.attemptSameTimeRecovery(candidate.getSpaSessionId());
+                attempted++;
+                log.info("Recovery request processed for SpaSession #{}: recovered={}, preservedTime={}, consentRequired={}",
+                        candidate.getSpaSessionId(), result.isRecovered(), result.isPreservedSameTime(),
+                        result.isRequiresCustomerConsent());
+            } catch (RuntimeException ex) {
+                log.error("Recovery request failed for SpaSession #{}; it remains eligible for a later retry.",
+                        candidate.getSpaSessionId(), ex);
+            }
+        }
+        return attempted;
     }
 }

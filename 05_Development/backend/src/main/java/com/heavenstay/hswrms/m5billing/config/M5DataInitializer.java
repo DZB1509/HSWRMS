@@ -2,6 +2,8 @@ package com.heavenstay.hswrms.m5billing.config;
 
 import com.heavenstay.hswrms.m1identity.entity.CustomerProfile;
 import com.heavenstay.hswrms.m1identity.entity.User;
+import com.heavenstay.hswrms.m1identity.repository.CustomerProfileRepository;
+import com.heavenstay.hswrms.m1identity.repository.UserRepository;
 import com.heavenstay.hswrms.m2booking.entity.PhysicalVilla;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
@@ -22,6 +24,12 @@ import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentRoomStatus;
 import com.heavenstay.hswrms.m3spa.repository.SpaSessionRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaTreatmentRepository;
 import com.heavenstay.hswrms.m3spa.repository.TherapistRepository;
+import com.heavenstay.hswrms.m3spa.repository.TherapistTreatmentQualificationRepository;
+import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomCompatibilityRepository;
+import com.heavenstay.hswrms.m3spa.repository.RetreatPackageSpaTreatmentRepository;
+import com.heavenstay.hswrms.m3spa.entity.TherapistTreatmentQualification;
+import com.heavenstay.hswrms.m3spa.entity.TreatmentRoomCompatibility;
+import com.heavenstay.hswrms.m3spa.entity.RetreatPackageSpaTreatment;
 import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
 import com.heavenstay.hswrms.m4fnb.entity.MealOrderEntity;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
@@ -38,6 +46,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +62,8 @@ public class M5DataInitializer implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(M5DataInitializer.class);
 
     private final EntityManager entityManager;
+    private final UserRepository userRepository;
+    private final CustomerProfileRepository customerProfileRepository;
     private final RetreatBookingRepository bookingRepository;
     private final PhysicalVillaRepository villaRepository;
     private final VillaCategoryRepository villaCategoryRepository;
@@ -65,8 +77,14 @@ public class M5DataInitializer implements CommandLineRunner {
     private final FolioItemRepository folioItemRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final Environment environment;
+    private final TherapistTreatmentQualificationRepository qualificationRepository;
+    private final TreatmentRoomCompatibilityRepository roomCompatibilityRepository;
+    private final RetreatPackageSpaTreatmentRepository retreatPackageSpaTreatmentRepository;
 
     public M5DataInitializer(EntityManager entityManager,
+                             UserRepository userRepository,
+                             CustomerProfileRepository customerProfileRepository,
                              RetreatBookingRepository bookingRepository,
                              PhysicalVillaRepository villaRepository,
                              VillaCategoryRepository villaCategoryRepository,
@@ -79,8 +97,40 @@ public class M5DataInitializer implements CommandLineRunner {
                              FolioRepository folioRepository,
                              FolioItemRepository folioItemRepository,
                              InvoiceRepository invoiceRepository,
-                             PaymentTransactionRepository paymentTransactionRepository) {
+                             PaymentTransactionRepository paymentTransactionRepository,
+                             Environment environment) {
+        this(entityManager, userRepository, customerProfileRepository, bookingRepository,
+             villaRepository, villaCategoryRepository, retreatPackageRepository, spaSessionRepository,
+             spaTreatmentRepository, treatmentRoomRepository, therapistRepository, mealOrderRepository,
+             folioRepository, folioItemRepository, invoiceRepository, paymentTransactionRepository,
+             environment, null, null, null);
+    }
+
+    // Overloaded with M3 qualification & compatibility repositories
+    @org.springframework.beans.factory.annotation.Autowired
+    public M5DataInitializer(EntityManager entityManager,
+                             UserRepository userRepository,
+                             CustomerProfileRepository customerProfileRepository,
+                             RetreatBookingRepository bookingRepository,
+                             PhysicalVillaRepository villaRepository,
+                             VillaCategoryRepository villaCategoryRepository,
+                             RetreatPackageRepository retreatPackageRepository,
+                             SpaSessionRepository spaSessionRepository,
+                             SpaTreatmentRepository spaTreatmentRepository,
+                             TreatmentRoomRepository treatmentRoomRepository,
+                             TherapistRepository therapistRepository,
+                             MealOrderRepository mealOrderRepository,
+                             FolioRepository folioRepository,
+                             FolioItemRepository folioItemRepository,
+                             InvoiceRepository invoiceRepository,
+                             PaymentTransactionRepository paymentTransactionRepository,
+                             Environment environment,
+                             @org.springframework.beans.factory.annotation.Autowired(required = false) TherapistTreatmentQualificationRepository qualificationRepository,
+                             @org.springframework.beans.factory.annotation.Autowired(required = false) TreatmentRoomCompatibilityRepository roomCompatibilityRepository,
+                             @org.springframework.beans.factory.annotation.Autowired(required = false) RetreatPackageSpaTreatmentRepository retreatPackageSpaTreatmentRepository) {
         this.entityManager = entityManager;
+        this.userRepository = userRepository;
+        this.customerProfileRepository = customerProfileRepository;
         this.bookingRepository = bookingRepository;
         this.villaRepository = villaRepository;
         this.villaCategoryRepository = villaCategoryRepository;
@@ -94,6 +144,10 @@ public class M5DataInitializer implements CommandLineRunner {
         this.folioItemRepository = folioItemRepository;
         this.invoiceRepository = invoiceRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
+        this.environment = environment;
+        this.qualificationRepository = qualificationRepository;
+        this.roomCompatibilityRepository = roomCompatibilityRepository;
+        this.retreatPackageSpaTreatmentRepository = retreatPackageSpaTreatmentRepository;
     }
 
     @Override
@@ -101,10 +155,11 @@ public class M5DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         if (bookingRepository.count() > 0) {
             log.info("Database already seeded. Skipping M5 test data initialization.");
+            seedCustomerBAcceptanceFixture();
             return;
         }
 
-        log.info("Seeding realistic M5 demo and test data (Eleanor Vance - HSW-88192)...");
+        log.info("Seeding synthetic M5 demo and test data for the local Customer account...");
 
         // 0. Base Categories & Packages
         VillaCategory cat1 = villaCategoryRepository.findAll().stream().findFirst().orElseGet(() -> {
@@ -129,13 +184,15 @@ public class M5DataInitializer implements CommandLineRunner {
         });
 
         // 1. Users
-        User customerUser = new User();
-        customerUser.setFullName("Eleanor Vance");
-        customerUser.setEmail("eleanor.vance@heavenstay.resort");
-        customerUser.setPhoneNumber("+84901234567");
-        customerUser.setAccountStatus("ACTIVE");
-        customerUser.setEmailVerified(true);
-        entityManager.persist(customerUser);
+        User customerUser = userRepository.findByEmail("customer@heavenstay.dev").orElse(null);
+        if (customerUser == null) {
+            customerUser = new User();
+            customerUser.setFullName("Demo Customer");
+            customerUser.setEmail("customer@heavenstay.dev");
+            customerUser.setAccountStatus("ACTIVE");
+            customerUser.setEmailVerified(true);
+            entityManager.persist(customerUser);
+        }
 
         User therapistUser1 = new User();
         therapistUser1.setFullName("Nguyen Thi Lan");
@@ -154,10 +211,12 @@ public class M5DataInitializer implements CommandLineRunner {
         entityManager.persist(therapistUser2);
 
         // 2. Customer Profile
-        CustomerProfile profile = new CustomerProfile();
-        profile.setUser(customerUser);
-        profile.setEmergencyContact("Arthur Vance (+84911223344)");
-        entityManager.persist(profile);
+        CustomerProfile profile = customerProfileRepository.findByUserId(customerUser.getUserId()).orElse(null);
+        if (profile == null) {
+            profile = new CustomerProfile();
+            profile.setUser(customerUser);
+            entityManager.persist(profile);
+        }
 
         // 3. Villas
         PhysicalVilla v102 = new PhysicalVilla();
@@ -209,6 +268,35 @@ public class M5DataInitializer implements CommandLineRunner {
                 treatmentRoomRepository.save(new TreatmentRoom("Lotus Room", TreatmentRoomStatus.AVAILABLE, "STANDARD")));
 
         TreatmentRoom room2 = treatmentRoomRepository.save(new TreatmentRoom("Bamboo Room", TreatmentRoomStatus.AVAILABLE, "VIP"));
+
+        // 4c. Therapist Qualifications & Room Compatibility
+        if (qualificationRepository != null) {
+            for (Therapist t : therapistRepository.findAll()) {
+                if (!qualificationRepository.existsByTherapist_TherapistIdAndTreatment_TreatmentId(t.getTherapistId(), treatment1.getTreatmentId())) {
+                    qualificationRepository.save(new TherapistTreatmentQualification(t, treatment1));
+                }
+                if (!qualificationRepository.existsByTherapist_TherapistIdAndTreatment_TreatmentId(t.getTherapistId(), treatment2.getTreatmentId())) {
+                    qualificationRepository.save(new TherapistTreatmentQualification(t, treatment2));
+                }
+            }
+        }
+        if (roomCompatibilityRepository != null) {
+            for (TreatmentRoom r : treatmentRoomRepository.findAll()) {
+                if (!roomCompatibilityRepository.existsByTreatmentRoom_RoomIdAndTreatment_TreatmentId(r.getRoomId(), treatment1.getTreatmentId())) {
+                    roomCompatibilityRepository.save(new TreatmentRoomCompatibility(r, treatment1));
+                }
+                if (!roomCompatibilityRepository.existsByTreatmentRoom_RoomIdAndTreatment_TreatmentId(r.getRoomId(), treatment2.getTreatmentId())) {
+                    roomCompatibilityRepository.save(new TreatmentRoomCompatibility(r, treatment2));
+                }
+            }
+        }
+        if (retreatPackageSpaTreatmentRepository != null) {
+            if (retreatPackageSpaTreatmentRepository.findByRetreatPackageId(pkg1.getRetreatPackageId()).isEmpty()) {
+                retreatPackageSpaTreatmentRepository.save(new RetreatPackageSpaTreatment(
+                        pkg1, treatment1, 1, "INCLUDED", "Included 90-min herbal massage"
+                ));
+            }
+        }
 
         // 5. Booking 1: Eleanor Vance (HSW-88192, id = 1)
         RetreatBooking booking1 = new RetreatBooking();
@@ -332,5 +420,72 @@ public class M5DataInitializer implements CommandLineRunner {
         invoiceRepository.save(invoice);
 
         log.info("M5 demo data seeded successfully: Folio ID {}, Invoice ID {}", savedFolio.getFolioId(), invoice.getInvoiceId());
+        seedCustomerBAcceptanceFixture();
+    }
+
+    /** Seeds a second synthetic owner only in explicitly enabled local/demo environments. */
+    void seedCustomerBAcceptanceFixture() {
+        if (!environment.acceptsProfiles(Profiles.of("local", "demo"))
+                || !Boolean.parseBoolean(environment.getProperty("app.demo.bootstrap-enabled", "false"))) {
+            return;
+        }
+
+        User customerB = userRepository.findByEmail("customer-b@heavenstay.dev").orElse(null);
+        if (customerB == null) {
+            log.info("Customer B acceptance fixture skipped: local demo account bootstrap is not available.");
+            return;
+        }
+        CustomerProfile profileB = customerProfileRepository.findByUserId(customerB.getUserId()).orElse(null);
+        if (profileB == null) {
+            log.warn("Customer B acceptance fixture skipped: Customer B profile is not available.");
+            return;
+        }
+
+        final String fixtureMarker = "Synthetic Batch 4.3 Customer B authorization fixture";
+        RetreatBooking bookingB = bookingRepository.findByCustomerProfileIdOrderByCreatedAtDesc(profileB.getCustomerProfileId())
+                .stream()
+                .filter(booking -> fixtureMarker.equals(booking.getSpecialRequest()))
+                .findFirst()
+                .orElse(null);
+        if (bookingB == null) {
+            RetreatBooking template = bookingRepository.findAll().stream().findFirst().orElse(null);
+            if (template == null) {
+                log.warn("Customer B acceptance fixture skipped: no seeded package/category is available.");
+                return;
+            }
+            bookingB = new RetreatBooking();
+            bookingB.setCustomerProfileId(profileB.getCustomerProfileId());
+            bookingB.setRetreatPackage(template.getRetreatPackage());
+            bookingB.setRequestedVillaCategory(template.getRequestedVillaCategory());
+            bookingB.setAssignedVilla(null);
+            bookingB.setCheckInDate(LocalDate.now().plusDays(30));
+            bookingB.setCheckOutDate(LocalDate.now().plusDays(32));
+            bookingB.setBookingStatus("PENDING");
+            bookingB.setDepositAmount(BigDecimal.ZERO);
+            bookingB.setTotalEstimatedAmount(template.getTotalEstimatedAmount());
+            bookingB.setSpecialRequest(fixtureMarker);
+            bookingB = bookingRepository.save(bookingB);
+        }
+
+        final RetreatBooking persistedBooking = bookingB;
+        FolioEntity folio = folioRepository.findByRetreatBookingId(persistedBooking.getRetreatBookingId())
+                .orElseGet(() -> {
+                    FolioEntity created = new FolioEntity(persistedBooking);
+                    created.setTotalCharges(BigDecimal.ZERO);
+                    created.setTotalPaid(BigDecimal.ZERO);
+                    created.setFolioStatus("OPEN");
+                    return folioRepository.save(created);
+                });
+        if (invoiceRepository.findByFolioId(folio.getFolioId()).isEmpty()) {
+            InvoiceEntity invoiceB = new InvoiceEntity(
+                    folio,
+                    "INV-DEMO-CB-" + persistedBooking.getRetreatBookingId(),
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    "DRAFT");
+            invoiceRepository.save(invoiceB);
+        }
+        log.info("Synthetic Customer B authorization fixture ready for booking ID {}.", persistedBooking.getRetreatBookingId());
     }
 }

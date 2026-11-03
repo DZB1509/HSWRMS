@@ -31,6 +31,7 @@ public class SpaSessionDto {
     private BookingSource bookingSource;
     private SpaSessionStatus sessionStatus;
     private SpaConfirmationStatus confirmationStatus;
+    private Integer scheduleVersion;
     private String customerNote;
     private SpaReminderStatus reminderStatus;
     private LocalDateTime reminderClaimedAt;
@@ -206,6 +207,14 @@ public class SpaSessionDto {
 
     public void setConfirmationStatus(SpaConfirmationStatus confirmationStatus) {
         this.confirmationStatus = confirmationStatus;
+    }
+
+    public Integer getScheduleVersion() {
+        return scheduleVersion;
+    }
+
+    public void setScheduleVersion(Integer scheduleVersion) {
+        this.scheduleVersion = scheduleVersion;
     }
 
     public String getCustomerNote() {

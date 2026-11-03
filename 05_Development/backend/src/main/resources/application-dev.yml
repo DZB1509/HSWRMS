@@ -1,22 +1,30 @@
-# Local Developer Override Profile
+﻿# Local Developer Override Profile
 # Run with: --spring.profiles.active=dev
-
-spring:
-  datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
-    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
-  jpa:
-    hibernate:
-      ddl-auto: none
-      naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
 
 logging:
   level:
     com.heavenstay.hswrms: DEBUG
     org.springframework.security: DEBUG
+
+---
+# Dedicated SQL Server datasource for dev profile.
+# Activates only when local (in-memory H2) profile is NOT active.
+spring:
+  config:
+    activate:
+      on-profile: "dev & !local"
+  datasource:
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:12345678}}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    naming:
+      physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: true

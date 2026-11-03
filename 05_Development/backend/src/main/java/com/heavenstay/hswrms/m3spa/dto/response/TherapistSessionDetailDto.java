@@ -4,6 +4,9 @@ import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class TherapistSessionDetailDto {
     private Long spaSessionId;
@@ -14,9 +17,11 @@ public class TherapistSessionDetailDto {
     private String roomName;
     private String customerFirstName;
     private String treatmentSafetyNotes;
-    private String relevantPrecautions;
+    private String mobilityJointNotes;
+    private List<String> relevantPrecautions = new ArrayList<>();
     private SpaSessionStatus sessionStatus;
     private SpaConfirmationStatus confirmationStatus;
+    private Integer scheduleVersion;
     private String customerNote;
 
     public TherapistSessionDetailDto() {
@@ -86,12 +91,28 @@ public class TherapistSessionDetailDto {
         this.treatmentSafetyNotes = treatmentSafetyNotes;
     }
 
-    public String getRelevantPrecautions() {
-        return relevantPrecautions;
+    public String getMobilityJointNotes() {
+        return mobilityJointNotes;
     }
 
-    public void setRelevantPrecautions(String relevantPrecautions) {
-        this.relevantPrecautions = relevantPrecautions;
+    public void setMobilityJointNotes(String mobilityJointNotes) {
+        this.mobilityJointNotes = mobilityJointNotes;
+    }
+
+    public List<String> getRelevantPrecautions() {
+        return relevantPrecautions != null ? relevantPrecautions : Collections.emptyList();
+    }
+
+    public void setRelevantPrecautions(List<String> relevantPrecautions) {
+        this.relevantPrecautions = relevantPrecautions != null ? relevantPrecautions : new ArrayList<>();
+    }
+
+    public void setRelevantPrecautions(String relevantPrecaution) {
+        if (relevantPrecaution != null && !relevantPrecaution.isBlank()) {
+            this.relevantPrecautions = new ArrayList<>(List.of(relevantPrecaution.trim()));
+        } else {
+            this.relevantPrecautions = new ArrayList<>();
+        }
     }
 
     public SpaSessionStatus getSessionStatus() {
@@ -108,6 +129,14 @@ public class TherapistSessionDetailDto {
 
     public void setConfirmationStatus(SpaConfirmationStatus confirmationStatus) {
         this.confirmationStatus = confirmationStatus;
+    }
+
+    public Integer getScheduleVersion() {
+        return scheduleVersion;
+    }
+
+    public void setScheduleVersion(Integer scheduleVersion) {
+        this.scheduleVersion = scheduleVersion;
     }
 
     public String getCustomerNote() {

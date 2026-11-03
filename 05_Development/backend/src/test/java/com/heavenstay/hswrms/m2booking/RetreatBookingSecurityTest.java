@@ -102,6 +102,19 @@ public class RetreatBookingSecurityTest {
     @DisplayName("Villa status endpoint allows receptionist/admin and rejects manager")
     void villaStatusEndpointUsesReceptionistAdminRolePolicy() throws Exception {
         mockMvc.perform(patch("/api/v1/villas/NO-SUCH-VILLA/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"MAINTENANCE\"}"))
+                .andExpect(status().isUnauthorized());
+
+        // A generic Spring User principal is not an application actor identity. It must not
+        // reach the service or be attributed to a fallback user ID.
+        mockMvc.perform(patch("/api/v1/villas/NO-SUCH-VILLA/status")
+                        .with(user("noncanonical-principal").roles("RECEPTIONIST"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"MAINTENANCE\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/villas/NO-SUCH-VILLA/status")
                         .with(user(createManager(201)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"MAINTENANCE\"}"))
@@ -116,6 +129,7 @@ public class RetreatBookingSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"MAINTENANCE\"}"))
                 .andExpect(status().isNotFound());
+        verify(receptionistService, never()).updateVillaStatus(anyInt(), any(), any(), any());
     }
 
     @Test
@@ -329,6 +343,10 @@ public class RetreatBookingSecurityTest {
     @DisplayName("P2-05: MANAGER is denied receptionist POST/PATCH write operations (HTTP 403 Forbidden)")
     public void testManagerDeniedReceptionistWriteOperations() throws Exception {
         CustomUserDetails manager = createManager(301);
+
+        mockMvc.perform(post("/api/v1/receptionist/bookings/1/cancel")
+                        .with(user("noncanonical-principal").roles("RECEPTIONIST")))
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/api/v1/receptionist/walk-in")
                         .with(user(manager))

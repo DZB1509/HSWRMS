@@ -8,6 +8,7 @@ public class RecoveryResultDto {
     private boolean requiresCustomerConsent;
     private Integer replacementTherapistId;
     private Integer replacementRoomId;
+    private Integer scheduleVersion;
     private String message;
 
     public RecoveryResultDto() {
@@ -71,6 +72,14 @@ public class RecoveryResultDto {
 
     public void setReplacementRoomId(Integer replacementRoomId) {
         this.replacementRoomId = replacementRoomId;
+    }
+
+    public Integer getScheduleVersion() {
+        return scheduleVersion;
+    }
+
+    public void setScheduleVersion(Integer scheduleVersion) {
+        this.scheduleVersion = scheduleVersion;
     }
 
     public String getMessage() {

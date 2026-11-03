@@ -7,6 +7,9 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailPreparationException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -28,7 +31,7 @@ import java.time.format.DateTimeFormatter;
 @Service
 @Profile("smtp")
 @Primary
-public class SmtpSpaNotificationAdapter implements SpaNotificationPort {
+public class SmtpSpaNotificationAdapter implements SpaNotificationOutcomeAware {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpSpaNotificationAdapter.class);
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -40,6 +43,66 @@ public class SmtpSpaNotificationAdapter implements SpaNotificationPort {
         this.mailSender = mailSender;
         this.fromAddress = env.getProperty("spring.mail.properties.mail.smtp.from",
                 env.getProperty("spring.mail.username", "noreply@heavenstay.com"));
+    }
+
+    @Override
+    public SpaProviderResult sendScheduleChangeNotificationResult(SpaSession session, String customerEmail,
+                                                                  String customerName, String changeDetails) {
+        if (session == null) return SpaProviderResult.permanent("Spa session is missing");
+        String name = customerName == null || customerName.isBlank() ? "Customer" : customerName;
+        String body = "Dear " + name + ",\n\nYour Spa/Therapy schedule has changed.\n"
+                + "Change: " + (changeDetails == null ? "Schedule updated" : changeDetails) + "\n"
+                + "Session: " + session.getSpaSessionId() + "\n"
+                + "Treatment: " + (session.getTreatment() == null ? "Spa treatment" : session.getTreatment().getTreatmentName()) + "\n"
+                + "Start: " + session.getScheduledStartAt() + "\n"
+                + "End: " + session.getScheduledEndAt() + "\n\nPlease review your schedule in the Customer portal.";
+        return sendTyped(customerEmail, "HeavenStay Spa — Schedule updated", body);
+    }
+
+    @Override
+    public SpaProviderResult sendTimelineReminder(SpaSession session, String customerEmail,
+                                                   String customerName, String checkpoint) {
+        if (session == null) return SpaProviderResult.permanent("Spa session is missing");
+        String name = customerName == null || customerName.isBlank() ? "Customer" : customerName;
+        String detail = switch (checkpoint == null ? "" : checkpoint) {
+            case "REMINDER_T24H" -> "Your Spa/Therapy session is scheduled for tomorrow.";
+            case "REMINDER_T2H" -> "Please confirm whether you will attend your upcoming Spa/Therapy session.";
+            case "REMINDER_T75M" -> "Final request: please confirm your upcoming Spa/Therapy session before the confirmation deadline.";
+            case "REMINDER_T15M" -> "Your confirmed Spa/Therapy session starts soon.";
+            default -> "Please review your upcoming Spa/Therapy session.";
+        };
+        String body = "Dear " + name + ",\n\n" + detail + "\n"
+                + "Treatment: " + (session.getTreatment() == null ? "Spa treatment" : session.getTreatment().getTreatmentName()) + "\n"
+                + "Scheduled start: " + session.getScheduledStartAt() + "\n\n"
+                + "Please manage confirmation or rescheduling in your authenticated Customer portal.";
+        return sendTyped(customerEmail, "HeavenStay Spa — Appointment update", body);
+    }
+
+    private SpaProviderResult sendTyped(String customerEmail, String subject, String body) {
+        if (customerEmail == null || customerEmail.isBlank() || !customerEmail.contains("@")) {
+            return SpaProviderResult.permanent("Customer email is missing or invalid");
+        }
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromAddress);
+            message.setTo(customerEmail);
+            message.setSubject(subject);
+            message.setText(body);
+            mailSender.send(message);
+            return SpaProviderResult.accepted(null);
+        } catch (MailAuthenticationException | MailPreparationException ex) {
+            log.error("SMTP configuration/authentication failure; operator correction is required before retry.");
+            return SpaProviderResult.permanent(ex.getClass().getSimpleName());
+        } catch (MailSendException ex) {
+            log.error("SMTP send result is ambiguous; automatic resend is suppressed to avoid duplicate non-idempotent email.");
+            return SpaProviderResult.ambiguous(ex.getClass().getSimpleName());
+        } catch (MailException ex) {
+            log.error("SMTP provider outcome is ambiguous; automatic resend is suppressed.");
+            return SpaProviderResult.ambiguous(ex.getClass().getSimpleName());
+        } catch (RuntimeException ex) {
+            log.error("SMTP notification could not be prepared; operator review is required.");
+            return SpaProviderResult.permanent(ex.getClass().getSimpleName());
+        }
     }
 
     @Override

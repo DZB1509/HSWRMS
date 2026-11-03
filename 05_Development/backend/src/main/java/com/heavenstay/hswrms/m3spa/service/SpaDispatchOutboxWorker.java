@@ -2,8 +2,12 @@ package com.heavenstay.hswrms.m3spa.service;
 
 import com.heavenstay.hswrms.m3spa.entity.SpaDispatchOutboxEntity;
 import com.heavenstay.hswrms.m3spa.entity.SpaSession;
+import com.heavenstay.hswrms.m3spa.config.SpaOutboxProperties;
+import com.heavenstay.hswrms.m3spa.port.SpaCalendarOutcomeAware;
 import com.heavenstay.hswrms.m3spa.port.SpaCalendarPort;
+import com.heavenstay.hswrms.m3spa.port.SpaNotificationOutcomeAware;
 import com.heavenstay.hswrms.m3spa.port.SpaNotificationPort;
+import com.heavenstay.hswrms.m3spa.port.SpaProviderResult;
 import com.heavenstay.hswrms.m3spa.repository.SpaDispatchOutboxRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaScheduleHistoryRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaSessionRepository;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +49,7 @@ public class SpaDispatchOutboxWorker {
     public static final int MAX_RETRIES = 5;
     public static final int STALE_CLAIM_MINUTES = 5;
 
+    private final SpaOutboxProperties outboxProperties;
     private final SpaDispatchOutboxRepository outboxRepository;
     private final SpaSessionRepository sessionRepository;
     private final SpaScheduleHistoryRepository historyRepository;
@@ -52,11 +58,13 @@ public class SpaDispatchOutboxWorker {
     private final String instanceWorkerId = "worker-" + UUID.randomUUID().toString().substring(0, 8);
 
     @Autowired
-    public SpaDispatchOutboxWorker(SpaDispatchOutboxRepository outboxRepository,
+    public SpaDispatchOutboxWorker(SpaOutboxProperties outboxProperties,
+            SpaDispatchOutboxRepository outboxRepository,
             SpaSessionRepository sessionRepository,
             SpaScheduleHistoryRepository historyRepository,
             @Autowired(required = false) SpaNotificationPort notificationPort,
             @Autowired(required = false) SpaCalendarPort calendarPort) {
+        this.outboxProperties = outboxProperties;
         this.outboxRepository = outboxRepository;
         this.sessionRepository = sessionRepository;
         this.historyRepository = historyRepository;
@@ -86,10 +94,10 @@ public class SpaDispatchOutboxWorker {
     @Transactional
     public int processPendingOutboxDispatches(String workerId) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime staleThreshold = now.minusMinutes(STALE_CLAIM_MINUTES);
+        LocalDateTime staleThreshold = now.minus(outboxProperties.getClaimExpiry());
 
-        List<SpaDispatchOutboxEntity> claimableEntries = outboxRepository.findClaimableEntries(MAX_RETRIES,
-                staleThreshold);
+        List<SpaDispatchOutboxEntity> claimableEntries = outboxRepository.findClaimableEntries(
+                outboxProperties.getMaxAttempts(), staleThreshold, now);
 
         if (claimableEntries.isEmpty()) {
             return 0;
@@ -130,9 +138,9 @@ public class SpaDispatchOutboxWorker {
             return false;
         }
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime staleThreshold = now.minusMinutes(STALE_CLAIM_MINUTES);
+        LocalDateTime staleThreshold = now.minus(outboxProperties.getClaimExpiry());
         int updated = outboxRepository.claimRecordForProcessing(
-                outboxId, workerId, now, staleThreshold, MAX_RETRIES);
+                outboxId, workerId, now, staleThreshold, outboxProperties.getMaxAttempts());
         if (updated > 0) {
             outboxRepository.findById(outboxId).ifPresent(e -> {
                 e.setStatus("PROCESSING");
@@ -162,10 +170,11 @@ public class SpaDispatchOutboxWorker {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime staleThreshold = now.minusMinutes(STALE_CLAIM_MINUTES);
+        LocalDateTime staleThreshold = now.minus(outboxProperties.getClaimExpiry());
 
         int claimed = outboxRepository.claimRecordForProcessing(
-                outbox.getOutboxId(), workerId, now, staleThreshold, outbox.getMaxRetries());
+                outbox.getOutboxId(), workerId, now, staleThreshold,
+                Math.min(outboxProperties.getMaxAttempts(), outbox.getMaxRetries()));
         if (claimed == 0) {
             log.debug("[OUTBOX CLAIM] Worker '{}' skipped outbox #{}: already claimed, sent, or retry-exhausted.",
                     workerId, outbox.getOutboxId());
@@ -204,11 +213,17 @@ public class SpaDispatchOutboxWorker {
         if (sessionOpt.isEmpty()) {
             log.warn("[OUTBOX DISPATCH] Cannot dispatch outbox #{}: SpaSession #{} not found.",
                     outbox.getOutboxId(), outbox.getSessionId());
-            markFailed(outbox, "Session not found with ID: " + outbox.getSessionId());
+            markFinalFailure(outbox, "Session not found with ID: " + outbox.getSessionId());
             return false;
         }
 
         SpaSession session = sessionOpt.get();
+
+        if (outbox.getChangeType() != null && outbox.getChangeType().startsWith("REMINDER_")
+                && !isReminderStillCurrent(outbox, session)) {
+            markSuperseded(outbox, "Reminder checkpoint no longer matches the current session schedule or lifecycle");
+            return false;
+        }
 
         if ("CALENDAR".equalsIgnoreCase(outbox.getChannel())) {
             return dispatchCalendar(outbox, session);
@@ -217,48 +232,147 @@ public class SpaDispatchOutboxWorker {
         } else {
             log.error("[OUTBOX DISPATCH] Unknown outbox channel '{}' on outbox #{}", outbox.getChannel(),
                     outbox.getOutboxId());
-            markFailed(outbox, "Unknown channel: " + outbox.getChannel());
+            markFinalFailure(outbox, "Unknown channel: " + outbox.getChannel());
             return false;
         }
+    }
+
+    private boolean isReminderStillCurrent(SpaDispatchOutboxEntity outbox, SpaSession session) {
+        if (outbox.getScheduleVersion() != session.getScheduleVersion()
+                || session.getSessionStatus() != com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.SCHEDULED) {
+            return false;
+        }
+        String checkpoint = outbox.getChangeType();
+        return switch (checkpoint) {
+            case "REMINDER_T24H" -> session.getConfirmationStatus() == com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus.PENDING
+                    || session.getConfirmationStatus() == com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus.CONFIRMED;
+            case "REMINDER_T2H", "REMINDER_T75M" -> session.getConfirmationStatus() == com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus.PENDING;
+            case "REMINDER_T15M" -> session.getConfirmationStatus() == com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus.CONFIRMED;
+            default -> false;
+        };
     }
 
     private void markSent(SpaDispatchOutboxEntity outbox) {
         outbox.setStatus("SENT");
         outbox.setProcessedAt(LocalDateTime.now());
+        outbox.setNextAttemptAt(null);
         outbox.setClaimedAt(null);
         outbox.setClaimedBy(null);
         outboxRepository.save(outbox);
     }
 
     private void markFailed(SpaDispatchOutboxEntity outbox, String errorMessage) {
+        applyProviderResult(outbox, SpaProviderResult.retryable(errorMessage));
+    }
+
+    private void markFinalFailure(SpaDispatchOutboxEntity outbox, String errorMessage) {
         outbox.setRetryCount(outbox.getRetryCount() + 1);
-        outbox.setStatus("FAILED");
+        outbox.setStatus("FINAL_FAILURE");
         outbox.setLastError(errorMessage);
+        outbox.setProcessedAt(LocalDateTime.now());
+        outbox.setNextAttemptAt(null);
         outbox.setClaimedAt(null);
         outbox.setClaimedBy(null);
         outboxRepository.save(outbox);
     }
 
+    private void markSuperseded(SpaDispatchOutboxEntity outbox, String detail) {
+        outbox.setStatus("SUPERSEDED");
+        outbox.setLastError(detail);
+        outbox.setProcessedAt(LocalDateTime.now());
+        outbox.setNextAttemptAt(null);
+        outbox.setClaimedAt(null);
+        outbox.setClaimedBy(null);
+        outboxRepository.save(outbox);
+    }
+
+    private void applyProviderResult(SpaDispatchOutboxEntity outbox, SpaProviderResult result) {
+        String detail = result.detail() == null ? result.disposition().name() : result.detail();
+        outbox.setLastError(detail);
+        outbox.setClaimedAt(null);
+        outbox.setClaimedBy(null);
+        switch (result.disposition()) {
+            case ACCEPTED -> {
+                if (result.externalReference() != null) outbox.setExternalCalendarId(result.externalReference());
+                markSent(outbox);
+            }
+            case SUPPRESSED -> {
+                outbox.setStatus("SKIPPED");
+                outbox.setProcessedAt(LocalDateTime.now());
+                outbox.setNextAttemptAt(null);
+                outboxRepository.save(outbox);
+            }
+            case PERMANENT_FAILURE -> markFinalFailure(outbox, detail);
+            case AMBIGUOUS -> {
+                outbox.setRetryCount(outbox.getRetryCount() + 1);
+                outbox.setStatus("AMBIGUOUS");
+                outbox.setProcessedAt(LocalDateTime.now());
+                outbox.setNextAttemptAt(null);
+                outboxRepository.save(outbox);
+            }
+            case RETRYABLE_FAILURE -> {
+                int attempt = outbox.getRetryCount() + 1;
+                outbox.setRetryCount(attempt);
+                outbox.setNextAttemptAt(null);
+                if (attempt >= Math.min(outboxProperties.getMaxAttempts(), outbox.getMaxRetries())) {
+                    outbox.setStatus("FINAL_FAILURE");
+                    outbox.setProcessedAt(LocalDateTime.now());
+                } else {
+                    try {
+                        Duration delay = outboxProperties.delayAfterAttempt(attempt);
+                        outbox.setStatus("FAILED");
+                        outbox.setNextAttemptAt(LocalDateTime.now().plus(delay));
+                    } catch (RuntimeException configurationError) {
+                        outbox.setStatus("FINAL_FAILURE");
+                        outbox.setLastError("Invalid retry delay configuration");
+                        outbox.setProcessedAt(LocalDateTime.now());
+                    }
+                }
+                outboxRepository.save(outbox);
+            }
+        }
+    }
+
     private boolean dispatchCalendar(SpaDispatchOutboxEntity outbox, SpaSession session) {
         if (calendarPort == null) {
-            log.info("[OUTBOX CALENDAR] No calendar port configured; safely marking outbox #{} as SENT.",
+            log.error("[OUTBOX CALENDAR] No calendar provider configured for outbox #{}.",
                     outbox.getOutboxId());
-            markSent(outbox);
-            return true;
+            markFinalFailure(outbox, "Calendar provider unavailable; configuration correction required");
+            return false;
         }
 
         try {
             if ("CANCELLED".equalsIgnoreCase(outbox.getChangeType())) {
                 String calId = outbox.getExternalCalendarId() != null ? outbox.getExternalCalendarId()
                         : session.getExternalCalendarEventId();
-                if (calId != null) {
-                    calendarPort.cancelCalendarEvent(session, calId);
+                SpaProviderResult result;
+                if (calendarPort instanceof SpaCalendarOutcomeAware outcomeAware) {
+                    result = outcomeAware.cancelCalendarEventResult(session, calId);
+                } else {
+                    boolean cancelled = calId != null && calendarPort.cancelCalendarEvent(session, calId);
+                    result = cancelled ? SpaProviderResult.accepted(calId)
+                            : SpaProviderResult.retryable("Calendar cancellation returned false");
                 }
-                markSent(outbox);
-                return true;
+                applyProviderResult(outbox, result);
+                return result.disposition() == SpaProviderResult.Disposition.ACCEPTED;
             } else {
-                String updatedCalId = calendarPort.createOrUpdateCalendarEvent(session);
-                if (updatedCalId != null && !updatedCalId.isBlank()) {
+                String stableIdentity = "hswrms-spa-" + session.getSpaSessionId();
+                SpaProviderResult result;
+                if (calendarPort instanceof SpaCalendarOutcomeAware outcomeAware) {
+                    result = outcomeAware.upsertCalendarEvent(session, stableIdentity);
+                } else {
+                    String updatedCalId = calendarPort.createOrUpdateCalendarEvent(session);
+                    result = updatedCalId != null && !updatedCalId.isBlank()
+                            ? SpaProviderResult.accepted(updatedCalId)
+                            : SpaProviderResult.retryable("Calendar provider did not confirm an event identifier");
+                }
+                if (result.disposition() == SpaProviderResult.Disposition.ACCEPTED
+                        && (result.externalReference() == null || result.externalReference().isBlank())) {
+                    result = SpaProviderResult.permanent("Calendar provider accepted without returning the stable event reference");
+                }
+                if (result.disposition() == SpaProviderResult.Disposition.ACCEPTED
+                        && result.externalReference() != null && !result.externalReference().isBlank()) {
+                    String updatedCalId = result.externalReference();
                     session.setExternalCalendarEventId(updatedCalId);
                     sessionRepository.save(session);
 
@@ -270,14 +384,11 @@ public class SpaDispatchOutboxWorker {
                     }
 
                     outbox.setExternalCalendarId(updatedCalId);
-                    markSent(outbox);
-                    log.info("[OUTBOX CALENDAR] Successfully synced calendar event '{}' for session #{}",
-                            updatedCalId, session.getSpaSessionId());
+                    applyProviderResult(outbox, result);
                     return true;
-                } else {
-                    markFailed(outbox, "Calendar port returned empty event ID");
-                    return false;
                 }
+                applyProviderResult(outbox, result);
+                return false;
             }
         } catch (Exception ex) {
             log.error("[OUTBOX CALENDAR] Calendar dispatch failed for session #{}: {}", session.getSpaSessionId(),
@@ -289,30 +400,35 @@ public class SpaDispatchOutboxWorker {
 
     private boolean dispatchEmail(SpaDispatchOutboxEntity outbox, SpaSession session) {
         if (notificationPort == null) {
-            log.info("[OUTBOX EMAIL] No notification port configured; safely marking outbox #{} as SENT.",
+            log.error("[OUTBOX EMAIL] No notification provider configured for outbox #{}.",
                     outbox.getOutboxId());
-            markSent(outbox);
-            return true;
+            markFinalFailure(outbox, "Email provider unavailable; configuration correction required");
+            return false;
         }
 
         try {
-            boolean sent = notificationPort.sendScheduleChangeNotification(
-                    session,
-                    outbox.getCustomerEmail(),
-                    outbox.getCustomerName(),
-                    outbox.getChangeDetails());
-
-            if (sent) {
-                markSent(outbox);
-                log.info("[OUTBOX EMAIL] Notification email successfully dispatched for session #{}",
-                        session.getSpaSessionId());
-                return true;
+            SpaProviderResult result;
+            if (outbox.getChangeType() != null && outbox.getChangeType().startsWith("REMINDER_")) {
+                if (notificationPort instanceof SpaNotificationOutcomeAware outcomeAware) {
+                    result = outcomeAware.sendTimelineReminder(session, outbox.getCustomerEmail(),
+                            outbox.getCustomerName(), outbox.getChangeType());
+                } else {
+                    boolean accepted = notificationPort.sendAppointmentReminder(session,
+                            outbox.getCustomerEmail(), outbox.getCustomerName());
+                    result = accepted ? SpaProviderResult.accepted(null)
+                            : SpaProviderResult.retryable("Notification provider returned a definite failure");
+                }
+            } else if (notificationPort instanceof SpaNotificationOutcomeAware outcomeAware) {
+                result = outcomeAware.sendScheduleChangeNotificationResult(session, outbox.getCustomerEmail(),
+                        outbox.getCustomerName(), outbox.getChangeDetails());
             } else {
-                markFailed(outbox, "Notification port returned false (delivery failed or queued)");
-                log.warn("[OUTBOX EMAIL] Notification delivery returned false for session #{}. Marked for retry.",
-                        session.getSpaSessionId());
-                return false;
+                boolean accepted = notificationPort.sendScheduleChangeNotification(session,
+                        outbox.getCustomerEmail(), outbox.getCustomerName(), outbox.getChangeDetails());
+                result = accepted ? SpaProviderResult.accepted(null)
+                        : SpaProviderResult.retryable("Notification provider returned a definite failure");
             }
+            applyProviderResult(outbox, result);
+            return result.disposition() == SpaProviderResult.Disposition.ACCEPTED;
         } catch (Exception ex) {
             log.error("[OUTBOX EMAIL] Notification dispatch exception for session #{}: {}", session.getSpaSessionId(),
                     ex.getMessage());

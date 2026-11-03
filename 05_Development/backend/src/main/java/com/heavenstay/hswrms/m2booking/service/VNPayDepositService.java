@@ -2,10 +2,11 @@ package com.heavenstay.hswrms.m2booking.service;
 
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
-import com.heavenstay.hswrms.m2booking.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
+import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.port.CreateDepositTransactionCommand;
+import com.heavenstay.hswrms.m5billing.port.PaymentTransactionPort;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ public class VNPayDepositService {
 
     private final RetreatBookingRepository bookingRepository;
     private final RetreatBookingService bookingService;
-    private final PaymentTransactionRepository paymentTransactionRepository;
+    private final PaymentTransactionPort paymentTransactionPort;
     private final BookingClock bookingClock;
 
     @Value("${app.vnpay.tmn-code:HEAVENSTAY}")
@@ -53,12 +54,12 @@ public class VNPayDepositService {
     @org.springframework.beans.factory.annotation.Autowired
     public VNPayDepositService(RetreatBookingRepository bookingRepository,
                                RetreatBookingService bookingService,
-                               @org.springframework.beans.factory.annotation.Qualifier("m2PaymentTransactionRepository") PaymentTransactionRepository paymentTransactionRepository,
+                               PaymentTransactionPort paymentTransactionPort,
                                BookingClock bookingClock) {
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
-        this.paymentTransactionRepository = paymentTransactionRepository;
-        this.bookingClock = bookingClock;
+        this.paymentTransactionPort = paymentTransactionPort;
+        this.bookingClock = bookingClock != null ? bookingClock : new BookingClock();
     }
 
     public record VNPayDepositInitResult(String paymentUrl, String transactionReference) {}
@@ -90,17 +91,16 @@ public class VNPayDepositService {
 
         String txnRef = "HSW_DEP_" + bookingId + "_" + System.currentTimeMillis();
 
-        // Create or update PENDING PaymentTransaction record (SRS Data Rule 23)
-                if (paymentTransactionRepository != null) {
-            PaymentTransaction txn = new PaymentTransaction();
-            txn.setRetreatBookingId(bookingId);
-            txn.setPaymentType(PaymentTransaction.TYPE_DEPOSIT);
-            txn.setPaymentMethod(PaymentTransaction.METHOD_VNPAY);
-            txn.setTransactionReference(txnRef);
-            txn.setAmountPaid(depositAmount);
-            txn.setPaymentStatus(PaymentTransaction.STATUS_PENDING);
-            txn.setTransactionDate(bookingClock != null ? bookingClock.utcNow() : java.time.LocalDateTime.now());
-            paymentTransactionRepository.save(txn);
+        // Create or update PENDING PaymentTransaction record via M5 PaymentTransactionPort (SRS Data Rule 23)
+        if (paymentTransactionPort != null) {
+            CreateDepositTransactionCommand cmd = CreateDepositTransactionCommand.pending(
+                    bookingId,
+                    "VNPAY",
+                    txnRef,
+                    depositAmount,
+                    bookingClock != null ? bookingClock.utcNow() : java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+            );
+            paymentTransactionPort.createDepositTransaction(cmd);
         }
 
         Map<String, String> vnpParams = new HashMap<>();
@@ -110,53 +110,58 @@ public class VNPayDepositService {
         vnpParams.put("vnp_Amount", String.valueOf(amountInCents));
         vnpParams.put("vnp_CurrCode", "VND");
         vnpParams.put("vnp_TxnRef", txnRef);
-        vnpParams.put("vnp_OrderInfo", "HSWRMS Dat coc booking #" + bookingId);
+        vnpParams.put("vnp_OrderInfo", "Thanh toan tien coc cho don dat phong HSW-BK-" + bookingId);
         vnpParams.put("vnp_OrderType", "other");
         vnpParams.put("vnp_Locale", "vn");
         vnpParams.put("vnp_ReturnUrl", returnUrl);
         vnpParams.put("vnp_IpAddr", getClientIp(request));
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-        vnpParams.put("vnp_CreateDate", formatter.format(new Date()));
+        formatter.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        String createDate = formatter.format(cld.getTime());
+        vnpParams.put("vnp_CreateDate", createDate);
 
-        List<String> fieldNames = new ArrayList<>(vnpParams.keySet());
-        Collections.sort(fieldNames);
+        cld.add(Calendar.MINUTE, 15);
+        String expireDate = formatter.format(cld.getTime());
+        vnpParams.put("vnp_ExpireDate", expireDate);
 
+        Map<String, String> sortedParams = new TreeMap<>(vnpParams);
         StringBuilder hashData = new StringBuilder();
         StringBuilder query = new StringBuilder();
-        for (String fieldName : fieldNames) {
-            String value = vnpParams.get(fieldName);
-            if (value != null && !value.isEmpty()) {
-                hashData.append(fieldName).append('=').append(URLEncoder.encode(value, StandardCharsets.US_ASCII)).append('&');
-                query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII)).append('=')
-                     .append(URLEncoder.encode(value, StandardCharsets.US_ASCII)).append('&');
+
+        for (Map.Entry<String, String> entry : sortedParams.entrySet()) {
+            if (entry.getValue() != null && !entry.getValue().isEmpty()) {
+                hashData.append(entry.getKey()).append('=').append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII)).append('&');
+                query.append(URLEncoder.encode(entry.getKey(), StandardCharsets.US_ASCII)).append('=').append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII)).append('&');
             }
         }
-        hashData.setLength(hashData.length() - 1);
-        query.setLength(query.length() - 1);
+
+        if (hashData.length() > 0) {
+            hashData.setLength(hashData.length() - 1);
+            query.setLength(query.length() - 1);
+        }
 
         String secureHash = hmacSHA512(hashSecret, hashData.toString());
         query.append("&vnp_SecureHash=").append(secureHash);
 
-        String paymentUrl = payUrl + "?" + query.toString();
-        return new VNPayDepositInitResult(paymentUrl, txnRef);
+        return new VNPayDepositInitResult(payUrl + "?" + query, txnRef);
     }
 
     /**
-     * Verifies VNPay signature and processes payment result idempotently.
+     * Handles IPN callback from VNPay.
      */
     public Map<String, String> processIpn(Map<String, String> params) {
-        if (hashSecret == null || hashSecret.trim().isEmpty()) {
-            Map<String, String> err = new HashMap<>();
-            err.put("RspCode", "99");
-            err.put("Message", "VNPay payment gateway is unavailable: merchant hash secret is missing.");
-            return err;
-        }
         Map<String, String> response = new HashMap<>();
-        String vnpSecureHash = params.get("vnp_SecureHash");
 
+        if (hashSecret == null || hashSecret.trim().isEmpty()) {
+            response.put("RspCode", "99");
+            response.put("Message", "VNPay payment gateway is unavailable: merchant hash secret is missing.");
+            return response;
+        }
+
+        String vnpSecureHash = params.get("vnp_SecureHash");
         if (vnpSecureHash == null || !verifyChecksum(params, vnpSecureHash)) {
-            log.warn("VNPay IPN invalid checksum rejected");
             response.put("RspCode", "97");
             response.put("Message", "Invalid Checksum");
             return response;
@@ -165,7 +170,6 @@ public class VNPayDepositService {
         String txnRef = params.get("vnp_TxnRef");
         String responseCode = params.get("vnp_ResponseCode");
 
-        // Parse booking ID from TxnRef: HSW_DEP_{bookingId}_{timestamp}
         Integer bookingId = extractBookingId(txnRef);
         if (bookingId == null) {
             response.put("RspCode", "01");
@@ -174,15 +178,16 @@ public class VNPayDepositService {
         }
 
         // Lock payment transaction by reference for idempotent execution
-        Optional<PaymentTransaction> txnOpt = paymentTransactionRepository.findByReferenceForUpdate(txnRef);
-        PaymentTransaction txn;
-        if (txnOpt.isPresent()) {
-            txn = txnOpt.get();
-        } else {
-            // Find latest pending transaction for this booking
-            List<PaymentTransaction> list = paymentTransactionRepository
-                    .findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT);
-            txn = list.isEmpty() ? null : list.get(0);
+        PaymentResponseDTO txn = null;
+        if (paymentTransactionPort != null) {
+            Optional<PaymentResponseDTO> txnOpt = paymentTransactionPort.findByTransactionReferenceForUpdate(txnRef);
+            if (txnOpt.isPresent()) {
+                txn = txnOpt.get();
+            } else {
+                // Find latest pending transaction for this booking
+                List<PaymentResponseDTO> list = paymentTransactionPort.findDepositTransactionsByBookingId(bookingId);
+                txn = list.isEmpty() ? null : list.get(0);
+            }
         }
 
         if (txn == null) {
@@ -192,7 +197,7 @@ public class VNPayDepositService {
         }
 
         // Idempotency: if already successful, return success without double processing
-        if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(txn.getPaymentStatus())) {
+        if ("SUCCESSFUL".equalsIgnoreCase(txn.getPaymentStatus())) {
             response.put("RspCode", "00");
             response.put("Message", "Order already confirmed");
             return response;
@@ -212,18 +217,18 @@ public class VNPayDepositService {
         }
 
         if ("00".equals(responseCode)) {
-            txn.setPaymentStatus(PaymentTransaction.STATUS_SUCCESSFUL);
-            txn.setTransactionDate(bookingClock.utcNow());
-            paymentTransactionRepository.save(txn);
+            if (paymentTransactionPort != null) {
+                paymentTransactionPort.updatePaymentStatus(txn.getTransactionReference(), "SUCCESSFUL", bookingClock.utcNow());
+            }
 
             bookingService.confirmBookingDeposit(bookingId, amountPaid, txnRef);
 
             response.put("RspCode", "00");
             response.put("Message", "Confirm Success");
         } else {
-            txn.setPaymentStatus(PaymentTransaction.STATUS_FAILED);
-            txn.setTransactionDate(bookingClock.utcNow());
-            paymentTransactionRepository.save(txn);
+            if (paymentTransactionPort != null) {
+                paymentTransactionPort.updatePaymentStatus(txn.getTransactionReference(), "FAILED", bookingClock.utcNow());
+            }
 
             response.put("RspCode", "00");
             response.put("Message", "Payment Failure Recorded");
@@ -233,6 +238,9 @@ public class VNPayDepositService {
     }
 
     public boolean verifyChecksum(Map<String, String> params, String secureHash) {
+        if (hashSecret == null || hashSecret.trim().isEmpty() || secureHash == null) {
+            return false;
+        }
         Map<String, String> sortedParams = new TreeMap<>(params);
         sortedParams.remove("vnp_SecureHashType");
         sortedParams.remove("vnp_SecureHash");

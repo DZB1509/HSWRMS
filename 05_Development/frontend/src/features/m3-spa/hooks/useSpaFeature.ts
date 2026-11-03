@@ -92,13 +92,19 @@ export function useCustomerSpaSessions() {
     return updated;
   }, []);
 
+  const declineAttendance = useCallback(async (sessionId: number) => {
+    const updated = await spaApi.declineAttendance(sessionId);
+    setSessions((prev) => prev.map((s) => (s.spaSessionId === sessionId ? updated : s)));
+    return updated;
+  }, []);
+
   const cancelSession = useCallback(async (sessionId: number) => {
     const updated = await spaApi.cancelSession(sessionId);
     setSessions((prev) => prev.map((s) => (s.spaSessionId === sessionId ? updated : s)));
     return updated;
   }, []);
 
-  return { sessions, loading, error, refetch: fetchSessions, confirmAttendance, cancelSession };
+  return { sessions, loading, error, refetch: fetchSessions, confirmAttendance, declineAttendance, cancelSession };
 }
 
 export function useTherapistSchedule(initialDate?: string) {

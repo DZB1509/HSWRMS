@@ -6,12 +6,12 @@ import com.heavenstay.hswrms.m2booking.dto.BookingCalculationResponse;
 import com.heavenstay.hswrms.m2booking.dto.BookingSummaryResponse;
 import com.heavenstay.hswrms.m2booking.dto.CreateBookingRequest;
 import com.heavenstay.hswrms.m2booking.dto.UpdateBookingRequest;
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
+import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.port.PaymentTransactionPort;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
 import com.heavenstay.hswrms.m2booking.entity.VillaCategory;
 import com.heavenstay.hswrms.m2booking.service.CustomerIdentityPort;
-import com.heavenstay.hswrms.m2booking.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m2booking.repository.ResidenceRecordRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository;
@@ -57,7 +57,7 @@ public class RetreatBookingServiceTest {
     private ResidenceRecordRepository residenceRecordRepository;
 
     @Mock
-    private PaymentTransactionRepository paymentTransactionRepository;
+    private PaymentTransactionPort paymentTransactionPort;
 
     @Mock
     private CustomerIdentityPort customerIdentityPort;
@@ -85,7 +85,7 @@ public class RetreatBookingServiceTest {
                 villaCategoryRepository,
                 availabilityService,
                 residenceRecordRepository,
-                paymentTransactionRepository,
+                paymentTransactionPort,
                 customerIdentityPort,
                 bookingPolicyService,
                 bookingClock,
@@ -228,14 +228,14 @@ public class RetreatBookingServiceTest {
         when(bookingPolicyService.cancellationWindowHours()).thenReturn(Optional.of(48));
         when(bookingPolicyService.refundPercentage()).thenReturn(Optional.of(new BigDecimal("100")));
         when(bookingClock.utcNow()).thenReturn(LocalDateTime.now());
-        when(paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(100, PaymentTransaction.TYPE_DEPOSIT))
-                .thenReturn(Collections.emptyList());
+        when(paymentTransactionPort.cancelPendingDepositTransactions(100)).thenReturn(0);
         when(bookingRepository.save(any(RetreatBooking.class))).thenAnswer(i -> i.getArgument(0));
 
         BookingSummaryResponse response = bookingService.cancelBooking(100, 5, 2);
 
         assertNotNull(response);
         assertEquals("CANCELLED", response.getBookingStatus());
+        verify(paymentTransactionPort).cancelPendingDepositTransactions(100);
         verify(bookingAuditService).record(eq(2), eq("CANCEL_BOOKING"), contains("RetreatBooking #100"), eq("SUCCESS"));
     }
 }

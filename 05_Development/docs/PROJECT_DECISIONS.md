@@ -76,6 +76,12 @@ The following architectural open items remain officially unresolved and must not
 
 ---
 
+## Dated OI-02 Implementation Decision — 2026-11-01
+
+The project owner selected Option B for the current M3 implementation. This is a dated addendum and does not change the historical status recorded in ADR-06. Outbox dispatch uses a maximum of five total attempts (initial attempt plus four retries), with delays of 30 seconds, 1 minute, 2 minutes, and 4 minutes after retryable failures. The fifth unsuccessful retryable attempt becomes terminal failure. Permanent configuration/authentication failures require correction before deliberate reprocessing. The original idempotency key is retained. Retry values are centralized in application configuration. This bounds load and recovery while avoiding indefinite retries; provider-specific ambiguous outcomes remain subject to safe reconciliation and are not treated as successful delivery.
+
+---
+
 ## ADR-07: M3 Spa & Therapy Scheduling Engine Architecture
 * **System-Driven Scheduling Model:** Customer and Receptionist select Treatment, preferred Date, and Time Window; the backend Scheduling Engine (`SchedulingEngineService`) evaluates duration, therapist qualifications (`TherapistTreatmentQualification`), treatment room compatibility (`TreatmentRoomCompatibility`), and interval non-overlap (`existing.start < requested.end AND existing.end > requested.start`).
 * **Operational Parameters Without Fabricated Defaults:** Operating hours and alternative date search horizon are NOT hardcoded business rules. Operating hours must be supplied via operational configuration (`app.spa.scheduling.operating-open` and `close`); absence of configuration halts candidate generation safely with an explicit exception rather than applying speculative resort hours. Alternative date search horizon is caller-supplied or configured (`app.spa.scheduling.alternative-search-days`); in the absence of an explicit horizon, the engine defaults safely to 0 (no speculative forward searching).

@@ -27,15 +27,18 @@ public interface SpaDispatchOutboxRepository extends JpaRepository<SpaDispatchOu
 
     /**
      * Finds outbox entries eligible for worker claim:
-     * - PENDING or FAILED entries with retryCount < maxRetries
+     * - PENDING entries, or due FAILED entries, with retryCount < maxRetries
      * - Stale PROCESSING entries whose claim lease expired before staleThreshold and retryCount < maxRetries
      */
     @Query("SELECT e FROM SpaDispatchOutboxEntity e " +
-           "WHERE (e.status IN ('PENDING', 'FAILED') OR (e.status = 'PROCESSING' AND e.claimedAt < :staleThreshold)) " +
+           "WHERE (e.status = 'PENDING' " +
+           "       OR (e.status = 'FAILED' AND (e.nextAttemptAt IS NULL OR e.nextAttemptAt <= :now)) " +
+           "       OR (e.status = 'PROCESSING' AND e.claimedAt < :staleThreshold)) " +
            "  AND e.retryCount < :maxRetries " +
            "ORDER BY e.createdAt ASC")
     List<SpaDispatchOutboxEntity> findClaimableEntries(@Param("maxRetries") int maxRetries,
-                                                       @Param("staleThreshold") LocalDateTime staleThreshold);
+                                                       @Param("staleThreshold") LocalDateTime staleThreshold,
+                                                       @Param("now") LocalDateTime now);
 
     /**
      * Atomically transitions an eligible outbox record to PROCESSING state for the given workerId.
@@ -48,7 +51,9 @@ public interface SpaDispatchOutboxRepository extends JpaRepository<SpaDispatchOu
            "SET e.status = 'PROCESSING', e.claimedAt = :claimedAt, e.claimedBy = :workerId " +
            "WHERE e.outboxId = :outboxId " +
            "  AND e.retryCount < :maxRetries " +
-           "  AND (e.status IN ('PENDING', 'FAILED') OR (e.status = 'PROCESSING' AND e.claimedAt < :staleThreshold))")
+           "  AND (e.status = 'PENDING' " +
+           "       OR (e.status = 'FAILED' AND (e.nextAttemptAt IS NULL OR e.nextAttemptAt <= :claimedAt)) " +
+           "       OR (e.status = 'PROCESSING' AND e.claimedAt < :staleThreshold))")
     int claimRecordForProcessing(@Param("outboxId") Long outboxId,
                                  @Param("workerId") String workerId,
                                  @Param("claimedAt") LocalDateTime claimedAt,

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:m6-api": "tsx --test src/features/m6-admin/api/adminDashboardApi.test.ts src/features/m6-admin/api/auditLogApi.test.ts src/features/m6-admin/api/delegationApi.test.ts src/features/m6-admin/api/parametersApi.test.ts src/features/m6-admin/api/permissionMatrixApi.test.ts src/features/m6-admin/api/staffAccountsApi.test.ts src/context/governanceAuthorization.test.ts"
   },
   "dependencies": {
     "gsap": "^3.15.0",
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }

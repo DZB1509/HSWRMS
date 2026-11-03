@@ -38,6 +38,7 @@ public class TherapistController {
      * Displays today's and upcoming sessions assigned to the authenticated therapist.
      */
     @GetMapping("/dashboard")
+    @PreAuthorize("hasRole('THERAPIST')")
     public ResponseEntity<ApiResponse<List<SpaSessionDto>>> getDashboard(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -51,6 +52,7 @@ public class TherapistController {
      * Chronologically ordered sessions assigned to the authenticated therapist for a given date.
      */
     @GetMapping("/schedule")
+    @PreAuthorize("hasRole('THERAPIST')")
     public ResponseEntity<ApiResponse<List<SpaSessionDto>>> getDailySchedule(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -67,6 +69,7 @@ public class TherapistController {
      * Unrelated HealthProfile fields, medical history, dietary info are strictly excluded.
      */
     @GetMapping("/sessions/{id}")
+    @PreAuthorize("hasRole('THERAPIST')")
     public ResponseEntity<ApiResponse<TherapistSessionDetailDto>> getSessionDetail(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -82,6 +85,7 @@ public class TherapistController {
      * IN_PROGRESS is strictly prohibited and rejected per OI-08.
      */
     @PostMapping("/sessions/{id}/outcome")
+    @PreAuthorize("hasRole('THERAPIST')")
     public ResponseEntity<ApiResponse<SpaSessionDto>> recordOutcome(
             @PathVariable Long id,
             @Valid @RequestBody CompleteSessionRequest req,

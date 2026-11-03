@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useSpa } from '../../context/SpaContext';
+import { spaApi } from '../../features/m3-spa/api/spaApi';
+import type { BackendSpaSession } from '../../features/m3-spa/types/spaTypes';
 import {
   CalendarCheck,
+  XCircle,
   Clock,
   User,
   CheckCircle,
@@ -19,56 +21,48 @@ import {
 import type { LocalizedString } from '../../types/spa';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
-const CURRENT_THERAPIST_ID = 'THER-01'; // Demo: logged-in therapist
+
 const TODAY = new Date().toISOString().split('T')[0];
 
 export const TherapistDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
-  const { getSessionsByTherapist, getTherapistById, sessions, getTherapistRelevantWellnessInfo } = useSpa();
+  const [sessions, setSessions] = React.useState<BackendSpaSession[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  if (loading) {
+    return <div className="therapist-dashboard"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
+  }
+
+  React.useEffect(() => {
+    spaApi.getTherapistDashboard()
+      .then((data) => setSessions(data))
+      .catch((err) => console.error('Failed to load therapist dashboard:', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
-  const localize = (ls?: LocalizedString | null): string => {
+  const localize = (ls?: LocalizedString | string | null): string => {
     if (!ls) return '';
     if (typeof ls === 'string') return ls;
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
 
-  const therapist = getTherapistById(CURRENT_THERAPIST_ID);
   const todaySessions = useMemo(
-    () => getSessionsByTherapist(CURRENT_THERAPIST_ID, TODAY),
-    [getSessionsByTherapist]
+    () => sessions.filter((s) => s.date === TODAY),
+    [sessions]
   );
 
-  const confirmedCount = todaySessions.filter((s) => s.status === 'confirmed' || s.status === 'booked').length;
-  const completedCount = todaySessions.filter((s) => s.status === 'completed').length;
+  const confirmedCount = todaySessions.filter((s) => s.sessionStatus === 'SCHEDULED').length;
+  const completedCount = todaySessions.filter((s) => s.sessionStatus === 'COMPLETED').length;
   
-  // Next session is the next upcoming scheduled session
   const nextSession = useMemo(
-    () => todaySessions.find((s) => s.status === 'confirmed' || s.status === 'booked'),
+    () => todaySessions.find((s) => s.sessionStatus === 'SCHEDULED'),
     [todaySessions]
   );
 
-  const nextSessionWellness = useMemo(() => {
-    if (!nextSession) return null;
-    return getTherapistRelevantWellnessInfo(nextSession.customerId, nextSession.treatmentId);
-  }, [nextSession, getTherapistRelevantWellnessInfo]);
-
-  const hasHealthFlags = Boolean(
-    nextSessionWellness && (
-      nextSessionWellness.relevantMedicalConditions.length > 0 ||
-      Boolean(nextSessionWellness.mobilityConsiderations) ||
-      nextSessionWellness.stressLevel === 'high'
-    )
-  );
-
-  // Weekly stats
-  const weekSessions = useMemo(
-    () => sessions.filter(
-      (s) => s.therapistId === CURRENT_THERAPIST_ID && !['cancelled', 'no_show'].includes(s.status)
-    ),
-    [sessions]
-  );
+  const therapistDisplayName = sessions[0]?.therapistName || t('therapist.title', 'Therapist');
+  const hasHealthFlags = false;
+  const weekSessions = sessions.filter((s) => s.sessionStatus !== 'CANCELLED');
 
   const formattedTodayDate = new Date(TODAY + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -82,7 +76,7 @@ export const TherapistDashboardPage: React.FC = () => {
       {/* A. Compact Page Header */}
       <OperationalPageHeader
         title={t('therapist.dashboard', 'Therapist Dashboard')}
-        subtitle={therapist ? `${t('therapist.welcome', 'Welcome')}, ${therapist.name} · ${localize(therapist.title)}` : ''}
+        subtitle={`${t('therapist.welcome', 'Welcome')}, ${therapistDisplayName}`}
         badge="Screen #31"
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '6px 12px', backgroundColor: 'var(--bg-canvas)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
@@ -176,10 +170,10 @@ export const TherapistDashboardPage: React.FC = () => {
                     <span>{t('therapist.healthConsiderationFlag', 'Treatment Health Considerations On File')}</span>
                   </div>
                 )}
-                {nextSession.customerSpecialRequest && (
+                {nextSession.customerNote && (
                   <div className="therapist-flag therapist-flag--request">
                     <AlertCircle size={14} />
-                    <span>{t('therapist.customerRequestLabel', 'Request')}: {nextSession.customerSpecialRequest}</span>
+                    <span>{t('therapist.customerRequestLabel', 'Request')}: {nextSession.customerNote}</span>
                   </div>
                 )}
               </div>
@@ -188,7 +182,7 @@ export const TherapistDashboardPage: React.FC = () => {
             <div className="therapist-next-action-col">
               <button
                 className="therapist-primary-action-btn"
-                onClick={() => navigate(`/therapist/sessions/${nextSession.id}`)}
+                onClick={() => navigate(`/therapist/sessions/${nextSession.spaSessionId}`)}
                 id="therapist-view-next"
               >
                 <span>{t('therapist.viewSession', 'View Session Details')}</span>
@@ -221,15 +215,15 @@ export const TherapistDashboardPage: React.FC = () => {
           <div className="therapist-preview-list ops-card">
             {todaySessions.map((session) => (
               <div
-                key={session.id}
-                className={`therapist-preview-item therapist-preview-item--${session.status}`}
-                onClick={() => navigate(`/therapist/sessions/${session.id}`)}
-                id={`therapist-preview-${session.id}`}
+                key={session.spaSessionId}
+                className={`therapist-preview-item therapist-preview-item--${session.sessionStatus}`}
+                onClick={() => navigate(`/therapist/sessions/${session.spaSessionId}`)}
+                id={`therapist-preview-${session.spaSessionId}`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    navigate(`/therapist/sessions/${session.id}`);
+                    navigate(`/therapist/sessions/${session.spaSessionId}`);
                   }
                 }}
               >
@@ -244,15 +238,13 @@ export const TherapistDashboardPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="therapist-preview-status-col">
-                  <span className={`spa-status-badge spa-status--${session.status}`}>
-                    {session.status === 'confirmed' ? (
-                      <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
-                    ) : session.status === 'in_progress' ? (
-                      <><Activity size={12} /> {t('therapist.inProgress', 'In Progress')}</>
-                    ) : session.status === 'completed' ? (
+                  <span className={`spa-status-badge spa-status--${session.sessionStatus}`}>
+                    {session.sessionStatus === 'COMPLETED' ? (
                       <><CheckCircle size={12} /> {t('therapist.done', 'Done')}</>
+                    ) : session.sessionStatus === 'NO_SHOW' ? (
+                      <><XCircle size={12} /> {t('therapist.noShow', 'No-Show')}</>
                     ) : (
-                      session.status
+                      <><CheckCircle size={12} /> {session.confirmationStatus}</>
                     )}
                   </span>
                   <ChevronRight size={16} className="therapist-preview-chevron" />
@@ -286,7 +278,7 @@ export const TherapistDashboardPage: React.FC = () => {
           {todaySessions.length > 0 && (
             <button
               className="therapist-action-card ops-card"
-              onClick={() => navigate(`/therapist/sessions/${todaySessions[0].id}`)}
+              onClick={() => navigate(`/therapist/sessions/${todaySessions[0].spaSessionId}`)}
               id="therapist-go-session"
             >
               <div className="therapist-action-card-left">

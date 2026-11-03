@@ -77,6 +77,12 @@ public class SpaSession {
     @Column(name = "external_calendar_event_id", length = 255)
     private String externalCalendarEventId;
 
+    @Column(name = "schedule_version", nullable = false)
+    private int scheduleVersion = 1;
+
+    @Column(name = "recovery_attempted_version")
+    private Integer recoveryAttemptedVersion;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -254,6 +260,16 @@ public class SpaSession {
 
     public String getExternalCalendarEventId() {
         return externalCalendarEventId;
+    }
+
+    public int getScheduleVersion() { return scheduleVersion; }
+
+    public void incrementScheduleVersion() { this.scheduleVersion++; }
+
+    public Integer getRecoveryAttemptedVersion() { return recoveryAttemptedVersion; }
+
+    public void setRecoveryAttemptedVersion(Integer recoveryAttemptedVersion) {
+        this.recoveryAttemptedVersion = recoveryAttemptedVersion;
     }
 
     public void setExternalCalendarEventId(String externalCalendarEventId) {

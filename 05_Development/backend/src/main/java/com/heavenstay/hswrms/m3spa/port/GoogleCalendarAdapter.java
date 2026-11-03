@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
  * suite location, start/end timestamps), and generates a synchronized external calendar event identifier.
  */
 @Component
-public class GoogleCalendarAdapter implements SpaCalendarPort {
+public class GoogleCalendarAdapter implements SpaCalendarOutcomeAware {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleCalendarAdapter.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -43,6 +43,36 @@ public class GoogleCalendarAdapter implements SpaCalendarPort {
     }
 
     @Override
+    public SpaProviderResult upsertCalendarEvent(SpaSession session, String stableEventIdentity) {
+        if (session == null || stableEventIdentity == null || stableEventIdentity.isBlank()) {
+            return SpaProviderResult.permanent("Session or stable Calendar event identity is missing");
+        }
+        if (!enabled) {
+            log.info("[GOOGLE CALENDAR SUPPRESSED] Calendar integration is disabled; session #{} was not synchronized.",
+                    session.getSpaSessionId());
+            return SpaProviderResult.suppressed("Google Calendar integration disabled; no event was created");
+        }
+        log.error("Google Calendar is enabled but no authenticated Calendar API client is installed; event {} was not sent.",
+                stableEventIdentity);
+        return SpaProviderResult.permanent("Google Calendar API client is not configured");
+    }
+
+    @Override
+    public SpaProviderResult cancelCalendarEventResult(SpaSession session, String externalEventIdentity) {
+        if (!enabled) {
+            return SpaProviderResult.suppressed("Google Calendar integration disabled; no event was cancelled");
+        }
+        if (externalEventIdentity == null || externalEventIdentity.isBlank()) {
+            return SpaProviderResult.permanent("Calendar event identity is missing");
+        }
+        return SpaProviderResult.permanent("Google Calendar API client is not configured");
+    }
+
+    public static String stableEventIdentity(Long sessionId) {
+        return "hswrms-spa-" + sessionId;
+    }
+
+    @Override
     public String createOrUpdateCalendarEvent(SpaSession session) {
         if (session == null) {
             log.warn("Cannot create calendar event: session is null");
@@ -57,10 +87,9 @@ public class GoogleCalendarAdapter implements SpaCalendarPort {
             String end = session.getScheduledEndAt() != null ? session.getScheduledEndAt().format(ISO_FORMATTER) : "";
 
             if (!enabled) {
-                String decoupledRef = "gcal-decoupled-" + session.getSpaSessionId();
-                log.info("[GOOGLE CALENDAR DECOUPLED] Sync disabled or unconfigured. Formatted decoupled ref '{}' for session #{}: {} at {} in {}",
-                        decoupledRef, session.getSpaSessionId(), treatmentName, start, suite);
-                return decoupledRef;
+                log.info("[GOOGLE CALENDAR SUPPRESSED] Calendar integration is disabled; session #{} was not synchronized.",
+                        session.getSpaSessionId());
+                return null;
             }
 
             // When enabled: format event payload
@@ -71,11 +100,9 @@ public class GoogleCalendarAdapter implements SpaCalendarPort {
                     + "Suite: " + suite + "\n"
                     + "Confirmation Status: " + session.getConfirmationStatus();
 
-            String generatedEventId = "gcal-event-" + session.getSpaSessionId() + "-" + System.currentTimeMillis();
-            log.info("[GOOGLE CALENDAR SYNC] Event created in calendar '{}': Event ID={}, Summary='{}', Location='{}', Interval=[{} to {}]",
-                    calendarId, generatedEventId, summary, suite, start, end);
-
-            return generatedEventId;
+            log.error("Google Calendar API client is unavailable; formatted payload was not sent. identity={}, calendar={}, summary={}, location={}, interval=[{} to {}]",
+                    stableEventIdentity(session.getSpaSessionId()), calendarId, summary, suite, start, end);
+            return null;
         } catch (Exception ex) {
             log.error("Failed to sync calendar event for spa session #{}: {}", session.getSpaSessionId(), ex.getMessage());
             return null;
@@ -92,15 +119,8 @@ public class GoogleCalendarAdapter implements SpaCalendarPort {
         Long sessionId = session != null ? session.getSpaSessionId() : null;
 
         try {
-            if (!enabled) {
-                log.info("[GOOGLE CALENDAR DECOUPLED] Event cancellation requested for session #{}, event ID '{}'; safely acknowledged in decoupled mode.",
-                        sessionId, externalCalendarEventId);
-                return true;
-            }
-
-            log.info("[GOOGLE CALENDAR SYNC] Cancelled calendar event '{}' in calendar '{}' for spa session #{}",
-                    externalCalendarEventId, calendarId, sessionId);
-            return true;
+            log.info("Google Calendar cancellation is not performed because no authenticated provider client is configured (enabled={}).", enabled);
+            return false;
         } catch (Exception ex) {
             log.error("Failed to cancel calendar event '{}' for session #{}: {}", externalCalendarEventId, sessionId, ex.getMessage());
             return false;

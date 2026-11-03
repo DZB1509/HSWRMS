@@ -68,14 +68,53 @@ export const ManualExtraSpaPage: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverCandidates, setServerCandidates] = useState<AvailableSlot[]>([]);
+  const [, setIsLoadingCandidates] = useState(false);
+
+  useEffect(() => {
+    if (!selectedTreatmentId || !selectedDate) {
+      setServerCandidates([]);
+      return;
+    }
+    const numericTrtId = Number(selectedTreatmentId.replace(/\D/g, '')) || 1;
+    setIsLoadingCandidates(true);
+    spaApi.generateCandidates({
+      treatmentId: numericTrtId,
+      preferredDate: selectedDate,
+      timeRangePreference: 'ANY',
+      flexibleWithDate: false,
+    }).then((res) => {
+      if (res && res.candidates && res.candidates.length > 0) {
+        const slots: AvailableSlot[] = res.candidates.map((cand) => ({
+          id: cand.candidateId,
+          startTime: cand.startTime,
+          endTime: cand.endTime,
+          therapistId: String(cand.therapistId),
+          therapistName: cand.therapistName,
+          roomId: String(cand.roomId),
+          roomName: { en: cand.roomName, vi: cand.roomName } as LocalizedString,
+          date: cand.date || selectedDate,
+          isAvailable: true,
+        }));
+        setServerCandidates(slots);
+      } else {
+        setServerCandidates([]);
+      }
+    }).catch(() => {
+      setServerCandidates([]);
+    }).finally(() => {
+      setIsLoadingCandidates(false);
+    });
+  }, [selectedTreatmentId, selectedDate]);
 
   const selectedArrival = checkedInCustomers.find((a) => a.bookingReference === selectedCustomer);
   const selectedTreatment = treatments.find((t) => t.id === selectedTreatmentId);
 
   const availableSlots = useMemo(() => {
     if (!selectedTreatmentId || !selectedDate) return [];
+    if (serverCandidates.length > 0) return serverCandidates;
     return getAvailableSlots(selectedTreatmentId, selectedDate);
-  }, [selectedTreatmentId, selectedDate, getAvailableSlots]);
+  }, [selectedTreatmentId, selectedDate, serverCandidates, getAvailableSlots]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);

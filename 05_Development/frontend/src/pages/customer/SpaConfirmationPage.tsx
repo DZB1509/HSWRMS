@@ -11,7 +11,7 @@
  * 6. Notification delivery is reported only when the server exposes that state.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
@@ -33,7 +33,7 @@ import {
   Shield,
 } from 'lucide-react';
 import type { LocalizedString, SessionChargeType, SpaConflictType } from '../../types/spa';
-import type { SchedulingCandidate } from '../../features/m3-spa/types/spaTypes';
+import type { SchedulingCandidate, BackendSpaSession } from '../../features/m3-spa/types/spaTypes';
 
 interface PendingBookingData {
   bookingReference?: string;
@@ -86,16 +86,32 @@ export const SpaConfirmationPage: React.FC = () => {
   const pendingRoom = pendingRoomId ? getRoomById(pendingRoomId) : undefined;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiConfirmedSession, setApiConfirmedSession] = useState<BackendSpaSession | null>(null);
+  const [loadingSession, setLoadingSession] = useState<boolean>(Boolean(sessionId));
+  if (loadingSession) {
+    return <div className="spa-confirmation-page"><div className="spa-loading">Loading session...</div></div>;
+  }
+
+  useEffect(() => {
+    if (sessionId && !isNaN(Number(sessionId))) {
+      setLoadingSession(true);
+      spaApi.getSession(Number(sessionId))
+        .then((s) => setApiConfirmedSession(s))
+        .catch((err) => console.warn('Could not load session from API:', err))
+        .finally(() => setLoadingSession(false));
+    }
+  }, [sessionId]);
   const [conflictError, setConflictError] = useState<{
     conflictType: SpaConflictType;
     message: string;
   } | null>(null);
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
-  const localize = (ls?: LocalizedString | null): string => {
+  const localize = (ls?: LocalizedString | { en: string; vi: string } | string | null): string => {
     if (!ls) return '';
     if (typeof ls === 'string') return ls;
-    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
+    const obj = ls as Record<string, string>;
+    return obj[currentLang] || obj.en || Object.values(obj)[0] || '';
   };
 
   const formatPrice = (price: number) => {
@@ -156,10 +172,20 @@ export const SpaConfirmationPage: React.FC = () => {
   };
 
   // ── CASE 1: Displaying an already confirmed session ────
-  if (confirmedSession) {
-    const sessionTreatment = getTreatmentById(confirmedSession.treatmentId);
-    const sessionTherapist = getTherapistById(confirmedSession.therapistId);
-    const sessionRoom = getRoomById(confirmedSession.roomId);
+  const displaySession = apiConfirmedSession || confirmedSession;
+  if (displaySession) {
+    const sessionTreatment = 'treatmentName' in displaySession && typeof displaySession.treatmentName === 'string'
+      ? { name: { en: displaySession.treatmentName, vi: displaySession.treatmentName }, imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80', durationMinutes: displaySession.durationMinutes }
+      : getTreatmentById((displaySession as any).treatmentId);
+    const therapistName = 'therapistName' in displaySession ? (displaySession as any).therapistName : getTherapistById((displaySession as any).therapistId)?.name || 'Assigned Therapist';
+    const roomName = 'roomName' in displaySession ? (displaySession as any).roomName : getRoomById((displaySession as any).roomId)?.name || 'Treatment Room';
+    const displayDate = 'date' in displaySession && displaySession.date ? displaySession.date : ('scheduledStartAt' in displaySession && displaySession.scheduledStartAt ? displaySession.scheduledStartAt.split('T')[0] : '');
+    const startTimeStr = 'startTime' in displaySession && displaySession.startTime ? displaySession.startTime : ('scheduledStartAt' in displaySession && displaySession.scheduledStartAt ? displaySession.scheduledStartAt.substring(11, 16) : '');
+    const endTimeStr = 'endTime' in displaySession && displaySession.endTime ? displaySession.endTime : ('scheduledEndAt' in displaySession && displaySession.scheduledEndAt ? displaySession.scheduledEndAt.substring(11, 16) : '');
+    const isIncludedSession = 'isIncluded' in displaySession ? Boolean(displaySession.isIncluded) : ('chargeType' in displaySession && (displaySession as any).chargeType === 'included');
+    const priceVal = 'basePrice' in displaySession ? (displaySession as any).basePrice : ('price' in displaySession ? (displaySession as any).price : 0);
+    const sessionStatusBadge = 'sessionStatus' in displaySession ? (displaySession as any).sessionStatus : (displaySession as any).status;
+    const confirmStatusBadge = 'confirmationStatus' in displaySession ? (displaySession as any).confirmationStatus : 'CONFIRMED';
 
     return (
       <div className="spa-confirmation-page" id="screen-28-spa-booking-confirmation">
@@ -179,13 +205,13 @@ export const SpaConfirmationPage: React.FC = () => {
               <div className="spa-confirmation-treatment">
                 <img src={sessionTreatment.imageUrl} alt={localize(sessionTreatment.name)} className="spa-confirmation-img" />
                 <div className="spa-confirmation-treatment-info">
-                  <h2>{localize(confirmedSession.treatmentName)}</h2>
-                  {confirmedSession.chargeType === 'included' ? (
+                  <h2>{typeof sessionTreatment?.name === 'object' ? localize(sessionTreatment.name) : sessionTreatment?.name}</h2>
+                  {isIncludedSession ? (
                     <span className="spa-card-included-tag">
                       <Leaf size={12} /> {t('spa.includedInPackage', 'Included in Package')}
                     </span>
                   ) : (
-                    <span className="spa-confirmation-price">{formatPrice(confirmedSession.price)}</span>
+                    <span className="spa-confirmation-price">{formatPrice(priceVal)}</span>
                   )}
                 </div>
               </div>
@@ -197,7 +223,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.date', 'Date')}</span>
                   <span className="spa-confirmation-value">
-                    {new Date(confirmedSession.date + 'T00:00:00').toLocaleDateString('en-US', {
+                    {new Date(displayDate + 'T00:00:00').toLocaleDateString('en-US', {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',
@@ -212,7 +238,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.time', 'Time')}</span>
                   <span className="spa-confirmation-value">
-                    {confirmedSession.startTime} — {confirmedSession.endTime} ({confirmedSession.durationMinutes} {t('spa.minutes', 'min')})
+                    {startTimeStr} — {endTimeStr} ({displaySession.durationMinutes} {t('spa.minutes', 'min')})
                   </span>
                 </div>
               </div>
@@ -222,8 +248,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.therapist', 'Therapist')}</span>
                   <span className="spa-confirmation-value">
-                    {confirmedSession.therapistName}
-                    {sessionTherapist && <span className="spa-confirmation-sub"> · {localize(sessionTherapist.title)}</span>}
+                    {therapistName}
                   </span>
                 </div>
               </div>
@@ -233,8 +258,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.room', 'Room')}</span>
                   <span className="spa-confirmation-value">
-                    {localize(confirmedSession.roomName)}
-                    {sessionRoom && <span className="spa-confirmation-sub"> · {sessionRoom.type}</span>}
+                    {typeof roomName === 'string' ? roomName : localize(roomName)}
                   </span>
                 </div>
               </div>
@@ -245,8 +269,9 @@ export const SpaConfirmationPage: React.FC = () => {
               <span>{t('spa.calendarReminderNotice', 'Booking confirmed. Notification delivery status is managed by the scheduling service.')}</span>
             </div>
 
-            <div className="spa-confirmation-id">
-              <span>{t('spa.sessionId', 'Session ID')}: {confirmedSession.id}</span>
+            <div className="spa-confirmation-id" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{t('spa.sessionId', 'Session ID')}: {'spaSessionId' in displaySession ? (displaySession as any).spaSessionId : ('id' in displaySession ? (displaySession as any).id : sessionId)}</span>
+              <span className="spa-status-badge spa-status--confirmed" style={{ fontSize: '0.8rem' }}>{sessionStatusBadge} · {confirmStatusBadge}</span>
             </div>
           </div>
 
@@ -273,7 +298,17 @@ export const SpaConfirmationPage: React.FC = () => {
   }
 
   // ── CASE 2: Review & Confirm Pending Booking (Pre-Mutation) ──
-  if (pendingTreatment && pendingTherapist && pendingRoom) {
+  const candidate = locationState?.selectedCandidate;
+  if (candidate || (pendingTreatment && pendingTherapist && pendingRoom)) {
+    const reviewTreatmentName = candidate ? candidate.treatmentName : localize(pendingTreatment?.name);
+    const reviewTherapistName = candidate ? candidate.therapistName : pendingTherapist?.name;
+    const reviewRoomName = candidate ? candidate.roomName : (pendingRoom ? localize(pendingRoom.name) : '');
+    const reviewDate = candidate ? candidate.date : pendingDate;
+    const reviewStartTime = candidate ? candidate.startTime : pendingStartTime;
+    const reviewEndTime = candidate ? candidate.endTime : calculatedEndTime;
+    const reviewDuration = candidate ? candidate.durationMinutes : (pendingTreatment ? pendingTreatment.durationMinutes : 60);
+    const reviewPrice = candidate && 'basePrice' in candidate ? (candidate as any).basePrice : (pendingTreatment ? pendingTreatment.price : 0);
+    const reviewIsIncluded = candidate && 'isIncluded' in candidate ? Boolean((candidate as any).isIncluded) : Boolean(pendingTreatment?.isIncludedInRetreat);
     return (
       <div className="spa-confirmation-page" id="screen-28-spa-booking-confirmation">
         <div className="spa-confirmation-card">
@@ -325,9 +360,7 @@ export const SpaConfirmationPage: React.FC = () => {
                     className="spa-confirm-btn"
                     style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
                     onClick={() =>
-                      navigate(
-                        `/customer/spa/alternatives?treatment=${pendingTreatment.id}&date=${pendingDate}`
-                      )
+                      navigate(`/customer/spa/alternatives?treatment=${candidate?.treatmentId || pendingTreatment?.id || ''}&date=${reviewDate}`)
                     }
                     id="btn-goto-alternatives"
                   >
@@ -342,15 +375,15 @@ export const SpaConfirmationPage: React.FC = () => {
           {/* Session Details */}
           <div className="spa-confirmation-details">
             <div className="spa-confirmation-treatment">
-              <img src={pendingTreatment.imageUrl} alt={localize(pendingTreatment.name)} className="spa-confirmation-img" />
+              <img src={pendingTreatment?.imageUrl || 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80'} alt={reviewTreatmentName} className="spa-confirmation-img" />
               <div className="spa-confirmation-treatment-info">
-                <h2>{localize(pendingTreatment.name)}</h2>
-                {pendingTreatment.isIncludedInRetreat ? (
+                <h2>{reviewTreatmentName}</h2>
+                {reviewIsIncluded ? (
                   <span className="spa-card-included-tag">
                     <Leaf size={12} /> {t('spa.includedInPackage', 'Included in Package')}
                   </span>
                 ) : (
-                  <span className="spa-confirmation-price">{formatPrice(pendingTreatment.price)}</span>
+                  <span className="spa-confirmation-price">{formatPrice(reviewPrice)}</span>
                 )}
               </div>
             </div>
@@ -361,7 +394,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.date', 'Date')}</span>
                   <span className="spa-confirmation-value">
-                    {new Date(pendingDate + 'T00:00:00').toLocaleDateString('en-US', {
+                    {new Date(reviewDate + 'T00:00:00').toLocaleDateString('en-US', {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',
@@ -376,7 +409,7 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.time', 'Time')}</span>
                   <span className="spa-confirmation-value">
-                    {pendingStartTime} — {calculatedEndTime} ({pendingTreatment.durationMinutes} {t('spa.minutes', 'min')})
+                    {reviewStartTime} — {reviewEndTime} ({reviewDuration} {t('spa.minutes', 'min')})
                   </span>
                 </div>
               </div>
@@ -386,8 +419,8 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.therapist', 'Therapist')}</span>
                   <span className="spa-confirmation-value">
-                    {pendingTherapist.name}
-                    <span className="spa-confirmation-sub"> · {localize(pendingTherapist.title)}</span>
+                    {reviewTherapistName}
+                    
                   </span>
                 </div>
               </div>
@@ -397,8 +430,8 @@ export const SpaConfirmationPage: React.FC = () => {
                 <div>
                   <span className="spa-confirmation-label">{t('spa.room', 'Room')}</span>
                   <span className="spa-confirmation-value">
-                    {localize(pendingRoom.name)}
-                    <span className="spa-confirmation-sub"> · {pendingRoom.type}</span>
+                    {reviewRoomName}
+                    
                   </span>
                 </div>
               </div>
@@ -460,9 +493,7 @@ export const SpaConfirmationPage: React.FC = () => {
               onClick={handleConfirmReservation}
               disabled={
                 isSubmitting ||
-                !locationState?.selectedCandidate ||
-                !(activeBooking?.bookingReference || locationState?.bookingReference) ||
-                !(profile?.id || locationState?.customerId)
+                !locationState?.selectedCandidate
               }
               id="btn-confirm-spa-booking"
             >

@@ -33,6 +33,7 @@ import {
   Ban,
   LayoutDashboard,
   Check,
+  XCircle,
   Leaf,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
@@ -46,6 +47,7 @@ export const MySpaSessions: React.FC = () => {
   const {
     sessions: backendSessions,
     confirmAttendance,
+    declineAttendance,
     cancelSession: cancelBackendSession,
   } = useCustomerSpaSessions();
 
@@ -120,6 +122,20 @@ export const MySpaSessions: React.FC = () => {
       setTimeout(() => setActionSuccessMsg(null), 4000);
     } catch (err: unknown) {
       console.error('Failed to confirm attendance', err);
+    } finally {
+      setActionSessionId(null);
+    }
+  };
+
+  const handleDeclineAttendance = async (sessionId: number) => {
+    setActionSessionId(sessionId);
+    setActionSuccessMsg(null);
+    try {
+      await declineAttendance(sessionId);
+      setActionSuccessMsg('Attendance declined. System is orchestrating replacement recovery.');
+      setTimeout(() => setActionSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      console.error('Failed to decline attendance', err);
     } finally {
       setActionSessionId(null);
     }
@@ -357,19 +373,32 @@ export const MySpaSessions: React.FC = () => {
                   {/* Actions Bar */}
                   {isScheduled && (
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
-                      {/* Attendance Confirmation Action */}
+                      {/* Attendance Confirmation & Decline Actions */}
                       {isPendingAttendance && (
-                        <button
-                          type="button"
-                          className="hsw-btn hsw-btn-primary"
-                          disabled={actionSessionId === session.spaSessionId}
-                          onClick={() => handleConfirmAttendance(session.spaSessionId)}
-                          id={`btn-confirm-attendance-${session.spaSessionId}`}
-                          style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                          <Check size={14} />
-                          <span>{t('spa.confirmAttendanceBtn', 'Confirm Attendance')}</span>
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="hsw-btn hsw-btn-primary"
+                            disabled={actionSessionId === session.spaSessionId}
+                            onClick={() => handleConfirmAttendance(session.spaSessionId)}
+                            id={`btn-confirm-attendance-${session.spaSessionId}`}
+                            style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <Check size={14} />
+                            <span>{t('spa.confirmAttendanceBtn', 'Confirm Attendance')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="hsw-btn hsw-btn-secondary"
+                            disabled={actionSessionId === session.spaSessionId}
+                            onClick={() => handleDeclineAttendance(session.spaSessionId)}
+                            id={`btn-decline-attendance-${session.spaSessionId}`}
+                            style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', color: '#c2410c' }}
+                          >
+                            <XCircle size={14} />
+                            <span>{t('spa.declineAttendanceBtn', 'Decline Attendance')}</span>
+                          </button>
+                        </>
                       )}
 
                       {/* Reschedule Entry Point (Customer-Initiated) */}

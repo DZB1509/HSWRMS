@@ -608,7 +608,6 @@ public class FnbKdsOrderServiceTest {
                 bookingContextPort,
                 dietaryProfilePort,
                 folioBillingService,
-                folioItemRepository,
                 failingAuditService
         );
 
@@ -759,4 +758,44 @@ public class FnbKdsOrderServiceTest {
         assertEquals("INVALID_BOOKING_DATES", ex.getErrorCode());
 
 }
+    @Test
+    @DisplayName("DEF-07: M4 FnbKdsOrderServiceImpl declares no dependency on M5 FolioItemRepository")
+    void testDef07_M4HasNoDirectDependencyOnFolioItemRepository() {
+        // Verify no field of type FolioItemRepository exists in FnbKdsOrderServiceImpl
+        boolean hasFolioItemRepoField = java.util.Arrays.stream(FnbKdsOrderServiceImpl.class.getDeclaredFields())
+                .anyMatch(field -> field.getType().getSimpleName().equals("FolioItemRepository"));
+        assertFalse(hasFolioItemRepoField, "FnbKdsOrderServiceImpl must NOT declare FolioItemRepository field");
+
+        // Verify no constructor accepts FolioItemRepository
+        boolean hasFolioItemRepoParam = java.util.Arrays.stream(FnbKdsOrderServiceImpl.class.getConstructors())
+                .anyMatch(ctor -> java.util.Arrays.stream(ctor.getParameterTypes())
+                        .anyMatch(pt -> pt.getSimpleName().equals("FolioItemRepository")));
+        assertFalse(hasFolioItemRepoParam, "FnbKdsOrderServiceImpl must NOT accept FolioItemRepository in constructor");
+    }
+
+    @Test
+    @DisplayName("DEF-07: Transitioning to DELIVERED delegates idempotency entirely to M5 FolioBillingService")
+    void testDef07_DeliveredDelegatesIdempotencyToM5Service() {
+        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 2, null);
+        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
+                testBooking.getRetreatBookingId(), targetDate, "19:00", "Villa 101", List.of(item));
+        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
+
+        mealOrderService.updateOrderStatus(order.getMealOrderId(),
+                new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
+        mealOrderService.updateOrderStatus(order.getMealOrderId(),
+                new UpdateOrderStatusRequest("READY", null), staffUser.getUserId(), true);
+
+        // First transition to DELIVERED posts charge via M5 service
+        MealOrderDto delivered1 = mealOrderService.updateOrderStatus(order.getMealOrderId(),
+                new UpdateOrderStatusRequest("DELIVERED", null), staffUser.getUserId(), true);
+        assertEquals("DELIVERED", delivered1.getOrderStatus());
+        assertTrue(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()));
+
+        // Second (duplicate/retry) transition to DELIVERED delegates to M5 idempotent service without error
+        MealOrderDto delivered2 = mealOrderService.updateOrderStatus(order.getMealOrderId(),
+                new UpdateOrderStatusRequest("DELIVERED", null), staffUser.getUserId(), true);
+        assertEquals("DELIVERED", delivered2.getOrderStatus());
+        assertTrue(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()));
+    }
 }

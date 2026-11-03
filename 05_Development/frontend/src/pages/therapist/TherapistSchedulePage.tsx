@@ -8,14 +8,14 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useSpa } from '../../context/SpaContext';
+import { useTherapistSchedule } from '../../features/m3-spa/hooks/useSpaFeature';
 import {
   Clock,
   User,
   MapPin,
   Play,
   CheckCircle,
-  Activity,
+  XCircle,
   Sparkles,
   ChevronRight,
   List,
@@ -25,7 +25,7 @@ import {
 import type { LocalizedString } from '../../types/spa';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
-const CURRENT_THERAPIST_ID = 'THER-01';
+
 
 // Helper: minutes between "HH:MM" strings
 const timeDiffMinutes = (startStr: string, endStr: string): number => {
@@ -37,19 +37,19 @@ const timeDiffMinutes = (startStr: string, endStr: string): number => {
 export const TherapistSchedulePage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
-  const { getSessionsByTherapist, getTherapistById } = useSpa();
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
+  const { sessions: daySessions, loading } = useTherapistSchedule(selectedDate);
+  if (loading) {
+    return <div className="therapist-schedule"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
+  }
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
-  const localize = (ls?: LocalizedString | null): string => {
+  const localize = (ls?: LocalizedString | string | null): string => {
     if (!ls) return '';
     if (typeof ls === 'string') return ls;
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
-  const therapist = getTherapistById(CURRENT_THERAPIST_ID);
-
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
-  // Default to COMPACT AGENDA-FIRST view per Requirement 8
-  const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
@@ -61,12 +61,6 @@ export const TherapistSchedulePage: React.FC = () => {
     }
     return dates;
   }, []);
-
-  // Sorted chronologically by start time
-  const daySessions = useMemo(() => {
-    const s = getSessionsByTherapist(CURRENT_THERAPIST_ID, selectedDate);
-    return [...s].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [getSessionsByTherapist, selectedDate]);
 
   // Hourly timeline slots: 08:00 to 18:00
   const timeSlots = Array.from({ length: 11 }, (_, i) => {
@@ -86,7 +80,7 @@ export const TherapistSchedulePage: React.FC = () => {
       {/* Page Header */}
       <OperationalPageHeader
         title={t('therapist.dailySchedule', 'Daily Work Schedule')}
-        subtitle={therapist ? `${therapist.name} · ${localize(therapist.title)}` : ''}
+        subtitle={t('therapist.scheduleSubtitle', 'Your assigned appointments for the selected date')}
         badge="Screen #32"
       />
 
@@ -174,7 +168,7 @@ export const TherapistSchedulePage: React.FC = () => {
                 const hasSubtleGap = gapMins >= 15;
 
                 return (
-                  <React.Fragment key={session.id}>
+                  <React.Fragment key={session.spaSessionId}>
                     {/* Subtle Free Gap Indicator (Requirement 8) */}
                     {hasSubtleGap && (
                       <div className="therapist-agenda-gap-row">
@@ -191,14 +185,14 @@ export const TherapistSchedulePage: React.FC = () => {
 
                     {/* Operational Session Row */}
                     <div
-                      className={`therapist-agenda-row therapist-agenda-row--${session.status}`}
-                      onClick={() => navigate(`/therapist/sessions/${session.id}`)}
-                      id={`therapist-agenda-row-${session.id}`}
+                      className={`therapist-agenda-row therapist-agenda-row--${session.sessionStatus}`}
+                      onClick={() => navigate(`/therapist/sessions/${session.spaSessionId}`)}
+                      id={`therapist-agenda-row-${session.spaSessionId}`}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
-                          navigate(`/therapist/sessions/${session.id}`);
+                          navigate(`/therapist/sessions/${session.spaSessionId}`);
                         }
                       }}
                     >
@@ -238,15 +232,15 @@ export const TherapistSchedulePage: React.FC = () => {
 
                       {/* STATUS */}
                       <div className="th-col-status">
-                        <span className={`spa-status-badge spa-status--${session.status}`}>
-                          {session.status === 'confirmed' ? (
-                            <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
-                          ) : session.status === 'in_progress' ? (
-                            <><Activity size={12} /> {t('therapist.inProgress', 'In Progress')}</>
-                          ) : session.status === 'completed' ? (
+                        <span className={`spa-status-badge spa-status--${session.sessionStatus}`}>
+                          {session.sessionStatus === 'COMPLETED' ? (
                             <><CheckCircle size={12} /> {t('therapist.done', 'Done')}</>
+                          ) : session.sessionStatus === 'NO_SHOW' ? (
+                            <><XCircle size={12} /> {t('therapist.noShow', 'No-Show')}</>
+                          ) : session.confirmationStatus === 'CONFIRMED' ? (
+                            <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
                           ) : (
-                            session.status
+                            session.sessionStatus
                           )}
                         </span>
                       </div>
@@ -258,9 +252,9 @@ export const TherapistSchedulePage: React.FC = () => {
                           className="therapist-details-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/therapist/sessions/${session.id}`);
+                            navigate(`/therapist/sessions/${session.spaSessionId}`);
                           }}
-                          id={`therapist-details-${session.id}`}
+                          id={`therapist-details-${session.spaSessionId}`}
                         >
                           <span>{t('therapist.viewDetails', 'View Details')}</span>
                           <ChevronRight size={13} />
@@ -299,15 +293,15 @@ export const TherapistSchedulePage: React.FC = () => {
                   {hourSessions.length > 0 ? (
                     hourSessions.map((session) => (
                       <div
-                        key={session.id}
-                        className={`therapist-session-card therapist-session-card--${session.status}`}
-                        onClick={() => navigate(`/therapist/sessions/${session.id}`)}
-                        id={`therapist-timeline-${session.id}`}
+                        key={session.spaSessionId}
+                        className={`therapist-session-card therapist-session-card--${session.sessionStatus}`}
+                        onClick={() => navigate(`/therapist/sessions/${session.spaSessionId}`)}
+                        id={`therapist-timeline-${session.spaSessionId}`}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
-                            navigate(`/therapist/sessions/${session.id}`);
+                            navigate(`/therapist/sessions/${session.spaSessionId}`);
                           }
                         }}
                       >
@@ -342,15 +336,15 @@ export const TherapistSchedulePage: React.FC = () => {
                         </div>
 
                         <div className="therapist-session-col therapist-session-col--status">
-                          <span className={`spa-status-badge spa-status--${session.status}`}>
-                            {session.status === 'confirmed' ? (
-                              <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
-                            ) : session.status === 'in_progress' ? (
-                              <><Activity size={12} /> {t('therapist.inProgress', 'In Progress')}</>
-                            ) : session.status === 'completed' ? (
+                          <span className={`spa-status-badge spa-status--${session.sessionStatus}`}>
+                            {session.sessionStatus === 'COMPLETED' ? (
                               <><CheckCircle size={12} /> {t('therapist.done', 'Done')}</>
+                            ) : session.sessionStatus === 'NO_SHOW' ? (
+                              <><XCircle size={12} /> {t('therapist.noShow', 'No-Show')}</>
+                            ) : session.confirmationStatus === 'CONFIRMED' ? (
+                              <><CheckCircle size={12} /> {t('therapist.confirmed', 'Confirmed')}</>
                             ) : (
-                              session.status
+                              session.sessionStatus
                             )}
                           </span>
                         </div>
@@ -361,19 +355,19 @@ export const TherapistSchedulePage: React.FC = () => {
                             className="therapist-details-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/therapist/sessions/${session.id}`);
+                              navigate(`/therapist/sessions/${session.spaSessionId}`);
                             }}
-                            id={`therapist-timeline-details-${session.id}`}
+                            id={`therapist-timeline-details-${session.spaSessionId}`}
                           >
                             <span>{t('therapist.viewDetails', 'View Details')}</span>
                             <ChevronRight size={13} />
                           </button>
-                          {session.status === 'confirmed' && (
+                          {session.confirmationStatus === 'CONFIRMED' && (
                             <button
                               type="button"
                               className="therapist-start-action-btn"
                               disabled
-                              id={`therapist-timeline-start-${session.id}`}
+                              id={`therapist-timeline-start-${session.spaSessionId}`}
                               title="Unavailable: the approved session lifecycle does not persist IN_PROGRESS."
                             >
                               <Play size={12} />

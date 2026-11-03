@@ -17,7 +17,6 @@ import com.heavenstay.hswrms.m4fnb.repository.MealOrderItemRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MealOrderRepository;
 import com.heavenstay.hswrms.m4fnb.repository.MenuItemRepository;
 import com.heavenstay.hswrms.m5billing.dto.PostChargeRequestDTO;
-import com.heavenstay.hswrms.m5billing.repository.FolioItemRepository;
 import com.heavenstay.hswrms.m5billing.service.FolioBillingService;
 import com.heavenstay.hswrms.m6admin.security.CurrentActor;
 import com.heavenstay.hswrms.m6admin.service.AuditLogService;
@@ -46,7 +45,6 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
     private final BookingContextPort bookingContextPort;
     private final DietaryProfilePort dietaryProfilePort;
     private final FolioBillingService folioBillingService;
-    private final FolioItemRepository folioItemRepository;
     private final AuditLogService auditLogService;
     @Autowired(required = false)
     private ApplicationEventPublisher eventPublisher;
@@ -60,7 +58,6 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
                                 BookingContextPort bookingContextPort,
                                 DietaryProfilePort dietaryProfilePort,
                                 FolioBillingService folioBillingService,
-                                FolioItemRepository folioItemRepository,
                                 AuditLogService auditLogService) {
         this.mealOrderRepository = mealOrderRepository;
         this.menuItemRepository = menuItemRepository;
@@ -69,7 +66,6 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         this.bookingContextPort = bookingContextPort;
         this.dietaryProfilePort = dietaryProfilePort;
         this.folioBillingService = folioBillingService;
-        this.folioItemRepository = folioItemRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -464,10 +460,6 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             return; // DAILY_MEAL is included in package
         }
         Long orderId = order.getMealOrderId();
-        if (folioItemRepository.existsBySourceMealOrderId(orderId)) {
-            log.info("Folio item already exists for meal order ID {}, skipping duplicate charge.", orderId);
-            return;
-        }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<MealOrderItem> totalItems = order.getItems();

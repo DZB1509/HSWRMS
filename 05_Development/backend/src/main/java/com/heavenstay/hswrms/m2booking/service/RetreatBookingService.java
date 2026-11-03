@@ -7,11 +7,11 @@ import com.heavenstay.hswrms.m2booking.dto.BookingCalculationResponse;
 import com.heavenstay.hswrms.m2booking.dto.BookingSummaryResponse;
 import com.heavenstay.hswrms.m2booking.dto.CreateBookingRequest;
 import com.heavenstay.hswrms.m2booking.dto.UpdateBookingRequest;
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
+import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.port.PaymentTransactionPort;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.entity.RetreatPackage;
 import com.heavenstay.hswrms.m2booking.entity.VillaCategory;
-import com.heavenstay.hswrms.m2booking.repository.PaymentTransactionRepository;
 import com.heavenstay.hswrms.m2booking.repository.ResidenceRecordRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m2booking.repository.RetreatPackageRepository;
@@ -37,7 +37,7 @@ public class RetreatBookingService {
     private final VillaCategoryRepository villaCategoryRepository;
     private final VillaAvailabilityService availabilityService;
     private final ResidenceRecordRepository residenceRecordRepository;
-    private final PaymentTransactionRepository paymentTransactionRepository;
+    private final PaymentTransactionPort paymentTransactionPort;
     private final CustomerIdentityPort customerIdentityPort;
     private final BookingPolicyService bookingPolicyService;
     private final BookingClock bookingClock;
@@ -110,7 +110,7 @@ public class RetreatBookingService {
                                  VillaCategoryRepository villaCategoryRepository,
                                  VillaAvailabilityService availabilityService,
                                  ResidenceRecordRepository residenceRecordRepository,
-                                 @org.springframework.beans.factory.annotation.Qualifier("m2PaymentTransactionRepository") PaymentTransactionRepository paymentTransactionRepository,
+                                 PaymentTransactionPort paymentTransactionPort,
                                  CustomerIdentityPort customerIdentityPort,
                                  BookingPolicyService bookingPolicyService,
                                  BookingClock bookingClock,
@@ -120,7 +120,7 @@ public class RetreatBookingService {
         this.villaCategoryRepository = villaCategoryRepository;
         this.availabilityService = availabilityService;
         this.residenceRecordRepository = residenceRecordRepository;
-        this.paymentTransactionRepository = paymentTransactionRepository;
+        this.paymentTransactionPort = paymentTransactionPort;
         this.customerIdentityPort = customerIdentityPort;
         this.bookingPolicyService = bookingPolicyService;
         this.bookingClock = bookingClock;
@@ -332,14 +332,9 @@ public class RetreatBookingService {
         booking.setBookingStatus("CANCELLED");
         RetreatBooking updated = bookingRepository.save(booking);
 
-        // Cancel pending payment transactions
-        List<PaymentTransaction> txns = paymentTransactionRepository != null ? paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT) : java.util.Collections.emptyList();
-
-        for (PaymentTransaction txn : txns) {
-            if (PaymentTransaction.STATUS_PENDING.equalsIgnoreCase(txn.getPaymentStatus())) {
-                txn.setPaymentStatus(PaymentTransaction.STATUS_CANCELLED);
-                paymentTransactionRepository.save(txn);
-            }
+        // Cancel pending payment transactions via M5 PaymentTransactionPort
+        if (paymentTransactionPort != null) {
+            paymentTransactionPort.cancelPendingDepositTransactions(bookingId);
         }
 
         if (bookingAuditService != null) bookingAuditService.record(
@@ -405,12 +400,14 @@ public class RetreatBookingService {
         boolean hasResidence = residenceRecordRepository.existsByRetreatBooking_RetreatBookingId(entity.getRetreatBookingId());
         res.setHasResidenceRecord(hasResidence);
 
-        // Enrich with deposit transaction details
-        List<PaymentTransaction> txns = paymentTransactionRepository != null ? paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(entity.getRetreatBookingId(), PaymentTransaction.TYPE_DEPOSIT) : java.util.Collections.emptyList();
+        // Enrich with deposit transaction details via M5 PaymentTransactionPort
+        List<PaymentResponseDTO> txns = paymentTransactionPort != null
+                ? paymentTransactionPort.findDepositTransactionsByBookingId(entity.getRetreatBookingId())
+                : java.util.Collections.emptyList();
 
         if (!txns.isEmpty()) {
-            PaymentTransaction preferred = txns.stream()
-                    .filter(t -> PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(t.getPaymentStatus()))
+            PaymentResponseDTO preferred = txns.stream()
+                    .filter(t -> "SUCCESSFUL".equalsIgnoreCase(t.getPaymentStatus()))
                     .findFirst()
                     .orElse(txns.get(0));
             res.setPaymentStatus(preferred.getPaymentStatus());

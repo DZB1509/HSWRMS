@@ -3,7 +3,9 @@ package com.heavenstay.hswrms.m2booking.service;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m2booking.dto.*;
-import com.heavenstay.hswrms.m2booking.entity.PaymentTransaction;
+import com.heavenstay.hswrms.m5billing.dto.PaymentResponseDTO;
+import com.heavenstay.hswrms.m5billing.port.CreateDepositTransactionCommand;
+import com.heavenstay.hswrms.m5billing.port.PaymentTransactionPort;
 import com.heavenstay.hswrms.m2booking.entity.PhysicalVilla;
 import com.heavenstay.hswrms.m2booking.entity.ResidenceRecord;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
@@ -30,7 +32,7 @@ public class ReceptionistOperationService {
     private final ResidenceRecordRepository residenceRecordRepository;
     private final RetreatPackageRepository packageRepository;
     private final VillaCategoryRepository villaCategoryRepository;
-    private final PaymentTransactionRepository paymentTransactionRepository;
+    private final PaymentTransactionPort paymentTransactionPort;
     private final VillaAvailabilityService availabilityService;
     private final CustomerIdentityPort customerIdentityPort;
     private final BookingClock bookingClock;
@@ -41,7 +43,7 @@ public class ReceptionistOperationService {
                                         ResidenceRecordRepository residenceRecordRepository,
                                         RetreatPackageRepository packageRepository,
                                         VillaCategoryRepository villaCategoryRepository,
-                                        @org.springframework.beans.factory.annotation.Qualifier("m2PaymentTransactionRepository") PaymentTransactionRepository paymentTransactionRepository,
+                                        PaymentTransactionPort paymentTransactionPort,
                                         VillaAvailabilityService availabilityService,
                                         CustomerIdentityPort customerIdentityPort,
                                         BookingClock bookingClock,
@@ -51,7 +53,7 @@ public class ReceptionistOperationService {
         this.residenceRecordRepository = residenceRecordRepository;
         this.packageRepository = packageRepository;
         this.villaCategoryRepository = villaCategoryRepository;
-        this.paymentTransactionRepository = paymentTransactionRepository;
+        this.paymentTransactionPort = paymentTransactionPort;
         this.availabilityService = availabilityService;
         this.customerIdentityPort = customerIdentityPort;
         this.bookingClock = bookingClock;
@@ -73,16 +75,18 @@ public class ReceptionistOperationService {
         Map<Integer, CustomerIdentityPort.CustomerContact> contacts = customerIdentityPort.findContacts(profileIds);
 
         List<Integer> bookingIds = arrivals.stream().map(RetreatBooking::getRetreatBookingId).collect(Collectors.toList());
-        Map<Integer, PaymentTransaction> txnMap = paymentTransactionRepository.findByRetreatBookingIdInAndPaymentType(bookingIds, PaymentTransaction.TYPE_DEPOSIT)
-                .stream().collect(Collectors.toMap(
-                        PaymentTransaction::getRetreatBookingId,
-                        t -> t,
-                        (a, b) -> {
-                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(a.getPaymentStatus())) return a;
-                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(b.getPaymentStatus())) return b;
-                            return (a.getTransactionId() != null && b.getTransactionId() != null && a.getTransactionId() > b.getTransactionId()) ? a : b;
-                        }
-                ));
+        Map<Integer, PaymentResponseDTO> txnMap = (paymentTransactionPort != null)
+                ? paymentTransactionPort.findDepositTransactionsByBookingIds(bookingIds)
+                        .stream().collect(Collectors.toMap(
+                                t -> t.getRetreatBookingId() != null ? t.getRetreatBookingId().intValue() : null,
+                                t -> t,
+                                (a, b) -> {
+                                    if ("SUCCESSFUL".equalsIgnoreCase(a.getPaymentStatus())) return a;
+                                    if ("SUCCESSFUL".equalsIgnoreCase(b.getPaymentStatus())) return b;
+                                    return (a.getTransactionId() != null && b.getTransactionId() != null && a.getTransactionId() > b.getTransactionId()) ? a : b;
+                                }
+                        ))
+                : java.util.Collections.emptyMap();
 
         return arrivals.stream()
                 .map(rb -> toArrivalResponse(rb, contacts.get(rb.getCustomerProfileId()), txnMap.get(rb.getRetreatBookingId())))
@@ -417,16 +421,20 @@ public class ReceptionistOperationService {
 
         RetreatBooking savedBooking = bookingRepository.save(booking);
 
-        // Record immediate deposit payment transaction for walk-in
-        PaymentTransaction txn = new PaymentTransaction();
-        txn.setRetreatBookingId(savedBooking.getRetreatBookingId());
-        txn.setPaymentType(PaymentTransaction.TYPE_DEPOSIT);
-        txn.setPaymentMethod(request.getResolvedPaymentMethod());
-        txn.setTransactionReference("WALK_IN_" + savedBooking.getRetreatBookingId() + "_" + System.currentTimeMillis());
-        txn.setAmountPaid(calcRes.getRequiredDepositAmount());
-        txn.setPaymentStatus(PaymentTransaction.STATUS_SUCCESSFUL);
-        txn.setTransactionDate(bookingClock.utcNow());
-        paymentTransactionRepository.save(txn);
+        // Record immediate deposit payment transaction for walk-in via M5 PaymentTransactionPort
+        String walkInRef = "WALK_IN_" + savedBooking.getRetreatBookingId() + "_" + System.currentTimeMillis();
+        PaymentResponseDTO txn = null;
+        if (paymentTransactionPort != null) {
+            String initialMethod = request.getResolvedPaymentMethod();
+            CreateDepositTransactionCommand cmd = CreateDepositTransactionCommand.successful(
+                    savedBooking.getRetreatBookingId(),
+                    initialMethod,
+                    walkInRef,
+                    calcRes.getRequiredDepositAmount(),
+                    bookingClock.utcNow()
+            );
+            txn = paymentTransactionPort.createDepositTransaction(cmd);
+        }
 
         if (hasIdInfo) {
             // Record residence record
@@ -461,7 +469,7 @@ public class ReceptionistOperationService {
         }
 
         BookingSummaryResponse res = toSummaryResponse(savedBooking);
-        res.setTransactionReference(txn.getTransactionReference());
+        res.setTransactionReference(txn != null ? txn.getTransactionReference() : walkInRef);
         res.setPaymentStatus("SUCCESSFUL");
         return res;
     }
@@ -560,16 +568,18 @@ public class ReceptionistOperationService {
         Map<Integer, ResidenceRecord> residenceMap = residenceRecordRepository.findByRetreatBooking_RetreatBookingIdIn(bookingIds)
                 .stream().collect(Collectors.toMap(r -> r.getRetreatBooking().getRetreatBookingId(), r -> r, (a, b) -> a));
 
-        Map<Integer, PaymentTransaction> txnMap = paymentTransactionRepository.findByRetreatBookingIdInAndPaymentType(bookingIds, PaymentTransaction.TYPE_DEPOSIT)
-                .stream().collect(Collectors.toMap(
-                        PaymentTransaction::getRetreatBookingId,
-                        t -> t,
-                        (a, b) -> {
-                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(a.getPaymentStatus())) return a;
-                            if (PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(b.getPaymentStatus())) return b;
-                            return (a.getTransactionId() != null && b.getTransactionId() != null && a.getTransactionId() > b.getTransactionId()) ? a : b;
-                        }
-                ));
+        Map<Integer, PaymentResponseDTO> txnMap = (paymentTransactionPort != null)
+                ? paymentTransactionPort.findDepositTransactionsByBookingIds(bookingIds)
+                        .stream().collect(Collectors.toMap(
+                                t -> t.getRetreatBookingId() != null ? t.getRetreatBookingId().intValue() : null,
+                                t -> t,
+                                (a, b) -> {
+                                    if ("SUCCESSFUL".equalsIgnoreCase(a.getPaymentStatus())) return a;
+                                    if ("SUCCESSFUL".equalsIgnoreCase(b.getPaymentStatus())) return b;
+                                    return (a.getTransactionId() != null && b.getTransactionId() != null && a.getTransactionId() > b.getTransactionId()) ? a : b;
+                                }
+                        ))
+                : java.util.Collections.emptyMap();
 
         String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim().toLowerCase() : null;
 
@@ -588,7 +598,7 @@ public class ReceptionistOperationService {
                 .map(b -> {
                     CustomerIdentityPort.CustomerContact contact = contacts.get(b.getCustomerProfileId());
                     ResidenceRecord resRec = residenceMap.get(b.getRetreatBookingId());
-                    PaymentTransaction txn = txnMap.get(b.getRetreatBookingId());
+                    PaymentResponseDTO txn = txnMap.get(b.getRetreatBookingId());
                     return toReceptionistBookingResponse(b, contact, resRec != null, txn);
                 })
                 .collect(Collectors.toList());
@@ -608,10 +618,12 @@ public class ReceptionistOperationService {
         CustomerIdentityPort.CustomerHealthSummary healthProfile = customerIdentityPort.findHealthProfile(booking.getCustomerProfileId())
                 .orElse(null);
 
-        List<PaymentTransaction> txns = paymentTransactionRepository.findByRetreatBookingIdAndPaymentTypeOrderByTransactionIdDesc(bookingId, PaymentTransaction.TYPE_DEPOSIT);
+        List<PaymentResponseDTO> txns = (paymentTransactionPort != null)
+                ? paymentTransactionPort.findDepositTransactionsByBookingId(bookingId)
+                : java.util.Collections.emptyList();
 
-        PaymentTransaction preferredTxn = txns.isEmpty() ? null : txns.stream()
-                .filter(t -> PaymentTransaction.STATUS_SUCCESSFUL.equalsIgnoreCase(t.getPaymentStatus()))
+        PaymentResponseDTO preferredTxn = txns.isEmpty() ? null : txns.stream()
+                .filter(t -> "SUCCESSFUL".equalsIgnoreCase(t.getPaymentStatus()))
                 .findFirst()
                 .orElse(txns.get(0));
 
@@ -691,7 +703,7 @@ public class ReceptionistOperationService {
             RetreatBooking rb,
             CustomerIdentityPort.CustomerContact contact,
             boolean hasResidence,
-            PaymentTransaction txn) {
+            PaymentResponseDTO txn) {
         ReceptionistBookingResponse res = new ReceptionistBookingResponse();
         res.setRetreatBookingId(rb.getRetreatBookingId());
         res.setBookingReference("HSW-BK-" + rb.getRetreatBookingId());
@@ -775,7 +787,7 @@ public class ReceptionistOperationService {
         dest.setTransactionReference(src.getTransactionReference());
     }
 
-    private DailyArrivalResponse toArrivalResponse(RetreatBooking rb, CustomerIdentityPort.CustomerContact contact, PaymentTransaction txn) {
+    private DailyArrivalResponse toArrivalResponse(RetreatBooking rb, CustomerIdentityPort.CustomerContact contact, PaymentResponseDTO txn) {
         DailyArrivalResponse res = new DailyArrivalResponse();
         res.setRetreatBookingId(rb.getRetreatBookingId());
         res.setCustomerProfileId(rb.getCustomerProfileId());

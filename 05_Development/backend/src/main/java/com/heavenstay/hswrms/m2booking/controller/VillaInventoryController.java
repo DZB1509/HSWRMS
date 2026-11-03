@@ -12,8 +12,11 @@ import com.heavenstay.hswrms.m2booking.repository.VillaCategoryRepository;
 import com.heavenstay.hswrms.m2booking.repository.VillaFunctionalAreaRepository;
 import com.heavenstay.hswrms.m2booking.service.ReceptionistOperationService;
 import com.heavenstay.hswrms.security.CustomUserDetails;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +37,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1")
 public class VillaInventoryController {
+
+    private static final Logger log = LoggerFactory.getLogger(VillaInventoryController.class);
 
     private final PhysicalVillaRepository villaRepo;
     private final VillaCategoryRepository categoryRepo;
@@ -84,12 +89,16 @@ public class VillaInventoryController {
         if (newStatus == null || newStatus.isBlank()) {
             throw new IllegalArgumentException("Status field is required");
         }
+        if (userDetails == null || userDetails.getUserId() == null) {
+            log.warn("Refusing villa status update because the authenticated actor identity is unavailable");
+            throw new AccessDeniedException("Authenticated actor identity is unavailable.");
+        }
         PhysicalVilla villa = villaRepo.findByVillaNumber(villaNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("PhysicalVilla", "villaNumber", villaNumber));
         String notes = payload.get("viewAndOperationalNotes") != null
                 ? payload.get("viewAndOperationalNotes")
                 : (payload.get("notes") != null ? payload.get("notes") : payload.get("reason"));
-        receptionistService.updateVillaStatus(villa.getVillaId(), newStatus, notes, userDetails != null ? userDetails.getUserId() : 1);
+        receptionistService.updateVillaStatus(villa.getVillaId(), newStatus, notes, userDetails.getUserId());
         return ResponseEntity.ok(ApiResponse.ok("Villa status updated successfully",
                 villaRepo.findById(villa.getVillaId()).orElseThrow()));
     }

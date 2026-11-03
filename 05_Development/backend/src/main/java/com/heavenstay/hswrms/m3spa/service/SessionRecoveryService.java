@@ -80,15 +80,48 @@ public class SessionRecoveryService {
      * If no same-time candidate exists, marks session as RESCHEDULING requiring customer consent.
      */
     public RecoveryResultDto attemptSameTimeRecovery(Long sessionId) {
+        return attemptSameTimeRecovery(sessionId, false);
+    }
+
+    @Transactional
+    public void markRecoveryNotApplicableAfterStart(Long sessionId, int expectedScheduleVersion, LocalDateTime now) {
+        sessionRepository.findByIdWithLock(sessionId).ifPresent(session -> {
+            if (session.getScheduleVersion() == expectedScheduleVersion
+                    && session.getScheduledStartAt() != null
+                    && !session.getScheduledStartAt().isAfter(now)
+                    && session.getSessionStatus() == SpaSessionStatus.RESCHEDULING
+                    && (session.getConfirmationStatus() == SpaConfirmationStatus.EXPIRED
+                        || session.getConfirmationStatus() == SpaConfirmationStatus.DECLINED)) {
+                session.setRecoveryAttemptedVersion(session.getScheduleVersion());
+                sessionRepository.save(session);
+            }
+        });
+    }
+
+    /** Explicit therapist-unavailability triggers may retry a prior consent-required recovery after conditions change. */
+    public RecoveryResultDto attemptSameTimeRecovery(Long sessionId, boolean allowRepeatForExternalTrigger) {
         // Candidate discovery reads the session WITHOUT a lock. Pessimistic locks are acquired later in the
         // same global order used by SpaSessionService.confirmReservation (Therapist -> Room -> Session)
         // to avoid lock-order inversion deadlocks between concurrent reschedule and recovery.
         SpaSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spa Session", "sessionId", sessionId));
 
+        if (alreadyAttemptedForCurrentVersion(session, allowRepeatForExternalTrigger)) {
+            return concurrentChangeResult(sessionId);
+        }
+
+        if (session.getSessionStatus() == SpaSessionStatus.RESCHEDULING
+                && session.getConfirmationStatus() == SpaConfirmationStatus.DECLINED) {
+            session.setRecoveryAttemptedVersion(session.getScheduleVersion());
+            sessionRepository.save(session);
+            return new RecoveryResultDto(sessionId, false, false, true, null, null,
+                    "Customer declined this appointment; a time change requires explicit Customer consent.");
+        }
+
         LocalDateTime startAt = session.getScheduledStartAt();
         LocalDateTime endAt = session.getScheduledEndAt();
         Integer treatmentId = session.getTreatment().getTreatmentId();
+        int expectedScheduleVersion = session.getScheduleVersion();
 
         // 1. Evaluate current therapist availability
         Therapist currentTherapist = session.getTherapist();
@@ -101,6 +134,12 @@ public class SessionRecoveryService {
         boolean currentRoomOk = currentRoom.getRoomStatus() == TreatmentRoomStatus.AVAILABLE
                 && !sessionRepository.hasOverlappingSession(
                         null, currentRoom.getRoomId(), startAt, endAt, session.getSpaSessionId());
+
+        if (session.getSessionStatus() == SpaSessionStatus.SCHEDULED && currentTherapistOk && currentRoomOk) {
+            return new RecoveryResultDto(sessionId, true, true, false,
+                    currentTherapist.getTherapistId(), currentRoom.getRoomId(),
+                    "Recovery skipped because the session already has available resources at the requested time.");
+        }
 
         Therapist targetTherapist = currentTherapistOk ? currentTherapist : null;
         TreatmentRoom targetRoom = currentRoomOk ? currentRoom : null;
@@ -144,7 +183,9 @@ public class SessionRecoveryService {
             TreatmentRoom lockedRoom = roomRepository.findByIdWithLock(targetRoom.getRoomId())
                     .orElse(null);
             lockAndRefreshSession(session);
-            if (!isStillRecoverable(session, startAt, endAt)) {
+            if (!isStillRecoverable(session, startAt, endAt, expectedScheduleVersion,
+                    currentTherapist.getTherapistId(), currentRoom.getRoomId())
+                    || alreadyAttemptedForCurrentVersion(session, allowRepeatForExternalTrigger)) {
                 return concurrentChangeResult(sessionId);
             }
             boolean lockedTherapistReady = lockedTherapist != null
@@ -163,6 +204,8 @@ public class SessionRecoveryService {
                 String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
                 session.setTherapist(lockedTherapist);
                 session.setTreatmentRoom(lockedRoom);
+                session.incrementScheduleVersion();
+                session.setRecoveryAttemptedVersion(session.getScheduleVersion());
                 session.setSessionStatus(SpaSessionStatus.SCHEDULED);
                 session.setConfirmationStatus(SpaConfirmationStatus.PENDING);
                 session.resetReminderState();
@@ -178,27 +221,24 @@ public class SessionRecoveryService {
                         resolveCustomerName(saved.getRetreatBookingId())
                 ));
 
-                return new RecoveryResultDto(
-                        sessionId,
-                        true,
-                        true,
-                        false,
-                        lockedTherapist.getTherapistId(),
-                        lockedRoom.getRoomId(),
-                        "Same-time recovery succeeded. Preserved original schedule."
-                );
+                RecoveryResultDto recResult = new RecoveryResultDto(sessionId, true, true, false, lockedTherapist.getTherapistId(), lockedRoom.getRoomId(), "Same-time recovery succeeded. Preserved original schedule.");
+                recResult.setScheduleVersion(saved.getScheduleVersion());
+                return recResult;
             }
         }
 
         // 4. Same-time recovery impossible: Time-change required
         // System MUST NOT silently commit a new time without customer consent!
         lockAndRefreshSession(session);
-        if (!isStillRecoverable(session, startAt, endAt)) {
+        if (!isStillRecoverable(session, startAt, endAt, expectedScheduleVersion,
+                currentTherapist.getTherapistId(), currentRoom.getRoomId())
+                || alreadyAttemptedForCurrentVersion(session, allowRepeatForExternalTrigger)) {
             return concurrentChangeResult(sessionId);
         }
         log.info("Same-time recovery unavailable for session #{}. Retaining in RESCHEDULING status awaiting Customer consent.", sessionId);
         String prevStatus = session.getSessionStatus() != null ? session.getSessionStatus().name() : "SCHEDULED";
         session.setSessionStatus(SpaSessionStatus.RESCHEDULING);
+        session.setRecoveryAttemptedVersion(session.getScheduleVersion());
         SpaSession saved = sessionRepository.save(session);
 
         publishScheduleEvent(new SpaScheduleAcceptedEvent(
@@ -235,14 +275,26 @@ public class SessionRecoveryService {
         }
     }
 
-    private boolean isStillRecoverable(SpaSession session, LocalDateTime expectedStart, LocalDateTime expectedEnd) {
+    private boolean isStillRecoverable(SpaSession session, LocalDateTime expectedStart, LocalDateTime expectedEnd,
+                                      int expectedScheduleVersion, Integer expectedTherapistId,
+                                      Integer expectedRoomId) {
         SpaSessionStatus status = session.getSessionStatus();
         boolean activeStatus = status == null
                 || status == SpaSessionStatus.SCHEDULED
                 || status == SpaSessionStatus.RESCHEDULING;
         return activeStatus
+                && session.getScheduleVersion() == expectedScheduleVersion
+                && Objects.equals(expectedTherapistId,
+                        session.getTherapist() == null ? null : session.getTherapist().getTherapistId())
+                && Objects.equals(expectedRoomId,
+                        session.getTreatmentRoom() == null ? null : session.getTreatmentRoom().getRoomId())
                 && Objects.equals(expectedStart, session.getScheduledStartAt())
                 && Objects.equals(expectedEnd, session.getScheduledEndAt());
+    }
+
+    private boolean alreadyAttemptedForCurrentVersion(SpaSession session, boolean allowRepeat) {
+        return !allowRepeat && session.getRecoveryAttemptedVersion() != null
+                && session.getRecoveryAttemptedVersion() == session.getScheduleVersion();
     }
 
     private RecoveryResultDto concurrentChangeResult(Long sessionId) {

@@ -25,6 +25,10 @@ app:
   cors:
     allowed-origins: http://localhost:5173
   spa:
+    outbox:
+      max-attempts: 5
+      claim-expiry: 5m
+      retry-delays: 30s,1m,2m,4m
     scheduling:
       # Test operating window for automated scheduling verification
       operating-open: "08:00"

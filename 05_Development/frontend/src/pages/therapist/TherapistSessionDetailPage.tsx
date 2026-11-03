@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useSpa } from '../../context/SpaContext';
+import { useTherapistSessionDetail } from '../../features/m3-spa/hooks/useSpaFeature';
 import {
   ChevronLeft,
   Clock,
@@ -21,59 +21,46 @@ import {
   HeartHandshake,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Shield,
   FileText,
-  Sparkles,
-  Activity,
   Heart,
   ShieldAlert,
 } from 'lucide-react';
-import type { LocalizedString } from '../../types/spa';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
 
 export const TherapistSessionDetailPage: React.FC = () => {
-  const { t, i18n } = useTranslation('operations');
+  const { t } = useTranslation('operations');
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const currentLang = (i18n.language || 'en') as keyof LocalizedString;
-  const localize = (ls?: LocalizedString | null): string => {
-    if (!ls) return '';
-    if (typeof ls === 'string') return ls;
-    return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
-  };
 
-  const {
-    getSessionById,
-    getTreatmentById,
-    getRoomById,
-    completeSession,
-    markNoShow,
-    getTherapistRelevantWellnessInfo,
-  } = useSpa();
 
-  const session = id ? getSessionById(id) : undefined;
-  const treatment = session ? getTreatmentById(session.treatmentId) : undefined;
-  const room = session ? getRoomById(session.roomId) : undefined;
-  const wellnessView = session
-    ? getTherapistRelevantWellnessInfo(session.customerId, session.treatmentId)
-    : null;
+  const numericSessionId = id ? Number(id) : null;
+  const { detail: session, loading, error, recordOutcome } = useTherapistSessionDetail(numericSessionId);
+  if (loading) {
+    return <div className="therapist-session-detail"><p style={{ padding: '2rem' }}>Loading session...</p></div>;
+  }
+  if (error) {
+    return <div className="therapist-session-detail"><p style={{ padding: '2rem', color: 'red' }}>Error: {error}</p></div>;
+  }
 
-  const [therapistNotes, setTherapistNotes] = useState(session?.therapistNotes || '');
+  const [therapistNotes, setTherapistNotes] = useState('');
   const [actionResult, setActionResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+
+
   const handleAction = async (action: 'complete' | 'no_show') => {
-    if (!session) return;
+    if (!numericSessionId) return;
     setIsProcessing(true);
     setActionResult(null);
 
     try {
-      const result = action === 'complete'
-        ? await completeSession(session.id, therapistNotes || undefined)
-        : await markNoShow(session.id);
-      setActionResult(result);
+      const outcome = action === 'complete' ? 'COMPLETED' : 'NO_SHOW';
+      await recordOutcome(outcome, therapistNotes || undefined);
+      setActionResult({ success: true, message: `Session recorded as ${outcome}` });
+    } catch (err: unknown) {
+      setActionResult({ success: false, message: err instanceof Error ? err.message : 'Action failed' });
     } finally {
       setIsProcessing(false);
     }
@@ -96,29 +83,26 @@ export const TherapistSessionDetailPage: React.FC = () => {
   return (
     <div className="therapist-session-detail" id="screen-33-therapist-session-detail" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <OperationalPageHeader
-        title={localize(session.treatmentName)}
+        title={session.treatmentName}
         subtitle={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {session.startTime} — {session.endTime} ({session.durationMinutes} min)</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {session.scheduledStartAt ? session.scheduledStartAt.substring(11, 16) : ''} — {session.scheduledEndAt ? session.scheduledEndAt.substring(11, 16) : ''} ({session.durationMinutes} min)</span>
             <span>·</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {localize(session.roomName)}{room ? ` (${room.type})` : ''}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {session.roomName}</span>
             <span>·</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={14} /> {session.customerName}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={14} /> {session.customerFirstName}</span>
           </div>
         }
         badge="Screen #33"
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <span className={`spa-status-badge spa-status--${session.status}`}>
-              {session.status === 'confirmed' && <CheckCircle size={14} />}
-              {session.status === 'in_progress' && <Activity size={14} />}
-              {session.status === 'completed' && <CheckCircle size={14} />}
-              {session.status === 'no_show' && <XCircle size={14} />}
-              {session.status === 'confirmed' ? t('therapist.confirmed', 'Confirmed') :
-               session.status === 'in_progress' ? t('therapist.inProgress', 'In Progress') :
-               session.status === 'completed' ? t('therapist.done', 'Done') :
-               session.status === 'no_show' ? t('therapist.noShow', 'No-Show') :
-               session.status}
+            <span className={`spa-status-badge spa-status--${session.sessionStatus}`}>
+              {session.sessionStatus === 'COMPLETED' && <CheckCircle size={14} />}
+              {session.sessionStatus === 'NO_SHOW' && <XCircle size={14} />}
+              {session.sessionStatus === 'COMPLETED' ? t('therapist.done', 'Done') :
+               session.sessionStatus === 'NO_SHOW' ? t('therapist.noShow', 'No-Show') :
+               session.confirmationStatus === 'CONFIRMED' ? t('therapist.confirmed', 'Confirmed') :
+               session.sessionStatus}
             </span>
             <button className="hsw-btn hsw-btn-secondary" onClick={() => navigate(-1)} style={{ fontSize: 'var(--text-xs)', minHeight: '36px' }}>
               <ChevronLeft size={14} />
@@ -147,7 +131,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
                   <span>{t('therapist.date', 'Date')}</span>
                 </span>
                 <span className="therapist-kv-value">
-                  {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
+                  {new Date(session.scheduledStartAt ? session.scheduledStartAt.substring(0, 10) + 'T00:00:00' : Date.now()).toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'short',
                     day: 'numeric',
@@ -162,7 +146,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
                   <span>{t('therapist.time', 'Time & Duration')}</span>
                 </span>
                 <span className="therapist-kv-value">
-                  {session.startTime} — {session.endTime} ({session.durationMinutes} min)
+                  {session.scheduledStartAt ? session.scheduledStartAt.substring(11, 16) : ''} — {session.scheduledEndAt ? session.scheduledEndAt.substring(11, 16) : ''} ({session.durationMinutes} min)
                 </span>
               </div>
               <div className="therapist-kv-divider" />
@@ -171,7 +155,7 @@ export const TherapistSessionDetailPage: React.FC = () => {
                   <User size={15} />
                   <span>{t('therapist.customer', 'Customer')}</span>
                 </span>
-                <span className="therapist-kv-value">{session.customerName}</span>
+                <span className="therapist-kv-value">{session.customerFirstName}</span>
               </div>
               <div className="therapist-kv-divider" />
               <div className="therapist-kv-row">
@@ -180,14 +164,14 @@ export const TherapistSessionDetailPage: React.FC = () => {
                   <span>{t('therapist.room', 'Treatment Suite')}</span>
                 </span>
                 <span className="therapist-kv-value">
-                  {localize(session.roomName)}
-                  {room && <span className="therapist-info-sub"> · {room.type}</span>}
+                  {session.roomName}
+                  
                 </span>
               </div>
             </div>
           </section>
 
-          {session.customerSpecialRequest && (
+          {session.customerNote && (
             <section className="therapist-card therapist-card--attention ops-card" aria-labelledby="customer-request-title" style={{ padding: 'var(--space-4)' }}>
               <div className="therapist-alert-header">
                 <Heart size={18} />
@@ -196,34 +180,34 @@ export const TherapistSessionDetailPage: React.FC = () => {
                 </h2>
               </div>
               <div className="therapist-alert-body">
-                <p>{session.customerSpecialRequest}</p>
+                <p>{session.customerNote}</p>
               </div>
             </section>
           )}
 
           {/* 3. Relevant Treatment Considerations (Privacy-Filtered) */}
-          {wellnessView && (
-            <div className="therapist-wellness-container">
-              {/* 3a. Important Health Consideration / Medical Flag (Emphasized Container) */}
-              {wellnessView.relevantMedicalConditions.length > 0 && (
-                <section className="therapist-card therapist-card--attention ops-card" aria-labelledby="medical-conditions-title" style={{ padding: 'var(--space-4)' }}>
-                  <div className="therapist-alert-header">
-                    <ShieldAlert size={18} />
-                    <h2 id="medical-conditions-title" className="therapist-alert-title">
-                      {t('therapist.medicalConditions', 'Relevant Medical Considerations')}
-                    </h2>
-                  </div>
-                  <div className="therapist-alert-body">
-                    <ul className="therapist-attention-list">
-                      {wellnessView.relevantMedicalConditions.map((condition, i) => (
-                        <li key={i}>{condition}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </section>
-              )}
+          <div className="therapist-wellness-container">
+            {/* 3a. Mobility / Movement Considerations */}
+            {session.relevantPrecautions && session.relevantPrecautions.length > 0 && (
+              <section className="therapist-card therapist-card--attention ops-card" aria-labelledby="mobility-considerations-title" style={{ padding: 'var(--space-4)' }}>
+                <div className="therapist-alert-header">
+                  <ShieldAlert size={18} />
+                  <h2 id="mobility-considerations-title" className="therapist-alert-title">
+                    {t('therapist.mobility', 'Mobility Considerations')}
+                  </h2>
+                </div>
+                <div className="therapist-alert-body">
+                  <ul className="therapist-attention-list">
+                    {session.relevantPrecautions.map((precaution, i) => (
+                      <li key={i}>{precaution}</li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            )}
 
-              {/* 3b. Normal Considerations */}
+            {/* 3b. Treatment-Relevant Safety Notes */}
+            {session.treatmentSafetyNotes && (
               <section className="therapist-clean-section ops-card" aria-labelledby="wellness-profile-title" style={{ padding: 'var(--space-5)' }}>
                 <div className="therapist-clean-section-header">
                   <h2 id="wellness-profile-title" className="therapist-clean-title">
@@ -236,69 +220,12 @@ export const TherapistSessionDetailPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="therapist-kv-list">
-                  {/* Mobility Considerations */}
-                  {wellnessView.mobilityConsiderations && (
-                    <>
-                      <div className="therapist-kv-row">
-                        <span className="therapist-kv-label">
-                          <Activity size={15} />
-                          <span>{t('therapist.mobility', 'Mobility Considerations')}</span>
-                        </span>
-                        <span className="therapist-kv-value">{wellnessView.mobilityConsiderations}</span>
-                      </div>
-                      <div className="therapist-kv-divider" />
-                    </>
-                  )}
-
-                  {/* Treatment Preferences */}
-                  {wellnessView.treatmentPreferences.length > 0 && (
-                    <>
-                      <div className="therapist-kv-row">
-                        <span className="therapist-kv-label">
-                          <Sparkles size={15} />
-                          <span>{t('therapist.preferences', 'Preferences')}</span>
-                        </span>
-                        <span className="therapist-kv-value">
-                          {wellnessView.treatmentPreferences.join(', ')}
-                        </span>
-                      </div>
-                      <div className="therapist-kv-divider" />
-                    </>
-                  )}
-
-                  {/* Stress Level */}
-                  <div className="therapist-kv-row">
-                    <span className="therapist-kv-label">
-                      <Heart size={15} />
-                      <span>{t('therapist.stressLevel', 'Stress Level')}</span>
-                    </span>
-                    <span className="therapist-kv-value">
-                      <span className={`therapist-stress-badge therapist-stress--${wellnessView.stressLevel}`}>
-                        {wellnessView.stressLevel}
-                      </span>
-                    </span>
-                  </div>
-
-                  {/* Prior Therapist Notes */}
-                  {wellnessView.therapistNotes && (
-                    <>
-                      <div className="therapist-kv-divider" />
-                      <div className="therapist-kv-row therapist-kv-row--vertical">
-                        <span className="therapist-kv-label">
-                          <FileText size={15} />
-                          <span>{t('therapist.priorNotes', 'Prior Therapist Notes')}</span>
-                        </span>
-                        <p className="therapist-prior-notes-text">
-                          "{wellnessView.therapistNotes}"
-                        </p>
-                      </div>
-                    </>
-                  )}
+                <div className="therapist-kv-list" style={{ marginTop: 'var(--space-3)' }}>
+                  <p style={{ margin: 0, color: 'var(--ops-text-primary)' }}>{session.treatmentSafetyNotes}</p>
                 </div>
 
                 {/* Privacy Safeguard Notice */}
-                <div className="therapist-privacy-notice">
+                <div className="therapist-privacy-notice" style={{ marginTop: 'var(--space-4)' }}>
                   <Shield size={14} />
                   <span>
                     {t(
@@ -308,30 +235,11 @@ export const TherapistSessionDetailPage: React.FC = () => {
                   </span>
                 </div>
               </section>
-            </div>
-          )}
-
-          {/* 4. Contraindications / Safety Notes (Emphasized Container) */}
-          {treatment && treatment.contraindications.length > 0 && (
-            <section className="therapist-card therapist-card--warning ops-card" aria-labelledby="contraindications-title" style={{ padding: 'var(--space-4)' }}>
-              <div className="therapist-alert-header">
-                <AlertTriangle size={18} />
-                <h2 id="contraindications-title" className="therapist-alert-title">
-                  {t('therapist.contraindications', 'Treatment Contraindications & Safety Alerts')}
-                </h2>
-              </div>
-              <div className="therapist-alert-body">
-                <ul className="therapist-contraindication-list">
-                  {treatment.contraindications.map((contraindication, i) => (
-                    <li key={i}>{contraindication}</li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-          )}
+            )}
+          </div>
 
           {/* 5. Therapist Session Notes */}
-          {['confirmed', 'in_progress'].includes(session.status) && (
+          {['confirmed', 'in_progress'].includes(session.sessionStatus) && (
             <section className="therapist-clean-section therapist-notes-section ops-card" aria-labelledby="session-notes-title" style={{ padding: 'var(--space-5)' }}>
               <h2 id="session-notes-title" className="therapist-clean-title">
                 <FileText size={18} />
@@ -348,19 +256,6 @@ export const TherapistSessionDetailPage: React.FC = () => {
                 className="therapist-notes-input"
                 id="therapist-notes"
               />
-            </section>
-          )}
-
-          {/* Existing Read-only Notes (for completed sessions) */}
-          {session.status === 'completed' && session.therapistNotes && (
-            <section className="therapist-clean-section therapist-notes-section ops-card" aria-labelledby="readonly-notes-title" style={{ padding: 'var(--space-5)' }}>
-              <h2 id="readonly-notes-title" className="therapist-clean-title">
-                <FileText size={18} />
-                <span>{t('therapist.sessionNotes', 'Recorded Session Notes')}</span>
-              </h2>
-              <div className="therapist-notes-readonly">
-                <p>{session.therapistNotes}</p>
-              </div>
             </section>
           )}
 
@@ -386,22 +281,19 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
             <div className="therapist-action-status-block">
               <span className="therapist-action-status-label">{t('therapist.statusLabel', 'Current Status')}</span>
-              <span className={`spa-status-badge spa-status--${session.status}`}>
-                {session.status === 'confirmed' && <CheckCircle size={13} />}
-                {session.status === 'in_progress' && <Activity size={13} />}
-                {session.status === 'completed' && <CheckCircle size={13} />}
-                {session.status === 'no_show' && <XCircle size={13} />}
-                {session.status === 'confirmed' ? t('therapist.confirmed', 'Confirmed') :
-                 session.status === 'in_progress' ? t('therapist.inProgress', 'In Progress') :
-                 session.status === 'completed' ? t('therapist.done', 'Done') :
-                 session.status === 'no_show' ? t('therapist.noShow', 'No-Show') :
-                 session.status}
+              <span className={`spa-status-badge spa-status--${session.sessionStatus}`}>
+                {session.sessionStatus === 'COMPLETED' && <CheckCircle size={13} />}
+                {session.sessionStatus === 'NO_SHOW' && <XCircle size={13} />}
+                {session.sessionStatus === 'COMPLETED' ? t('therapist.done', 'Done') :
+                 session.sessionStatus === 'NO_SHOW' ? t('therapist.noShow', 'No-Show') :
+                 session.confirmationStatus === 'CONFIRMED' ? t('therapist.confirmed', 'Confirmed') :
+                 session.sessionStatus}
               </span>
             </div>
 
             {/* Action Buttons */}
             <div className="therapist-action-buttons">
-              {session.status !== 'completed' && session.status !== 'no_show' && (
+              {!['COMPLETED', 'NO_SHOW', 'completed', 'no_show'].includes(session.sessionStatus) && (
                 <>
                   <button
                     className="therapist-btn-primary"
@@ -425,19 +317,14 @@ export const TherapistSessionDetailPage: React.FC = () => {
                 </>
               )}
 
-              {session.status === 'completed' && (
+              {session.sessionStatus === 'COMPLETED' && (
                 <div className="therapist-completed-badge">
                   <CheckCircle size={28} />
                   <span>{t('therapist.sessionCompleted', 'Session Completed')}</span>
-                  {session.completedAt && (
-                    <span className="therapist-completed-time">
-                      {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  )}
                 </div>
               )}
 
-              {session.status === 'no_show' && (
+              {session.sessionStatus === 'NO_SHOW' && (
                 <div className="therapist-completed-badge" style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>
                   <XCircle size={28} />
                   <span>{t('therapist.sessionNoShow', 'Recorded as No-Show')}</span>

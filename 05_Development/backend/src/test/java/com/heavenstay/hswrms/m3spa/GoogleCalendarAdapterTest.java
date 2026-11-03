@@ -7,6 +7,7 @@ import com.heavenstay.hswrms.m3spa.entity.TreatmentRoom;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 import com.heavenstay.hswrms.m3spa.port.GoogleCalendarAdapter;
+import com.heavenstay.hswrms.m3spa.port.SpaProviderResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -46,33 +47,32 @@ public class GoogleCalendarAdapterTest {
     }
 
     @Test
-    @DisplayName("Decoupled mode: Returns deterministic decoupled reference when disabled")
-    public void testDecoupledModeReturnsReference() {
+    @DisplayName("Disabled mode: Does not fabricate an event ID or report a successful Calendar delivery")
+    public void testDisabledModeDoesNotFabricateDelivery() {
         GoogleCalendarAdapter adapter = new GoogleCalendarAdapter(false, "primary");
         SpaSession session = createSampleSession();
 
         String ref = adapter.createOrUpdateCalendarEvent(session);
-
-        assertNotNull(ref);
-        assertEquals("gcal-decoupled-202", ref, "Decoupled reference must follow predictable contract format");
-
-        boolean cancelResult = adapter.cancelCalendarEvent(session, ref);
-        assertTrue(cancelResult, "Cancellation in decoupled mode must succeed without errors");
+        assertNull(ref);
+        SpaProviderResult result = adapter.upsertCalendarEvent(session, GoogleCalendarAdapter.stableEventIdentity(202L));
+        assertEquals(SpaProviderResult.Disposition.SUPPRESSED, result.disposition());
+        assertEquals("hswrms-spa-202", GoogleCalendarAdapter.stableEventIdentity(202L));
+        assertEquals(SpaProviderResult.Disposition.SUPPRESSED,
+                adapter.cancelCalendarEventResult(session, "hswrms-spa-202").disposition());
+        assertFalse(adapter.cancelCalendarEvent(session, "hswrms-spa-202"));
     }
 
     @Test
-    @DisplayName("Enabled mode: Formats event payload and returns active event ID")
-    public void testEnabledModeCreatesEvent() {
+    @DisplayName("Enabled mode without API client: Fails closed and does not generate a pretend event ID")
+    public void testEnabledModeWithoutClientFailsClosed() {
         GoogleCalendarAdapter adapter = new GoogleCalendarAdapter(true, "resort-spa-calendar@heavenstay.com");
         SpaSession session = createSampleSession();
 
         String eventId = adapter.createOrUpdateCalendarEvent(session);
-
-        assertNotNull(eventId);
-        assertTrue(eventId.startsWith("gcal-event-202-"), "Enabled sync must generate an external event identifier");
-
-        boolean cancelResult = adapter.cancelCalendarEvent(session, eventId);
-        assertTrue(cancelResult, "Cancellation with valid event ID in enabled mode must return true");
+        assertNull(eventId);
+        assertEquals(SpaProviderResult.Disposition.PERMANENT_FAILURE,
+                adapter.upsertCalendarEvent(session, GoogleCalendarAdapter.stableEventIdentity(202L)).disposition());
+        assertFalse(adapter.cancelCalendarEvent(session, "hswrms-spa-202"));
     }
 
     @Test

@@ -21,21 +21,54 @@ import java.util.Optional;
 @Repository
 public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
 
+    int BUFFER_MINUTES = 15;
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM SpaSession s WHERE s.spaSessionId = :spaSessionId")
     Optional<SpaSession> findByIdWithLock(@Param("spaSessionId") Long spaSessionId);
 
+    /**
+     * Checks if therapist or room has an overlapping session adhering to the mandatory 15-minute buffer (BR-SPA-02).
+     * Evaluates sessions in SCHEDULED, RESCHEDULING, and COMPLETED statuses.
+     * Excludes CANCELLED and NO_SHOW sessions.
+     */
+    default boolean hasOverlappingSession(
+            Integer therapistId,
+            Integer roomId,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
+            Long excludeSessionId
+    ) {
+        return hasOverlappingSession(therapistId, roomId, startAt, endAt, BUFFER_MINUTES, excludeSessionId);
+    }
+
+    /**
+     * Checks if therapist or room has an overlapping session with a customizable buffer in minutes.
+     */
+    default boolean hasOverlappingSession(
+            Integer therapistId,
+            Integer roomId,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
+            int bufferMinutes,
+            Long excludeSessionId
+    ) {
+        LocalDateTime startAtMinusBuffer = startAt != null ? startAt.minusMinutes(bufferMinutes) : null;
+        LocalDateTime endAtPlusBuffer = endAt != null ? endAt.plusMinutes(bufferMinutes) : null;
+        return hasOverlappingSessionWithBuffer(therapistId, roomId, startAtMinusBuffer, endAtPlusBuffer, excludeSessionId);
+    }
+
     @Query("SELECT COUNT(s) > 0 FROM SpaSession s " +
-           "WHERE s.sessionStatus IN ('SCHEDULED', 'RESCHEDULING') " +
+           "WHERE s.sessionStatus IN ('SCHEDULED', 'RESCHEDULING', 'COMPLETED') " +
            "AND ((:therapistId IS NOT NULL AND s.therapist.therapistId = :therapistId) " +
            "     OR (:roomId IS NOT NULL AND s.treatmentRoom.roomId = :roomId)) " +
-           "AND s.scheduledStartAt < :endAt AND s.scheduledEndAt > :startAt " +
+           "AND s.scheduledStartAt < :endAtPlusBuffer AND s.scheduledEndAt > :startAtMinusBuffer " +
            "AND (:excludeSessionId IS NULL OR s.spaSessionId <> :excludeSessionId)")
-    boolean hasOverlappingSession(
+    boolean hasOverlappingSessionWithBuffer(
             @Param("therapistId") Integer therapistId,
             @Param("roomId") Integer roomId,
-            @Param("startAt") LocalDateTime startAt,
-            @Param("endAt") LocalDateTime endAt,
+            @Param("startAtMinusBuffer") LocalDateTime startAtMinusBuffer,
+            @Param("endAtPlusBuffer") LocalDateTime endAtPlusBuffer,
             @Param("excludeSessionId") Long excludeSessionId
     );
 
@@ -172,6 +205,24 @@ public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt
     );
+
+    @Query("SELECT s FROM SpaSession s " +
+           "LEFT JOIN FETCH s.treatment " +
+           "LEFT JOIN FETCH s.therapist " +
+           "LEFT JOIN FETCH s.treatmentRoom " +
+           "WHERE s.sessionStatus = com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.SCHEDULED " +
+           "AND s.scheduledStartAt >= :startAt AND s.scheduledStartAt <= :endAt " +
+           "ORDER BY s.scheduledStartAt ASC")
+    List<SpaSession> findScheduledSessionsStartingBetween(@Param("startAt") LocalDateTime startAt,
+                                                          @Param("endAt") LocalDateTime endAt);
+
+    @Query("SELECT s FROM SpaSession s " +
+           "WHERE s.sessionStatus = com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.RESCHEDULING " +
+           "AND s.confirmationStatus IN (com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus.DECLINED, " +
+           "                               com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus.EXPIRED) " +
+           "AND (s.recoveryAttemptedVersion IS NULL OR s.recoveryAttemptedVersion <> s.scheduleVersion) " +
+           "ORDER BY s.spaSessionId ASC")
+    List<SpaSession> findSessionsAwaitingRecovery();
 
     @Query("SELECT s FROM SpaSession s " +
            "WHERE s.therapist.therapistId = :therapistId " +

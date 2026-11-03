@@ -7,6 +7,7 @@ import com.heavenstay.hswrms.m3spa.entity.TreatmentRoom;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaConfirmationStatus;
 import com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus;
 import com.heavenstay.hswrms.m3spa.port.SmtpSpaNotificationAdapter;
+import com.heavenstay.hswrms.m3spa.port.SpaProviderResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -144,6 +145,38 @@ public class SmtpSpaNotificationAdapterTest {
         boolean result = adapter.sendScheduleChangeNotification(session, "guest@example.com", "Guest", "Room changed");
 
         assertFalse(result, "Adapter must return false when SMTP authentication fails");
+    }
+
+    @Test
+    @DisplayName("BR-M3-14: Typed SMTP outcomes distinguish permanent auth failure from ambiguous send timeout")
+    public void testTypedProviderOutcomeClassification() {
+        SpaSession session = createSampleSession();
+        doThrow(new MailAuthenticationException("invalid credentials"))
+                .when(mailSender).send(any(SimpleMailMessage.class));
+        SpaProviderResult auth = adapter.sendScheduleChangeNotificationResult(
+                session, "guest@example.com", "Guest", "Schedule changed");
+        assertEquals(SpaProviderResult.Disposition.PERMANENT_FAILURE, auth.disposition());
+
+        reset(mailSender);
+        doThrow(new MailSendException("connection timed out after submission"))
+                .when(mailSender).send(any(SimpleMailMessage.class));
+        SpaProviderResult timeout = adapter.sendScheduleChangeNotificationResult(
+                session, "guest@example.com", "Guest", "Schedule changed");
+        assertEquals(SpaProviderResult.Disposition.AMBIGUOUS, timeout.disposition());
+        assertFalse(adapter.sendScheduleChangeNotificationResult(
+                session, null, "Guest", "Schedule changed").disposition()
+                == SpaProviderResult.Disposition.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("BR-M3-10: Timeline reminder includes checkpoint-specific confirmation context")
+    public void testTimelineReminderCheckpointMessage() {
+        SpaProviderResult result = adapter.sendTimelineReminder(
+                createSampleSession(), "guest@example.com", "Customer", "REMINDER_T2H");
+        assertEquals(SpaProviderResult.Disposition.ACCEPTED, result.disposition());
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertTrue(captor.getValue().getText().contains("Please confirm whether you will attend"));
     }
 }
 

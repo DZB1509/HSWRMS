@@ -3,6 +3,7 @@ package com.heavenstay.hswrms.m3spa.service;
 import com.heavenstay.hswrms.m3spa.entity.SpaDispatchOutboxEntity;
 import com.heavenstay.hswrms.m3spa.entity.SpaScheduleHistory;
 import com.heavenstay.hswrms.m3spa.entity.SpaSession;
+import com.heavenstay.hswrms.m3spa.config.SpaOutboxProperties;
 import com.heavenstay.hswrms.m3spa.repository.SpaDispatchOutboxRepository;
 import com.heavenstay.hswrms.m3spa.repository.SpaScheduleHistoryRepository;
 import com.heavenstay.hswrms.m3spa.service.event.SpaScheduleAcceptedEvent;
@@ -13,8 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Event listener that records audit history, enqueues transactional outbox dispatches,
- * and delegates dispatch after enqueueing (BR-M3-14).
+ * Event listener that records audit history and enqueues transactional outbox dispatches.
+ * External work is left to the scheduled worker after this transaction commits.
  *
  * Fault Tolerance & Outbox Pattern:
  * 1. Schedule history is saved atomically with deduplication checks.
@@ -29,14 +30,14 @@ public class SpaScheduleAuditEventListener {
 
     private final SpaScheduleHistoryRepository historyRepository;
     private final SpaDispatchOutboxRepository outboxRepository;
-    private final SpaAcceptedScheduleOutboxDispatcher outboxDispatcher;
+    private final SpaOutboxProperties outboxProperties;
 
     public SpaScheduleAuditEventListener(SpaScheduleHistoryRepository historyRepository,
                                          SpaDispatchOutboxRepository outboxRepository,
-                                         SpaAcceptedScheduleOutboxDispatcher outboxDispatcher) {
+                                         SpaOutboxProperties outboxProperties) {
         this.historyRepository = historyRepository;
         this.outboxRepository = outboxRepository;
-        this.outboxDispatcher = outboxDispatcher;
+        this.outboxProperties = outboxProperties;
     }
 
     @EventListener
@@ -113,23 +114,13 @@ public class SpaScheduleAuditEventListener {
                 session.getExternalCalendarEventId(),
                 emailKey
         );
+        calOutbox.setScheduleVersion(session.getScheduleVersion());
+        emailOutbox.setScheduleVersion(session.getScheduleVersion());
+        calOutbox.setMaxRetries(outboxProperties.getMaxAttempts());
+        emailOutbox.setMaxRetries(outboxProperties.getMaxAttempts());
 
-        if (!outboxRepository.existsByIdempotencyKey(calKey)) {
-            calOutbox = outboxRepository.save(calOutbox);
-            try {
-                outboxDispatcher.dispatch(calOutbox);
-            } catch (Exception ex) {
-                log.error("[SPA OUTBOX] Immediate calendar dispatch failed; retained in outbox for retry: {}", ex.getMessage());
-            }
-        }
+        if (!outboxRepository.existsByIdempotencyKey(calKey)) outboxRepository.save(calOutbox);
 
-        if (!outboxRepository.existsByIdempotencyKey(emailKey)) {
-            emailOutbox = outboxRepository.save(emailOutbox);
-            try {
-                outboxDispatcher.dispatch(emailOutbox);
-            } catch (Exception ex) {
-                log.error("[SPA OUTBOX] Immediate email dispatch failed; retained in outbox for retry: {}", ex.getMessage());
-            }
-        }
+        if (!outboxRepository.existsByIdempotencyKey(emailKey)) outboxRepository.save(emailOutbox);
     }
 }

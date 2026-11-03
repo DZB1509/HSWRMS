@@ -54,6 +54,8 @@ public class SpaBookingController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Integer userId = userDetails != null ? userDetails.getUserId() : null;
+        boolean isStaff = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RECEPTIONIST") || a.getAuthority().equals("ROLE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"));
         SpaSessionDto sessionDto = spaSessionService.confirmReservation(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Spa session successfully scheduled.", sessionDto));
     }
@@ -72,6 +74,21 @@ public class SpaBookingController {
     }
 
     /**
+     * Screen 28 & 29: Single Session Detail / Confirmation view.
+     */
+    @GetMapping("/sessions/{id}")
+    public ResponseEntity<ApiResponse<SpaSessionDto>> getSession(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Integer userId = userDetails != null ? userDetails.getUserId() : null;
+        boolean isStaff = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RECEPTIONIST") || a.getAuthority().equals("ROLE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"));
+        SpaSessionDto sessionDto = spaSessionService.getCustomerSessionById(id, userId, isStaff);
+        return ResponseEntity.ok(ApiResponse.ok(sessionDto));
+    }
+
+    /**
      * Screen 29: Customer Attendance Confirmation.
      * Transitions confirmation_status from PENDING -> CONFIRMED.
      * session_status remains SCHEDULED.
@@ -84,6 +101,17 @@ public class SpaBookingController {
         Integer userId = userDetails != null ? userDetails.getUserId() : null;
         SpaSessionDto sessionDto = spaSessionService.confirmAttendance(id, userId);
         return ResponseEntity.ok(ApiResponse.ok("Session attendance confirmed.", sessionDto));
+    }
+
+    /** Customer declines attendance and leaves the session in recovery/rescheduling; it is not a cancellation. */
+    @PostMapping("/sessions/{id}/decline-attendance")
+    public ResponseEntity<ApiResponse<SpaSessionDto>> declineAttendance(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Integer userId = userDetails != null ? userDetails.getUserId() : null;
+        SpaSessionDto sessionDto = spaSessionService.declineAttendance(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok("Attendance declined; recovery has been queued.", sessionDto));
     }
 
     /**

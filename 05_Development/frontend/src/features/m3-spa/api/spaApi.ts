@@ -82,6 +82,31 @@ export const spaApi = {
   /**
    * Screen 29: Cancel a scheduled session.
    */
+  /**
+   * Screen 29: Customer attendance decline.
+   * Records DECLINED and moves session to RESCHEDULING for same-time recovery.
+   */
+  async declineAttendance(sessionId: number): Promise<BackendSpaSession> {
+    const res = await apiRequest<ApiResponse<BackendSpaSession>>(
+      `/spa/sessions/${sessionId}/decline-attendance`,
+      {
+        method: 'POST',
+      }
+    );
+    return res.data;
+  },
+
+  /**
+   * Screen 28 & 29: Get single Spa Session detail / confirmation.
+   */
+  async getSession(sessionId: number): Promise<BackendSpaSession> {
+    const res = await apiRequest<ApiResponse<BackendSpaSession>>(`/spa/sessions/${sessionId}`);
+    return res.data;
+  },
+
+  /**
+   * Screen 29: Cancel a scheduled session.
+   */
   async cancelSession(sessionId: number): Promise<BackendSpaSession> {
     const res = await apiRequest<ApiResponse<BackendSpaSession>>(
       `/spa/sessions/${sessionId}/cancel`,
