@@ -22,7 +22,7 @@ export interface MenuItemResponse {
   category: string | null;
   mealType: string | null;
   price: number;
-  dietaryTags: string | null;
+  dietaryTags: string | string[] | null;
   allergenInformation: string | null;
   available: boolean;
   servingsAvailable: number;

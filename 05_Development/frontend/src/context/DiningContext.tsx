@@ -36,9 +36,10 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setMenuItems(backendMenu.map(item => {
         const value = item.itemName;
         const category = (['starter','main','dessert','beverage','wellness_drink'].includes(String(item.category).toLowerCase()) ? String(item.category).toLowerCase() : 'main') as DietaryMenuItem['category'];
-        const tags = (item.dietaryTags || '').toLowerCase();
+        const rawTags = Array.isArray(item.dietaryTags) ? item.dietaryTags.join(' ') : String(item.dietaryTags || '');
+        const tags = rawTags.toLowerCase();
         const allergens = (item.allergenInformation || '').toLowerCase();
-        return { id: String(item.id), backendId: item.id, name: {vi:value,en:value,'zh-CN':value,ja:value,fr:value}, description:{vi:'',en:'','zh-CN':'',ja:'',fr:''}, image:'', category, mealPeriods:[(item.mealType || 'all_day').toLowerCase() as MealPeriod], dietaryTags: (['vegetarian','vegan','gluten_free','dairy_free','pescatarian'] as const).filter(tag => tags.includes(tag)) as DietaryMenuItem['dietaryTags'], allergenTags: (['nuts','shellfish','soy','eggs','fish','dairy'] as const).filter(tag => allergens.includes(tag)) as DietaryMenuItem['allergenTags'], price:item.price, isExtra:item.price > 0, available:item.available, availableServings:item.servingsAvailable };
+        return { id: String(item.id), backendId: item.id, name: {vi:value,en:value,'zh-CN':value,ja:value,fr:value}, description:{vi:'',en:'','zh-CN':'',ja:'',fr:''}, image:'', category, mealPeriods:[(item.mealType || 'all_day').toLowerCase() as MealPeriod], dietaryTags: (['vegetarian','vegan','gluten_free','dairy_free','pescatarian'] as const).filter(tag => tags.includes(tag)) as DietaryMenuItem['dietaryTags'], allergenTags: (['nuts','shellfish','soy','eggs','fish','dairy'] as const).filter(tag => allergens.includes(tag)) as DietaryMenuItem['allergenTags'], price:item.price, isExtra:item.price > 0, available:item.available, availableServings:(item as any).availableServings ?? item.servingsAvailable ?? 0 };
       }));
       setError(null); setIsInventoryStale(false);
     } catch (err) {
