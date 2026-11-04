@@ -2,13 +2,15 @@
 # run-local.ps1 - HSWRMS local development launcher (Windows PowerShell 5.1)
 #
 # Starts the Spring Boot backend locally using:
-#   - Spring profiles: local,smtp  (local => H2 in-memory DB; mail is env-driven)
-#   - MAIL_USERNAME / MAIL_PASSWORD from the environment (Gmail SMTP app creds)
+#   - Spring profiles: local,smtp  (local => H2 in-memory DB; smtp => mail label)
+#   - MAIL_USERNAME / MAIL_PASSWORD: process-scoped LOCAL-DEV defaults are
+#     embedded below so teammates need no manual setx / .env. Any values the
+#     user already provides in the environment are preserved (override wins).
 #   - JWT_SECRET auto-generated temporarily if absent or too weak (>= 32 bytes)
 #
-# Credentials are never printed. The original environment variables are
-# restored when the backend exits. The Maven exit code is propagated back
-# to the caller.
+# LOCAL DEVELOPMENT ONLY. Credentials are never printed. The original
+# environment variables are restored when the backend exits. The Maven exit
+# code is propagated back to the caller.
 # ============================================================================
 $ErrorActionPreference = 'Stop'
 
@@ -20,15 +22,27 @@ if (-not (Test-Path -LiteralPath $mvn)) {
     exit 1
 }
 
-# --- 1. Validate Gmail credential presence only (never print values) --------
-$hasUser = -not [string]::IsNullOrWhiteSpace($env:MAIL_USERNAME)
-$hasPass = -not [string]::IsNullOrWhiteSpace($env:MAIL_PASSWORD)
-Write-Host ("MAIL_USERNAME present: {0}; MAIL_PASSWORD present: {1}" -f $hasUser, $hasPass)
-if (-not ($hasUser -and $hasPass)) {
-    Write-Host "Both MAIL_USERNAME and MAIL_PASSWORD must be set in the environment before starting." -ForegroundColor Red
-    Write-Host 'Example (run once, then reopen the terminal): setx MAIL_USERNAME "you@gmail.com" ; setx MAIL_PASSWORD "<gmail-app-password>"' -ForegroundColor Yellow
-    exit 1
+# --- 1. Gmail SMTP defaults (LOCAL DEVELOPMENT ONLY; never printed) ---------
+# Shared dev sender + Gmail app password provided as PROCESS-SCOPED defaults so
+# teammates need no manual setx / .env. Values already present in the
+# environment (user override) are preserved. Originals are restored on exit.
+$devMailUser = 'nguyenviethung2261998@gmail.com'
+$devMailPass = 'aeyziocoprdsanqo'
+
+$originalMailUser = $env:MAIL_USERNAME
+$originalMailPass = $env:MAIL_PASSWORD
+$mailUserDefaulted = $false
+$mailPassDefaulted = $false
+
+if ([string]::IsNullOrWhiteSpace($env:MAIL_USERNAME)) {
+    $env:MAIL_USERNAME = $devMailUser
+    $mailUserDefaulted = $true
 }
+if ([string]::IsNullOrWhiteSpace($env:MAIL_PASSWORD)) {
+    $env:MAIL_PASSWORD = $devMailPass
+    $mailPassDefaulted = $true
+}
+Write-Host 'SMTP configured for local dev: sender set (hidden), app password set (hidden).'
 
 # --- 2. Ensure a strong JWT_SECRET (>= 32 UTF-8 bytes); generate temp if weak
 $originalJwt = $env:JWT_SECRET
@@ -70,7 +84,15 @@ finally {
     } else {
         Remove-Item Env:\SPRING_PROFILES_ACTIVE -ErrorAction SilentlyContinue
     }
-    Write-Host "Backend exited. Restored original JWT_SECRET / SPRING_PROFILES_ACTIVE." -ForegroundColor Cyan
+    if ($mailUserDefaulted) {
+        if ([string]::IsNullOrEmpty($originalMailUser)) { Remove-Item Env:\MAIL_USERNAME -ErrorAction SilentlyContinue }
+        else { $env:MAIL_USERNAME = $originalMailUser }
+    }
+    if ($mailPassDefaulted) {
+        if ([string]::IsNullOrEmpty($originalMailPass)) { Remove-Item Env:\MAIL_PASSWORD -ErrorAction SilentlyContinue }
+        else { $env:MAIL_PASSWORD = $originalMailPass }
+    }
+    Write-Host "Backend exited. Restored original MAIL_*/JWT_SECRET/SPRING_PROFILES_ACTIVE environment." -ForegroundColor Cyan
 }
 
 # --- 5. Propagate the actual Maven exit code --------------------------------
