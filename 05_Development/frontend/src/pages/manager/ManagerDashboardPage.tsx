@@ -7,7 +7,8 @@ import {
   TrendingUp,
   Users2,
   Activity,
-  Lock
+  Lock,
+  HandHeart
 } from 'lucide-react';
 import { useFolio } from '../../context/FolioContext';
 import { formatVND } from '../../i18n';
@@ -148,6 +149,16 @@ export const ManagerDashboardPage: React.FC = () => {
             <div className="hsw-quicknav-tile-content">
               <h4>{t('operations.sidebar.systemOverviewPoliceExport', 'Tổng Quan Vận Hành & Khai Báo Tạm Trú')}</h4>
               <p>{t('operations.managerDashboard.descSystem', 'Tổng hợp sức khỏe vận hành liên mô-đun và xuất lô khai báo tạm trú hàng ngày (Luật Cư trú 2020).')}</p>
+            </div>
+          </Link>
+
+          <Link to="/manager/health-readiness" className="hsw-quicknav-tile">
+            <div className="hsw-quicknav-tile-icon icon-health">
+              <HandHeart size={20} />
+            </div>
+            <div className="hsw-quicknav-tile-content">
+              <h4>{t('operations.sidebar.managerHealthReadiness.title', 'Health & Wellness Readiness')}</h4>
+              <p>{t('operations.sidebar.managerHealthReadiness.subtitle', 'Monitor customer health-profile completion and consent readiness across the resort.')}</p>
             </div>
           </Link>
         </div>
