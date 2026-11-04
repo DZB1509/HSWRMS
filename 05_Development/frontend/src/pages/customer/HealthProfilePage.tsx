@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../components/common/Toast';
 import { Container } from '../../components/common/Container';
@@ -7,8 +7,8 @@ import { Button } from '../../components/common/Button';
 import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader';
 import { PrivacyNotice } from '../../components/customer/PrivacyNotice';
 import { HeartPulse, Utensils, ShieldCheck, Lock, Save, Trash2 } from 'lucide-react';
-import { getMyHealthProfile, updateMyHealthProfile, type HealthProfileData } from '../../api/health/healthProfileApi';
-import { grantConsent } from '../../api/health/consentApi';
+import { getMyHealthProfile, updateMyHealthProfile, type HealthProfileData, type HealthDeclarationState } from '../../api/health/healthProfileApi';
+import { listMyConsents } from '../../api/health/consentApi';
 import { AppApiError } from '../../api/errors/apiError';
 import { useAuth } from '../../app/providers/AuthProvider';
 
@@ -16,6 +16,7 @@ type StressLevel = 'mild' | 'moderate' | 'high';
 const splitList = (value: string): string[] => value.split(',').map((s) => s.trim()).filter(Boolean);
 const joinList = (values: string[] | null | undefined): string => (values ?? []).join(', ');
 const textOrEmpty = (value: string | null | undefined): string => value ?? '';
+const formatDateTime = (iso: string | null): string => { if (!iso) return ''; try { return new Date(iso).toLocaleString(); } catch { return iso; } };
 
 const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean }> = ({ isCurrentIdentity }) => {
   const { t } = useTranslation();
@@ -25,19 +26,34 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [hasConsented, setHasConsented] = useState(false);
+  const navigate = useNavigate();
   const [serverConsented, setServerConsented] = useState(false);
+  const [consentVersion, setConsentVersion] = useState<string | null>(null);
+  const [consentGrantedAt, setConsentGrantedAt] = useState<string | null>(null);
   const [healthNotes, setHealthNotes] = useState({ medicalConditions: '', injuriesOrSurgeries: '', mobilityConsiderations: '', currentMedications: '', stressLevel: '' as StressLevel | '', treatmentPreferences: '' });
   const [dietary, setDietary] = useState({ allergies: '', dietaryRestrictions: '', intolerances: '', dislikedIngredients: '', specialInstructions: '' });
+  const [allergiesState, setAllergiesState] = useState<HealthDeclarationState>('NOT_DECLARED');
+  const [dietaryState, setDietaryState] = useState<HealthDeclarationState>('NOT_DECLARED');
   const applyServer = (data: HealthProfileData): void => {
-    setHasConsented(data.hasConsented);
     setServerConsented(data.hasConsented);
     setHealthNotes({ medicalConditions: textOrEmpty(data.currentHealthCondition), injuriesOrSurgeries: textOrEmpty(data.injurySurgeryHistory), mobilityConsiderations: textOrEmpty(data.mobilityJointNotes), currentMedications: textOrEmpty(data.currentMedications), stressLevel: ((data.stressFatigueLevel as StressLevel) || ''), treatmentPreferences: joinList(data.therapyPreferences) });
     setDietary({ allergies: joinList(data.foodAllergies), dietaryRestrictions: joinList(data.dietaryRequirements), intolerances: textOrEmpty(data.foodIntoleranceNotes), dislikedIngredients: textOrEmpty(data.dislikedIngredients), specialInstructions: textOrEmpty(data.kitchenNotes) });
+    setAllergiesState(data.allergiesDeclarationState ?? 'NOT_DECLARED');
+    setDietaryState(data.dietaryRequirementsDeclarationState ?? 'NOT_DECLARED');
   };
   useEffect(() => {
     let cancelled = false;
     getMyHealthProfile().then((r) => { if (!cancelled) applyServer(r.data); }).catch((e: unknown) => { if (!cancelled) setLoadError(e instanceof AppApiError ? e.message : 'Could not load your saved health profile.'); }).finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [reloadSequence]);
+  useEffect(() => {
+    let cancelled = false;
+    listMyConsents().then((r) => {
+      if (cancelled) return;
+      const rec = r.data.find((c) => c.consentType === 'HEALTH_DATA_PROCESSING' && c.active);
+      setConsentVersion(rec ? rec.policyVersion : null);
+      setConsentGrantedAt(rec ? rec.grantedAt : null);
+    }).catch(() => { /* consent meta is non-fatal to the profile */ });
     return () => { cancelled = true; };
   }, [reloadSequence]);
   const toMsg = (error: unknown, fallback: string): string => {
@@ -54,14 +70,24 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
     setSaveError(null);
     setIsSaving(true);
     try {
-      if (hasConsented && !serverConsented) {
-        try { await grantConsent({ consentType: 'HEALTH_DATA_PROCESSING' }); }
-        catch (error) { const m = toMsg(error, 'Could not record consent.'); setSaveError(m); showToast(m, 'error'); return; }
-      }
       if (!isCurrentIdentity()) return;
-      const allergenItems = splitList(dietary.allergies);
-      const requirementItems = splitList(dietary.dietaryRestrictions);
-      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: allergenItems, foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: requirementItems, therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null, allergiesDeclarationState: allergenItems.length > 0 ? 'DECLARED' : undefined, dietaryRequirementsDeclarationState: requirementItems.length > 0 ? 'DECLARED' : undefined });
+      if (!serverConsented) {
+        const msg = t('customer.healthProfile.consentRequiredBeforeSave', 'Please confirm health-data consent before saving.');
+        setSaveError(msg); showToast(msg, 'error');
+        navigate('/customer/health-profile/consent');
+        return;
+      }
+      const allergenItems = allergiesState === 'DECLARED' ? splitList(dietary.allergies) : [];
+      const requirementItems = dietaryState === 'DECLARED' ? splitList(dietary.dietaryRestrictions) : [];
+      if (allergiesState === 'DECLARED' && allergenItems.length === 0) {
+        const msg = t('customer.healthProfile.allergyStateRequired', 'Please enter at least one allergen when "Allergies declared" is selected.');
+        setSaveError(msg); showToast(msg, 'error'); return;
+      }
+      if (dietaryState === 'DECLARED' && requirementItems.length === 0) {
+        const msg = t('customer.healthProfile.dietaryStateRequired', 'Please enter at least one dietary need when "Dietary needs declared" is selected.');
+        setSaveError(msg); showToast(msg, 'error'); return;
+      }
+      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: allergenItems, foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: requirementItems, therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null, allergiesDeclarationState: allergiesState, dietaryRequirementsDeclarationState: dietaryState });
       if (!isCurrentIdentity()) return;
       const saved = (await getMyHealthProfile()).data;
       if (!isCurrentIdentity()) return;
@@ -154,18 +180,40 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
               variant="highlight"
             />
 
-            <div style={{ marginTop: 'var(--space-4)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={hasConsented}
-                  onChange={(e) => setHasConsented(e.target.checked)}
-                  required
-                />
+                        <div style={{ marginTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {t('customer.healthProfile.consentGranted', 'I Agree & Grant Consent (v1.2 â€” Treatment Purpose Limitation)')}
+                  {t('customer.healthProfile.consentStatusLabel', 'Status')}:
                 </span>
-              </label>
+                {serverConsented ? (
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--accent-forest)', backgroundColor: 'var(--accent-sand-soft)', padding: '2px 10px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--accent-sand)' }}>
+                    {t('customer.healthProfile.consentStatusConfirmed', 'Consent confirmed')}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-warning)', backgroundColor: 'var(--surface-warning)', padding: '2px 10px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-warning)' }}>
+                    {t('customer.healthProfile.consentStatusNotConfirmed', 'Not confirmed')}
+                  </span>
+                )}
+              </div>
+              {serverConsented ? (
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  {t('customer.healthProfile.consentVersionDisplay', 'Version: {{version}}', { version: consentVersion ?? 'v1.2' })}
+                  {consentGrantedAt ? ' · ' + t('customer.healthProfile.consentConfirmedAtDisplay', 'Confirmed at: {{when}}', { when: formatDateTime(consentGrantedAt) }) : ''}
+                </div>
+              ) : null}
+              <div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  icon={<ShieldCheck size={16} />}
+                  onClick={() => navigate(serverConsented ? '/customer/health-profile/consent?mode=review' : '/customer/health-profile/consent')}
+                >
+                  {serverConsented
+                    ? t('customer.healthProfile.consentReviewBtn', 'Review agreement')
+                    : t('customer.healthProfile.consentViewConfirmBtn', 'View content and confirm')}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -361,10 +409,29 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-danger)', marginBottom: '4px' }}>
                   {t('customer.healthProfile.allergies', 'Known Food Allergies (Strict Safety Alert)')}
                 </label>
+                <select
+                  value={allergiesState}
+                  onChange={(e) => setAllergiesState(e.target.value as HealthDeclarationState)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-danger)',
+                    fontSize: 'var(--text-sm)',
+                    marginBottom: '8px',
+                    backgroundColor: 'var(--surface)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <option value="NOT_DECLARED">{t('customer.healthProfile.allergyStateNotDeclared', 'Not declared')}</option>
+                  <option value="EXPLICITLY_NONE">{t('customer.healthProfile.allergyStateExplicitlyNone', 'Confirm no allergies')}</option>
+                  <option value="DECLARED">{t('customer.healthProfile.allergyStateDeclared', 'Allergies declared')}</option>
+                </select>
                 <input
                   type="text"
                   value={dietary.allergies}
                   onChange={(e) => setDietary((p) => ({ ...p, allergies: e.target.value }))}
+                  disabled={allergiesState !== 'DECLARED'}
                   placeholder={t('customer.healthProfile.allergiesHint', 'e.g., Peanuts, Crustaceans, Shellfish, Tree Nuts')}
                   style={{
                     width: '100%',
@@ -372,10 +439,16 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
                     borderRadius: 'var(--radius-sm)',
                     border: '1px solid var(--border-danger)',
                     fontSize: 'var(--text-sm)',
-                    backgroundColor: 'var(--surface-danger)',
+                    backgroundColor: allergiesState !== 'DECLARED' ? 'var(--surface-muted, var(--surface))' : 'var(--surface-danger)',
                     color: 'var(--text-primary)',
+                    cursor: allergiesState !== 'DECLARED' ? 'not-allowed' : 'text',
                   }}
                 />
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  {allergiesState === 'NOT_DECLARED' && t('customer.healthProfile.allergyStateHintNotDeclared', 'You have not declared your allergies yet.')}
+                  {allergiesState === 'EXPLICITLY_NONE' && t('customer.healthProfile.allergyStateHintExplicitlyNone', 'You confirmed you have no food allergies.')}
+                  {allergiesState === 'DECLARED' && t('customer.healthProfile.allergyStateHintDeclared', 'Enter allergen names separated by commas.')}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
@@ -383,10 +456,29 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
                     {t('customer.healthProfile.dietaryRestrictions', 'Dietary Principles')}
                   </label>
+                  <select
+                    value={dietaryState}
+                    onChange={(e) => setDietaryState(e.target.value as HealthDeclarationState)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: 'var(--text-sm)',
+                      marginBottom: '8px',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    <option value="NOT_DECLARED">{t('customer.healthProfile.dietaryStateNotDeclared', 'Not declared')}</option>
+                    <option value="EXPLICITLY_NONE">{t('customer.healthProfile.dietaryStateExplicitlyNone', 'Confirm no special dietary needs')}</option>
+                    <option value="DECLARED">{t('customer.healthProfile.dietaryStateDeclared', 'Dietary needs declared')}</option>
+                  </select>
                   <input
                     type="text"
                     value={dietary.dietaryRestrictions}
                     onChange={(e) => setDietary((p) => ({ ...p, dietaryRestrictions: e.target.value }))}
+                    disabled={dietaryState !== 'DECLARED'}
                     placeholder={t('customer.healthProfile.dietaryRestrictionsHint', 'e.g., Vegetarian, Pescatarian, Gluten-Conscious, Low-Sodium')}
                     style={{
                       width: '100%',
@@ -394,8 +486,15 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
                       borderRadius: 'var(--radius-sm)',
                       border: '1px solid var(--border-subtle)',
                       fontSize: 'var(--text-sm)',
+                      backgroundColor: dietaryState !== 'DECLARED' ? 'var(--surface-muted, var(--surface))' : undefined,
+                      cursor: dietaryState !== 'DECLARED' ? 'not-allowed' : 'text',
                     }}
                   />
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {dietaryState === 'NOT_DECLARED' && t('customer.healthProfile.dietaryStateHintNotDeclared', 'You have not declared any special dietary needs yet.')}
+                    {dietaryState === 'EXPLICITLY_NONE' && t('customer.healthProfile.dietaryStateHintExplicitlyNone', 'You confirmed you have no special dietary needs.')}
+                    {dietaryState === 'DECLARED' && t('customer.healthProfile.dietaryStateHintDeclared', 'Enter dietary needs separated by commas.')}
+                  </div>
                 </div>
 
                 <div>

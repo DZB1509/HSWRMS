@@ -106,7 +106,8 @@ public class HealthProfileService {
         return toResponse(updated, consented);
     }
     private void replaceAllergies(HealthProfile profile, List<String> names) {
-        foodAllergyRepository.deleteByHealthProfileHealthProfileId(profile.getHealthProfileId());
+        // Previous rows are removed via the parent collection's orphanRemoval on flush;
+        // do not bulk-delete here (it would conflict with orphanRemoval and cause stale-state errors).
         List<FoodAllergy> rows = new ArrayList<>();
         int order = 0;
         for (String raw : names) {
@@ -117,7 +118,7 @@ public class HealthProfileService {
         profile.setFoodAllergies(foodAllergyRepository.saveAll(rows));
     }
     private void replaceRequirements(HealthProfile profile, List<String> names) {
-        dietaryRequirementRepository.deleteByHealthProfileHealthProfileId(profile.getHealthProfileId());
+        // orphanRemoval on the parent collection deletes previous rows on flush.
         List<DietaryRequirement> rows = new ArrayList<>();
         int order = 0;
         for (String raw : names) {
@@ -128,7 +129,7 @@ public class HealthProfileService {
         profile.setDietaryRequirementsList(dietaryRequirementRepository.saveAll(rows));
     }
     private void replaceTherapies(HealthProfile profile, List<String> labels, String therapyCode) {
-        therapyPreferenceRepository.deleteByHealthProfileHealthProfileId(profile.getHealthProfileId());
+        // orphanRemoval on the parent collection deletes previous rows on flush.
         List<HealthProfileTherapyPreference> rows = new ArrayList<>();
         int order = 0;
         String code = therapyCode != null && !therapyCode.isBlank() ? therapyCode.trim() : null;

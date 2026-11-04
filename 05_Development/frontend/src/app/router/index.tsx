@@ -24,6 +24,7 @@ import { PasswordResetPage } from '../../pages/auth/PasswordResetPage';
 import { CustomerDashboardPage } from '../../pages/customer/CustomerDashboardPage';
 import { AccountSettingsPage } from '../../pages/customer/AccountSettingsPage';
 import { HealthProfilePage } from '../../pages/customer/HealthProfilePage';
+import { HealthConsentPage } from '../../pages/customer/HealthConsentPage';
 import { HealthDataDeletionPage } from '../../pages/customer/HealthDataDeletionPage';
 import { RetreatBookingPage } from '../../pages/customer/RetreatBookingPage';
 import { BookingSummaryPage } from '../../pages/customer/BookingSummaryPage';
@@ -134,6 +135,7 @@ export const AppRouter: React.FC = () => {
         <Route path="dashboard" element={<CustomerDashboardPage />} />
         <Route path="account" element={<AccountSettingsPage />} />
         <Route path="health-profile" element={<HealthProfilePage />} />
+        <Route path="health-profile/consent" element={<HealthConsentPage />} />
         <Route path="health-profile/deletion" element={<HealthDataDeletionPage />} />
         
         {/* Module 2: Booking Journey */}
