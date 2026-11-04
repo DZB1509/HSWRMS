@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
@@ -215,10 +215,27 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
     <div className="hsw-dining-container" id="screen-36-alacarte-order">
       {/* Page Header */}
       <div className="hsw-dining-header">
-        <h1 className="hsw-dining-title">{t('dining.extra.title', 'A-la-carte Culinary Requests')}</h1>
+        <h1 className="hsw-dining-title">{t('dining.extra.title', 'Thực Đơn Gọi Thêm A-la-carte')}</h1>
         <p className="hsw-dining-subtitle">
-          {t('dining.extra.subtitle', 'Order additional artisanal dishes and elixirs outside your included retreat plan.')}
+          {t('dining.extra.subtitle', 'Gọi các món ăn bổ dưỡng thượng hạng và thức uống thủ công ngoài khẩu phần trọn gói của kỳ nghỉ.')}
         </p>
+      </div>
+
+      {/* Informative Banner */}
+      <div style={{
+        backgroundColor: '#fff9e6',
+        border: '1px solid #f9ab00',
+        borderRadius: '8px',
+        padding: '14px 18px',
+        marginBottom: '24px',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center'
+      }}>
+        <Info size={22} color="#b06000" style={{ flexShrink: 0 }} />
+        <div style={{ fontSize: '13px', color: '#7c4a03', lineHeight: 1.5 }}>
+          <strong>Danh mục ẩm thực A-la-carte đặc thù ({extraItems.length} món):</strong> Đây là các món ăn bồi bổ cao cấp, canh tiềm thảo dược và thức uống dinh dưỡng được phục vụ theo yêu cầu riêng, <em>ngoài khẩu phần ăn tiêu chuẩn đã bao gồm trong gói kỳ nghỉ</em>. Chi phí sẽ được ghi nhận vào Folio phòng và thanh toán khi trả phòng.
+        </div>
       </div>
 
       {/* 2-Column Catalogue + Sticky Summary Layout (Requirement 16) */}

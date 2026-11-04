@@ -79,12 +79,27 @@ export const MyMealPlanPage: React.FC = () => {
     (o) => (o.bookingId === activeBooking.id || o.customerId === customerId)
   );
 
-  // Group selections by date
-  const groupedSelections = mySelections.reduce((acc, sel) => {
+  // Active selections represent current valid meal itinerary for each day.
+  // Superseded/cancelled orders (when customer re-selected meals for the same period) are filtered out of the active itinerary.
+  const activeSelections = mySelections.filter((s) => s.status !== 'cancelled');
+
+  const findItem = (id: string | number) => {
+    const sId = String(id).trim();
+    const numId = Number(sId.replace(/\D/g, ''));
+    return menuItems.find(
+      (m) =>
+        m.id === sId ||
+        String(m.backendId) === sId ||
+        (Number.isFinite(numId) && (m.backendId === numId || Number(m.id.replace(/\D/g, '')) === numId))
+    );
+  };
+
+  // Group active selections by date
+  const groupedSelections = activeSelections.reduce((acc, sel) => {
     if (!acc[sel.date]) acc[sel.date] = [];
     acc[sel.date].push(sel);
     return acc;
-  }, {} as Record<string, typeof mySelections>);
+  }, {} as Record<string, typeof activeSelections>);
 
   const sortedDates = Object.keys(groupedSelections).sort();
 
@@ -248,10 +263,20 @@ export const MyMealPlanPage: React.FC = () => {
                       }}
                     >
                       {groupedSelections[date].map((sel) => {
-                        const item = menuItems.find((m) => m.id === sel.menuItemIds[0]);
-                        if (!item) return null;
+                        const lines = (sel.items && sel.items.length > 0)
+                          ? sel.items.map((it) => ({
+                              id: it.menuItemId,
+                              quantity: it.quantity || 1,
+                              menu: findItem(it.menuItemId),
+                            }))
+                          : sel.menuItemIds.map((id) => ({
+                              id,
+                              quantity: 1,
+                              menu: findItem(id),
+                            }));
+
+                        const primaryItem = lines[0]?.menu;
                         const statusObj = formatStatus(sel.status);
-                        const localizedName = localize(item.name);
 
                         return (
                           <div
@@ -260,7 +285,11 @@ export const MyMealPlanPage: React.FC = () => {
                             style={{ flexDirection: 'row', alignItems: 'stretch' }}
                           >
                             <div style={{ width: '120px', flexShrink: 0 }}>
-                              <FoodImage src={item.image} alt={localizedName} aspectRatio="1 / 1" />
+                              <FoodImage
+                                src={primaryItem?.image}
+                                alt={primaryItem ? localize(primaryItem.name) : 'Món ăn'}
+                                aspectRatio="1 / 1"
+                              />
                             </div>
 
                             <div style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -269,7 +298,7 @@ export const MyMealPlanPage: React.FC = () => {
                                   display: 'flex',
                                   justifyContent: 'space-between',
                                   alignItems: 'center',
-                                  marginBottom: '4px',
+                                  marginBottom: '6px',
                                 }}
                               >
                                 <span
@@ -297,13 +326,27 @@ export const MyMealPlanPage: React.FC = () => {
                                 </span>
                               </div>
 
-                              <h3 className="hsw-culinary-dish-name" style={{ fontSize: 'var(--text-md)', marginBottom: '4px' }}>
-                                {localizedName}
-                              </h3>
-                              <DietaryBadgeList item={item} maxBadges={2} />
+                              {/* Multi-dish listing */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                                {lines.map((line, idx) => {
+                                  const dishName = line.menu ? localize(line.menu.name) : `Món ăn dưỡng sinh (#${line.id})`;
+                                  return (
+                                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <h3
+                                        className="hsw-culinary-dish-name"
+                                        style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0 }}
+                                      >
+                                        {line.quantity > 1 ? `${line.quantity}x ` : '1x '}
+                                        {dishName}
+                                      </h3>
+                                      {line.menu && <DietaryBadgeList item={line.menu} maxBadges={2} />}
+                                    </div>
+                                  );
+                                })}
+                              </div>
 
                               {/* Amanoi Service Location & Requests Badge */}
-                              <div style={{ marginTop: '6px' }}>
+                              <div style={{ marginTop: 'auto', paddingTop: '4px' }}>
                                 <AmanoiServiceLocationBadge
                                   notes={sel.notes}
                                   villaNumber={activeBooking?.villaNumber}
@@ -331,7 +374,6 @@ export const MyMealPlanPage: React.FC = () => {
                                 ) : null;
                               })()}
                             </div>
-
                           </div>
                         );
                       })}

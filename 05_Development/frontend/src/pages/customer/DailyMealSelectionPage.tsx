@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
 import { isItemDietaryCompatible } from '../../utils/dietaryFilter';
-import type { MealPeriod, LocalizedString } from '../../types/dining';
-import { AlertCircle, CheckCircle2, Info, Calendar, Clock, Sun, Moon, Coffee, ShieldCheck } from 'lucide-react';
+import type { MealPeriod, LocalizedString, DietaryMenuItem } from '../../types/dining';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  Calendar,
+  Clock,
+  Sun,
+  Moon,
+  Coffee,
+  ShieldCheck,
+  Sparkles,
+  Utensils,
+  Leaf
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { FoodImage } from '../../components/common/FoodImage';
@@ -15,6 +28,120 @@ import {
   buildAmanoiDiningNotes,
   type DiningServiceLocation,
 } from '../../utils/diningServiceHelper';
+
+export interface RetreatPackageCulinaryMeta {
+  code: string;
+  name: string;
+  goal: string;
+  durationNights: number;
+  regimen: string;
+  targetCalories: string;
+  itemIds: number[];
+}
+
+export const RETREAT_PACKAGES_METADATA: Record<string, RetreatPackageCulinaryMeta> = {
+  'RET-DETOX-03': {
+    code: 'RET-DETOX-03',
+    name: '3D2N Thải Độc & Thanh Lọc Tinh Khiết (Pure Detox)',
+    goal: 'Detox & Purification',
+    durationNights: 2,
+    regimen: 'Thực đơn Detox thanh lọc, nước ép lạnh hữu cơ, không đường & không chất béo bão hòa',
+    targetCalories: '1.200 - 1.400 kcal/ngày',
+    itemIds: [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 4, 6],
+  },
+  'RET-DETOX-05': {
+    code: 'RET-DETOX-05',
+    name: '5D4N Tái Tạo Năng Lượng & Thải Độc Chuyên Sâu (Deep Detox & Reset)',
+    goal: 'Deep Detoxification',
+    durationNights: 4,
+    regimen: 'Liệu trình ăn kiêng gián đoạn / Plant-based chuyên sâu, trà thảo mộc đào thải kim loại nặng',
+    targetCalories: '1.300 - 1.500 kcal/ngày',
+    itemIds: [106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 3, 7],
+  },
+  'RET-SLEEP-03': {
+    code: 'RET-SLEEP-03',
+    name: '3D2N Khôi Phục Giấc Ngủ Sâu (Holistic Deep Sleep)',
+    goal: 'Sleep Improvement',
+    durationNights: 2,
+    regimen: 'Thực đơn tăng sinh Melatonin tự nhiên: hạt sen, cá ngừ, hạnh nhân, trà hoa cúc buổi tối',
+    targetCalories: '1.500 - 1.700 kcal/ngày',
+    itemIds: [126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 141, 5, 8],
+  },
+  'RET-STRESS-04': {
+    code: 'RET-STRESS-04',
+    name: '4D3N Chữa Lành Thân - Tâm & Buông Thư (Mind-Body Harmony)',
+    goal: 'Stress Reduction',
+    durationNights: 3,
+    regimen: 'Thực đơn dưỡng tâm bổ khí, cân bằng năng lượng Âm - Dương, đồ uống thảo dược phục hồi',
+    targetCalories: '1.600 - 1.800 kcal/ngày',
+    itemIds: [142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 1, 6],
+  },
+  'RET-AGING-04': {
+    code: 'RET-AGING-04',
+    name: '4D3N Trẻ Hóa Tế Bào & Sắc Diện Hoàng Gia (Longevity & Radiance)',
+    goal: 'Anti-Aging & Cellular Care',
+    durationNights: 3,
+    regimen: 'Thực đơn giàu Collagen, chất chống oxy hóa cao (Antioxidants), các loại quả mọng và Superfoods',
+    targetCalories: '1.500 - 1.700 kcal/ngày',
+    itemIds: [153, 154, 155, 156, 157, 158, 159, 160, 1, 5, 9, 12],
+  },
+  'RET-ALIGN-03': {
+    code: 'RET-ALIGN-03',
+    name: '3D2N Nắn Chỉnh Cột Sống & Phục Hồi Thể Lực (Spine & Posture Care)',
+    goal: 'Physical Therapy & Posture',
+    durationNights: 2,
+    regimen: 'Thực đơn hỗ trợ xương khớp: bổ sung Canxi hữu cơ, Glucosamine tự nhiên, nước hầm xương hữu cơ',
+    targetCalories: '1.600 - 1.800 kcal/ngày',
+    itemIds: [161, 162, 163, 164, 2, 7, 10],
+  },
+  'RET-VITAL-05': {
+    code: 'RET-VITAL-05',
+    name: '5D4N Tăng Cường Sinh Lực & Quản Lý Vóc Dáng (Vitality & Weight Trim)',
+    goal: 'Fitness & Body Shaping',
+    durationNights: 4,
+    regimen: 'Thực đơn Macro-balanced chuẩn Calories deficit nhẹ, đạm thực vật cao cấp, ít muối (Low-sodium)',
+    targetCalories: '1.400 - 1.600 kcal/ngày',
+    itemIds: [165, 166, 167, 3, 10, 11, 12],
+  },
+  'RET-MOM-03': {
+    code: 'RET-MOM-03',
+    name: '3D2N Nghỉ Dưỡng Chữa Lành Mẹ Bầu (Gentle Nurturing Prenatal)',
+    goal: 'Maternal Wellness',
+    durationNights: 2,
+    regimen: 'Thực đơn hữu cơ lành tính, giàu Axit Folic, Sắt, Vitamin tự nhiên theo khuyến nghị dinh dưỡng thai kỳ',
+    targetCalories: '2.000 - 2.200 kcal/ngày',
+    itemIds: [168, 169, 170, 171, 172, 173, 174, 175, 8, 9],
+  },
+};
+
+function resolvePackageMeta(bookingName?: string, slug?: string): RetreatPackageCulinaryMeta {
+  const text = `${bookingName || ''} ${slug || ''}`.toLowerCase();
+  if (text.includes('detox') && (text.includes('05') || text.includes('5d4n') || text.includes('sâu') || text.includes('reset'))) {
+    return RETREAT_PACKAGES_METADATA['RET-DETOX-05'];
+  }
+  if (text.includes('detox')) {
+    return RETREAT_PACKAGES_METADATA['RET-DETOX-03'];
+  }
+  if (text.includes('sleep') || text.includes('ngủ')) {
+    return RETREAT_PACKAGES_METADATA['RET-SLEEP-03'];
+  }
+  if (text.includes('stress') || text.includes('buông thư') || text.includes('harmony') || text.includes('chữa lành thân')) {
+    return RETREAT_PACKAGES_METADATA['RET-STRESS-04'];
+  }
+  if (text.includes('aging') || text.includes('trẻ hóa') || text.includes('radiance') || text.includes('longevity')) {
+    return RETREAT_PACKAGES_METADATA['RET-AGING-04'];
+  }
+  if (text.includes('align') || text.includes('cột sống') || text.includes('posture') || text.includes('spine')) {
+    return RETREAT_PACKAGES_METADATA['RET-ALIGN-03'];
+  }
+  if (text.includes('vital') || text.includes('vóc dáng') || text.includes('slimming') || text.includes('weight')) {
+    return RETREAT_PACKAGES_METADATA['RET-VITAL-05'];
+  }
+  if (text.includes('mom') || text.includes('mẹ bầu') || text.includes('prenatal')) {
+    return RETREAT_PACKAGES_METADATA['RET-MOM-03'];
+  }
+  return RETREAT_PACKAGES_METADATA['RET-DETOX-03'];
+}
 
 const DailyMealSelectionPageForIdentity: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
@@ -39,6 +166,8 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
 
   const [activeDate, setActiveDate] = useState<string>('');
   const [activePeriod, setActivePeriod] = useState<MealPeriod>('breakfast');
+  const [filterMode, setFilterMode] = useState<'package' | 'all'>('package');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'starter' | 'main' | 'dessert' | 'beverage'>('all');
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
   const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('DINING_PAVILION');
   const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
@@ -47,8 +176,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-
-  const todayStr = React.useMemo(() => {
+  const todayStr = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -56,20 +184,25 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
     return `${y}-${m}-${d}`;
   }, []);
 
+  const retreatMeta = useMemo(() => {
+    return resolvePackageMeta(
+      typeof activeBooking?.retreatName === 'string' ? activeBooking.retreatName : activeBooking?.retreatName?.vi,
+      activeBooking?.retreatSlug
+    );
+  }, [activeBooking]);
+
   // Calculate dates based on the guest's booked retreat package, strictly excluding past dates
-  const dates = React.useMemo(() => {
+  const dates = useMemo(() => {
     if (!activeBooking) return [];
     const start = new Date(activeBooking.startDate);
     const end = new Date(activeBooking.endDate);
     const result: string[] = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
-      // Exclude past dates (only current date or future dates are displayed)
       if (dateStr >= todayStr) {
         result.push(dateStr);
       }
     }
-    // Fallback: If all retreat booking dates were in the past, provide active dates starting from today
     if (result.length === 0) {
       const base = new Date();
       for (let i = 0; i < 4; i++) {
@@ -81,7 +214,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
     return result;
   }, [activeBooking, todayStr]);
 
-  // Automatically default to the first available date (current date or nearest future date)
+  // Automatically default to the first available date
   useEffect(() => {
     if (dates.length > 0 && (!activeDate || !dates.includes(activeDate) || activeDate < todayStr)) {
       setActiveDate(dates[0]);
@@ -117,15 +250,37 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
     }
   }, [activeDate, activePeriod, activeBooking, getMealSelection]);
 
-  const availableItems = menuItems.filter(
-    (item) =>
-      !item.isExtra &&
-      (item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day')) &&
-      isItemDietaryCompatible(item, dietaryRestrictions, allergies)
-  );
+  // Filter available items: included in package, period matched, dietary compatible
+  const availableItems = useMemo(() => {
+    return menuItems.filter((item) => {
+      // 1. Match period
+      const matchesPeriod =
+        item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day');
+      if (!matchesPeriod) return false;
 
-  const hasAllergyWarning = (item: any) => {
-    return item.allergenTags.some((tag: string) => allergies.includes(tag.toLowerCase()));
+      // 2. Match package recommendation filter
+      if (filterMode === 'package') {
+        const numericId = Number(item.backendId ?? item.id);
+        const isPackageDish = retreatMeta.itemIds.includes(numericId) || (numericId >= 1 && numericId <= 12);
+        if (!isPackageDish) return false;
+      }
+
+      // 3. Match category filter
+      if (categoryFilter !== 'all') {
+        const itemCat = String(item.category || '').toLowerCase();
+        if (categoryFilter === 'starter' && !itemCat.includes('starter') && !itemCat.includes('soup')) return false;
+        if (categoryFilter === 'main' && !itemCat.includes('main')) return false;
+        if (categoryFilter === 'dessert' && !itemCat.includes('dessert') && !itemCat.includes('snack')) return false;
+        if (categoryFilter === 'beverage' && !itemCat.includes('beverage') && !itemCat.includes('drink')) return false;
+      }
+
+      // 4. Dietary compatibility
+      return isItemDietaryCompatible(item, dietaryRestrictions, allergies);
+    });
+  }, [menuItems, activePeriod, filterMode, categoryFilter, retreatMeta, dietaryRestrictions, allergies]);
+
+  const hasAllergyWarning = (item: DietaryMenuItem) => {
+    return (item.allergenTags || []).some((tag: string) => allergies.includes(tag.toLowerCase()));
   };
 
   const handleToggleTag = (tag: string) => {
@@ -138,7 +293,8 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
 
   const handleSave = async () => {
     if (!activeBooking || selectedEntries.length === 0 || isSaving) return;
-    setSaveError(null); setIsSaving(true);
+    setSaveError(null);
+    setIsSaving(true);
     const finalNotes = buildAmanoiDiningNotes(
       diningLocation,
       selectedWellnessTags,
@@ -155,23 +311,24 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
     const totalPortions = selectedEntries.reduce((sum, [_, qty]) => sum + qty, 0);
 
     try {
-    await saveMealSelection({
-      bookingId: activeBooking.id,
-      customerId,
-      date: activeDate,
-      mealPeriod: activePeriod,
-      menuItemIds,
-      quantity: totalPortions,
-      items,
-      notes: finalNotes,
-    });
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3500);
+      await saveMealSelection({
+        bookingId: activeBooking.id,
+        customerId,
+        date: activeDate,
+        mealPeriod: activePeriod,
+        menuItemIds,
+        quantity: totalPortions,
+        items,
+        notes: finalNotes,
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'The server did not confirm the meal selection.');
-    } finally { setIsSaving(false); }
+    } finally {
+      setIsSaving(false);
+    }
   };
-
 
   if (!activeBooking) {
     return (
@@ -222,42 +379,123 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
         </p>
       </div>
 
-      {/* Main 2-Column Planning Layout (Requirement 13) */}
+      {/* Hero Package Banner: Synced from Retreat Catalog (Excel Specification) */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(46, 90, 54, 0.08) 0%, rgba(200, 160, 100, 0.08) 100%)',
+          border: '1px solid rgba(46, 90, 54, 0.22)',
+          borderRadius: 'var(--radius-md, 8px)',
+          padding: '16px 20px',
+          marginBottom: 'var(--space-6, 24px)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+        }}
+        id="synced-retreat-package-card"
+      >
+        <div style={{ flex: '1 1 320px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: 'var(--accent-forest, #2e5a36)',
+                color: '#fff',
+              }}
+            >
+              {retreatMeta.code}
+            </span>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--accent-olive, #5c6f50)',
+              }}
+            >
+              🎯 {retreatMeta.goal} · {retreatMeta.durationNights} Đêm
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: 'rgba(46, 125, 50, 0.12)',
+                color: 'var(--accent-forest, #2e7d32)',
+              }}
+            >
+              ✓ 100% Đã Bao Gồm Trong Gói (0đ)
+            </span>
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', margin: '0 0 6px 0', color: 'var(--text-primary)' }}>
+            {retreatMeta.name}
+          </h2>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            <strong>Chế độ dinh dưỡng F&B:</strong> {retreatMeta.regimen} ({retreatMeta.targetCalories})
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            className={`hsw-btn hsw-btn-sm ${filterMode === 'package' ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
+            onClick={() => setFilterMode('package')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Sparkles size={14} />
+            <span>Thực Đơn Gợi Ý Theo Gói</span>
+          </button>
+          <button
+            type="button"
+            className={`hsw-btn hsw-btn-sm ${filterMode === 'all' ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
+            onClick={() => setFilterMode('all')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Utensils size={14} />
+            <span>Toàn Bộ 95 Món Dưỡng Sinh</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main 2-Column Planning Layout */}
       <div className="hsw-meal-select-layout">
         {/* Left Sticky Planning Rail */}
         <aside className="hsw-planning-rail" aria-label="Meal planning controls">
-          {/* Booked Retreat Package Sync Banner */}
-          {activeBooking && (
+          {/* Villa & Guest Summary */}
+          <div
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'var(--bg-soft)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: 'var(--space-3)',
+              borderLeft: '3px solid var(--accent-forest)',
+            }}
+          >
             <div
               style={{
-                padding: '10px 12px',
-                backgroundColor: 'var(--bg-soft)',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: 'var(--space-3)',
-                borderLeft: '3px solid var(--accent-forest)',
+                fontSize: '10px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--accent-olive)',
+                marginBottom: '2px',
               }}
-              id="synced-retreat-package-card"
             >
-              <div
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: 'var(--accent-olive)',
-                  marginBottom: '2px',
-                }}
-              >
-                {t('dining.select.retreatPackage', 'Retreat Package')}
-              </div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
-                {localize(activeBooking.retreatName)}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                {activeBooking.villaNumber} · {dates[0] || activeBooking.startDate} → {dates[dates.length - 1] || activeBooking.endDate}
-              </div>
+              {t('dining.select.retreatPackage', 'Retreat Stay')}
             </div>
-          )}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+              {localize(activeBooking.retreatName)}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+              {activeBooking.villaNumber ? `Biệt Thự ${activeBooking.villaNumber}` : 'Standard Villa'} · {dates[0]} → {dates[dates.length - 1]}
+            </div>
+          </div>
 
           {/* Date Selector */}
           <div style={{ marginBottom: 'var(--space-4)' }}>
@@ -270,9 +508,9 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                 const dateObj = new Date(d);
                 const isSelected = activeDate === d;
                 const isToday = d === todayStr;
-                const formattedDate = dateObj.toLocaleDateString(i18n.language || 'en', {
+                const formattedDate = dateObj.toLocaleDateString(i18n.language || 'vi', {
                   weekday: 'short',
-                  month: 'short',
+                  month: 'numeric',
                   day: 'numeric',
                 });
                 return (
@@ -292,7 +530,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                     title={formattedDate}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600 }}>Day {index + 1}</span>
+                      <span style={{ fontWeight: 600 }}>Ngày {index + 1}</span>
                       {isToday && (
                         <span
                           style={{
@@ -316,7 +554,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
           </div>
 
           {/* Meal Period Selector */}
-          <div>
+          <div style={{ marginBottom: 'var(--space-4)' }}>
             <h3 className="hsw-rail-section-title">
               <Clock size={13} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
               {t('dining.select.selectPeriod', 'Meal Period')}
@@ -332,6 +570,43 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                 >
                   {periodIcons[period]}
                   <span>{t(`dining.periods.${period}`, period.charAt(0).toUpperCase() + period.slice(1))}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category Quick Filter */}
+          <div>
+            <h3 className="hsw-rail-section-title">
+              <Leaf size={13} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
+              Phân Loại Món
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {[
+                { id: 'all', label: 'Tất cả phân loại' },
+                { id: 'main', label: 'Món chính dưỡng sinh' },
+                { id: 'starter', label: 'Khai vị & Canh tiềm' },
+                { id: 'dessert', label: 'Tráng miệng & Chè thảo mộc' },
+                { id: 'beverage', label: 'Nước ép & Trà thanh lọc' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat.id as any)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid',
+                    borderColor: categoryFilter === cat.id ? 'var(--accent-forest)' : 'var(--border-subtle)',
+                    backgroundColor: categoryFilter === cat.id ? 'rgba(46, 90, 54, 0.08)' : 'transparent',
+                    color: categoryFilter === cat.id ? 'var(--accent-forest)' : 'var(--text-secondary)',
+                    fontWeight: categoryFilter === cat.id ? 700 : 500,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  {cat.label}
                 </button>
               ))}
             </div>
@@ -364,11 +639,11 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                   color: 'var(--accent-olive)',
                 }}
               >
-                {t(`dining.periods.${activePeriod}`, activePeriod.toUpperCase())}
+                {t(`dining.periods.${activePeriod}`, activePeriod.toUpperCase())} · {filterMode === 'package' ? `Khuyên dùng cho ${retreatMeta.code}` : 'Toàn bộ danh mục'}
               </span>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', margin: '2px 0 0 0' }}>
                 {activeDate
-                  ? new Date(activeDate).toLocaleDateString(i18n.language || 'en', {
+                  ? new Date(activeDate).toLocaleDateString(i18n.language || 'vi', {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',
@@ -406,14 +681,14 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                 {t('dining.select.safeguardTitle', 'Tự động lọc theo hồ sơ dưỡng sinh')}:
               </span>{' '}
               <span style={{ color: 'var(--accent-forest, #2e7d32)' }}>
-                {dietaryRestrictions.join(', ') || 'Ăn chay'}
+                {dietaryRestrictions.join(', ') || 'Chế độ tiêu chuẩn gói'}
               </span>
               {allergies.length > 0 && (
                 <span style={{ color: 'var(--text-danger, #d32f2f)', marginLeft: '6px' }}>
                   (Dị ứng: {allergies.join(', ')})
                 </span>
               )}
-              . {t('dining.select.safeguardDesc', 'Chỉ những món phù hợp với chế độ ăn chay và không gây dị ứng mới được hiển thị.')}
+              . Món ăn hiển thị đã được kiểm định an toàn và hỗ trợ mục tiêu {retreatMeta.goal}.
             </div>
           </div>
 
@@ -429,18 +704,22 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
             >
               <Info size={32} style={{ color: 'var(--text-tertiary)', margin: '0 auto var(--space-3)' }} />
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>
-                {t('dining.select.noOptions', 'No Options Available')}
+                {t('dining.select.noOptions', 'Chưa có món phù hợp với bộ lọc này')}
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-                {t(
-                  'dining.select.noOptionsDesc',
-                  'There are no included meal options for this period. Please check A-la-carte for extra options.'
-                )}
+              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginBottom: '12px' }}>
+                Quý khách có thể chuyển sang chế độ "Toàn Bộ 95 Món Dưỡng Sinh" hoặc đổi phân loại món để chọn thêm.
               </p>
+              <button
+                type="button"
+                className="hsw-btn hsw-btn-secondary hsw-btn-sm"
+                onClick={() => { setFilterMode('all'); setCategoryFilter('all'); }}
+              >
+                Hiển Thị Toàn Bộ Thực Đơn
+              </button>
             </div>
           ) : (
             <>
-              {/* Meal Options Grid (Requirement 14) */}
+              {/* Meal Options Grid */}
               <div
                 style={{
                   display: 'grid',
@@ -455,7 +734,8 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                   const warning = hasAllergyWarning(item);
                   const localizedName = localize(item.name);
                   const localizedDesc = localize(item.description);
-                  const isAvailable = item.available !== false && (item.availableServings === undefined || item.availableServings > 0);
+                  const servingsLeft = item.availableServings ?? 50;
+                  const isAvailable = item.available !== false && servingsLeft > 0;
 
                   const toggleSelection = () => {
                     if (!isAvailable) return;
@@ -478,6 +758,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                         opacity: isAvailable ? 1 : 0.62,
                         cursor: isAvailable ? 'pointer' : 'not-allowed',
                         position: 'relative',
+                        border: isSelected ? '2px solid var(--accent-forest)' : undefined,
                       }}
                       onClick={toggleSelection}
                       onKeyDown={(e) => {
@@ -532,32 +813,42 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                                 backgroundColor: isAvailable ? 'var(--accent-forest)' : '#d32f2f',
                               }}
                             />
-                            {isAvailable ? t('dining.select.available', 'Sẵn sàng') : t('dining.select.unavailable', 'Tạm hết')}
+                            {isAvailable ? `Còn ${servingsLeft} suất` : t('dining.select.unavailable', 'Tạm hết')}
                           </span>
                         </div>
 
                         {/* Dish Description */}
                         <p className="hsw-culinary-desc">{localizedDesc}</p>
 
-                        {/* Price Display directly below dish description */}
+                        {/* Price & Package Inclusion Badge */}
                         <div
                           className="hsw-culinary-dish-price"
                           style={{
                             margin: '8px 0',
                             display: 'flex',
-                            alignItems: 'baseline',
-                            gap: '6px',
+                            alignItems: 'center',
+                            gap: '8px',
                           }}
                           id={`price-tag-${item.id}`}
                         >
-                          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-forest)' }}>
-                            {item.price && item.price > 0
-                              ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)
-                              : '85.000 ₫'}
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: 'var(--radius-pill)',
+                              backgroundColor: 'rgba(46, 90, 54, 0.12)',
+                              color: 'var(--accent-forest)',
+                              border: '1px solid rgba(46, 90, 54, 0.25)',
+                            }}
+                          >
+                            ✓ {t('dining.select.includedInPackage', 'Bao gồm trong gói (0đ)')}
                           </span>
-                          <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 500 }}>
-                            ({t('dining.select.includedInPackage', 'Đã bao gồm trong gói')})
-                          </span>
+                          {item.price !== undefined && item.price > 0 && (
+                            <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'line-through' }}>
+                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
+                            </span>
+                          )}
                         </div>
 
                         {/* Dietary Badges */}
@@ -670,7 +961,6 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                   </div>
                 )}
 
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                   <button
                     type="button"
@@ -681,7 +971,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
                   >
                     <CheckCircle2 size={16} />
                     <span>
-                      {t('dining.select.saveSelection', 'Save Meal Selection')}
+                      {isSaving ? 'Đang gửi đơn về bếp...' : t('dining.select.saveSelection', 'Xác Nhận & Lưu Thực Đơn')}
                       {selectedEntries.length > 0 ? ` (${selectedEntries.length} món)` : ''}
                     </span>
                   </button>

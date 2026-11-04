@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Backend Data Transfer Objects (DTO) for Module 4: Dietary F&B Management.
  * Synchronized with com.heavenstay.hswrms.m4fnb.dto.* and ApiResponse envelope.
  */
@@ -27,6 +27,7 @@ export interface MenuItemResponse {
   available: boolean;
   servingsAvailable: number;
   allergenWarning: boolean;
+  isExtra?: boolean;
 }
 
 export interface MenuAvailabilityResponse {

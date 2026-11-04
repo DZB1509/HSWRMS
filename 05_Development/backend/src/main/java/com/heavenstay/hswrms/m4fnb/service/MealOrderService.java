@@ -264,9 +264,17 @@ public class MealOrderService {
                 throw new BusinessRuleException("MENU_ITEM_UNAVAILABLE",
                         "The requested menu item does not have enough usable stock for the requested servings.");
             }
-            if (orderType == FnbOrderType.A_LA_CARTE && menuItem.getPrice().signum() <= 0) {
-                throw new BusinessRuleException("ALA_CARTE_PRICE_REQUIRED",
-                        "A-la-carte orders require a menu item with a positive price.");
+            if (orderType == FnbOrderType.A_LA_CARTE) {
+                if (menuItem.getPrice().signum() <= 0) {
+                    throw new BusinessRuleException("ALA_CARTE_PRICE_REQUIRED",
+                            "A-la-carte orders require a menu item with a positive price.");
+                }
+                boolean isAlaCarte = Boolean.TRUE.equals(menuItem.getIsExtra())
+                        || (menuItem.getId() != null && menuItem.getId() >= 1 && menuItem.getId() <= 15);
+                if (!isAlaCarte) {
+                    throw new BusinessRuleException("NOT_AN_ALACARTE_ITEM",
+                            "Món '" + menuItem.getItemName() + "' thuộc thực đơn gói nghỉ dưỡng, không thuộc danh mục gọi thêm A-la-carte.");
+                }
             }
             selectedItems.add(menuItem);
         }
