@@ -183,6 +183,7 @@ public class MealOrderService {
                 if (existing.getOrderStatusValue() == FnbOrderStatus.PENDING) {
                     return updateDailyMealSelection(userId, existing.getId(), request);
                 }
+                existing = orderRepository.findLockedById(existing.getId()).orElse(existing);
                 existing.setOrderStatus(FnbOrderStatus.CANCELLED);
                 orderRepository.save(existing);
             }
@@ -293,6 +294,29 @@ public class MealOrderService {
         return mapOrders(List.of(order)).get(0);
     }
 
+    @Transactional
+    public MealOrderResponse cancelCustomerOrder(Integer userId, Integer orderId) {
+        if (orderId == null) {
+            throw new BusinessRuleException("INVALID_MEAL_ORDER_ID", "Meal order ID is required.");
+        }
+        MealOrderEntity order = orderRepository.findLockedById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("MealOrder", "id", orderId));
+        requireBookingPort().requireOwnedCustomerBooking(userId, order.getRetreatBookingId());
+        if (order.getOrderStatusValue() != FnbOrderStatus.PENDING) {
+            throw new BusinessRuleException("CANNOT_CANCEL_ORDER",
+                    "Chỉ có thể hủy đơn khi ở trạng thái Chờ chuẩn bị (PENDING). Đơn hiện tại đang ở trạng thái: " + order.getOrderStatus());
+        }
+        LocalDateTime deadline = order.getCreatedAt() != null ? order.getCreatedAt().plusSeconds(30) : LocalDateTime.MIN;
+        if (!LocalDateTime.now().isBefore(deadline)) {
+            throw new BusinessRuleException("CANCELLATION_GRACE_PERIOD_EXPIRED",
+                    "Đã quá thời gian cho phép tự hủy đơn (30 giây). Bếp đã tiếp nhận quy trình chuẩn bị.");
+        }
+        order.setOrderStatus(FnbOrderStatus.CANCELLED);
+        MealOrderEntity saved = orderRepository.save(order);
+        Map<Integer, MenuItem> menuMap = indexMenuItems(menuItemRepository.findAll());
+        return mealOrderMapper.toResponse(saved, saved.getItems(), menuMap);
+    }
+
     public List<KitchenOrderResponse> listKitchenOrders(LocalDate orderDate) {
         List<MealOrderEntity> orders = orderDate != null
                 ? orderRepository.findByOrderDateAndOrderStatusNotOrderByCreatedAtDesc(orderDate, "CANCELLED")
@@ -327,6 +351,11 @@ public class MealOrderService {
 
         // Operational workflow: Automatically process inventory consumption ONLY when updating order from PENDING to PREPARING
         if (currentStatus == FnbOrderStatus.PENDING && requestedStatus == FnbOrderStatus.PREPARING) {
+            LocalDateTime graceDeadline = order.getCreatedAt() != null ? order.getCreatedAt().plusSeconds(30) : null;
+            if (graceDeadline != null && LocalDateTime.now().isBefore(graceDeadline)) {
+                throw new BusinessRuleException("ORDER_IN_CANCELLATION_GRACE_PERIOD",
+                        "Đơn hàng đang trong thời gian ân hạn tự hủy của khách (30 giây đầu). Bếp vui lòng chờ hết thời gian ân hạn trước khi tiếp nhận chế biến.");
+            }
             List<MealOrderItem> orderLines = orderItemRepository.findByMealOrderIdOrderByIdAsc(orderId);
             LocalDate consumptionDate = order.getOrderDate() != null ? order.getOrderDate() : LocalDate.now();
             for (MealOrderItem line : orderLines) {
@@ -564,7 +593,7 @@ public class MealOrderService {
                     order.orderType(), order.status(), cleanNotes, dietaryAvailable,
                     profile.foodAllergies(), profile.dietaryPreferences(), kitchenLines,
                     booking.packageCode(), cleanPkgName,
-                    dietaryStatus, locationStatus, folioStatus, aggregatedInventoryStatus));
+                    dietaryStatus, locationStatus, folioStatus, aggregatedInventoryStatus, order.createdAt()));
         }
         return result;
     }

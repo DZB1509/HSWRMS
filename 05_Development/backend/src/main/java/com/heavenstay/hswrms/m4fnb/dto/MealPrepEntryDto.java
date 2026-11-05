@@ -1,6 +1,7 @@
 package com.heavenstay.hswrms.m4fnb.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,7 @@ public class MealPrepEntryDto {
     private String customerNotes;
     private List<String> dietaryNotes = new ArrayList<>(); // Minimal projection: dietary & allergies only
     private String status; // 'pending', 'preparing', 'ready', 'delivered', 'cancelled'
+    private LocalDateTime createdAt;
 
     public MealPrepEntryDto() {}
 
@@ -105,5 +107,13 @@ public class MealPrepEntryDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
