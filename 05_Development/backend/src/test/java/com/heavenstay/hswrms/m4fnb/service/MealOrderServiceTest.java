@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.anyInt;
 
+import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.m4fnb.dto.response.KitchenOrderResponse;
 import com.heavenstay.hswrms.m4fnb.dto.response.MealOrderResponse;
@@ -260,7 +261,7 @@ class MealOrderServiceTest {
         when(order.getMealType()).thenReturn("LUNCH");
         when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
         when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
-        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now().minusSeconds(35));
         when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
 
         MealOrderItem item = mock(MealOrderItem.class);
@@ -300,6 +301,22 @@ class MealOrderServiceTest {
     }
 
     @Test
+    @DisplayName("Option B: updateStatus to PREPARING within 30s customer grace period is rejected")
+    void updateStatusToPreparing_WithinGracePeriod_ThrowsException() {
+        Integer orderId = 2005;
+        MealOrderEntity order = mock(MealOrderEntity.class);
+        when(order.getId()).thenReturn(orderId);
+        when(order.getOrderStatusValue()).thenReturn(FnbOrderStatus.PENDING);
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now().minusSeconds(10));
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                mealOrderService.updateStatus(orderId, "PREPARING"));
+
+        assertEquals("ORDER_IN_CANCELLATION_GRACE_PERIOD", ex.getErrorCode());
+    }
+
+    @Test
     @DisplayName("updateStatus rejects invalid transition from DELIVERED to PENDING")
     void updateStatusRejectsDisallowedTransitions() {
         Integer orderId = 2002;
@@ -326,7 +343,7 @@ class MealOrderServiceTest {
         when(order.getMealType()).thenReturn("LUNCH");
         when(order.getOrderType()).thenReturn(FnbOrderType.DAILY_MEAL.name());
         when(order.getOrderTypeValue()).thenReturn(FnbOrderType.DAILY_MEAL);
-        when(order.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(order.getCreatedAt()).thenReturn(LocalDateTime.now().minusSeconds(35));
         when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
 
         MealOrderItem item = mock(MealOrderItem.class);
@@ -569,6 +586,80 @@ class MealOrderServiceTest {
         // Verify inventory status reflects INSUFFICIENT_STOCK
         assertEquals("INSUFFICIENT_STOCK", response.inventoryStatus());
         assertEquals("INSUFFICIENT_STOCK", response.items().get(0).inventoryStatus());
+    }
 
-}
+    @Test
+    @DisplayName("cancelCustomerOrder within 30 seconds succeeds and locks order")
+    void cancelCustomerOrder_within30Seconds_succeeds() {
+        Integer userId = 101;
+        Integer orderId = 9001;
+        MealOrderEntity order = new MealOrderEntity();
+        order.setId(orderId);
+        order.setRetreatBookingId(1);
+        order.setOrderDate(LocalDate.now());
+        order.setMealType("DINNER");
+        order.setOrderType("A_LA_CARTE");
+        order.setOrderStatus(FnbOrderStatus.PENDING);
+        order.setCreatedAt(LocalDateTime.now().minusSeconds(10));
+        order.setSpecialNotes("Amanoi Pavilion");
+
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(MealOrderEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(menuItemRepository.findAll()).thenReturn(List.of());
+
+        MealOrderResponse response = mealOrderService.cancelCustomerOrder(userId, orderId);
+
+        assertNotNull(response);
+        assertEquals("CANCELLED", response.status());
+        verify(bookingPort).requireOwnedCustomerBooking(userId, 1);
+        verify(orderRepository).findLockedById(orderId);
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    @DisplayName("cancelCustomerOrder at or after 30 seconds throws CANCELLATION_GRACE_PERIOD_EXPIRED")
+    void cancelCustomerOrder_after30Seconds_rejectedWithGracePeriodExpired() {
+        Integer userId = 101;
+        Integer orderId = 9002;
+        MealOrderEntity order = new MealOrderEntity();
+        order.setId(orderId);
+        order.setRetreatBookingId(1);
+        order.setOrderDate(LocalDate.now());
+        order.setOrderStatus(FnbOrderStatus.PENDING);
+        order.setCreatedAt(LocalDateTime.now().minusSeconds(31));
+
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                mealOrderService.cancelCustomerOrder(userId, orderId)
+        );
+
+        assertEquals("CANCELLATION_GRACE_PERIOD_EXPIRED", ex.getErrorCode());
+        verify(bookingPort).requireOwnedCustomerBooking(userId, 1);
+        verify(orderRepository).findLockedById(orderId);
+        verify(orderRepository, never()).save(any(MealOrderEntity.class));
+    }
+
+    @Test
+    @DisplayName("cancelCustomerOrder with non-PENDING status throws CANNOT_CANCEL_ORDER")
+    void cancelCustomerOrder_notPending_rejected() {
+        Integer userId = 101;
+        Integer orderId = 9003;
+        MealOrderEntity order = new MealOrderEntity();
+        order.setId(orderId);
+        order.setRetreatBookingId(1);
+        order.setOrderStatus(FnbOrderStatus.PREPARING);
+        order.setCreatedAt(LocalDateTime.now().minusSeconds(5));
+
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                mealOrderService.cancelCustomerOrder(userId, orderId)
+        );
+
+        assertEquals("CANNOT_CANCEL_ORDER", ex.getErrorCode());
+        verify(bookingPort).requireOwnedCustomerBooking(userId, 1);
+        verify(orderRepository).findLockedById(orderId);
+        verify(orderRepository, never()).save(any(MealOrderEntity.class));
+    }
 }

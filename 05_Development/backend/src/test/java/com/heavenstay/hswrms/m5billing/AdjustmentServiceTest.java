@@ -468,7 +468,7 @@ public class AdjustmentServiceTest {
 
                 "Artisan Ginger Tea " + timestamp, "BEVERAGE", "ALL_DAY",
 
-                new BigDecimal("120000.00"), "vegan", null, "AVAILABLE"
+                new BigDecimal("120000.00"), "vegan", null, "AVAILABLE", true
 
         ));
 
