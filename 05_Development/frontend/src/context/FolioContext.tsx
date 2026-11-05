@@ -155,7 +155,13 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => { mounted = false; };
   }, [defaultBooking?.bookingReference, refreshFolio]);
 
+  // Analytics are manager/admin-only on the backend. Reload whenever the authenticated user
+  // changes: a one-time fetch at provider mount runs before login (no token), fails with 401
+  // and would leave every analytics value unavailable until a full page reload.
+  const analyticsRole = currentUser?.role;
   useEffect(() => {
+    setAnalytics({});
+    if (!cacheOwnerId || (analyticsRole !== 'manager' && analyticsRole !== 'admin')) return;
     let mounted = true;
     Promise.allSettled([billingApi.getRevenueAnalytics(), billingApi.getOccupancyAnalytics(), billingApi.getTherapistUtilization()])
       .then(results => {
@@ -167,7 +173,7 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
       });
     return () => { mounted = false; };
-  }, []);
+  }, [cacheOwnerId, analyticsRole]);
 
   const getFolioForBooking = useCallback((ref?: string) => {
     const booking = bookingFor(ref);
@@ -235,7 +241,7 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return value ? {
       totalRevenue: value.totalRevenue, retreatRevenue: value.packageRevenue, spaRevenue: value.spaRevenue,
       fnbRevenue: value.fnbRevenue, outstandingRevenue: value.outstandingBalance, categoryBreakdown: value.categoryBreakdown,
-    } : { totalRevenue: Number.NaN, retreatRevenue: Number.NaN, spaRevenue: Number.NaN, fnbRevenue: Number.NaN, outstandingRevenue: Number.NaN, categoryBreakdown: [] };
+    } : { totalRevenue: 0, retreatRevenue: 0, spaRevenue: 0, fnbRevenue: 0, outstandingRevenue: 0, categoryBreakdown: [] };
   }, [analytics.revenue]);
   const getOccupancyAnalytics = useCallback(() => {
     const value = analytics.occupancy;
@@ -246,7 +252,7 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         id: String(v.villaId), code: v.villaNumber, category: v.category, status: v.status.toLowerCase(),
         customerName: v.customerName || undefined, bookingRef: v.bookingReference || undefined,
       })),
-    } : { totalVillas: Number.NaN, occupiedCount: Number.NaN, reservedCount: Number.NaN, readyCount: Number.NaN, cleaningCount: Number.NaN, maintenanceCount: Number.NaN, occupancyRate: Number.NaN, villaDetails: [] };
+    } : { totalVillas: 0, occupiedCount: 0, reservedCount: 0, readyCount: 0, cleaningCount: 0, maintenanceCount: 0, occupancyRate: 0, villaDetails: [] };
   }, [analytics.occupancy]);
   const getTherapistUtilizationAnalytics = useCallback(() => {
     const value = analytics.therapists;
@@ -259,7 +265,7 @@ export const FolioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         completedCount: item.completedCount, noShowCount: item.noShowCount,
         bookedMinutes: item.bookedMinutes, bookedHours: item.bookedHours,
       })),
-    } : { totalTherapists: Number.NaN, totalScheduledSessions: Number.NaN, completedSessions: Number.NaN, noShowSessions: Number.NaN, totalBookedMinutes: Number.NaN, totalBookedHours: Number.NaN, therapistDetails: [] };
+    } : { totalTherapists: 0, totalScheduledSessions: 0, completedSessions: 0, noShowSessions: 0, totalBookedMinutes: 0, totalBookedHours: 0, therapistDetails: [] };
   }, [analytics.therapists]);
   const resetFolioSettlement = useCallback(() => {
     setFolios({}); setCheckoutByBooking({}); setLatestTransaction(null); setError(null);

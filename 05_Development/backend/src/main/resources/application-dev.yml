@@ -14,7 +14,7 @@ spring:
     activate:
       on-profile: "dev & !local"
   datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:53170};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
     password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -28,3 +28,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:5174,http://localhost:4173

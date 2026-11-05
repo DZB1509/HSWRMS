@@ -68,7 +68,7 @@ export const AdminDashboardPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
               <h1 className="hsw-gov-title" style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-                {t('operations.adminDashboard.title', 'System Administration & Governance Cockpit')}
+                {t('operations.adminDashboard.title', 'Bảng Điều Khiển Quản Trị Hệ Thống & Tuân Thủ')}
               </h1>
               <span
                 style={{
@@ -82,7 +82,7 @@ export const AdminDashboardPage: React.FC = () => {
                   color: '#ffffff'
                 }}
               >
-                {t('topbar.adminClearance', 'Administrator Clearance')}
+                {t('topbar.adminClearance', 'Quyền Quản Trị Hệ Thống')}
               </span>
             </div>
             <p className="hsw-gov-subtitle" style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px' }}>
@@ -164,7 +164,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* KPI 1: Business Parameters */}
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiParams', 'Business Parameters')}
+            {t('operations.adminDashboard.kpiParams', 'Tham Số Nghiệp Vụ')}
           </span>
           <span className="hsw-gov-kpi-val">
             {loading ? '...' : data?.businessParameters.status === 'loaded' ? data.businessParameters.value?.count : '—'}
@@ -181,7 +181,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* KPI 2: Manager Delegations */}
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiDelegations', 'Manager Delegations')}
+            {t('operations.adminDashboard.kpiDelegations', 'Ủy Quyền Quản Lý')}
           </span>
           <span
             className="hsw-gov-kpi-val"
@@ -210,7 +210,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* KPI 3: Total Audit Records (Total historical audit records in database, not 24h events) */}
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiTotalAuditRecords', 'Total Audit Records')}
+            {t('operations.adminDashboard.kpiTotalAuditRecords', 'Tổng Bản Ghi Kiểm Toán')}
           </span>
           <span className="hsw-gov-kpi-val">
             {loading ? '...' : data?.auditActivity.status === 'loaded' ? (data.auditActivity.value?.totalRecords ?? data.auditActivity.value?.totalEvents) : '—'}
@@ -227,7 +227,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* KPI 4: Staff Accounts */}
         <div className="hsw-gov-kpi">
           <span className="hsw-gov-kpi-label">
-            {t('operations.adminDashboard.kpiStaff', 'Staff Accounts')}
+            {t('operations.adminDashboard.kpiStaff', 'Tài Khoản Nhân Sự')}
           </span>
           <span className="hsw-gov-kpi-val">
             {loading
@@ -251,7 +251,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="hsw-gov-card-header">
           <h2 className="hsw-gov-card-title">
             <Settings2 size={18} style={{ color: 'var(--accent-forest, #059669)' }} />
-            {t('operations.adminDashboard.navTitle', 'Administrative Functions & Governance Modules')}
+            {t('operations.adminDashboard.navTitle', 'Chức Năng Quản Trị & Phân Hệ Tuân Thủ')}
           </h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             {t('operations.adminDashboard.screensScope', 'Phạm vi quản trị chính thức: Màn hình 10–12 & 50–53')}
@@ -265,7 +265,7 @@ export const AdminDashboardPage: React.FC = () => {
               <UserPlus size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.staffAccounts', 'Staff Accounts')}</h4>
+              <h4>{t('operations.sidebar.staffAccounts', 'Tài Khoản Nhân Viên')}</h4>
               <p>{t('operations.adminDashboard.descStaff', 'Quản lý tài khoản nhân viên, phân quyền vai trò, trạng thái làm việc và ranh giới RBAC (Màn 10 & 11).')}</p>
             </div>
           </Link>
@@ -276,7 +276,7 @@ export const AdminDashboardPage: React.FC = () => {
               <Database size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.masterDataManagement', 'Master Data Management')}</h4>
+              <h4>{t('operations.sidebar.masterDataManagement', 'Quản Lý Dữ Liệu Gốc')}</h4>
               <p>{t('operations.adminDashboard.descMasterData', 'Quản trị gói nghỉ dưỡng, liệu trình spa và danh mục biệt thự (Màn hình 12).')}</p>
             </div>
           </Link>
@@ -287,7 +287,7 @@ export const AdminDashboardPage: React.FC = () => {
               <Settings2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.businessParameters', 'Business Parameters')}</h4>
+              <h4>{t('operations.sidebar.businessParameters', 'Tham Số Nghiệp Vụ')}</h4>
               <p>{t('operations.adminDashboard.descParams', 'Cấu hình thời hạn hủy, tỷ lệ hoàn cọc, tỷ lệ đặt cọc và hạn giờ chốt thực đơn (Màn hình 50).')}</p>
             </div>
           </Link>
@@ -298,7 +298,7 @@ export const AdminDashboardPage: React.FC = () => {
               <Shield size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.permissionMatrix', 'Permission Matrix')}</h4>
+              <h4>{t('operations.sidebar.permissionMatrix', 'Ma Trận Phân Quyền')}</h4>
               <p>{t('operations.adminDashboard.descMatrix', 'Kiểm tra ma trận phân quyền theo vai trò, ranh giới quyền Admin bất biến và bảo vệ quyền riêng tư (Màn hình 51).')}</p>
             </div>
           </Link>
@@ -309,7 +309,7 @@ export const AdminDashboardPage: React.FC = () => {
               <Users2 size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.managerDelegation', 'Manager Delegation')}</h4>
+              <h4>{t('operations.sidebar.managerDelegation', 'Ủy Quyền Quản Lý')}</h4>
               <p>{t('operations.adminDashboard.descDelegation', 'Cấp ủy quyền tạm thời có giới hạn phạm vi cho Giám đốc vận hành Resort (Màn hình 52).')}</p>
             </div>
           </Link>
@@ -320,7 +320,7 @@ export const AdminDashboardPage: React.FC = () => {
               <History size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.sensitiveDataAuditLog', 'Sensitive Data Audit Log')}</h4>
+              <h4>{t('operations.sidebar.sensitiveDataAuditLog', 'Nhật Ký Kiểm Toán')}</h4>
               <p>{t('operations.adminDashboard.descAudit', 'Xem xét lịch sử truy cập dữ liệu sức khỏe, hồ sơ cư trú và giao dịch tài chính (Màn hình 53).')}</p>
             </div>
           </Link>
@@ -331,7 +331,7 @@ export const AdminDashboardPage: React.FC = () => {
               <Activity size={20} />
             </div>
             <div className="hsw-quicknav-tile-content">
-              <h4>{t('operations.sidebar.systemOverviewDashboard', 'System Overview Dashboard')}</h4>
+              <h4>{t('operations.sidebar.systemOverviewDashboard', 'Tổng Quan Tình Trạng Hệ Thống')}</h4>
               <p>{t('operations.adminDashboard.descOverview', 'Tổng quan vận hành đa phân hệ và trạng thái khai báo lưu trú theo quy định pháp luật.')}</p>
             </div>
           </Link>

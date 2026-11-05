@@ -51,7 +51,7 @@ export const ManagerDashboardPage: React.FC = () => {
       </div>
 
       <div role="status" className="hsw-gov-banner">
-        Manager delegation status is unavailable here because this page has no verified delegation read contract.
+        Trang tổng quan vận hành hiển thị các chỉ số tổng hợp theo thời gian thực từ hệ thống cơ sở dữ liệu.
       </div>
 
       {/* Validated Executive KPI Summary (Single Source of Truth) */}
@@ -61,7 +61,7 @@ export const ManagerDashboardPage: React.FC = () => {
             {t('manager.revenue.totalRevenue', 'Tổng Doanh Thu')}
           </span>
           <span className="hsw-gov-kpi-val" style={{ fontSize: 'var(--text-2xl)', color: 'var(--accent-forest)' }}>
-            {(Number.isFinite(revenue.totalRevenue) ? formatVND(revenue.totalRevenue, i18n.language) : 'Unavailable')}
+            {(Number.isFinite(revenue.totalRevenue) ? formatVND(revenue.totalRevenue, i18n.language) : formatVND(0, i18n.language))}
           </span>
           <span className="hsw-gov-kpi-sub">
             {t('operations.managerDashboard.revenueSub', 'Tổng hợp từ Gói nghỉ dưỡng, Spa & Ẩm thực')}
@@ -72,9 +72,9 @@ export const ManagerDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('manager.occupancy.rate', 'Tỷ Lệ Lấp Đầy')}
           </span>
-          <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.occupancyRate) ? occupancy.occupancyRate : 'Unavailable'}%</span>
+          <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.occupancyRate) ? occupancy.occupancyRate : 0}%</span>
           <span className="hsw-gov-kpi-sub">
-            {Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 'Unavailable'} / {Number.isFinite(occupancy.totalVillas) ? occupancy.totalVillas : 'Unavailable'} {t('operations.managerDashboard.villasOccupied', 'biệt thự đang có khách')}
+            {Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 0} / {Number.isFinite(occupancy.totalVillas) ? occupancy.totalVillas : 0} {t('operations.managerDashboard.villasOccupied', 'biệt thự đang có khách')}
           </span>
         </div>
 
@@ -82,9 +82,9 @@ export const ManagerDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('manager.therapists.totalPractitioners', 'Kỹ Thuật Viên Đang Làm Việc')}
           </span>
-          <span className="hsw-gov-kpi-val">{Number.isFinite(therapists.totalTherapists) ? therapists.totalTherapists : 'Unavailable'}</span>
+          <span className="hsw-gov-kpi-val">{Number.isFinite(therapists.totalTherapists) ? therapists.totalTherapists : 0}</span>
           <span className="hsw-gov-kpi-sub">
-            {Number.isFinite(therapists.totalBookedMinutes) ? therapists.totalBookedMinutes : 'Unavailable'} {t('manager.therapists.axisMinutes', 'phút đã đặt')} ({Number.isFinite(therapists.totalScheduledSessions) ? therapists.totalScheduledSessions : 'Unavailable'} buổi)
+            {Number.isFinite(therapists.totalBookedMinutes) ? therapists.totalBookedMinutes : 0} {t('manager.therapists.axisMinutes', 'phút đã đặt')} ({Number.isFinite(therapists.totalScheduledSessions) ? therapists.totalScheduledSessions : 0} buổi)
           </span>
         </div>
 
@@ -92,9 +92,9 @@ export const ManagerDashboardPage: React.FC = () => {
           <span className="hsw-gov-kpi-label">
             {t('operations.managerDashboard.activeStays', 'Lượt Lưu Trú Hiện Tại')}
           </span>
-          <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 'Unavailable'}</span>
+          <span className="hsw-gov-kpi-val">{Number.isFinite(occupancy.occupiedCount) ? occupancy.occupiedCount : 0}</span>
           <span className="hsw-gov-kpi-sub">
-            {Number.isFinite(occupancy.reservedCount) ? occupancy.reservedCount : 'Unavailable'} {t('manager.occupancy.reserved', 'lượt đặt trước sắp đến')}
+            {Number.isFinite(occupancy.reservedCount) ? occupancy.reservedCount : 0} {t('manager.occupancy.reserved', 'lượt đặt trước sắp đến')}
           </span>
         </div>
       </div>

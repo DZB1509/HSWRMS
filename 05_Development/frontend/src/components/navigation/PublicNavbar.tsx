@@ -27,6 +27,14 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const isCustomer = isAuthenticated && role === 'customer';
+  const roleDashboard = role ? ({
+    customer: '/customer/dashboard',
+    receptionist: '/receptionist/dashboard',
+    therapist: '/therapist/dashboard',
+    fb_staff: '/fb/dashboard',
+    manager: '/manager/dashboard',
+    admin: '/admin/dashboard',
+  }[role] || '/customer/dashboard') : '/customer/dashboard';
 
   const getInitials = (name: string): string => {
     return name
@@ -259,7 +267,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
                 }}
               >
                 <Link
-                  to="/customer/dashboard"
+                  to={roleDashboard}
                   className="hsw-nav-dropdown-item"
                   role="menuitem"
                   onClick={() => setProfileDropdownOpen(false)}
@@ -444,7 +452,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ isHeroMode = false }
 
             {isCustomer ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '6px' }}>
-                <Link to="/customer/dashboard" style={{ width: '100%' }} onClick={() => setMobileMenuOpen(false)}>
+                <Link to={roleDashboard} style={{ width: '100%' }} onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="secondary" size="md" style={{ width: '100%' }}>
                     <LayoutDashboard size={16} style={{ marginRight: '6px' }} />
                     {t('navigation:nav.dashboard', 'Dashboard')}

@@ -64,12 +64,24 @@ export const TherapistUtilizationReportPage: React.FC = () => {
     }
   };
 
-  const totalTherapists = liveAnalytics?.totalTherapists ?? localAnalytics.totalTherapists;
-  const totalScheduledSessions = liveAnalytics?.totalScheduledSessions ?? localAnalytics.totalScheduledSessions;
-  const completedSessions = liveAnalytics?.completedSessions ?? localAnalytics.completedSessions;
-  const noShowSessions = liveAnalytics?.noShowSessions ?? localAnalytics.noShowSessions;
-  const totalBookedHours = liveAnalytics?.totalBookedHours ?? localAnalytics.totalBookedHours;
-  const totalBookedMinutes = (liveAnalytics?.totalBookedHours ? Math.round(liveAnalytics.totalBookedHours * 60) : undefined) ?? localAnalytics.totalBookedMinutes;
+  const totalTherapists = Number.isFinite(liveAnalytics?.totalTherapists)
+    ? liveAnalytics!.totalTherapists
+    : (Number.isFinite(localAnalytics.totalTherapists) ? localAnalytics.totalTherapists : 0);
+  const totalScheduledSessions = Number.isFinite(liveAnalytics?.totalScheduledSessions)
+    ? liveAnalytics!.totalScheduledSessions
+    : (Number.isFinite(localAnalytics.totalScheduledSessions) ? localAnalytics.totalScheduledSessions : 0);
+  const completedSessions = Number.isFinite(liveAnalytics?.completedSessions)
+    ? liveAnalytics!.completedSessions
+    : (Number.isFinite(localAnalytics.completedSessions) ? localAnalytics.completedSessions : 0);
+  const noShowSessions = Number.isFinite(liveAnalytics?.noShowSessions)
+    ? liveAnalytics!.noShowSessions
+    : (Number.isFinite(localAnalytics.noShowSessions) ? localAnalytics.noShowSessions : 0);
+  const totalBookedHours = Number.isFinite(liveAnalytics?.totalBookedHours)
+    ? liveAnalytics!.totalBookedHours
+    : (Number.isFinite(localAnalytics.totalBookedHours) ? localAnalytics.totalBookedHours : 0);
+  const totalBookedMinutes = Number.isFinite(liveAnalytics?.totalBookedHours)
+    ? Math.round(liveAnalytics!.totalBookedHours * 60)
+    : (Number.isFinite(localAnalytics.totalBookedMinutes) ? localAnalytics.totalBookedMinutes : 0);
 
   // Helper for locale-aware units (e.g., VI: "510 phút", "8,5 giờ"; EN: "510 min", "8.5 hrs")
   const formatDuration = (mins: number, hours: number, lang: string) => {
@@ -95,14 +107,17 @@ export const TherapistUtilizationReportPage: React.FC = () => {
       hrLabel = 'h';
     }
 
+    const safeMins = Number.isFinite(mins) ? mins : 0;
+    const safeHours = Number.isFinite(hours) ? hours : 0;
+
     const formattedHours = isVi
-      ? hours.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
+      ? safeHours.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
       : isFr
-      ? hours.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
-      : hours.toFixed(1);
+      ? safeHours.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
+      : safeHours.toFixed(1);
 
     return {
-      minText: `${mins.toLocaleString()} ${minLabel}`,
+      minText: `${safeMins.toLocaleString()} ${minLabel}`,
       minUnit: minLabel,
       hrText: `${formattedHours} ${hrLabel}`,
       hrUnit: hrLabel,
@@ -188,12 +203,12 @@ export const TherapistUtilizationReportPage: React.FC = () => {
               ) : (
                 <FileSpreadsheet size={14} style={{ color: '#047857' }} />
               )}
-              <span>{isExporting ? t('common.exporting', 'Exporting...') : t('manager.revenue.exportExcel', 'Export to Excel (.xlsx)')}</span>
+              <span>{isExporting ? t('common.exporting', 'Đang xuất...') : t('manager.revenue.exportExcel', 'Xuất Excel (.xlsx)')}</span>
             </button>
 
             <div className="hsw-manager-privacy-notice">
               <ShieldCheck size={14} />
-              <span>{t('manager.therapists.privacyNotice', 'Manager Clearance · Operational Workload Only · Health & Clinical Notes Excluded')}</span>
+              <span>{t('manager.therapists.privacyNotice', 'Phạm Vi Quản Lý · Khối Lượng Vận Hành · Không Hiển Thị Hồ Sơ Bệnh Lý Khách')}</span>
             </div>
           </div>
         </div>
@@ -229,7 +244,7 @@ export const TherapistUtilizationReportPage: React.FC = () => {
             {totalScheduledSessions}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {completedSessions} {t('manager.therapists.completedSub', 'completed')} · {noShowSessions} {t('manager.therapists.noShowSub', 'no-show')}
+            {completedSessions} {t('manager.therapists.completedSub', 'hoàn thành')} · {noShowSessions} {t('manager.therapists.noShowSub', 'vắng mặt')}
           </div>
         </div>
 
@@ -265,7 +280,7 @@ export const TherapistUtilizationReportPage: React.FC = () => {
         <div className="hsw-manager-chart-title">
           <span>{t('manager.therapists.chartTitle', 'Phân Bổ Khối Lượng Công Việc (Số Phút Đặt Lịch)')}</span>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            {totalBookedMinutes.toLocaleString()} {t('manager.therapists.totalTreatmentMinutes', 'Total Treatment Minutes')}
+            {totalBookedMinutes.toLocaleString()} {t('manager.therapists.totalTreatmentMinutes', 'Tổng Số Phút Trị Liệu')}
           </span>
         </div>
         <div style={{ width: '100%', height: 280 }}>

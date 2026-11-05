@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8080
   servlet:
     encoding:
@@ -14,7 +14,7 @@ spring:
     default: sqlserver
 
   datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:53170};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
     password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -59,7 +59,7 @@ app:
     secret: ${JWT_SECRET:${APP_JWT_SECRET:defaultHeavenStayResortSuperSecretKeyForDevelopmentOnlyMustBeAtLeast256BitsLong}}
     expiration-ms: 86400000
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:4173}
 
   resort:
     timezone: ${RESORT_TIMEZONE:Asia/Ho_Chi_Minh}

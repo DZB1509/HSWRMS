@@ -24,6 +24,7 @@ import {
   type DelegationViewDto,
   type DelegablePermissionViewDto,
 } from '../../features/m6-admin/api/delegationApi';
+import { staffAccountsApi } from '../../features/m6-admin/api/staffAccountsApi';
 import {
   ACTION_NAMES,
   getPermissionSpecification,
@@ -46,7 +47,11 @@ export const AdminDelegationPage: React.FC = () => {
 
   // Mutation state for creating / revoking delegations
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
-  const [managerUserId, setManagerUserId] = useState<string>('2');
+  const [managers, setManagers] = useState<{ id: number; name: string; email: string }[]>([
+    { id: 16, name: 'Demo Manager', email: 'manager@heavenstay.dev' },
+    { id: 2, name: 'Resort Manager (Sarah Jenkins)', email: 'manager@heavenstay.com' },
+  ]);
+  const [managerUserId, setManagerUserId] = useState<string>('16');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
   const [validFrom, setValidFrom] = useState<string>(() => {
     const now = new Date();
@@ -92,6 +97,15 @@ export const AdminDelegationPage: React.FC = () => {
 
       setDelegations(delegationList);
       setDelegablePermissions(delegables);
+
+      try {
+        const staffList = await staffAccountsApi.list({ role: 'manager' });
+        if (staffList && staffList.length > 0) {
+          setManagers(staffList.map((s) => ({ id: Number(s.id), name: s.name, email: s.email })));
+        }
+      } catch {
+        // fallback
+      }
     } catch (err: any) {
       const msg = err?.message || 'Không thể tải danh sách ủy quyền từ máy chủ';
       setDelegations([]);
@@ -404,21 +418,23 @@ export const AdminDelegationPage: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
             <div>
               <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                Quản Lý Nhận Ủy Quyền (Manager User ID):
+                Quản Lý Nhận Ủy Quyền (Manager):
               </label>
-              <input
-                type="number"
-                min="1"
-                step="1"
+              <select
                 value={managerUserId}
                 onChange={(e) => setManagerUserId(e.target.value)}
-                placeholder="Ví dụ: 2 (Sarah Jenkins)"
                 required
                 disabled={mutationPending}
-                style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}
-              />
+                style={{ width: '100%', padding: 'var(--space-2)', fontSize: 'var(--text-xs)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)', backgroundColor: '#fff' }}
+              >
+                {managers.map((m) => (
+                  <option key={m.id} value={String(m.id)}>
+                    {m.name} ({m.email}) - ID #{m.id}
+                  </option>
+                ))}
+              </select>
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
-                Mặc định ID 2 là tài khoản Sarah Jenkins (Manager).
+                Chọn đúng tài khoản Quản lý nhận quyền ủy quyền hành chính.
               </span>
             </div>
 
