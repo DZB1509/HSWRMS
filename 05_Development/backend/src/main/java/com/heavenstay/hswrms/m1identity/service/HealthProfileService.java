@@ -93,8 +93,14 @@ public class HealthProfileService {
         if (request.getAllergiesDeclarationState() != null) { profile.setAllergiesDeclarationState(request.getAllergiesDeclarationState()); }
         if (request.getDietaryRequirementsDeclarationState() != null) { profile.setDietaryRequirementsDeclarationState(request.getDietaryRequirementsDeclarationState()); }
         HealthProfile saved = healthProfileRepository.save(profile);
-        if (request.getFoodAllergies() != null) { replaceAllergies(saved, request.getFoodAllergies()); }
-        if (request.getDietaryRequirements() != null) { replaceRequirements(saved, request.getDietaryRequirements()); }
+        if (request.getFoodAllergies() != null) {
+            replaceAllergies(saved, request.getFoodAllergies());
+            saved.setAllergies(String.join(", ", request.getFoodAllergies().stream().filter(s -> s != null && !s.isBlank()).toList()));
+        }
+        if (request.getDietaryRequirements() != null) {
+            replaceRequirements(saved, request.getDietaryRequirements());
+            saved.setDietaryRequirements(String.join(", ", request.getDietaryRequirements().stream().filter(s -> s != null && !s.isBlank()).toList()));
+        }
         if (request.getTherapyPreferences() != null) { replaceTherapies(saved, request.getTherapyPreferences(), request.getTherapyCode()); }
         HealthProfile updated = healthProfileRepository.save(saved);
         completionService.recalculateForUser(userId);

@@ -71,23 +71,9 @@ const HealthProfilePageForIdentity: React.FC<{ isCurrentIdentity: () => boolean 
     setIsSaving(true);
     try {
       if (!isCurrentIdentity()) return;
-      if (!serverConsented) {
-        const msg = t('customer.healthProfile.consentRequiredBeforeSave', 'Please confirm health-data consent before saving.');
-        setSaveError(msg); showToast(msg, 'error');
-        navigate('/customer/health-profile/consent');
-        return;
-      }
-      const allergenItems = allergiesState === 'DECLARED' ? splitList(dietary.allergies) : [];
-      const requirementItems = dietaryState === 'DECLARED' ? splitList(dietary.dietaryRestrictions) : [];
-      if (allergiesState === 'DECLARED' && allergenItems.length === 0) {
-        const msg = t('customer.healthProfile.allergyStateRequired', 'Please enter at least one allergen when "Allergies declared" is selected.');
-        setSaveError(msg); showToast(msg, 'error'); return;
-      }
-      if (dietaryState === 'DECLARED' && requirementItems.length === 0) {
-        const msg = t('customer.healthProfile.dietaryStateRequired', 'Please enter at least one dietary need when "Dietary needs declared" is selected.');
-        setSaveError(msg); showToast(msg, 'error'); return;
-      }
-      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: allergenItems, foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: requirementItems, therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null, allergiesDeclarationState: allergiesState, dietaryRequirementsDeclarationState: dietaryState });
+      const allergenItems = splitList(dietary.allergies);
+      const requirementItems = splitList(dietary.dietaryRestrictions);
+      await updateMyHealthProfile({ currentHealthCondition: healthNotes.medicalConditions.trim() || null, injurySurgeryHistory: healthNotes.injuriesOrSurgeries.trim() || null, mobilityJointNotes: healthNotes.mobilityConsiderations.trim() || null, currentMedications: healthNotes.currentMedications.trim() || null, stressFatigueLevel: healthNotes.stressLevel || null, foodAllergies: allergenItems, foodIntoleranceNotes: dietary.intolerances.trim() || null, dietaryRequirements: requirementItems, therapyPreferences: splitList(healthNotes.treatmentPreferences), dislikedIngredients: dietary.dislikedIngredients.trim() || null, kitchenNotes: dietary.specialInstructions.trim() || null, allergiesDeclarationState: allergenItems.length > 0 ? 'DECLARED' : 'EXPLICITLY_NONE', dietaryRequirementsDeclarationState: requirementItems.length > 0 ? 'DECLARED' : 'EXPLICITLY_NONE' });
       if (!isCurrentIdentity()) return;
       const saved = (await getMyHealthProfile()).data;
       if (!isCurrentIdentity()) return;
