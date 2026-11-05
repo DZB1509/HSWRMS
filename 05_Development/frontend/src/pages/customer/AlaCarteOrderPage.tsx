@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
-import { buildAmanoiDiningNotes, type DiningServiceLocation } from '../../utils/diningServiceHelper';
+import { buildAmanoiDiningNotes, type DiningServiceLocation, type DeliveryTimingOption } from '../../utils/diningServiceHelper';
 
 interface CartItem {
   menuItem: DietaryMenuItem;
@@ -40,6 +40,8 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
   const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('IN_VILLA');
   const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState('');
+  const [deliveryTiming, setDeliveryTiming] = useState<DeliveryTimingOption>('ASAP');
+  const [scheduledTime, setScheduledTime] = useState('');
 
 
   const extraItems = menuItems.filter((item) => item.isExtra);
@@ -84,6 +86,29 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
     if (!activeBooking || cart.length === 0 || isSubmitting) return;
     setSubmitError(null); setIsSubmitting(true);
 
+    if (deliveryTiming === 'SCHEDULED') {
+      if (!scheduledTime) {
+        setSubmitError(currentLang === 'vi' ? 'Vui lòng chọn mốc giờ hẹn dùng món.' : 'Please select your preferred scheduled time.');
+        setIsSubmitting(false);
+        return;
+      }
+      const now = new Date();
+      const [h, m] = scheduledTime.split(':').map(Number);
+      const sched = new Date();
+      sched.setHours(h, m, 0, 0);
+      const diffMinutes = Math.round((sched.getTime() - now.getTime()) / 60000);
+      const minRequired = diningLocation === 'IN_VILLA' ? 45 : 30;
+      if (diffMinutes < minRequired && diffMinutes > -1380) {
+        setSubmitError(
+          currentLang === 'vi'
+            ? 'Thời gian hẹn phải cách thời điểm hiện tại tối thiểu ' + minRequired + ' phút để Bếp chuẩn bị chu đáo.'
+            : 'Scheduled time must be at least ' + minRequired + ' minutes from now.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const locationLabel = diningLocation === 'IN_VILLA'
       ? `In-Villa (${activeBooking.villaNumber || 'Villa'})`
       : 'Dining Pavilion';
@@ -92,7 +117,9 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
       diningLocation,
       selectedWellnessTags,
       customNotes,
-      activeBooking.villaNumber
+      activeBooking.villaNumber,
+      deliveryTiming,
+      scheduledTime
     );
 
     try {
@@ -392,6 +419,10 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
                   onCustomNotesChange={setCustomNotes}
                   villaNumber={activeBooking.villaNumber}
                   lang={currentLang === 'vi' ? 'vi' : 'en'}
+                  deliveryTiming={deliveryTiming}
+                  onDeliveryTimingChange={setDeliveryTiming}
+                  scheduledTime={scheduledTime}
+                  onScheduledTimeChange={setScheduledTime}
                 />
               </div>
 

@@ -253,6 +253,9 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
   // Filter available items: included in package, period matched, dietary compatible
   const availableItems = useMemo(() => {
     return menuItems.filter((item) => {
+      // 0. Exclude extra A-la-carte dishes (package daily meals are inclusive)
+      if (item.isExtra) return false;
+
       // 1. Match period
       const matchesPeriod =
         item.mealPeriods.includes(activePeriod) || item.mealPeriods.includes('all_day');
@@ -261,7 +264,7 @@ const DailyMealSelectionPageForIdentity: React.FC = () => {
       // 2. Match package recommendation filter
       if (filterMode === 'package') {
         const numericId = Number(item.backendId ?? item.id);
-        const isPackageDish = retreatMeta.itemIds.includes(numericId) || (numericId >= 1 && numericId <= 12);
+        const isPackageDish = retreatMeta.itemIds.includes(numericId);
         if (!isPackageDish) return false;
       }
 
