@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8080
   servlet:
     encoding:
@@ -14,9 +14,9 @@ spring:
     default: sqlserver
 
   datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:53170};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hikari:
       maximum-pool-size: 10

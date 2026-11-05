@@ -7,10 +7,10 @@
 
 spring:
   datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:53170};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:}}
     hikari:
       pool-name: HSWRMS-SqlServerPool
       maximum-pool-size: 10
