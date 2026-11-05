@@ -51,12 +51,14 @@ import { RetreatPackageDetailModal } from '../../components/operations/RetreatPa
 type ActiveTab = 'treatments' | 'packages' | 'rooms' | 'rules';
 
 export const SpaManagementPage: React.FC = () => {
-  const { role } = useAuth();
-  const { hasCapability, managerDelegatedCapabilities, logAuditEvent } = useGovernance();
+  const { currentUser, role } = useAuth();
+  const { hasCapability, managerDelegatedCapabilities, logAuditEvent, refreshGovernanceData } = useGovernance();
   const { showToast } = useToast();
 
   const isAdmin = role === 'admin';
-  const canManageSpa = isAdmin || hasCapability('manager', 'manage_spa_packages') || managerDelegatedCapabilities.includes('manage_spa_packages');
+  const hasS12C = isAdmin || Boolean(currentUser?.permissions?.includes('S12:C'));
+  const hasS12U = isAdmin || Boolean(currentUser?.permissions?.includes('S12:U'));
+  const canManageSpa = isAdmin || ((hasS12U || hasS12C) && (hasCapability('manager', 'manage_spa_packages') || managerDelegatedCapabilities.includes('manage_spa_packages')));
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('treatments');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -93,7 +95,7 @@ export const SpaManagementPage: React.FC = () => {
   };
 
   // Fetch data directly from backend REST API (SQL Server)
-  const fetchSpaDataFromDb = async () => {
+  const fetchSpaDataFromDb = async (showToastNotice = false) => {
     setIsLoadingDb(true);
     try {
       const authHeaders = getAuthHeaders();
@@ -189,16 +191,22 @@ export const SpaManagementPage: React.FC = () => {
         })));
       }
 
-      showToast('Đã đồng bộ thành công dữ liệu Spa & Retreat từ CSDL SQL Server!', 'success');
+      if (showToastNotice) {
+        showToast('Đã đồng bộ thành công dữ liệu Spa & Retreat từ CSDL SQL Server!', 'success');
+      }
     } catch {
-      showToast('Không thể kết nối đến backend; đang hiển thị dữ liệu Master Inventory mẫu.', 'warning');
+      if (showToastNotice) {
+        showToast('Không thể kết nối đến backend; đang hiển thị dữ liệu Master Inventory mẫu.', 'warning');
+      }
     } finally {
       setIsLoadingDb(false);
     }
   };
 
   useEffect(() => {
-    fetchSpaDataFromDb();
+    refreshGovernanceData();
+    fetchSpaDataFromDb(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Categories list
@@ -647,7 +655,7 @@ export const SpaManagementPage: React.FC = () => {
             variant="secondary"
             size="sm"
             icon={<RefreshCw size={14} className={isLoadingDb ? 'hsw-spin' : ''} />}
-            onClick={fetchSpaDataFromDb}
+            onClick={() => fetchSpaDataFromDb(true)}
             disabled={isLoadingDb}
           >
             {isLoadingDb ? 'Đang Tải DB...' : 'Đồng Bộ Database'}

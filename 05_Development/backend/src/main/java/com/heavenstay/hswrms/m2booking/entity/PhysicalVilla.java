@@ -55,19 +55,19 @@ public class PhysicalVilla {
     @Column(name = "nightly_rate", precision = 18, scale = 2)
     private BigDecimal nightlyRate;
 
-    @Transient
+    @Column(name = "bed_type", length = 100)
     private String bedType;
 
-    @Transient
+    @Column(name = "max_adults")
     private Integer maxAdults = 2;
 
-    @Transient
+    @Column(name = "max_children")
     private Integer maxChildren = 1;
 
-    @Transient
+    @Column(name = "image", length = 500)
     private String image;
 
-    @Transient
+    @Column(name = "amenities", length = 1000)
     private String amenities;
 
     public PhysicalVilla() {

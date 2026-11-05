@@ -63,8 +63,8 @@ import { getAuthToken } from '../../api/client/apiClient';
 type TabKey = 'villas' | 'categories' | 'packages' | 'zones' | 'functional_areas';
 
 export const VillaManagementPage: React.FC = () => {
-  const { role } = useAuth();
-  const { hasCapability, managerDelegatedCapabilities, logAuditEvent } = useGovernance();
+  const { currentUser, role } = useAuth();
+  const { hasCapability, managerDelegatedCapabilities, logAuditEvent, refreshGovernanceData } = useGovernance();
   const { showToast } = useToast();
 
   const getAuthHeaders = () => {
@@ -163,14 +163,15 @@ export const VillaManagementPage: React.FC = () => {
       if (pkgsRes?.data && Array.isArray(pkgsRes.data) && pkgsRes.data.length > 0) {
         const loadedPkgs: RetreatPackageMaster[] = pkgsRes.data.map((item: any) => ({
           id: `PKG-${item.retreatPackageId}`,
-          packageName: item.packageName,
-          wellnessGoal: item.wellnessGoal || 'Thư giãn & Phục hồi Thân Tâm',
+          code: item.packageCode || `RET-0${item.retreatPackageId}`,
+          name: item.packageName || item.name || 'Gói Nghỉ Dưỡng',
+          goal: item.wellnessGoal || item.goal || 'Thư giãn & Phục hồi Thân Tâm',
+          durationDays: item.durationDays || (item.durationNights || 3) + 1,
           durationNights: item.durationNights || 3,
+          includedSpaSessions: item.includedSpaSessions || 4,
           basePrice: typeof item.basePrice === 'number' ? item.basePrice : (Number(item.basePrice) || 18500000),
-          packageStatus: item.packageStatus === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
-          includedTreatmentsCount: 4,
-          mealsPerDay: 3,
-          applicableCategories: ['1-Bedroom Garden Villa', '1-Bedroom Beachfront Pool Villa', '2-Bedroom Pool Villa']
+          status: (item.packageStatus === 'ACTIVE' || item.status === 'active') ? 'active' : 'archived',
+          description: item.dietaryPlan || item.includedTreatments || item.description || 'Gói nghỉ dưỡng chăm sóc sức khỏe chuyên sâu'
         }));
         setPackages(loadedPkgs);
       }
@@ -224,7 +225,9 @@ export const VillaManagementPage: React.FC = () => {
   };
 
   useEffect(() => {
+    refreshGovernanceData();
     fetchAllFromDatabase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Add modals state
@@ -257,10 +260,12 @@ export const VillaManagementPage: React.FC = () => {
   // Permission Checks:
   // Admin has full rights; Manager has rights only if explicitly delegated
   const isAdmin = role === 'admin';
-  const canManageInventory = isAdmin || hasCapability('manager', 'manage_villa_inventory') || managerDelegatedCapabilities.includes('manage_villa_inventory');
-  const canManageMaintenance = isAdmin || hasCapability('manager', 'manage_villa_maintenance') || managerDelegatedCapabilities.includes('manage_villa_maintenance');
-  const canManageCategories = isAdmin || hasCapability('manager', 'manage_villa_categories') || managerDelegatedCapabilities.includes('manage_villa_categories');
-  const canManagePricing = isAdmin || hasCapability('manager', 'manage_pricing') || managerDelegatedCapabilities.includes('manage_pricing');
+  const hasS12C = isAdmin || Boolean(currentUser?.permissions?.includes('S12:C'));
+  const hasS12U = isAdmin || Boolean(currentUser?.permissions?.includes('S12:U'));
+  const canManageInventory = isAdmin || ((hasS12C || hasS12U) && (hasCapability('manager', 'manage_villa_inventory') || managerDelegatedCapabilities.includes('manage_villa_inventory')));
+  const canManageMaintenance = isAdmin || (hasS12U && (hasCapability('manager', 'manage_villa_maintenance') || managerDelegatedCapabilities.includes('manage_villa_maintenance')));
+  const canManageCategories = isAdmin || ((hasS12C || hasS12U) && (hasCapability('manager', 'manage_villa_categories') || managerDelegatedCapabilities.includes('manage_villa_categories')));
+  const canManagePricing = isAdmin || (hasS12U && (hasCapability('manager', 'manage_pricing') || managerDelegatedCapabilities.includes('manage_pricing')));
 
   // Filtered Villas
   const filteredVillas = useMemo(() => {
@@ -523,7 +528,7 @@ export const VillaManagementPage: React.FC = () => {
     try {
       const res = await fetch('http://localhost:8080/api/v1/villa-categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           categoryName: newCategory.categoryName,
           maxOccupancy: newCategory.maxOccupancy,
@@ -701,42 +706,55 @@ export const VillaManagementPage: React.FC = () => {
     });
   };
 
-  const handleAddPackage = (newPkg: RetreatPackageMaster) => {
+  const handleAddPackage = async (newPkg: RetreatPackageMaster) => {
     if (!canManageInventory && !canManageCategories) {
       showToast('Thao tác bị từ chối: Quản lý cần được Quản Trị Viên ủy quyền để tạo gói nghỉ dưỡng.', 'error');
       return;
     }
 
-    setPackages((prev) => [newPkg, ...prev]);
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/retreat-packages', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          packageName: newPkg.name,
+          packageCode: newPkg.code,
+          name: newPkg.name,
+          code: newPkg.code,
+          durationDays: newPkg.durationDays,
+          durationNights: newPkg.durationNights,
+          wellnessGoal: newPkg.goal,
+          goal: newPkg.goal,
+          includedSpaSessions: newPkg.includedSpaSessions,
+          basePrice: newPkg.basePrice,
+          description: newPkg.description
+        })
+      });
 
-    fetch('http://localhost:8080/api/v1/retreat-packages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: newPkg.code,
-        name: newPkg.name,
-        durationDays: newPkg.durationDays,
-        durationNights: newPkg.durationNights,
-        goal: newPkg.goal,
-        includedSpaSessions: newPkg.includedSpaSessions,
-        basePrice: newPkg.basePrice,
-        description: newPkg.description
-      })
-    }).catch(() => {});
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || `Lỗi máy chủ (${res.status})`);
+      }
 
-    logAuditEvent({
-      actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
-      actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
-      actorRole: role || 'manager',
-      action: 'CREATE',
-      dataCategory: 'SECURITY_GOVERNANCE',
-      targetRef: `PACKAGE-${newPkg.code}`,
-      result: 'SUCCESS',
-      detailsKey: 'operations.audit.packageCreated',
-      detailsFallback: `Đã ban hành gói nghỉ dưỡng mới ${newPkg.name} (${newPkg.code}, Đơn giá: ${formatVND(newPkg.basePrice)})`
-    });
+      await fetchAllFromDatabase();
 
-    showToast(`Đã ban hành gói nghỉ dưỡng "${newPkg.name}" thành công!`, 'success');
+      logAuditEvent({
+        actorId: role === 'admin' ? 'usr-admin-01' : 'usr-mgr-01',
+        actorName: role === 'admin' ? 'Alexander Wright' : 'Sarah Jenkins',
+        actorRole: role || 'manager',
+        action: 'CREATE',
+        dataCategory: 'SECURITY_GOVERNANCE',
+        targetRef: `PACKAGE-${newPkg.code}`,
+        result: 'SUCCESS',
+        detailsKey: 'operations.audit.packageCreated',
+        detailsFallback: `Đã ban hành gói nghỉ dưỡng mới ${newPkg.name} (${newPkg.code}, Đơn giá: ${formatVND(newPkg.basePrice)}) vào CSDL SQL Server`
+      });
+
+      showToast(`Đã ban hành thành công gói nghỉ dưỡng "${newPkg.name}" vào CSDL!`, 'success');
+    } catch (err: any) {
+      console.error('Lỗi lưu gói nghỉ dưỡng vào CSDL:', err);
+      showToast(`Không thể lưu gói nghỉ dưỡng vào CSDL: ${err.message}`, 'error');
+    }
   };
 
   const getStatusBadge = (status: VillaOperationalStatus) => {

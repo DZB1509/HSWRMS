@@ -186,7 +186,7 @@ public class VillaInventoryController {
     public ResponseEntity<ApiResponse<List<ResortZone>>> getAllZones() {
         return ResponseEntity.ok(ApiResponse.ok(zoneRepo.findAll()));
     }
-
+    @PostMapping("/villas")
     @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<PhysicalVilla>> createVilla(@RequestBody Map<String, Object> payload) {
         String villaNumber = (String) payload.get("villaNumber");
@@ -239,7 +239,7 @@ public class VillaInventoryController {
         PhysicalVilla saved = villaRepo.save(villa);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Villa created successfully", saved));
     }
-
+    @PostMapping("/villa-categories")
     @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<VillaCategory>> createVillaCategory(@RequestBody Map<String, Object> payload) {
         String categoryName = (String) payload.get("categoryName");

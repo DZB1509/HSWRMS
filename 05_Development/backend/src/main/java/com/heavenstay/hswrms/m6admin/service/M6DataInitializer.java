@@ -67,6 +67,11 @@ public class M6DataInitializer implements ApplicationRunner {
         for (PermissionCatalog.Def def : PermissionCatalog.defaults()) {
             Permission p = permissionRepo.findByModuleOrScreenAndActionType(def.module(), def.action())
                     .orElseGet(() -> permissionRepo.save(new Permission(def.module(), def.action(), def.delegable(), def.adminOnly())));
+            if (p.isDelegable() != def.delegable() || p.isAdminOnly() != def.adminOnly()) {
+                p.setDelegable(def.delegable());
+                p.setAdminOnly(def.adminOnly());
+                permissionRepo.save(p);
+            }
 
             for (String rName : def.roles()) {
                 Role r = roles.get(rName);
@@ -74,6 +79,19 @@ public class M6DataInitializer implements ApplicationRunner {
                     RolePermission.Id id = new RolePermission.Id(r.getRoleId(), p.getPermissionId());
                     if (!rolePermissionRepo.existsById(id)) {
                         rolePermissionRepo.save(new RolePermission(id.getRoleId(), id.getPermissionId()));
+                    }
+                }
+            }
+
+            // Revoke baseline grants for admin-only permissions from non-assigned roles (e.g. S12:C/U for MANAGER)
+            if (def.adminOnly()) {
+                for (Map.Entry<String, Role> entry : roles.entrySet()) {
+                    if (!def.roles().contains(entry.getKey())) {
+                        Role r = entry.getValue();
+                        RolePermission.Id id = new RolePermission.Id(r.getRoleId(), p.getPermissionId());
+                        if (rolePermissionRepo.existsById(id)) {
+                            rolePermissionRepo.deleteById(id);
+                        }
                     }
                 }
             }

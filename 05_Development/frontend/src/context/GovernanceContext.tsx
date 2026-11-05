@@ -130,6 +130,11 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     error: `${feature} is unavailable through the governance context. Use its verified backend page/API when available.`,
   });
 
+  const refreshGovernanceData = useCallback(() => {
+    void refreshPermissions();
+    void loadEffectivePermissions();
+  }, [refreshPermissions, loadEffectivePermissions]);
+
   const value: GovernanceContextType = {
     // Governance pages with verified APIs load their server data directly.
     // This shared compatibility context intentionally contains no mock state.
@@ -149,10 +154,7 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     activeDelegations: emptyUnavailable<AdminDelegation>(),
     managerDelegatedCapabilities,
     permissionLoadState: currentPermissionLoadState,
-    refreshGovernanceData: () => {
-      void refreshPermissions();
-      void loadEffectivePermissions();
-    },
+    refreshGovernanceData,
   };
 
   return <GovernanceContext.Provider value={value}>{children}</GovernanceContext.Provider>;

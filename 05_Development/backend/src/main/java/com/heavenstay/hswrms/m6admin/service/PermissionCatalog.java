@@ -54,8 +54,8 @@ public final class PermissionCatalog {
                 d("S11", "V", false, true, ADMIN), d("S11", "C", false, true, ADMIN),
                 d("S11", "U", false, true, ADMIN), d("S11", "D", false, true, ADMIN),
                 // Manager manages master data catalog inventory: S12 C and U are permitted to Manager and Admin; D remains Admin-only.
-                d("S12", "V", true, false, ADMIN, MANAGER), d("S12", "C", true, false, ADMIN, MANAGER),
-                d("S12", "U", true, false, ADMIN, MANAGER), d("S12", "D", true, false, ADMIN),
+                d("S12", "V", true, false, ADMIN, MANAGER), d("S12", "C", true, true, ADMIN),
+                d("S12", "U", true, true, ADMIN), d("S12", "D", true, false, ADMIN),
                 // M6 – dashboards, parameters, matrix, delegation, audit
                 d("S49", "V", false, true, ADMIN),
                 d("S50", "V", true, true, ADMIN), d("S50", "U", true, true, ADMIN),
