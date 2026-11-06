@@ -43,6 +43,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -116,6 +117,12 @@ public class FnbKdsOrderServiceTest {
     private MenuItem soupItem;
     private MenuItem steakItem;
     private final LocalDate targetDate = LocalDate.now();
+
+    private void advancePastGracePeriod(Long orderId) {
+        MealOrderEntity entity = mealOrderRepository.findById(orderId).orElseThrow();
+        entity.setCreatedAt(LocalDateTime.now().minusSeconds(35));
+        mealOrderRepository.saveAndFlush(entity);
+    }
 
     @BeforeEach
     void setUp() {
@@ -259,6 +266,7 @@ public class FnbKdsOrderServiceTest {
         MealOrderDto order = mealOrderService.createDailyMealOrder(req, testUser.getUserId());
 
         // Kitchen transitions order to PREPARING
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), 999, true);
 
@@ -326,6 +334,7 @@ public class FnbKdsOrderServiceTest {
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
         // PENDING -> PREPARING
+        advancePastGracePeriod(order.getMealOrderId());
         MealOrderDto prep = mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), 999, true);
         assertEquals("PREPARING", prep.getOrderStatus());
@@ -351,6 +360,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "LUNCH", List.of(saladItem.getMenuItemId()), null);
         MealOrderDto order = mealOrderService.createDailyMealOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), 999, true);
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
@@ -370,6 +380,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "13:00", "Villa 102", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), 999, true);
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
@@ -392,6 +403,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "13:00", "Villa 102", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), 999, true);
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
@@ -418,6 +430,40 @@ public class FnbKdsOrderServiceTest {
     }
 
     @Test
+    @DisplayName("Customer CANNOT cancel PENDING order after 30-second grace period")
+    void testCancel_PendingByCustomer_After30Seconds_Rejected() {
+        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
+        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
+                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
+        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
+
+        MealOrderEntity entity = mealOrderRepository.findById(order.getMealOrderId()).orElseThrow();
+        entity.setCreatedAt(java.time.LocalDateTime.now().minusSeconds(35));
+        mealOrderRepository.saveAndFlush(entity);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                mealOrderService.cancelOrder(order.getMealOrderId(), "Late cancel", testUser.getUserId(), false));
+        assertEquals("CANCELLATION_GRACE_PERIOD_EXPIRED", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Staff CAN cancel PENDING order even after 30 seconds")
+    void testCancel_PendingByStaff_After30Seconds_Allowed() {
+        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
+        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
+                testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
+        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
+
+        MealOrderEntity entity = mealOrderRepository.findById(order.getMealOrderId()).orElseThrow();
+        entity.setCreatedAt(java.time.LocalDateTime.now().minusSeconds(60));
+        mealOrderRepository.saveAndFlush(entity);
+
+        MealOrderDto cancelled = mealOrderService.cancelOrder(order.getMealOrderId(),
+                "Staff approved cancellation", staffUser.getUserId(), true);
+        assertEquals("CANCELLED", cancelled.getOrderStatus());
+    }
+
+    @Test
     @DisplayName("Customer CANNOT cancel PREPARING order")
     void testCancel_PreparingByCustomer_Rejected() {
         AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
@@ -425,6 +471,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), 999, true);
 
@@ -440,6 +487,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
 
@@ -522,6 +570,7 @@ public class FnbKdsOrderServiceTest {
                 mealOrderService.cancelOrder(order.getMealOrderId(), "Unauthorized cancel", 88888, false));
 
         // Advance to PREPARING
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
 
@@ -545,6 +594,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
@@ -593,6 +643,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "18:00", "Villa 102", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
 
@@ -781,6 +832,7 @@ public class FnbKdsOrderServiceTest {
                 testBooking.getRetreatBookingId(), targetDate, "19:00", "Villa 101", List.of(item));
         MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
 
+        advancePastGracePeriod(order.getMealOrderId());
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
                 new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
         mealOrderService.updateOrderStatus(order.getMealOrderId(),
@@ -797,5 +849,44 @@ public class FnbKdsOrderServiceTest {
                 new UpdateOrderStatusRequest("DELIVERED", null), staffUser.getUserId(), true);
         assertEquals("DELIVERED", delivered2.getOrderStatus());
         assertTrue(folioItemRepository.existsBySourceMealOrderId(order.getMealOrderId()));
+    }
+
+    @Test
+    @DisplayName("Option B: Kitchen transitioning PENDING to PREPARING within 30s customer grace period is rejected")
+    void testUpdateOrderStatus_PendingToPreparing_Within30Seconds_Rejected() {
+        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
+        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
+                testBooking.getRetreatBookingId(), targetDate, "12:00", "Villa 102", List.of(item));
+        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
+
+        // Attempting to advance to PREPARING within 30s must throw BusinessRuleException
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                mealOrderService.updateOrderStatus(order.getMealOrderId(),
+                        new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true));
+
+        assertEquals("ORDER_IN_CANCELLATION_GRACE_PERIOD", ex.getErrorCode());
+        assertTrue(ex.getMessage().contains("30 giây đầu"));
+
+        // Order remains PENDING
+        MealOrderEntity entity = mealOrderRepository.findById(order.getMealOrderId()).orElseThrow();
+        assertEquals("PENDING", entity.getOrderStatus());
+    }
+
+    @Test
+    @DisplayName("Option B: Kitchen transitioning PENDING to PREPARING after 30s customer grace period succeeds")
+    void testUpdateOrderStatus_PendingToPreparing_After30Seconds_Succeeds() {
+        AlaCarteItemRequest item = new AlaCarteItemRequest(saladItem.getMenuItemId(), 1, null);
+        CreateAlaCarteRequest req = new CreateAlaCarteRequest(
+                testBooking.getRetreatBookingId(), targetDate, "12:00", "Villa 102", List.of(item));
+        MealOrderDto order = mealOrderService.createAlaCarteOrder(req, testUser.getUserId());
+
+        // Backdate createdAt past 30 seconds
+        advancePastGracePeriod(order.getMealOrderId());
+
+        // Advancing to PREPARING now succeeds
+        MealOrderDto updated = mealOrderService.updateOrderStatus(order.getMealOrderId(),
+                new UpdateOrderStatusRequest("PREPARING", null), staffUser.getUserId(), true);
+
+        assertEquals("PREPARING", updated.getOrderStatus());
     }
 }

@@ -219,13 +219,43 @@ public class HealthProfile {
     public void setKitchenNotes(String v) { this.kitchenNotes = v; }
 
     public List<FoodAllergy> getFoodAllergies() { return foodAllergies; }
-    public void setFoodAllergies(List<FoodAllergy> foodAllergies) { this.foodAllergies = foodAllergies; }
+
+    // In-place update so the Hibernate-managed collection wrapper (with
+    // orphanRemoval=true) is preserved. Copy input first so a caller passing the
+    // current collection cannot self-clear.
+    public void setFoodAllergies(List<FoodAllergy> foodAllergies) {
+        List<FoodAllergy> incoming = foodAllergies == null ? List.of() : new ArrayList<>(foodAllergies);
+        if (this.foodAllergies == null) {
+            this.foodAllergies = new ArrayList<>();
+        } else {
+            this.foodAllergies.clear();
+        }
+        this.foodAllergies.addAll(incoming);
+    }
 
     public List<DietaryRequirement> getDietaryRequirementsList() { return dietaryRequirementsList; }
-    public void setDietaryRequirementsList(List<DietaryRequirement> v) { this.dietaryRequirementsList = v; }
+
+    public void setDietaryRequirementsList(List<DietaryRequirement> v) {
+        List<DietaryRequirement> incoming = v == null ? List.of() : new ArrayList<>(v);
+        if (this.dietaryRequirementsList == null) {
+            this.dietaryRequirementsList = new ArrayList<>();
+        } else {
+            this.dietaryRequirementsList.clear();
+        }
+        this.dietaryRequirementsList.addAll(incoming);
+    }
 
     public List<HealthProfileTherapyPreference> getTherapyPreferences() { return therapyPreferences; }
-    public void setTherapyPreferences(List<HealthProfileTherapyPreference> v) { this.therapyPreferences = v; }
+
+    public void setTherapyPreferences(List<HealthProfileTherapyPreference> v) {
+        List<HealthProfileTherapyPreference> incoming = v == null ? List.of() : new ArrayList<>(v);
+        if (this.therapyPreferences == null) {
+            this.therapyPreferences = new ArrayList<>();
+        } else {
+            this.therapyPreferences.clear();
+        }
+        this.therapyPreferences.addAll(incoming);
+    }
 
     public String getAnonymizationStatus() {
         return anonymizationStatus;

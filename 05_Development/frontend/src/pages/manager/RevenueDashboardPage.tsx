@@ -69,11 +69,21 @@ export const RevenueDashboardPage: React.FC = () => {
     }
   };
 
-  const currentTotal = liveAnalytics?.totalRevenue ?? localAnalytics.totalRevenue;
-  const currentRetreat = liveAnalytics?.packageRevenue ?? localAnalytics.retreatRevenue;
-  const currentSpa = liveAnalytics?.spaRevenue ?? localAnalytics.spaRevenue;
-  const currentFnb = liveAnalytics?.fnbRevenue ?? localAnalytics.fnbRevenue;
-  const currentOutstanding = liveAnalytics?.outstandingBalance ?? localAnalytics.outstandingRevenue;
+  const currentTotal = Number.isFinite(liveAnalytics?.totalRevenue)
+    ? liveAnalytics!.totalRevenue
+    : (Number.isFinite(localAnalytics.totalRevenue) ? localAnalytics.totalRevenue : 0);
+  const currentRetreat = Number.isFinite(liveAnalytics?.packageRevenue)
+    ? liveAnalytics!.packageRevenue
+    : (Number.isFinite(localAnalytics.retreatRevenue) ? localAnalytics.retreatRevenue : 0);
+  const currentSpa = Number.isFinite(liveAnalytics?.spaRevenue)
+    ? liveAnalytics!.spaRevenue
+    : (Number.isFinite(localAnalytics.spaRevenue) ? localAnalytics.spaRevenue : 0);
+  const currentFnb = Number.isFinite(liveAnalytics?.fnbRevenue)
+    ? liveAnalytics!.fnbRevenue
+    : (Number.isFinite(localAnalytics.fnbRevenue) ? localAnalytics.fnbRevenue : 0);
+  const currentOutstanding = Number.isFinite(liveAnalytics?.outstandingBalance)
+    ? liveAnalytics!.outstandingBalance
+    : (Number.isFinite(localAnalytics.outstandingRevenue) ? localAnalytics.outstandingRevenue : 0);
 
   // Pagination for settlement items
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,15 +99,15 @@ export const RevenueDashboardPage: React.FC = () => {
 
   const barData = [
     {
-      category: t('manager.revenue.retreatPkg', 'Retreat Packages'),
+      category: t('manager.revenue.retreatPkg', 'Gói Nghỉ Dưỡng'),
       amount: currentRetreat,
     },
     {
-      category: t('manager.revenue.spaTherapies', 'Spa Therapies'),
+      category: t('manager.revenue.spaTherapies', 'Trị Liệu Spa'),
       amount: currentSpa,
     },
     {
-      category: t('manager.revenue.fnbDining', 'F&B Dining'),
+      category: t('manager.revenue.fnbDining', 'Ẩm Thực Dưỡng Sinh'),
       amount: currentFnb,
     },
   ];
@@ -168,7 +178,7 @@ export const RevenueDashboardPage: React.FC = () => {
                   boxShadow: dateRange === '7d' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                 }}
               >
-                7 Days
+                7 Ngày
               </button>
               <button
                 type="button"
@@ -184,7 +194,7 @@ export const RevenueDashboardPage: React.FC = () => {
                   boxShadow: dateRange === '30d' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                 }}
               >
-                30 Days
+                30 Ngày
               </button>
               <button
                 type="button"
@@ -200,7 +210,7 @@ export const RevenueDashboardPage: React.FC = () => {
                   boxShadow: dateRange === 'ytd' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                 }}
               >
-                Year-to-Date
+                Từ Đầu Năm
               </button>
             </div>
 
@@ -214,13 +224,13 @@ export const RevenueDashboardPage: React.FC = () => {
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               {isExporting ? <RotateCw size={15} className="animate-spin" /> : <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />}
-              <span>{isExporting ? 'Exporting...' : 'Export to Excel (.xlsx)'}</span>
+              <span>{isExporting ? 'Đang xuất...' : 'Xuất Báo Cáo Excel (.xlsx)'}</span>
             </button>
 
             {/* Privacy & Clearance Tag */}
             <div className="hsw-manager-privacy-notice">
               <ShieldCheck size={14} />
-              <span>{t('manager.revenue.privacyNotice', 'Manager Clearance · Financial Aggregates Only')}</span>
+              <span>{t('manager.revenue.privacyNotice', 'Phạm Vi Quản Lý · Số Liệu Tài Chính Tổng Hợp · Đã Ẩn Dữ Liệu Cá Nhân')}</span>
             </div>
           </div>
         </div>
@@ -395,7 +405,7 @@ export const RevenueDashboardPage: React.FC = () => {
                     </td>
                     <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {item.totalAmount === 0 ? `0 VND (${t('status.included', t('common.status.included', 'Included'))})` : formatVND(item.totalAmount)}
+                      {item.totalAmount === 0 ? `0 VND (${t('status.included', t('common.status.included', 'Đã bao gồm trong gói'))})` : formatVND(item.totalAmount)}
                     </td>
                     <td>
                       <span className={`hsw-status-pill ${item.status}`}>

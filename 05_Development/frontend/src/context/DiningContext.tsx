@@ -11,6 +11,7 @@ import type {
 } from '../types/dining';
 import { useCustomer } from './CustomerContext';
 import { useAuth } from '../app/providers/AuthProvider';
+import { parseDiningNotes } from '../utils/diningServiceHelper';
 import { fnbApi } from '../features/m4-fnb/api/fnbApi';
 import { MOCK_MENU_ITEMS } from '../data/mockDining';
 import type { IngredientDemandResponse } from '../features/m4-fnb/types/fnbDto';
@@ -68,7 +69,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           dietaryTags: (['vegetarian','vegan','gluten_free','dairy_free','pescatarian'] as const).filter(tag => tags.includes(tag)) as DietaryMenuItem['dietaryTags'], 
           allergenTags: (['nuts','shellfish','soy','eggs','fish','dairy'] as const).filter(tag => allergens.includes(tag)) as DietaryMenuItem['allergenTags'], 
           price: item.price, 
-          isExtra: item.price > 0, 
+          isExtra: item.isExtra !== undefined ? Boolean(item.isExtra) : (item.price > 0 || (item.id >= 1 && item.id <= 15)), 
           available: item.available, 
           availableServings: (item as any).availableServings ?? item.servingsAvailable ?? 0 
         };
@@ -123,7 +124,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
       const daily = orders.filter(order => order.orderType === 'DAILY_MEAL').map(order => {
         const lines = order.lines || order.items || [];
         const ids = lines.map(line => String(line.menuItemId));
-        return { id:String(order.id), bookingId:rawId, customerId:profile?.id || '', date:order.orderDate, mealPeriod:(order.mealType || 'all_day').toLowerCase() as MealPeriod, menuItemIds:ids, quantity:lines.reduce((sum,line) => sum + line.quantity, 0), items:lines.map(line => ({ menuItemId:String(line.menuItemId), quantity:line.quantity, notes:order.specialNotes || '' })), notes:order.specialNotes || '', status:order.status.toLowerCase() as FnbFulfillmentStatus, inventoryStatus:order.inventoryStatus, inventoryMessage:order.inventoryMessage };
+        return { id:String(order.id), bookingId:rawId, customerId:profile?.id || '', date:order.orderDate, mealPeriod:(order.mealType || 'all_day').toLowerCase() as MealPeriod, menuItemIds:ids, quantity:lines.reduce((sum,line) => sum + line.quantity, 0), items:lines.map(line => ({ menuItemId:String(line.menuItemId), quantity:line.quantity, notes:order.specialNotes || '' })), notes:order.specialNotes || '', status:order.status.toLowerCase() as FnbFulfillmentStatus, inventoryStatus:order.inventoryStatus, inventoryMessage:order.inventoryMessage, createdAt:order.createdAt };
       });
       const extras = orders.filter(order => order.orderType === 'A_LA_CARTE').map(order => {
         const lines = order.lines || order.items || [];
@@ -150,7 +151,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
     });
     const saved = await fnbApi.placeDailyMealOrder({ bookingId, orderDate: selection.date, mealType: selection.mealPeriod.toUpperCase(), specialNotes: selection.notes || undefined, items });
     const savedLines = saved.lines || saved.items || [];
-    const persisted: DailyMealSelection = { ...selection, id: String(saved.id), menuItemIds: savedLines.map(line => String(line.menuItemId)), items: savedLines.map(line => ({ menuItemId: String(line.menuItemId), quantity: line.quantity, notes: selection.notes })), notes: saved.specialNotes || selection.notes, status: saved.status.toLowerCase() as FnbFulfillmentStatus, inventoryStatus: saved.inventoryStatus };
+    const persisted: DailyMealSelection = { ...selection, id: String(saved.id), menuItemIds: savedLines.map(line => String(line.menuItemId)), items: savedLines.map(line => ({ menuItemId: String(line.menuItemId), quantity: line.quantity, notes: selection.notes })), notes: saved.specialNotes || selection.notes, status: saved.status.toLowerCase() as FnbFulfillmentStatus, inventoryStatus: saved.inventoryStatus, createdAt: saved.createdAt || selection.createdAt || new Date().toISOString() };
     setMealSelections(prev => [persisted, ...prev.filter(s => !(s.bookingId === selection.bookingId && s.date === selection.date && s.mealPeriod === selection.mealPeriod))]);
     setRecentOrderIds(prev => [persisted.id, ...prev]);
     await fetchKitchenOrders(selection.date);
@@ -226,6 +227,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
           id: String(ko.id),
           type: ko.orderType === 'A_LA_CARTE' ? 'a_la_carte' : 'retreat_meal',
           date: ko.orderDate || date,
+          createdAt: ko.createdAt,
           targetTime: ko.mealType ? ko.mealType.toLowerCase() : undefined,
           mealPeriod: (ko.mealType ? ko.mealType.toLowerCase() : 'lunch') as MealPeriod,
           customerName: (ko.guestFirstName || ko.customerFirstName) ? `${ko.guestFirstName || ko.customerFirstName}` : 'Customer',
@@ -297,6 +299,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
           id: sel.id,
           type: 'retreat_meal',
           date: sel.date,
+          createdAt: sel.createdAt,
           mealPeriod: sel.mealPeriod,
           targetTime: sel.mealPeriod,
           customerName: projection.customerName || 'Customer',
@@ -320,6 +323,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
           id: ala.id,
           type: 'a_la_carte',
           date: ala.createdAt.split('T')[0],
+          createdAt: ala.createdAt,
           targetTime: ala.targetTime,
           customerName: projection.customerName || 'Customer',
           villaNumber: ala.location || projection.villaNumber || '',
@@ -361,6 +365,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
         id: s.id,
         type: 'retreat_meal',
         date: s.date,
+        createdAt: s.createdAt,
         mealPeriod: s.mealPeriod,
         targetTime: s.mealPeriod,
         customerName: projection.customerName || 'Customer',
@@ -382,6 +387,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
         id: o.id,
         type: 'a_la_carte',
         date: o.createdAt.split('T')[0],
+        createdAt: o.createdAt,
         targetTime: o.targetTime,
         customerName: projection.customerName || 'Customer',
         villaNumber: o.location || projection.villaNumber || '',
@@ -500,6 +506,78 @@ const getLocalDateString = (d: Date = new Date()): string => {
     }
   }, [fetchKitchenOrders]);
 
+  const cancelCustomerOrder = useCallback(async (id: string, reason?: string) => {
+    const numId = parseInt(id.replace(/\D/g, ''), 10);
+    if (!Number.isSafeInteger(numId) || numId <= 0) throw new Error('A persisted server order ID is required.');
+    setIsLoading(true);
+    try {
+      await fnbApi.cancelCustomerOrder(numId, reason || 'Customer cancelled');
+      setAlaCarteOrders(prev => prev.map(o => (o.id === id || o.id === String(numId)) ? { ...o, status: 'cancelled' as FnbFulfillmentStatus, isCancelable: false } : o));
+      setMealSelections(prev => prev.map(s => (s.id === id || s.id === String(numId)) ? { ...s, status: 'cancelled' as FnbFulfillmentStatus } : s));
+      if (activeBooking?.id) {
+        const rawId = activeBooking.id;
+        const bId = /^\d+$/.test(String(rawId)) ? Number(rawId) : 0;
+        if (bId > 0) {
+          fnbApi.getMyOrders(bId).then(orders => {
+            const daily = orders.filter(order => order.orderType === 'DAILY_MEAL').map(order => {
+              const lines = order.lines || order.items || [];
+              const ids = lines.map(line => String(line.menuItemId));
+              return {
+                id: String(order.id),
+                bookingId: rawId,
+                customerId: profile?.id || '',
+                date: order.orderDate,
+                mealPeriod: (order.mealType || 'all_day').toLowerCase() as MealPeriod,
+                menuItemIds: ids,
+                quantity: lines.reduce((sum, line) => sum + line.quantity, 0),
+                items: lines.map(line => ({
+                  menuItemId: String(line.menuItemId),
+                  quantity: line.quantity,
+                  notes: order.specialNotes || ''
+                })),
+                notes: order.specialNotes || '',
+                status: order.status.toLowerCase() as FnbFulfillmentStatus,
+                inventoryStatus: order.inventoryStatus,
+                inventoryMessage: order.inventoryMessage,
+                createdAt: order.createdAt
+              };
+            });
+            const ext = orders.filter(order => order.orderType === 'A_LA_CARTE').map(order => {
+              const lines = order.lines || order.items || [];
+              const parsed = parseDiningNotes(order.specialNotes, order.createdAt);
+              return {
+                id: String(order.id),
+                bookingId: rawId,
+                customerId: profile?.id || '',
+                createdAt: order.createdAt,
+                targetTime: parsed.scheduledTime || parsed.estimatedTime,
+                location: parsed.locationLabelVi,
+                status: order.status.toLowerCase() as FnbFulfillmentStatus,
+                lines: lines.map(line => ({ id: String(line.id), menuItemId: String(line.menuItemId), quantity: line.quantity, unitPrice: line.unitPrice, notes: order.specialNotes || '' })),
+                totalAmount: order.subtotal,
+                chargeType: 'fnb_extra' as const,
+                folioPostingStatus: 'PENDING_RECONCILIATION' as const,
+                isVillaDelivery: parsed.isVillaDelivery,
+                serviceLocation: parsed.location,
+                etaWindow: parsed.etaWindow,
+                estimatedTime: parsed.estimatedTime,
+                deliveryTiming: parsed.deliveryTiming,
+                isCancelable: order.status.toLowerCase() === 'pending'
+              };
+            });
+            setMealSelections(daily);
+            setAlaCarteOrders(ext);
+          }).catch(() => {});
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to cancel order');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeBooking?.id, profile?.id]);
+
   const cancelOrder = useCallback(async (id: string, reason?: string) => {
     setIsLoading(true);
     try {
@@ -518,6 +596,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
     getActiveKitchenQueue,
     refreshKitchenQueue,
     cancelOrder,
+    cancelCustomerOrder,
     isLoading,
     isRefreshing,
     error,
@@ -557,6 +636,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
     getActiveKitchenQueue,
     refreshKitchenQueue,
     cancelOrder,
+    cancelCustomerOrder,
     isLoading,
     isRefreshing,
     error,

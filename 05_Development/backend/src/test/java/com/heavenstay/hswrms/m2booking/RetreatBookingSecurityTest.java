@@ -270,10 +270,14 @@ public class RetreatBookingSecurityTest {
         when(bookingService.createBooking(any(), any(CustomUserDetails.class)))
                 .thenThrow(new AccessDeniedException("Customer profile not found for user ID: 999. Customer booking operations require an active customer profile."));
 
+        LocalDate checkIn = LocalDate.now().plusDays(10);
+        LocalDate checkOut = LocalDate.now().plusDays(15);
+        String requestJson = String.format("{\"retreatPackageId\":1,\"requestedVillaCategoryId\":1,\"checkInDate\":\"%s\",\"checkOutDate\":\"%s\"}", checkIn, checkOut);
+
         mockMvc.perform(post("/api/v1/customer/bookings")
                         .with(user(customerWithoutProfile))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"retreatPackageId\":1,\"requestedVillaCategoryId\":1,\"checkInDate\":\"2026-11-01\",\"checkOutDate\":\"2026-11-05\"}"))
+                        .content(requestJson))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));

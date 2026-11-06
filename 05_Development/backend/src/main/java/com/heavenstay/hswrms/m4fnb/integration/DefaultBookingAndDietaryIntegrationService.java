@@ -3,8 +3,12 @@ package com.heavenstay.hswrms.m4fnb.integration;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
 import com.heavenstay.hswrms.m1identity.entity.CustomerProfile;
+import com.heavenstay.hswrms.m1identity.entity.DietaryRequirement;
+import com.heavenstay.hswrms.m1identity.entity.FoodAllergy;
 import com.heavenstay.hswrms.m1identity.entity.HealthProfile;
 import com.heavenstay.hswrms.m1identity.repository.CustomerProfileRepository;
+import com.heavenstay.hswrms.m1identity.repository.DietaryRequirementRepository;
+import com.heavenstay.hswrms.m1identity.repository.FoodAllergyRepository;
 import com.heavenstay.hswrms.m1identity.repository.HealthProfileRepository;
 import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
@@ -34,19 +38,32 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
     private final RetreatBookingRepository bookingRepository;
     private final CustomerProfileRepository customerProfileRepository;
     private final HealthProfileRepository healthProfileRepository;
+    private final FoodAllergyRepository foodAllergyRepository;
+    private final DietaryRequirementRepository dietaryRequirementRepository;
 
     public DefaultBookingAndDietaryIntegrationService() {
-        this(null, null, null);
+        this(null, null, null, null, null);
+    }
+
+    public DefaultBookingAndDietaryIntegrationService(
+            RetreatBookingRepository bookingRepository,
+            CustomerProfileRepository customerProfileRepository,
+            HealthProfileRepository healthProfileRepository) {
+        this(bookingRepository, customerProfileRepository, healthProfileRepository, null, null);
     }
 
     @Autowired
     public DefaultBookingAndDietaryIntegrationService(
             @Autowired(required = false) RetreatBookingRepository bookingRepository,
             @Autowired(required = false) CustomerProfileRepository customerProfileRepository,
-            @Autowired(required = false) HealthProfileRepository healthProfileRepository) {
+            @Autowired(required = false) HealthProfileRepository healthProfileRepository,
+            @Autowired(required = false) FoodAllergyRepository foodAllergyRepository,
+            @Autowired(required = false) DietaryRequirementRepository dietaryRequirementRepository) {
         this.bookingRepository = bookingRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.healthProfileRepository = healthProfileRepository;
+        this.foodAllergyRepository = foodAllergyRepository;
+        this.dietaryRequirementRepository = dietaryRequirementRepository;
     }
 
     @Override
@@ -181,21 +198,68 @@ public class DefaultBookingAndDietaryIntegrationService implements BookingContex
         }
 
         List<String> allergies = new ArrayList<>();
+
+        // 1. Structured FoodAllergy entities
+        if (foodAllergyRepository != null && hp.getHealthProfileId() != null) {
+            List<FoodAllergy> allergyEntities = foodAllergyRepository.findByHealthProfileHealthProfileIdOrderByDisplayOrderAsc(hp.getHealthProfileId());
+            for (FoodAllergy fa : allergyEntities) {
+                if (fa.getAllergenName() != null && !fa.getAllergenName().isBlank()) {
+                    allergies.add(fa.getAllergenName().trim());
+                }
+            }
+        }
+        if (allergies.isEmpty() && hp.getFoodAllergies() != null && !hp.getFoodAllergies().isEmpty()) {
+            for (FoodAllergy fa : hp.getFoodAllergies()) {
+                if (fa.getAllergenName() != null && !fa.getAllergenName().isBlank()) {
+                    allergies.add(fa.getAllergenName().trim());
+                }
+            }
+        }
+
+        // 2. Legacy / fallback text columns
         if (hp.getAllergies() != null && !hp.getAllergies().isBlank()) {
             for (String a : hp.getAllergies().split("[,;\\n]+")) {
-                if (!a.trim().isEmpty()) allergies.add(a.trim());
+                String clean = a.trim();
+                if (!clean.isEmpty() && allergies.stream().noneMatch(existing -> existing.equalsIgnoreCase(clean))) {
+                    allergies.add(clean);
+                }
             }
         }
         if (hp.getFoodIntoleranceNotes() != null && !hp.getFoodIntoleranceNotes().isBlank()) {
             for (String f : hp.getFoodIntoleranceNotes().split("[,;\\n]+")) {
-                if (!f.trim().isEmpty()) allergies.add(f.trim());
+                String clean = f.trim();
+                if (!clean.isEmpty() && allergies.stream().noneMatch(existing -> existing.equalsIgnoreCase(clean))) {
+                    allergies.add(clean);
+                }
             }
         }
 
         List<String> dietaryPreferences = new ArrayList<>();
+
+        // 3. Structured DietaryRequirement entities
+        if (dietaryRequirementRepository != null && hp.getHealthProfileId() != null) {
+            List<DietaryRequirement> reqEntities = dietaryRequirementRepository.findByHealthProfileHealthProfileIdOrderByDisplayOrderAsc(hp.getHealthProfileId());
+            for (DietaryRequirement dr : reqEntities) {
+                if (dr.getRequirementName() != null && !dr.getRequirementName().isBlank()) {
+                    dietaryPreferences.add(dr.getRequirementName().trim());
+                }
+            }
+        }
+        if (dietaryPreferences.isEmpty() && hp.getDietaryRequirementsList() != null && !hp.getDietaryRequirementsList().isEmpty()) {
+            for (DietaryRequirement dr : hp.getDietaryRequirementsList()) {
+                if (dr.getRequirementName() != null && !dr.getRequirementName().isBlank()) {
+                    dietaryPreferences.add(dr.getRequirementName().trim());
+                }
+            }
+        }
+
+        // 4. Legacy / fallback text columns
         if (hp.getDietaryRequirements() != null && !hp.getDietaryRequirements().isBlank()) {
             for (String d : hp.getDietaryRequirements().split("[,;\\n]+")) {
-                if (!d.trim().isEmpty()) dietaryPreferences.add(d.trim());
+                String clean = d.trim();
+                if (!clean.isEmpty() && dietaryPreferences.stream().noneMatch(existing -> existing.equalsIgnoreCase(clean))) {
+                    dietaryPreferences.add(clean);
+                }
             }
         }
 

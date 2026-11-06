@@ -49,6 +49,7 @@ export interface DailyMealSelection {
   status: FnbFulfillmentStatus; // Fulfillment status of the included retreat meal
   inventoryStatus?: string;
   inventoryMessage?: string | null;
+  createdAt?: string; // ISO timestamp
 }
 
 export interface AlaCarteOrderLine {
@@ -106,6 +107,7 @@ export interface MealPrepEntry {
   locationVerificationStatus?: LocationVerificationStatus;
   folioPostingStatus?: FolioPostingStatus;
   status: FnbFulfillmentStatus;
+  createdAt?: string;
   inventoryStatus?: 'PENDING' | 'CONSUMED' | 'NOT_CONFIGURED' | 'INSUFFICIENT_STOCK' | 'FAILED' | string;
   inventoryMessage?: string | null;
 }
@@ -137,6 +139,7 @@ export interface DiningContextType {
   error?: string | null;
   refreshKitchenQueue?: (date?: string) => Promise<void>;
   cancelOrder?: (id: string, reason?: string) => Promise<void>;
+  cancelCustomerOrder?: (id: string, reason?: string) => Promise<void>;
 
   // Live REST API Integration & Sync (Module 4)
   syncStatus?: 'idle' | 'syncing' | 'synced' | 'offline';

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Home, UtensilsCrossed, Sparkles, Check, Info } from 'lucide-react';
+import { Home, UtensilsCrossed, Sparkles, Check, Info, Clock } from 'lucide-react';
 import {
   AMANOI_WELLNESS_TAGS,
   type DiningServiceLocation,
+  type DeliveryTimingOption,
   type AmanoiWellnessTag,
 } from '../../utils/diningServiceHelper';
 
@@ -15,6 +16,10 @@ interface Props {
   onCustomNotesChange: (notes: string) => void;
   villaNumber?: string;
   lang?: 'vi' | 'en';
+  deliveryTiming?: DeliveryTimingOption;
+  onDeliveryTimingChange?: (timing: DeliveryTimingOption) => void;
+  scheduledTime?: string;
+  onScheduledTimeChange?: (time: string) => void;
 }
 
 export const AmanoiDiningLocationPicker: React.FC<Props> = ({
@@ -26,7 +31,20 @@ export const AmanoiDiningLocationPicker: React.FC<Props> = ({
   onCustomNotesChange,
   villaNumber,
   lang = 'vi',
+  deliveryTiming = 'ASAP',
+  onDeliveryTimingChange,
+  scheduledTime = '',
+  onScheduledTimeChange,
 }) => {
+  const leadMinutes = location === 'IN_VILLA' ? 35 : 20;
+  const etaWindowText = location === 'IN_VILLA' ? '30 - 45 phút' : '15 - 25 phút';
+
+  const getAsapTimeStr = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + leadMinutes);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div
       style={{
@@ -148,8 +166,8 @@ export const AmanoiDiningLocationPicker: React.FC<Props> = ({
           </div>
           <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary, #4b5563)', lineHeight: 1.4 }}>
             {lang === 'vi'
-              ? 'Không gian mở thanh tịnh, bày đĩa sứ fine-dining phục vụ trực tiếp tại bàn (Mặc định chuẩn retreat).'
-              : 'Open-air pavilion view, artisan fine-dining table service (Included wellness retreat standard).'}
+              ? 'Thưởng thức tại không gian mở nhìn ra hồ sen. Bày đĩa sứ nghệ nhân & phục vụ trực tiếp tại bàn ăn (SLA 15-25 phút).'
+              : 'Dine in open pavilion over lotus lake. Plated on artisan porcelain with dedicated table service (SLA 15-25 min).'}
           </p>
         </div>
 
@@ -167,12 +185,12 @@ export const AmanoiDiningLocationPicker: React.FC<Props> = ({
               ? '2px solid #d97706'
               : '1px solid var(--border-subtle, #e5e7eb)',
             backgroundColor: location === 'IN_VILLA'
-              ? 'rgba(217, 119, 6, 0.06)'
+              ? 'rgba(217, 119, 6, 0.05)'
               : 'var(--bg-soft, #f9fafb)',
             transition: 'all 0.15s ease',
             position: 'relative',
           }}
-          id="btn-select-in-villa-dining"
+          id="btn-select-in-villa"
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -213,10 +231,139 @@ export const AmanoiDiningLocationPicker: React.FC<Props> = ({
           </div>
           <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary, #4b5563)', lineHeight: 1.4 }}>
             {lang === 'vi'
-              ? `Phục vụ riêng tại ${villaNumber || 'Biệt thự'}. Bếp trang bị dụng cụ giữ nhiệt cloche & Butler giao tận phòng.`
-              : `Private dining at ${villaNumber || 'Villa'}. Packed with insulated cloche domes and delivered by butler.`}
+              ? `Phục vụ riêng tại ${villaNumber || 'Biệt thự'}. Bếp trang bị dụng cụ giữ nhiệt cloche & Butler giao tận phòng (SLA 30-45 phút).`
+              : `Private dining at ${villaNumber || 'Villa'}. Packed with insulated cloche domes and delivered by butler (SLA 30-45 min).`}
           </p>
         </div>
+      </div>
+
+      {/* Delivery Timing & ETA Selector */}
+      <div
+        style={{
+          padding: '12px 14px',
+          borderRadius: 'var(--radius-sm, 6px)',
+          backgroundColor: 'var(--bg-soft, #f9fafb)',
+          border: '1px solid var(--border-subtle, #e5e7eb)',
+          marginBottom: '14px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} style={{ color: 'var(--accent-forest, #2e5a36)' }} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary, #111827)' }}>
+              {lang === 'vi' ? 'Thời gian nhận món & Dự kiến hoàn thành (ETA)' : 'Service Timing & Estimated Arrival (ETA)'}
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              backgroundColor: location === 'IN_VILLA' ? '#fef3c7' : '#ecfdf5',
+              color: location === 'IN_VILLA' ? '#92400e' : '#065f46',
+              border: `1px solid ${location === 'IN_VILLA' ? '#fde68a' : '#a7f3d0'}`,
+            }}
+          >
+            SLA: {etaWindowText}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+          <button
+            type="button"
+            onClick={() => onDeliveryTimingChange?.('ASAP')}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: (deliveryTiming === 'ASAP' || !deliveryTiming)
+                ? '2px solid var(--accent-forest, #2e5a36)'
+                : '1px solid var(--border-subtle, #e5e7eb)',
+              backgroundColor: (deliveryTiming === 'ASAP' || !deliveryTiming)
+                ? 'rgba(46, 90, 54, 0.08)'
+                : '#ffffff',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.15s ease',
+            }}
+            id="btn-timing-asap"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary, #111827)' }}>
+                {location === 'IN_VILLA'
+                  ? (lang === 'vi' ? '🚀 Giao ngay (ASAP)' : '🚀 Deliver ASAP')
+                  : (lang === 'vi' ? '🍽️ Phục vụ ngay tại bàn' : '🍽️ Serve ASAP at Table')}
+              </span>
+              {(deliveryTiming === 'ASAP' || !deliveryTiming) && <Check size={12} color="var(--accent-forest, #2e5a36)" />}
+            </div>
+            <p style={{ margin: '3px 0 0 0', fontSize: '11px', color: 'var(--text-secondary, #4b5563)' }}>
+              {lang === 'vi'
+                ? `Dự kiến: khoảng ${getAsapTimeStr()} (${etaWindowText})`
+                : `Est: ~${getAsapTimeStr()} (${etaWindowText})`}
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDeliveryTimingChange?.('SCHEDULED')}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: deliveryTiming === 'SCHEDULED'
+                ? '2px solid var(--accent-forest, #2e5a36)'
+                : '1px solid var(--border-subtle, #e5e7eb)',
+              backgroundColor: deliveryTiming === 'SCHEDULED'
+                ? 'rgba(46, 90, 54, 0.08)'
+                : '#ffffff',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.15s ease',
+            }}
+            id="btn-timing-scheduled"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary, #111827)' }}>
+                {lang === 'vi' ? '⏰ Hẹn giờ cụ thể' : '⏰ Scheduled Time'}
+              </span>
+              {deliveryTiming === 'SCHEDULED' && <Check size={12} color="var(--accent-forest, #2e5a36)" />}
+            </div>
+            <p style={{ margin: '3px 0 0 0', fontSize: '11px', color: 'var(--text-secondary, #4b5563)' }}>
+              {lang === 'vi'
+                ? (location === 'IN_VILLA' ? 'Đặt trước tối thiểu 45 phút' : 'Đặt trước tối thiểu 30 phút')
+                : (location === 'IN_VILLA' ? 'Min 45 min notice' : 'Min 30 min notice')}
+            </p>
+          </button>
+        </div>
+
+        {deliveryTiming === 'SCHEDULED' && (
+          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed var(--border-subtle, #e5e7eb)' }}>
+            <label
+              htmlFor="amanoi-scheduled-time"
+              style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #4b5563)', marginBottom: '4px' }}
+            >
+              {lang === 'vi' ? 'Chọn mốc giờ quý khách muốn dùng món:' : 'Select preferred service time:'}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                id="amanoi-scheduled-time"
+                type="time"
+                className="hsw-input"
+                style={{ width: '140px', fontSize: '13px', padding: '6px 10px' }}
+                value={scheduledTime || ''}
+                onChange={(e) => onScheduledTimeChange?.(e.target.value)}
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary, #6b7280)' }}>
+                {lang === 'vi'
+                  ? (location === 'IN_VILLA'
+                    ? 'Khung giờ phục vụ In-Villa: 06:00 – 22:30'
+                    : 'Các ca Nhà hàng: 06:30–10:30, 11:30–14:30, 14:30–17:30, 18:00–22:00')
+                  : 'In-Villa: 06:00–22:30 | Dining Pavilion: meal periods'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Amanoi Quick Wellness Tags */}

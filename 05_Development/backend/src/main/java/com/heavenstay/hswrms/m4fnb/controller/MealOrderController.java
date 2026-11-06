@@ -65,6 +65,22 @@ public class MealOrderController {
         return ResponseEntity.ok(ApiResponse.ok(mealOrderService.getCustomerOrder(currentUser.getUserId(), orderId)));
     }
 
+    @PostMapping("/mine/{orderId}/cancel")
+    @PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
+    public ResponseEntity<ApiResponse<MealOrderResponse>> cancelMyOrder(
+            @AuthenticationPrincipal CustomUserDetails currentUser, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(ApiResponse.ok("ORDER_CANCELLED",
+                mealOrderService.cancelCustomerOrder(currentUser.getUserId(), orderId)));
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    @PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
+    public ResponseEntity<ApiResponse<MealOrderResponse>> cancelOrder(
+            @AuthenticationPrincipal CustomUserDetails currentUser, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(ApiResponse.ok("ORDER_CANCELLED",
+                mealOrderService.cancelCustomerOrder(currentUser.getUserId(), orderId)));
+    }
+
     @PutMapping("/mine/{orderId}/daily-meal")
     @PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
     public ResponseEntity<ApiResponse<MealOrderResponse>> updateDailyMealSelection(

@@ -55,6 +55,9 @@ const CAPABILITY_PERMISSION: Partial<Record<CapabilityKey, string>> = {
   view_manager_dashboard: 'S54:V',
   view_system_overview: 'S55:V',
   export_police_residence_declaration: 'RESIDENCE_REPORT:E',
+  view_villa_inventory: 'S12:V',
+  manage_villa_inventory: 'S12:U',
+  manage_villa_maintenance: 'S12:U',
   view_villa_categories: 'S12:V',
   manage_villa_categories: 'S12:U',
   view_functional_areas: 'S12:V',
@@ -127,6 +130,11 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     error: `${feature} is unavailable through the governance context. Use its verified backend page/API when available.`,
   });
 
+  const refreshGovernanceData = useCallback(() => {
+    void refreshPermissions();
+    void loadEffectivePermissions();
+  }, [refreshPermissions, loadEffectivePermissions]);
+
   const value: GovernanceContextType = {
     // Governance pages with verified APIs load their server data directly.
     // This shared compatibility context intentionally contains no mock state.
@@ -146,10 +154,7 @@ export const GovernanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     activeDelegations: emptyUnavailable<AdminDelegation>(),
     managerDelegatedCapabilities,
     permissionLoadState: currentPermissionLoadState,
-    refreshGovernanceData: () => {
-      void refreshPermissions();
-      void loadEffectivePermissions();
-    },
+    refreshGovernanceData,
   };
 
   return <GovernanceContext.Provider value={value}>{children}</GovernanceContext.Provider>;

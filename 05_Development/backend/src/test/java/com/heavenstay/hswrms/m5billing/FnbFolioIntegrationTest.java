@@ -154,6 +154,12 @@ public class FnbFolioIntegrationTest {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
+    private void advancePastGracePeriod(Integer orderId) {
+        MealOrderEntity entity = mealOrderRepository.findById(orderId).orElseThrow();
+        entity.setCreatedAt(LocalDateTime.now().minusSeconds(35));
+        mealOrderRepository.saveAndFlush(entity);
+    }
+
     private User guestUserA;
     private User guestUserB;
     private RetreatBooking bookingA;
@@ -270,13 +276,13 @@ public class FnbFolioIntegrationTest {
 
         herbalTeaItem = menuItemRepository.save(new MenuItem(
                 "Therapeutic Herbal Tea " + timestamp, "BEVERAGE", "ALL_DAY",
-                new BigDecimal("120000.00"), "vegan", null, "AVAILABLE"
+                new BigDecimal("120000.00"), "vegan", null, "AVAILABLE", true
         ));
         recipeRepository.save(new MenuItemIngredient(herbalTeaItem.getId(), mint.getId(), new BigDecimal("10.000")));
 
         fruitSaladItem = menuItemRepository.save(new MenuItem(
                 "Organic Fruit Bowl " + timestamp, "DISH", "ALL_DAY",
-                new BigDecimal("180000.00"), "vegan", null, "AVAILABLE"
+                new BigDecimal("180000.00"), "vegan", null, "AVAILABLE", true
         ));
         recipeRepository.save(new MenuItemIngredient(fruitSaladItem.getId(), mint.getId(), new BigDecimal("5.000")));
     }
@@ -941,6 +947,7 @@ public class FnbFolioIntegrationTest {
                 List.of(new CreateMealOrderLineRequest(herbalTeaItem.getId(), 1))
         );
         MealOrderResponse response = mealOrderService.placeAlaCarteOrder(guestUserA.getUserId(), request);
+        advancePastGracePeriod(response.id());
         mealOrderService.updateStatus(response.id(), "PREPARING");
 
         InvoiceEntity invoice = invoiceRepository.findByFolioId(folioA.getFolioId())
@@ -971,6 +978,7 @@ public class FnbFolioIntegrationTest {
                 List.of(new CreateMealOrderLineRequest(herbalTeaItem.getId(), 1))
         );
         MealOrderResponse response = mealOrderService.placeAlaCarteOrder(guestUserA.getUserId(), request);
+        advancePastGracePeriod(response.id());
         mealOrderService.updateStatus(response.id(), "PREPARING");
         mealOrderService.updateStatus(response.id(), "READY");
 
@@ -1005,6 +1013,7 @@ public class FnbFolioIntegrationTest {
         Integer orderId = response.id();
 
         // Deliver order via KDS service
+        advancePastGracePeriod(orderId);
         kdsOrderService.updateOrderStatus(orderId.longValue(), new UpdateOrderStatusRequest("PREPARING", null), guestUserA.getUserId(), true);
         kdsOrderService.updateOrderStatus(orderId.longValue(), new UpdateOrderStatusRequest("READY", null), guestUserA.getUserId(), true);
         kdsOrderService.updateOrderStatus(orderId.longValue(), new UpdateOrderStatusRequest("DELIVERED", null), guestUserA.getUserId(), true);
@@ -1251,6 +1260,7 @@ public class FnbFolioIntegrationTest {
         Integer orderId = placedOrder.id();
 
         // Advance to READY state
+        advancePastGracePeriod(orderId);
         mealOrderService.updateStatus(orderId, "PREPARING");
         mealOrderService.updateStatus(orderId, "READY");
 
@@ -1381,6 +1391,7 @@ public class FnbFolioIntegrationTest {
         MealOrderResponse response = mealOrderService.placeAlaCarteOrder(guestUserA.getUserId(), request);
         Integer orderId = response.id();
 
+        advancePastGracePeriod(orderId);
         mealOrderService.updateStatus(orderId, "PREPARING");
         mealOrderService.updateStatus(orderId, "READY");
 

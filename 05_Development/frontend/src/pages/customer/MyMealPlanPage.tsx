@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import { useCustomer } from '../../context/CustomerContext';
 import type { LocalizedString } from '../../types/dining';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Coffee, Info, Receipt, ListOrdered } from 'lucide-react';
+import { Calendar, Coffee, Info, Receipt, ListOrdered, Clock, XCircle, AlertTriangle } from 'lucide-react';
 
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
@@ -15,7 +15,25 @@ import { parseDiningNotes } from '../../utils/diningServiceHelper';
 
 export const MyMealPlanPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
-  const { menuItems, mealSelections, alaCarteOrders } = useDining();
+  const { menuItems, mealSelections, alaCarteOrders, cancelCustomerOrder } = useDining();
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  const handleConfirmCancel = async (orderId: string) => {
+    if (!cancelCustomerOrder) return;
+    setCancellingOrderId(orderId);
+    setCancelError(null);
+    try {
+      await cancelCustomerOrder(orderId, 'Customer cancelled from portal');
+      setConfirmCancelId(null);
+    } catch (err: any) {
+      setCancelError(err?.message || 'Không thể hủy đơn. Vui lòng thử lại hoặc liên hệ Lễ tân.');
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
   const { activeBooking } = useCustomer();
   const navigate = useNavigate();
 
@@ -79,12 +97,76 @@ export const MyMealPlanPage: React.FC = () => {
     (o) => (o.bookingId === activeBooking.id || o.customerId === customerId)
   );
 
-  // Group selections by date
-  const groupedSelections = mySelections.reduce((acc, sel) => {
+  // Timer effect: updates every second only while there are pending orders
+  useEffect(() => {
+    const hasPendingDaily = mySelections.some((s) => s.status === 'pending');
+    const hasPendingExtra = myOrders.some((o) => o.status === 'pending');
+    if (!hasPendingDaily && !hasPendingExtra) return;
+
+    const interval = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [mySelections, myOrders]);
+
+  const getCancellationCountdown = (createdAt?: string | null): { isEligible: boolean; remainingSeconds: number; hasValidTimestamp: boolean } => {
+    if (!createdAt) {
+      return { isEligible: false, remainingSeconds: 0, hasValidTimestamp: false };
+    }
+    const createdTime = new Date(createdAt).getTime();
+    if (Number.isNaN(createdTime) || createdTime <= 0) {
+      return { isEligible: false, remainingSeconds: 0, hasValidTimestamp: false };
+    }
+    const elapsedSeconds = (nowMs - createdTime) / 1000;
+    const remainingSeconds = Math.max(0, Math.ceil(30 - elapsedSeconds));
+    return {
+      isEligible: elapsedSeconds >= 0 && elapsedSeconds < 30,
+      remainingSeconds,
+      hasValidTimestamp: true,
+    };
+  };
+
+  // Active selections represent current valid meal itinerary for each day.
+  // Prioritizes active orders for each meal period so superseded/cancelled meals don't duplicate,
+  // but displays the cancelled order if it has not been replaced so the guest sees cancellation confirmation.
+  const activeSelections = Object.values(
+    mySelections.reduce((acc, sel) => {
+      const key = `${sel.date}_${sel.mealPeriod}`;
+      const existing = acc[key];
+      if (!existing) {
+        acc[key] = sel;
+      } else {
+        if (existing.status === 'cancelled' && sel.status !== 'cancelled') {
+          acc[key] = sel;
+        } else if (existing.status !== 'cancelled' && sel.status === 'cancelled') {
+          // Keep existing active selection
+        } else {
+          // Both active or both cancelled, take the later selection
+          acc[key] = sel;
+        }
+      }
+      return acc;
+    }, {} as Record<string, (typeof mySelections)[0]>)
+  );
+
+  const findItem = (id: string | number) => {
+    const sId = String(id).trim();
+    const numId = Number(sId.replace(/\D/g, ''));
+    return menuItems.find(
+      (m) =>
+        m.id === sId ||
+        String(m.backendId) === sId ||
+        (Number.isFinite(numId) && (m.backendId === numId || Number(m.id.replace(/\D/g, '')) === numId))
+    );
+  };
+
+  // Group active selections by date
+  const groupedSelections = activeSelections.reduce((acc, sel) => {
     if (!acc[sel.date]) acc[sel.date] = [];
     acc[sel.date].push(sel);
     return acc;
-  }, {} as Record<string, typeof mySelections>);
+  }, {} as Record<string, typeof activeSelections>);
 
   const sortedDates = Object.keys(groupedSelections).sort();
 
@@ -248,10 +330,20 @@ export const MyMealPlanPage: React.FC = () => {
                       }}
                     >
                       {groupedSelections[date].map((sel) => {
-                        const item = menuItems.find((m) => m.id === sel.menuItemIds[0]);
-                        if (!item) return null;
+                        const lines = (sel.items && sel.items.length > 0)
+                          ? sel.items.map((it) => ({
+                              id: it.menuItemId,
+                              quantity: it.quantity || 1,
+                              menu: findItem(it.menuItemId),
+                            }))
+                          : sel.menuItemIds.map((id) => ({
+                              id,
+                              quantity: 1,
+                              menu: findItem(id),
+                            }));
+
+                        const primaryItem = lines[0]?.menu;
                         const statusObj = formatStatus(sel.status);
-                        const localizedName = localize(item.name);
 
                         return (
                           <div
@@ -260,7 +352,11 @@ export const MyMealPlanPage: React.FC = () => {
                             style={{ flexDirection: 'row', alignItems: 'stretch' }}
                           >
                             <div style={{ width: '120px', flexShrink: 0 }}>
-                              <FoodImage src={item.image} alt={localizedName} aspectRatio="1 / 1" />
+                              <FoodImage
+                                src={primaryItem?.image || ''}
+                                alt={primaryItem ? localize(primaryItem.name) : 'Món ăn'}
+                                aspectRatio="1 / 1"
+                              />
                             </div>
 
                             <div style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -269,7 +365,7 @@ export const MyMealPlanPage: React.FC = () => {
                                   display: 'flex',
                                   justifyContent: 'space-between',
                                   alignItems: 'center',
-                                  marginBottom: '4px',
+                                  marginBottom: '6px',
                                 }}
                               >
                                 <span
@@ -297,13 +393,27 @@ export const MyMealPlanPage: React.FC = () => {
                                 </span>
                               </div>
 
-                              <h3 className="hsw-culinary-dish-name" style={{ fontSize: 'var(--text-md)', marginBottom: '4px' }}>
-                                {localizedName}
-                              </h3>
-                              <DietaryBadgeList item={item} maxBadges={2} />
+                              {/* Multi-dish listing */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                                {lines.map((line, idx) => {
+                                  const dishName = line.menu ? localize(line.menu.name) : `Món ăn dưỡng sinh (#${line.id})`;
+                                  return (
+                                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <h3
+                                        className="hsw-culinary-dish-name"
+                                        style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0 }}
+                                      >
+                                        {line.quantity > 1 ? `${line.quantity}x ` : '1x '}
+                                        {dishName}
+                                      </h3>
+                                      {line.menu && <DietaryBadgeList item={line.menu} maxBadges={2} />}
+                                    </div>
+                                  );
+                                })}
+                              </div>
 
                               {/* Amanoi Service Location & Requests Badge */}
-                              <div style={{ marginTop: '6px' }}>
+                              <div style={{ marginTop: 'auto', paddingTop: '4px' }}>
                                 <AmanoiServiceLocationBadge
                                   notes={sel.notes}
                                   villaNumber={activeBooking?.villaNumber}
@@ -330,8 +440,129 @@ export const MyMealPlanPage: React.FC = () => {
                                   </p>
                                 ) : null;
                               })()}
-                            </div>
 
+                              {/* Customer Cancellation Option for Pending Main Meals (30-second countdown) */}
+                              {sel.status === 'pending' && (() => {
+                                const cd = getCancellationCountdown(sel.createdAt);
+                                if (cd.hasValidTimestamp && !cd.isEligible) {
+                                  return (
+                                    <div
+                                      style={{
+                                        fontSize: '11px',
+                                        color: 'var(--text-tertiary)',
+                                        fontStyle: 'italic',
+                                        backgroundColor: 'var(--bg-soft)',
+                                        padding: '6px 10px',
+                                        borderRadius: 'var(--radius-xs)',
+                                        marginTop: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                      }}
+                                    >
+                                      <Clock size={13} style={{ color: '#ea580c', flexShrink: 0 }} />
+                                      <span>
+                                        {currentLang === 'vi'
+                                          ? 'Đã hết thời hạn tự hủy đơn (30 giây). Bếp đã tiếp nhận quy trình chuẩn bị.'
+                                          : 'The 30-second cancellation window has expired. Kitchen is preparing your order.'}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      padding: '6px 10px',
+                                      backgroundColor: 'rgba(239, 68, 68, 0.04)',
+                                      border: '1px dashed rgba(239, 68, 68, 0.3)',
+                                      borderRadius: 'var(--radius-xs)',
+                                      marginTop: '8px',
+                                      flexWrap: 'wrap',
+                                      gap: '6px',
+                                    }}
+                                  >
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                      {currentLang === 'vi'
+                                        ? (cd.hasValidTimestamp
+                                            ? `Quý khách có thể tự hủy đơn trong vòng ${cd.remainingSeconds} giây nữa.`
+                                            : 'Đơn đang ở trạng thái Chờ tiếp nhận. Quý khách có thể tự hủy đơn nếu muốn đổi món.')
+                                        : (cd.hasValidTimestamp
+                                            ? `You can cancel within the next ${cd.remainingSeconds} seconds.`
+                                            : 'Order is pending. You can cancel if you wish to change your meal.')}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmCancelId(sel.id)}
+                                      disabled={cancellingOrderId === sel.id}
+                                      style={{
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        color: '#dc2626',
+                                        backgroundColor: '#fee2e2',
+                                        border: '1px solid #fca5a5',
+                                        borderRadius: '4px',
+                                        padding: '4px 10px',
+                                        cursor: cancellingOrderId === sel.id ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        flexShrink: 0,
+                                      }}
+                                      id={`btn-cancel-main-order-${sel.id}`}
+                                    >
+                                      <XCircle size={13} />
+                                      <span>
+                                        {cd.hasValidTimestamp
+                                          ? (currentLang === 'vi' ? `Hủy đơn (${cd.remainingSeconds}s)` : `Cancel Order (${cd.remainingSeconds}s)`)
+                                          : (currentLang === 'vi' ? 'Hủy đơn' : 'Cancel Order')}
+                                      </span>
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+
+                              {sel.status === 'preparing' && (
+                                <div
+                                  style={{
+                                    fontSize: '11px',
+                                    color: 'var(--text-tertiary)',
+                                    marginTop: '6px',
+                                    fontStyle: 'italic',
+                                  }}
+                                >
+                                  {currentLang === 'vi'
+                                    ? 'ℹ️ Bếp đang tiến hành chế biến. Nếu cần thay đổi gấp, vui lòng liên hệ Lễ tân hoặc Butler qua hotline.'
+                                    : 'ℹ️ Kitchen has started preparing. Please contact front desk/butler if urgent changes are needed.'}
+                                </div>
+                              )}
+
+                              {sel.status === 'cancelled' && (
+                                <div
+                                  style={{
+                                    fontSize: '11px',
+                                    color: '#b91c1c',
+                                    marginTop: '6px',
+                                    backgroundColor: '#fef2f2',
+                                    padding: '5px 8px',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <Info size={12} />
+                                  <span>
+                                    {currentLang === 'vi'
+                                      ? 'Đơn đã hủy. Quý khách có thể bấm "Điều chỉnh thực đơn" ở trên để chọn lại món.'
+                                      : 'Order cancelled. You can click "Modify Meal Selection" above to choose another meal.'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -390,6 +621,7 @@ export const MyMealPlanPage: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {paginatedExtraOrders.map((order) => {
                 const statusObj = formatStatus(order.status);
+                const orderDining = parseDiningNotes(order.location || (order.lines[0]?.notes), order.createdAt);
                 const orderDate = new Date(order.createdAt).toLocaleDateString(i18n.language || 'en', {
                   month: 'short',
                   day: 'numeric',
@@ -432,6 +664,31 @@ export const MyMealPlanPage: React.FC = () => {
                         <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
                           {orderDate} · {orderTime}
                         </div>
+                        {(order.status === 'pending' || order.status === 'preparing') && (
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: orderDining.isVillaDelivery ? 'rgba(217, 119, 6, 0.1)' : 'rgba(46, 90, 54, 0.1)',
+                            color: orderDining.isVillaDelivery ? '#b45309' : '#2e5a36',
+                          }}>
+                            <Clock size={12} />
+                            <span>
+                              {orderDining.isVillaDelivery
+                                ? (currentLang === 'vi'
+                                  ? `Dự kiến giao Villa: ~${orderDining.estimatedTime || '35-45 phút'} (SLA: ${orderDining.etaWindow || '30-45 phút'})`
+                                  : `In-Villa Delivery ETA: ~${orderDining.estimatedTime || '35-45 min'} (SLA: ${orderDining.etaWindow || '30-45 min'})`)
+                                : (currentLang === 'vi'
+                                  ? `Dự kiến phục vụ bàn: ~${orderDining.estimatedTime || '15-25 phút'} (SLA: ${orderDining.etaWindow || '15-25 phút'})`
+                                  : `Table Service ETA: ~${orderDining.estimatedTime || '15-25 min'} (SLA: ${orderDining.etaWindow || '15-25 min'})`)}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
@@ -496,11 +753,105 @@ export const MyMealPlanPage: React.FC = () => {
                         compact={true}
                         lang={currentLang === 'vi' ? 'vi' : 'en'}
                       />
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-tertiary)' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-tertiary)' }}>
                         <Receipt size={13} />
                         <span>Will be settled at reception checkout</span>
                       </span>
                     </div>
+
+                    {/* Customer Cancellation Options (30-second countdown) */}
+                    {order.status === 'pending' && (() => {
+                      const cd = getCancellationCountdown(order.createdAt);
+                      if (cd.hasValidTimestamp && !cd.isEligible) {
+                        return (
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              color: 'var(--text-tertiary)',
+                              fontStyle: 'italic',
+                              backgroundColor: 'var(--bg-soft)',
+                              padding: '6px 10px',
+                              borderRadius: 'var(--radius-xs)',
+                              marginTop: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            <Clock size={13} style={{ color: '#ea580c', flexShrink: 0 }} />
+                            <span>
+                              {currentLang === 'vi'
+                                ? 'Đã hết thời hạn tự hủy đơn (30 giây). Bếp đã tiếp nhận quy trình chuẩn bị.'
+                                : 'The 30-second cancellation window has expired. Kitchen is preparing your order.'}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          backgroundColor: 'rgba(239, 68, 68, 0.04)',
+                          border: '1px dashed rgba(239, 68, 68, 0.3)',
+                          borderRadius: 'var(--radius-xs)',
+                          marginTop: '8px',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                        }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {currentLang === 'vi'
+                              ? (cd.hasValidTimestamp
+                                  ? `Quý khách có thể tự hủy đơn trong vòng ${cd.remainingSeconds} giây nữa.`
+                                  : 'Đơn đang ở trạng thái Chờ bếp tiếp nhận. Quý khách có thể tự hủy đơn nếu đặt nhầm.')
+                              : (cd.hasValidTimestamp
+                                  ? `You can cancel within the next ${cd.remainingSeconds} seconds.`
+                                  : 'Order is pending. You can cancel if placed by mistake.')}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmCancelId(order.id)}
+                            disabled={cancellingOrderId === order.id}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: '#dc2626',
+                              backgroundColor: '#fee2e2',
+                              border: '1px solid #fca5a5',
+                              borderRadius: '4px',
+                              padding: '4px 10px',
+                              cursor: cancellingOrderId === order.id ? 'not-allowed' : 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                            id={`btn-cancel-order-${order.id}`}
+                          >
+                            <XCircle size={13} />
+                            <span>
+                              {cd.hasValidTimestamp
+                                ? (currentLang === 'vi' ? `Hủy đơn (${cd.remainingSeconds}s)` : `Cancel Order (${cd.remainingSeconds}s)`)
+                                : (currentLang === 'vi' ? 'Hủy đơn' : 'Cancel Order')}
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    {order.status === 'preparing' && (
+                      <div style={{
+                        fontSize: '11px',
+                        color: 'var(--text-tertiary)',
+                        marginTop: '6px',
+                        fontStyle: 'italic',
+                      }}>
+                        {currentLang === 'vi'
+                          ? 'ℹ️ Bếp đang tiến hành chế biến. Nếu cần thay đổi gấp, vui lòng liên hệ Lễ tân hoặc Butler qua hotline.'
+                          : 'ℹ️ Kitchen has started preparing. Please contact front desk/butler if urgent changes are needed.'}
+                      </div>
+                    )}
 
                   </div>
                 );
@@ -520,6 +871,75 @@ export const MyMealPlanPage: React.FC = () => {
               )}
             </div>
           )}
+        </div>
+      )}
+    
+      {/* Cancellation Confirmation Modal */}
+      {confirmCancelId && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px',
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '420px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#dc2626', marginBottom: '12px' }}>
+              <AlertTriangle size={22} />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                {currentLang === 'vi' ? 'Xác nhận hủy đơn gọi món' : 'Confirm Order Cancellation'}
+              </h3>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              {currentLang === 'vi'
+                ? `Quý khách có chắc chắn muốn hủy đơn hàng #${confirmCancelId}? Bếp chưa tiến hành chế biến nên món ăn chưa trừ kho và không tính vào hóa đơn.`
+                : `Are you sure you want to cancel order #${confirmCancelId}? The kitchen has not started preparation yet.`}
+            </p>
+            {cancelError && (
+              <div style={{ color: '#dc2626', fontSize: '12px', marginBottom: '12px' }}>
+                {cancelError}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                disabled={cancellingOrderId !== null}
+                onClick={() => { setConfirmCancelId(null); setCancelError(null); }}
+                className="hsw-btn"
+                style={{ padding: '6px 14px', fontSize: '12px' }}
+              >
+                {currentLang === 'vi' ? 'Quay lại' : 'Keep Order'}
+              </button>
+              <button
+                type="button"
+                disabled={cancellingOrderId !== null}
+                onClick={() => handleConfirmCancel(confirmCancelId)}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  backgroundColor: '#dc2626',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: cancellingOrderId !== null ? 'not-allowed' : 'pointer',
+                }}
+                id="btn-confirm-cancel"
+              >
+                {cancellingOrderId !== null ? (currentLang === 'vi' ? 'Đang hủy...' : 'Cancelling...') : (currentLang === 'vi' ? 'Đồng ý hủy' : 'Yes, Cancel')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

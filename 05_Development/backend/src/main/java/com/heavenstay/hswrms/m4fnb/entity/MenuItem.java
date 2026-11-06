@@ -37,6 +37,9 @@ public class MenuItem {
     @Column(name = "availability_status", nullable = false, length = 20)
     private String availabilityStatus;
 
+    @Column(name = "is_extra")
+    private Boolean isExtra = false;
+
     protected MenuItem() { }
 
     public MenuItem(String itemName, String category, String mealType, BigDecimal price,
@@ -48,6 +51,19 @@ public class MenuItem {
         this.dietaryTags = dietaryTags;
         this.allergenInformation = allergenInformation;
         this.availabilityStatus = availabilityStatus;
+        this.isExtra = false;
+    }
+
+    public MenuItem(String itemName, String category, String mealType, BigDecimal price,
+                    String dietaryTags, String allergenInformation, String availabilityStatus, Boolean isExtra) {
+        this.itemName = itemName;
+        this.category = category;
+        this.mealType = mealType;
+        this.price = price;
+        this.dietaryTags = dietaryTags;
+        this.allergenInformation = allergenInformation;
+        this.availabilityStatus = availabilityStatus;
+        this.isExtra = isExtra != null && isExtra;
     }
 
     public Integer getId() { return id; }
@@ -65,6 +81,8 @@ public class MenuItem {
     public void setAllergenInformation(String allergenInformation) { this.allergenInformation = allergenInformation; }
     public String getAvailabilityStatus() { return availabilityStatus; }
     public void setAvailabilityStatus(String availabilityStatus) { this.availabilityStatus = availabilityStatus; }
+    public Boolean getIsExtra() { return isExtra != null && isExtra; }
+    public void setIsExtra(Boolean isExtra) { this.isExtra = isExtra; }
 
     public Integer getMenuItemId() { return id; }
     public void setMenuItemId(Integer id) { this.id = id; }

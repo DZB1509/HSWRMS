@@ -22,7 +22,14 @@ BEGIN
 
     IF COL_LENGTH('dbo.MenuItem', 'is_available') IS NULL
         ALTER TABLE dbo.MenuItem ADD is_available BIT NOT NULL CONSTRAINT DF_MenuItem_IsAvailable_V007 DEFAULT (1) WITH VALUES;
+
+    IF COL_LENGTH('dbo.MenuItem', 'is_extra') IS NULL
+        ALTER TABLE dbo.MenuItem ADD is_extra BIT NOT NULL CONSTRAINT DF_MenuItem_IsExtra_V007 DEFAULT (0) WITH VALUES;
 END;
+GO
+
+UPDATE dbo.MenuItem SET is_extra = 1 WHERE menu_item_id BETWEEN 1 AND 15;
+UPDATE dbo.MenuItem SET is_extra = 0 WHERE menu_item_id >= 96;
 GO
 
 IF OBJECT_ID(N'dbo.MenuItemIngredient', N'U') IS NOT NULL AND COL_LENGTH('dbo.MenuItemIngredient', 'required_quantity') IS NULL
@@ -231,9 +238,9 @@ IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 2 AND i
     INSERT INTO dbo.MenuItemIngredient (menu_item_id, ingredient_id, required_quantity)
     SELECT 2, ingredient_id, 200.000 FROM dbo.Ingredient WHERE ingredient_name = N'Cá chẽm tươi phi lê';
 
-IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 2 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name LIKE N'%gừng%'))
+IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 2 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name = N'Gừng non & trà xanh hữu cơ'))
     INSERT INTO dbo.MenuItemIngredient (menu_item_id, ingredient_id, required_quantity)
-    SELECT 2, ingredient_id, 20.000 FROM dbo.Ingredient WHERE ingredient_name LIKE N'%gừng%';
+    SELECT 2, ingredient_id, 20.000 FROM dbo.Ingredient WHERE ingredient_name = N'Gừng non & trà xanh hữu cơ';
 
 -- Menu 3
 IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 3 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name = N'Gạo lứt đỏ Điện Biên'))
@@ -285,17 +292,17 @@ IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 7 AND i
     SELECT 7, ingredient_id, 60.000 FROM dbo.Ingredient WHERE ingredient_name = N'Đậu hũ non áp chảo';
 
 -- Menu 8
-IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 8 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name LIKE N'%chia%'))
+IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 8 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name = N'Hạt chia'))
     INSERT INTO dbo.MenuItemIngredient (menu_item_id, ingredient_id, required_quantity)
-    SELECT 8, ingredient_id, 30.000 FROM dbo.Ingredient WHERE ingredient_name LIKE N'%chia%';
+    SELECT 8, ingredient_id, 30.000 FROM dbo.Ingredient WHERE ingredient_name = N'Hạt chia';
 
-IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 8 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name LIKE N'%cốt dừa%'))
+IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 8 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name = N'Nước cốt dừa Bến Tre'))
     INSERT INTO dbo.MenuItemIngredient (menu_item_id, ingredient_id, required_quantity)
-    SELECT 8, ingredient_id, 120.000 FROM dbo.Ingredient WHERE ingredient_name LIKE N'%cốt dừa%';
+    SELECT 8, ingredient_id, 120.000 FROM dbo.Ingredient WHERE ingredient_name = N'Nước cốt dừa Bến Tre';
 
-IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 8 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name LIKE N'%xoài%'))
+IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 8 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name = N'Xoài Cát Chu chín cây'))
     INSERT INTO dbo.MenuItemIngredient (menu_item_id, ingredient_id, required_quantity)
-    SELECT 8, ingredient_id, 70.000 FROM dbo.Ingredient WHERE ingredient_name LIKE N'%xoài%';
+    SELECT 8, ingredient_id, 70.000 FROM dbo.Ingredient WHERE ingredient_name = N'Xoài Cát Chu chín cây';
 
 -- Menu 9
 IF NOT EXISTS (SELECT 1 FROM dbo.MenuItemIngredient WHERE menu_item_id = 9 AND ingredient_id = (SELECT TOP 1 ingredient_id FROM dbo.Ingredient WHERE ingredient_name = N'Yến mạch nguyên cám'))

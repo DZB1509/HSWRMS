@@ -28,6 +28,7 @@ export interface MenuItemResponse {
   servingsAvailable: number;
   allergenWarning: boolean;
   description?: string | null;
+  isExtra?: boolean;
 }
 
 export interface MenuAvailabilityResponse {
@@ -140,6 +141,7 @@ export interface KitchenOrderResponse {
   inventoryMessage?: string | null;
   items?: KitchenOrderLineResponse[];
   lines?: KitchenOrderLineResponse[];
+  createdAt?: string;
 }
 
 export interface UpdateOrderStatusRequest {

@@ -53,4 +53,6 @@ public class Permission {
     public String getActionType() { return actionType; }
     public boolean isDelegable() { return delegable; }
     public boolean isAdminOnly() { return adminOnly; }
+    public void setDelegable(boolean delegable) { this.delegable = delegable; }
+    public void setAdminOnly(boolean adminOnly) { this.adminOnly = adminOnly; }
 }

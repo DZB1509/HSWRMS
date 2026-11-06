@@ -260,7 +260,7 @@ public class SpaMasterController {
     @PostMapping("/retreat-packages")
     @PreAuthorize("@perm.has('S12','C')")
     public ResponseEntity<ApiResponse<RetreatPackage>> createPackage(@RequestBody Map<String, Object> payload) {
-        String packageName = (String) payload.get("packageName");
+        String packageName = (String) payload.getOrDefault("packageName", payload.get("name"));
         if (packageName == null || packageName.isBlank()) {
             throw new IllegalArgumentException("packageName is required");
         }
@@ -269,9 +269,9 @@ public class SpaMasterController {
         }
 
         RetreatPackage pkg = new RetreatPackage();
-        pkg.setPackageCode((String) payload.get("packageCode"));
+        String code = (String) payload.getOrDefault("packageCode", payload.get("code")); if (code == null || code.isBlank()) { code = "RET-" + (System.currentTimeMillis() % 100000); } pkg.setPackageCode(code.toUpperCase());
         pkg.setPackageName(packageName);
-        pkg.setWellnessGoal((String) payload.getOrDefault("wellnessGoal", "Holistic Wellness"));
+        String goal = (String) payload.getOrDefault("wellnessGoal", payload.get("goal")); pkg.setWellnessGoal(goal != null ? goal : "Holistic Wellness");
         pkg.setDurationNights(payload.get("durationNights") != null
                 ? Integer.parseInt(payload.get("durationNights").toString())
                 : 3);
@@ -280,8 +280,7 @@ public class SpaMasterController {
                 ? new BigDecimal(payload.get("basePrice").toString())
                 : BigDecimal.ZERO);
         pkg.setBasePriceUnit((String) payload.getOrDefault("basePriceUnit", "VND/khách/gói"));
-        pkg.setIncludedTreatments((String) payload.get("includedTreatments"));
-        pkg.setDietaryPlan((String) payload.get("dietaryPlan"));
+        String desc = (String) payload.getOrDefault("description", payload.get("dietaryPlan")); pkg.setDietaryPlan(desc != null ? desc : "Thực dưỡng hữu cơ thanh lọc chuyên sâu"); String treatments = (String) payload.get("includedTreatments"); if (treatments == null && payload.get("includedSpaSessions") != null) { treatments = payload.get("includedSpaSessions") + " buổi trị liệu Spa cao cấp bao gồm"; } pkg.setIncludedTreatments(treatments);
         pkg.setExtraChargePolicy((String) payload.get("extraChargePolicy"));
         pkg.setTargetGuest((String) payload.get("targetGuest"));
         pkg.setPackageStatus((String) payload.getOrDefault("packageStatus", RetreatPackage.ACTIVE));
@@ -299,7 +298,7 @@ public class SpaMasterController {
         RetreatPackage pkg = resolvePackage(idOrCode);
 
         if (payload.containsKey("packageCode")) {
-            pkg.setPackageCode((String) payload.get("packageCode"));
+        String code = (String) payload.getOrDefault("packageCode", payload.get("code")); if (code == null || code.isBlank()) { code = "RET-" + (System.currentTimeMillis() % 100000); } pkg.setPackageCode(code.toUpperCase());
         }
         if (payload.containsKey("packageName")) {
             pkg.setPackageName((String) payload.get("packageName"));
@@ -320,10 +319,9 @@ public class SpaMasterController {
             pkg.setBasePriceUnit((String) payload.get("basePriceUnit"));
         }
         if (payload.containsKey("includedTreatments")) {
-            pkg.setIncludedTreatments((String) payload.get("includedTreatments"));
         }
         if (payload.containsKey("dietaryPlan")) {
-            pkg.setDietaryPlan((String) payload.get("dietaryPlan"));
+        String desc = (String) payload.getOrDefault("description", payload.get("dietaryPlan")); pkg.setDietaryPlan(desc != null ? desc : "Thực dưỡng hữu cơ thanh lọc chuyên sâu"); String treatments = (String) payload.get("includedTreatments"); if (treatments == null && payload.get("includedSpaSessions") != null) { treatments = payload.get("includedSpaSessions") + " buổi trị liệu Spa cao cấp bao gồm"; } pkg.setIncludedTreatments(treatments);
         }
         if (payload.containsKey("extraChargePolicy")) {
             pkg.setExtraChargePolicy((String) payload.get("extraChargePolicy"));

@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { FoodImage } from '../../components/common/FoodImage';
 import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 import { AmanoiDiningLocationPicker } from '../../components/dining/DiningLocationPicker';
-import { buildAmanoiDiningNotes, type DiningServiceLocation } from '../../utils/diningServiceHelper';
+import { buildAmanoiDiningNotes, type DiningServiceLocation, type DeliveryTimingOption } from '../../utils/diningServiceHelper';
 
 interface CartItem {
   menuItem: DietaryMenuItem;
@@ -40,6 +40,8 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
   const [diningLocation, setDiningLocation] = useState<DiningServiceLocation>('IN_VILLA');
   const [selectedWellnessTags, setSelectedWellnessTags] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState('');
+  const [deliveryTiming, setDeliveryTiming] = useState<DeliveryTimingOption>('ASAP');
+  const [scheduledTime, setScheduledTime] = useState('');
 
 
   const extraItems = menuItems.filter((item) => item.isExtra);
@@ -84,6 +86,29 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
     if (!activeBooking || cart.length === 0 || isSubmitting) return;
     setSubmitError(null); setIsSubmitting(true);
 
+    if (deliveryTiming === 'SCHEDULED') {
+      if (!scheduledTime) {
+        setSubmitError(currentLang === 'vi' ? 'Vui lòng chọn mốc giờ hẹn dùng món.' : 'Please select your preferred scheduled time.');
+        setIsSubmitting(false);
+        return;
+      }
+      const now = new Date();
+      const [h, m] = scheduledTime.split(':').map(Number);
+      const sched = new Date();
+      sched.setHours(h, m, 0, 0);
+      const diffMinutes = Math.round((sched.getTime() - now.getTime()) / 60000);
+      const minRequired = diningLocation === 'IN_VILLA' ? 45 : 30;
+      if (diffMinutes < minRequired && diffMinutes > -1380) {
+        setSubmitError(
+          currentLang === 'vi'
+            ? 'Thời gian hẹn phải cách thời điểm hiện tại tối thiểu ' + minRequired + ' phút để Bếp chuẩn bị chu đáo.'
+            : 'Scheduled time must be at least ' + minRequired + ' minutes from now.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const locationLabel = diningLocation === 'IN_VILLA'
       ? `In-Villa (${activeBooking.villaNumber || 'Villa'})`
       : 'Dining Pavilion';
@@ -92,7 +117,9 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
       diningLocation,
       selectedWellnessTags,
       customNotes,
-      activeBooking.villaNumber
+      activeBooking.villaNumber,
+      deliveryTiming,
+      scheduledTime
     );
 
     try {
@@ -215,10 +242,27 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
     <div className="hsw-dining-container" id="screen-36-alacarte-order">
       {/* Page Header */}
       <div className="hsw-dining-header">
-        <h1 className="hsw-dining-title">{t('dining.extra.title', 'A-la-carte Culinary Requests')}</h1>
+        <h1 className="hsw-dining-title">{t('dining.extra.title', 'Thực Đơn Gọi Thêm A-la-carte')}</h1>
         <p className="hsw-dining-subtitle">
-          {t('dining.extra.subtitle', 'Order additional artisanal dishes and elixirs outside your included retreat plan.')}
+          {t('dining.extra.subtitle', 'Gọi các món ăn bổ dưỡng thượng hạng và thức uống thủ công ngoài khẩu phần trọn gói của kỳ nghỉ.')}
         </p>
+      </div>
+
+      {/* Informative Banner */}
+      <div style={{
+        backgroundColor: '#fff9e6',
+        border: '1px solid #f9ab00',
+        borderRadius: '8px',
+        padding: '14px 18px',
+        marginBottom: '24px',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center'
+      }}>
+        <Info size={22} color="#b06000" style={{ flexShrink: 0 }} />
+        <div style={{ fontSize: '13px', color: '#7c4a03', lineHeight: 1.5 }}>
+          <strong>Danh mục ẩm thực A-la-carte đặc thù ({extraItems.length} món):</strong> Đây là các món ăn bồi bổ cao cấp, canh tiềm thảo dược và thức uống dinh dưỡng được phục vụ theo yêu cầu riêng, <em>ngoài khẩu phần ăn tiêu chuẩn đã bao gồm trong gói kỳ nghỉ</em>. Chi phí sẽ được ghi nhận vào Folio phòng và thanh toán khi trả phòng.
+        </div>
       </div>
 
       {/* 2-Column Catalogue + Sticky Summary Layout (Requirement 16) */}
@@ -375,6 +419,10 @@ const AlaCarteOrderPageForIdentity: React.FC = () => {
                   onCustomNotesChange={setCustomNotes}
                   villaNumber={activeBooking.villaNumber}
                   lang={currentLang === 'vi' ? 'vi' : 'en'}
+                  deliveryTiming={deliveryTiming}
+                  onDeliveryTimingChange={setDeliveryTiming}
+                  scheduledTime={scheduledTime}
+                  onScheduledTimeChange={setScheduledTime}
                 />
               </div>
 

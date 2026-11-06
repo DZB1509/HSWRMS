@@ -28,6 +28,29 @@
     "mealOrderAllergies": "Đơn Món Ăn & Dị Ứng",
     "managementCockpit": "Khoang Điều Hành Quản Lý",
     "managerDashboard": "Bảng Điều Hành Quản Lý",
+    "managerHealthReadiness": {
+      "title": "Mức Độ Sẵn Sàng Sức Khỏe & Chăm Sóc",
+      "subtitle": "Theo dõi mức độ hoàn thiện hồ sơ sức khỏe và trạng thái đồng ý xử lý dữ liệu của khách hàng trên toàn khu nghỉ dưỡng.",
+      "overview": "Hồ sơ được xem dựa trên điều kiện:",
+      "explanation": "Điều này giúp Manager hiểu vì sao hồ sơ đang ở trạng thái chưa hoàn thiện.",
+      "kpi": {
+        "totalHealthProfiles": "Tổng Số Hồ Sơ Sức Khỏe",
+        "completedProfiles": "Hồ Sơ Đã Hoàn Thiện",
+        "incompleteProfiles": "Hồ Sơ Chưa Hoàn Thiện",
+        "activeConsents": "Đồng Ý Xử Lý Dữ Liệu Sức Khỏe",
+        "pendingConsents": "Chưa Có Đồng Ý",
+        "completionRate": "Tỷ Lệ Hoàn Thiện"
+      },
+      "sections": {
+        "profileReadinessOverview": "Tổng Quan Trạng Thái Hồ Sơ",
+        "operationalExplanation": "Giải Thích Điều Kiện Hồ Sơ Hoàn Chỉnh"
+      },
+      "criteria": {
+        "consentConfirmed": "Khách hàng đã xác nhận consent xử lý dữ liệu sức khỏe",
+        "allergiesDeclared": "Đã khai báo dị ứng hoặc xác nhận không có",
+        "dietaryDeclared": "Đã khai báo nhu cầu dinh dưỡng hoặc xác nhận không có"
+      }
+    },
     "revenueAnalytics": "Phân Tích Doanh Thu",
     "occupancyReports": "Báo Cáo Công Suất Phòng",
     "therapistUtilization": "Mức Độ Sử Dụng Trị Liệu Viên",

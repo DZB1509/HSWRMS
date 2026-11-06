@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import type { DietaryMenuItem, MealPeriod, LocalizedString } from '../../types/dining';
-import { Search, Info, AlertCircle, CalendarCheck, Coffee } from 'lucide-react';
+import { Search, Info, AlertCircle, CalendarCheck, Coffee, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useCustomer } from '../../context/CustomerContext';
@@ -33,6 +33,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
   const customerId = profile?.id ?? '';
   const dietaryInfo = getDietaryProjection(customerId);
 
+  const [offeringFilter, setOfferingFilter] = useState<'all' | 'package' | 'extra'>('all');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [activePeriod, setActivePeriod] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,6 +50,10 @@ const DietaryMenuPageForIdentity: React.FC = () => {
   const periods = ['all', 'breakfast', 'lunch', 'dinner', 'all_day'];
 
   const filteredItems = menuItems.filter((item) => {
+    const matchesOffering =
+      offeringFilter === 'all' ||
+      (offeringFilter === 'extra' ? item.isExtra : !item.isExtra);
+
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const matchesPeriod =
       activePeriod === 'all' ||
@@ -56,7 +61,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
       item.mealPeriods.includes('all_day');
 
     if (!searchQuery.trim()) {
-      return matchesCategory && matchesPeriod;
+      return matchesOffering && matchesCategory && matchesPeriod;
     }
 
     const q = searchQuery.toLowerCase().trim();
@@ -64,12 +69,15 @@ const DietaryMenuPageForIdentity: React.FC = () => {
     const descMatch = Object.values(item.description).some((v) => v.toLowerCase().includes(q));
     const tagMatch = item.dietaryTags.some((t) => t.toLowerCase().includes(q));
 
-    return matchesCategory && matchesPeriod && (nameMatch || descMatch || tagMatch);
+    return matchesOffering && matchesCategory && matchesPeriod && (nameMatch || descMatch || tagMatch);
   });
 
   const hasAllergyWarning = (item: DietaryMenuItem) => {
     return item.allergenTags.some((tag) => dietaryInfo.allergies.includes(tag.toLowerCase()));
   };
+
+  const packageCount = menuItems.filter((i) => !i.isExtra).length;
+  const extraCount = menuItems.filter((i) => i.isExtra).length;
 
   return (
     <div className="hsw-dining-container" id="screen-34-dietary-menu">
@@ -77,7 +85,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
       <div className="hsw-dining-header">
         <h1 className="hsw-dining-title">{t('dining.menu.title', 'Nourishing Dietary Menu')}</h1>
         <p className="hsw-dining-subtitle">
-          {t('dining.menu.subtitle', 'Explore our holistic culinary offerings, curated for your wellness journey.')}
+          {t('dining.menu.subtitle', 'Khám phá ẩm thực dưỡng sinh tinh hoa: các món trọn gói theo kỳ nghỉ và thực đơn gọi thêm A-la-carte đặc thù.')}
         </p>
       </div>
 
@@ -93,7 +101,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
               id="btn-plan-retreat-meals"
             >
               <CalendarCheck size={16} />
-              <span>{t('dining.menu.planMeals', 'Plan Retreat Meals')}</span>
+              <span>{t('dining.menu.planMeals', 'Lên Thực Đơn Theo Gói (0đ)')}</span>
             </button>
             <button
               type="button"
@@ -102,7 +110,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
               id="btn-order-alacarte"
             >
               <Coffee size={16} />
-              <span>{t('dining.menu.orderAlaCarte', 'Order A-la-carte')}</span>
+              <span>{t('dining.menu.orderAlaCarte', 'Gọi Món A-la-carte')}</span>
             </button>
           </div>
 
@@ -123,7 +131,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
                 type="text"
                 className="hsw-input"
                 style={{ paddingLeft: '34px', width: '100%', height: '40px' }}
-                placeholder={t('dining.menu.searchPlaceholder', 'Search menu...')}
+                placeholder={t('dining.menu.searchPlaceholder', 'Tìm kiếm món ăn, vị thuốc...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 id="dining-menu-search"
@@ -140,12 +148,42 @@ const DietaryMenuPageForIdentity: React.FC = () => {
               {periods.map((p) => (
                 <option key={p} value={p}>
                   {p === 'all'
-                    ? t('dining.periods.all', 'All Meal Periods')
+                    ? t('dining.periods.all', 'Tất cả các bữa')
                     : t(`dining.periods.${p}`, p.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()))}
                 </option>
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Offering Type Tabs: Tất cả vs Món trong gói vs Món A-la-carte */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className={`hsw-btn hsw-btn-sm ${offeringFilter === 'all' ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
+            onClick={() => setOfferingFilter('all')}
+            style={offeringFilter === 'all' ? { backgroundColor: 'var(--brand-primary, #2d4a3e)', color: '#fff' } : {}}
+          >
+            <span>Tất Cả Thực Đơn ({menuItems.length})</span>
+          </button>
+          <button
+            type="button"
+            className={`hsw-btn hsw-btn-sm ${offeringFilter === 'package' ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
+            onClick={() => setOfferingFilter('package')}
+            style={offeringFilter === 'package' ? { backgroundColor: '#137333', borderColor: '#137333', color: '#fff' } : {}}
+          >
+            <Sparkles size={14} style={{ marginRight: '4px' }} />
+            <span>Món Trong Gói Nghỉ Dưỡng ({packageCount})</span>
+          </button>
+          <button
+            type="button"
+            className={`hsw-btn hsw-btn-sm ${offeringFilter === 'extra' ? 'hsw-btn-primary' : 'hsw-btn-secondary'}`}
+            onClick={() => setOfferingFilter('extra')}
+            style={offeringFilter === 'extra' ? { backgroundColor: 'var(--accent-sand, #c7a77b)', borderColor: 'var(--accent-sand, #c7a77b)', color: '#fff' } : {}}
+          >
+            <Coffee size={14} style={{ marginRight: '4px' }} />
+            <span>Món Gọi Thêm A-la-carte ({extraCount})</span>
+          </button>
         </div>
 
         {/* Category Pills (Requirement 11) */}
@@ -179,23 +217,41 @@ const DietaryMenuPageForIdentity: React.FC = () => {
               <div style={{ position: 'relative' }}>
                 <FoodImage src={item.image} alt={localizedName} aspectRatio="16 / 10" />
 
-                {item.isExtra && (
+                {item.isExtra ? (
                   <div
                     style={{
                       position: 'absolute',
                       top: '10px',
                       right: '10px',
-                      backgroundColor: 'var(--accent-sand)',
-                      color: 'var(--text-primary)',
-                      padding: '3px 8px',
-                      borderRadius: 'var(--radius-xs)',
+                      backgroundColor: 'var(--accent-sand, #bfa15f)',
+                      color: '#ffffff',
+                      padding: '4px 9px',
+                      borderRadius: 'var(--radius-xs, 4px)',
                       fontSize: '10px',
                       fontWeight: 700,
                       letterSpacing: '0.06em',
                       boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
                     }}
                   >
-                    {t('dining.menu.extraCharge', 'A-LA-CARTE')}
+                    A-LA-CARTE
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      backgroundColor: '#e6f4ea',
+                      color: '#137333',
+                      padding: '4px 9px',
+                      borderRadius: 'var(--radius-xs, 4px)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                    }}
+                  >
+                    TRỌN GÓI (0đ)
                   </div>
                 )}
               </div>
@@ -204,9 +260,13 @@ const DietaryMenuPageForIdentity: React.FC = () => {
               <div className="hsw-culinary-card-body">
                 <div className="hsw-culinary-card-header">
                   <h3 className="hsw-culinary-dish-name">{localizedName}</h3>
-                  {item.isExtra && item.price && (
+                  {item.isExtra && item.price && item.price > 0 ? (
                     <div className="hsw-culinary-price">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
+                    </div>
+                  ) : (
+                    <div className="hsw-culinary-price" style={{ color: '#137333', fontSize: '12px', fontWeight: 600 }}>
+                      ✓ Đã bao gồm trong gói
                     </div>
                   )}
                 </div>
@@ -279,6 +339,7 @@ const DietaryMenuPageForIdentity: React.FC = () => {
             type="button"
             className="hsw-btn hsw-btn-secondary"
             onClick={() => {
+              setOfferingFilter('all');
               setActiveCategory('all');
               setActivePeriod('all');
               setSearchQuery('');

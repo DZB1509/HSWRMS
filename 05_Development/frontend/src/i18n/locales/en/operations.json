@@ -22,6 +22,29 @@
     "mealOrderAllergies": "Meal Order & Allergies",
     "managementCockpit": "Management Cockpit",
     "managerDashboard": "Manager Dashboard",
+    "managerHealthReadiness": {
+      "title": "Health & Wellness Readiness",
+      "subtitle": "Monitor customer health-profile completion and consent readiness across the resort.",
+      "overview": "Profile readiness overview",
+      "explanation": "Operational explanation",
+      "kpi": {
+        "totalHealthProfiles": "Total Health Profiles",
+        "completedProfiles": "Completed Profiles",
+        "incompleteProfiles": "Incomplete Profiles",
+        "activeConsents": "Active Health Consents",
+        "pendingConsents": "Pending Consent",
+        "completionRate": "Completion Rate"
+      },
+      "sections": {
+        "profileReadinessOverview": "Profile Readiness Overview",
+        "operationalExplanation": "Operational Explanation"
+      },
+      "criteria": {
+        "consentConfirmed": "Customer has confirmed consent for health data processing",
+        "allergiesDeclared": "Allergies declared, or confirmed none",
+        "dietaryDeclared": "Dietary needs declared, or confirmed none"
+      }
+    },
     "revenueAnalytics": "Revenue Analytics",
     "occupancyReports": "Occupancy Reports",
     "therapistUtilization": "Therapist Utilization",

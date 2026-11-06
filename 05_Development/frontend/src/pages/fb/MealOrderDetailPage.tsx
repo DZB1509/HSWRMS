@@ -21,6 +21,27 @@ export const MealOrderDetailPage: React.FC = () => {
 
   const [remoteItem, setRemoteItem] = useState<MealPrepEntry | null>(null);
   const [isLoadingRemote, setIsLoadingRemote] = useState<boolean>(false);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getRemainingGraceSeconds = (createdAt?: string): number => {
+    if (!createdAt) return 0;
+    try {
+      const normalizedIso = createdAt.endsWith('Z') || createdAt.includes('+') ? createdAt : `${createdAt}+07:00`;
+      const createdMs = new Date(normalizedIso).getTime();
+      if (isNaN(createdMs)) return 0;
+      const elapsed = Math.floor((nowMs - createdMs) / 1000);
+      return elapsed >= 0 && elapsed < 30 ? 30 - elapsed : 0;
+    } catch {
+      return 0;
+    }
+  };
 
   const formatDietaryNote = (note: string) => {
     const normalized = note.toLowerCase().replace(/[\s-]+/g, '_');
@@ -190,6 +211,13 @@ export const MealOrderDetailPage: React.FC = () => {
   };
 
   const handleStatusChange = (newStatus: FnbFulfillmentStatus) => {
+    if (newStatus === 'preparing' && item?.status === 'pending') {
+      const remaining = getRemainingGraceSeconds(item.createdAt);
+      if (remaining > 0) {
+        alert(t('fnb.prepList.gracePeriodAlert', `Đơn hàng đang trong 30 giây tự hủy của khách (còn ${remaining}s). Bếp vui lòng chờ hết thời gian ân hạn!`));
+        return;
+      }
+    }
     void updateFulfillmentStatus(item!.id, item!.type, newStatus).catch(() => undefined);
   };
 
@@ -243,22 +271,48 @@ export const MealOrderDetailPage: React.FC = () => {
         subtitle={t('fnb.orderDetail.subtitle', 'Fulfillment details and dietary requirements.')}
         actions={
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-            <div className="hsw-order-status-badge-container">
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                {t('fnb.orderDetail.statusLabel', 'Status')}:
-              </span>
-              <select
-                className={`hsw-status-select hsw-status-${item.status}`}
-                value={item.status}
-                onChange={(e) => handleStatusChange(e.target.value as any)}
-              >
-                <option value="pending" disabled={item.status !== 'pending'}>{t('fnb.prepList.statusPending', 'PENDING')}</option>
-                <option value="preparing" disabled={item.status !== 'pending' && item.status !== 'preparing'}>{t('fnb.prepList.statusPreparing', 'PREPARING')}</option>
-                <option value="ready" disabled={item.status !== 'preparing' && item.status !== 'ready'}>{t('fnb.prepList.statusReady', 'READY')}</option>
-                <option value="delivered" disabled={item.status !== 'ready' && item.status !== 'delivered'}>{t('fnb.prepList.statusDelivered', 'DELIVERED')}</option>
-                <option value="cancelled" disabled={item.status === 'delivered' || item.status === 'cancelled'}>{t('fnb.prepList.statusCancelled', 'CANCELLED')}</option>
-              </select>
-            </div>
+            {(() => {
+              const remainingGrace = item.status === 'pending' ? getRemainingGraceSeconds(item.createdAt) : 0;
+              const isGraceLocked = remainingGrace > 0;
+              return (
+                <>
+                  <div className="hsw-order-status-badge-container">
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {t('fnb.orderDetail.statusLabel', 'Status')}:
+                    </span>
+                    <select
+                      className={`hsw-status-select hsw-status-${item.status}`}
+                      value={item.status}
+                      onChange={(e) => handleStatusChange(e.target.value as any)}
+                    >
+                      <option value="pending" disabled={item.status !== 'pending'}>{t('fnb.prepList.statusPending', 'PENDING')}</option>
+                      <option value="preparing" disabled={(item.status !== 'pending' && item.status !== 'preparing') || isGraceLocked}>
+                        {t('fnb.prepList.statusPreparing', 'PREPARING') + (isGraceLocked ? ` (Chờ khách ${remainingGrace}s)` : '')}
+                      </option>
+                      <option value="ready" disabled={item.status !== 'preparing' && item.status !== 'ready'}>{t('fnb.prepList.statusReady', 'READY')}</option>
+                      <option value="delivered" disabled={item.status !== 'ready' && item.status !== 'delivered'}>{t('fnb.prepList.statusDelivered', 'DELIVERED')}</option>
+                      <option value="cancelled" disabled={item.status === 'delivered' || item.status === 'cancelled'}>{t('fnb.prepList.statusCancelled', 'CANCELLED')}</option>
+                    </select>
+                  </div>
+                  {isGraceLocked && (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      fontSize: '11px',
+                      color: '#d46b08',
+                      background: '#fff7e6',
+                      border: '1px solid #ffd591',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 500,
+                    }}>
+                      ⏳ Chờ khách ({remainingGrace}s)
+                    </span>
+                  )}
+                </>
+              );
+            })()}
             {item.inventoryStatus && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Kho:</span>

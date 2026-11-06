@@ -24,6 +24,7 @@ import { PasswordResetPage } from '../../pages/auth/PasswordResetPage';
 import { CustomerDashboardPage } from '../../pages/customer/CustomerDashboardPage';
 import { AccountSettingsPage } from '../../pages/customer/AccountSettingsPage';
 import { HealthProfilePage } from '../../pages/customer/HealthProfilePage';
+import { HealthConsentPage } from '../../pages/customer/HealthConsentPage';
 import { HealthDataDeletionPage } from '../../pages/customer/HealthDataDeletionPage';
 import { RetreatBookingPage } from '../../pages/customer/RetreatBookingPage';
 import { BookingSummaryPage } from '../../pages/customer/BookingSummaryPage';
@@ -53,6 +54,7 @@ import { ManualExtraSpaPage } from '../../pages/receptionist/ManualExtraSpaPage'
 import { TherapistDashboardPage } from '../../pages/therapist/TherapistDashboardPage';
 import { TherapistSchedulePage } from '../../pages/therapist/TherapistSchedulePage';
 import { TherapistSessionDetailPage } from '../../pages/therapist/TherapistSessionDetailPage';
+import { ManagerHealthReadinessPage } from '../../pages/manager/ManagerHealthReadinessPage';
 
 // Phase 2.5 Dining & F&B Screens (Customer)
 import { DietaryMenuPage } from '../../pages/customer/DietaryMenuPage';
@@ -134,6 +136,7 @@ export const AppRouter: React.FC = () => {
         <Route path="dashboard" element={<CustomerDashboardPage />} />
         <Route path="account" element={<AccountSettingsPage />} />
         <Route path="health-profile" element={<HealthProfilePage />} />
+        <Route path="health-profile/consent" element={<HealthConsentPage />} />
         <Route path="health-profile/deletion" element={<HealthDataDeletionPage />} />
         
         {/* Module 2: Booking Journey */}
@@ -276,6 +279,7 @@ export const AppRouter: React.FC = () => {
         <Route path="revenue" element={<RevenueDashboardPage />} />
         <Route path="occupancy" element={<OccupancyReportPage />} />
         <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
+        <Route path="health-readiness" element={<ManagerHealthReadinessPage />} />
         <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
         <Route index element={<Navigate to="/manager/dashboard" replace />} />
       </Route>

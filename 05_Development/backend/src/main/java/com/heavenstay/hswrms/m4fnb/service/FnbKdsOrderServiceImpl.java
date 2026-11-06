@@ -52,13 +52,13 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
     private org.springframework.beans.factory.ObjectProvider<com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort> folioStatusPortProvider;
 
     public FnbKdsOrderServiceImpl(MealOrderRepository mealOrderRepository,
-                                MenuItemRepository menuItemRepository,
-                                MealOrderItemRepository mealOrderItemRepository,
-                                RetreatBookingRepository bookingRepository,
-                                BookingContextPort bookingContextPort,
-                                DietaryProfilePort dietaryProfilePort,
-                                FolioBillingService folioBillingService,
-                                AuditLogService auditLogService) {
+            MenuItemRepository menuItemRepository,
+            MealOrderItemRepository mealOrderItemRepository,
+            RetreatBookingRepository bookingRepository,
+            BookingContextPort bookingContextPort,
+            DietaryProfilePort dietaryProfilePort,
+            FolioBillingService folioBillingService,
+            AuditLogService auditLogService) {
         this.mealOrderRepository = mealOrderRepository;
         this.menuItemRepository = menuItemRepository;
         this.mealOrderItemRepository = mealOrderItemRepository;
@@ -75,8 +75,10 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         List<MenuItem> items = menuItemRepository.findAllAvailable();
         return items.stream()
                 .filter(i -> category == null || category.equalsIgnoreCase(i.getCategory()))
-                .filter(i -> mealPeriod == null || i.getMealType() == null || i.getMealType().toLowerCase().contains(mealPeriod.toLowerCase()) || i.getMealType().equalsIgnoreCase("ALL_DAY"))
-                .map(this::mapToMenuItemDto)
+                .filter(i -> mealPeriod == null || i.getMealType() == null
+                        || i.getMealType().toLowerCase().contains(mealPeriod.toLowerCase())
+                        || i.getMealType().equalsIgnoreCase("ALL_DAY"))
+                .map(item -> mapToMenuItemDto(item))
                 .collect(Collectors.toList());
     }
 
@@ -87,19 +89,23 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             throw new BusinessRuleException("ORDER_DATE_REQUIRED", "Order date is required for daily meal selection.");
         }
 
-        // Validate booking existence, ownership, and stay dates through BookingContextPort
+        // Validate booking existence, ownership, and stay dates through
+        // BookingContextPort
         bookingContextPort.requireEligibleCustomerBooking(currentUserId, request.getRetreatBookingId(), orderDate);
 
         if (folioStatusPortProvider != null) {
-            com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort folioPort = folioStatusPortProvider.getIfAvailable();
+            com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort folioPort = folioStatusPortProvider
+                    .getIfAvailable();
             if (folioPort != null && !folioPort.isFolioOpenForBooking(request.getRetreatBookingId())) {
                 throw new BusinessRuleException("FOLIO_CLOSED",
-                        "Cannot place dining orders for booking ID " + request.getRetreatBookingId() + " because its folio is closed.");
+                        "Cannot place dining orders for booking ID " + request.getRetreatBookingId()
+                                + " because its folio is closed.");
             }
         }
 
         RetreatBooking booking = bookingRepository.findById(request.getRetreatBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found with ID: " + request.getRetreatBookingId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Retreat booking not found with ID: " + request.getRetreatBookingId()));
 
         String mealPeriod = request.getMealPeriod().toUpperCase();
 
@@ -110,7 +116,8 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         if (existingOpt.isPresent()) {
             order = existingOpt.get();
             String status = order.getOrderStatus();
-            if ("PREPARING".equalsIgnoreCase(status) || "READY".equalsIgnoreCase(status) || "DELIVERED".equalsIgnoreCase(status)) {
+            if ("PREPARING".equalsIgnoreCase(status) || "READY".equalsIgnoreCase(status)
+                    || "DELIVERED".equalsIgnoreCase(status)) {
                 throw new BusinessRuleException("CANNOT_MODIFY_ACTIVE_MEAL",
                         "Cannot modify daily meal selection in " + status + " state.");
             }
@@ -155,19 +162,23 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
     public MealOrderDto createAlaCarteOrder(CreateAlaCarteRequest request, Integer currentUserId) {
         LocalDate orderDate = request.getOrderDate() != null ? request.getOrderDate() : LocalDate.now();
 
-        // Validate booking existence, ownership, and stay dates through BookingContextPort
+        // Validate booking existence, ownership, and stay dates through
+        // BookingContextPort
         bookingContextPort.requireEligibleCustomerBooking(currentUserId, request.getRetreatBookingId(), orderDate);
 
         if (folioStatusPortProvider != null) {
-            com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort folioPort = folioStatusPortProvider.getIfAvailable();
+            com.heavenstay.hswrms.m4fnb.integration.FolioStatusPort folioPort = folioStatusPortProvider
+                    .getIfAvailable();
             if (folioPort != null && !folioPort.isFolioOpenForBooking(request.getRetreatBookingId())) {
                 throw new BusinessRuleException("FOLIO_CLOSED",
-                        "Cannot place dining orders for booking ID " + request.getRetreatBookingId() + " because its folio is closed.");
+                        "Cannot place dining orders for booking ID " + request.getRetreatBookingId()
+                                + " because its folio is closed.");
             }
         }
 
         RetreatBooking booking = bookingRepository.findById(request.getRetreatBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException("Retreat booking not found with ID: " + request.getRetreatBookingId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Retreat booking not found with ID: " + request.getRetreatBookingId()));
 
         MealOrderEntity order = new MealOrderEntity();
         order.setRetreatBooking(booking);
@@ -197,7 +208,8 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
         for (AlaCarteItemRequest itemReq : request.getItems()) {
             MenuItem item = menuItemRepository.findById(itemReq.getMenuItemId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with ID: " + itemReq.getMenuItemId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Menu item not found with ID: " + itemReq.getMenuItemId()));
             if (!"AVAILABLE".equalsIgnoreCase(item.getAvailabilityStatus())) {
                 throw new BusinessRuleException("MENU_ITEM_UNAVAILABLE",
                         "Menu item '" + item.getItemName() + "' is currently unavailable.");
@@ -223,7 +235,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         }
 
         List<MealOrderEntity> orders = mealOrderRepository.findByBookingIdOrderByCreatedAtDesc(bookingId);
-        return orders.stream().map(this::mapToDto).collect(Collectors.toList());
+        return orders.stream().map(order -> mapToDto(order)).collect(Collectors.toList());
     }
 
     @Override
@@ -264,7 +276,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
     @Override
     @Transactional(readOnly = true)
     public List<MealPrepEntryDto> getKitchenPrepQueue(LocalDate date, String type, String status,
-                                                      Boolean dietaryOnly, String search) {
+            Boolean dietaryOnly, String search) {
         LocalDate targetDate = date != null ? date : LocalDate.now();
         List<MealOrderEntity> orders;
 
@@ -298,8 +310,10 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
             if (search != null && !search.isBlank()) {
                 String q = search.trim().toLowerCase();
-                boolean matchesName = entry.getCustomerName() != null && entry.getCustomerName().toLowerCase().contains(q);
-                boolean matchesVilla = entry.getVillaNumber() != null && entry.getVillaNumber().toLowerCase().contains(q);
+                boolean matchesName = entry.getCustomerName() != null
+                        && entry.getCustomerName().toLowerCase().contains(q);
+                boolean matchesVilla = entry.getVillaNumber() != null
+                        && entry.getVillaNumber().toLowerCase().contains(q);
                 if (!matchesName && !matchesVilla) {
                     continue;
                 }
@@ -321,7 +335,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
     @Override
     public MealOrderDto updateOrderStatus(Long orderId, UpdateOrderStatusRequest request,
-                                          Integer currentUserId, boolean isStaff) {
+            Integer currentUserId, boolean isStaff) {
         MealOrderEntity order = mealOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meal order not found with ID: " + orderId));
 
@@ -353,6 +367,14 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             }
             if (!isStaff) {
                 throw new AccessDeniedException("Only staff can transition order to PREPARING.");
+            }
+            // Protect customer 30-second cancellation grace period (Option B)
+            LocalDateTime graceDeadline = order.getCreatedAt() != null ? order.getCreatedAt().plusSeconds(30) : null;
+            if (graceDeadline != null && LocalDateTime.now().isBefore(graceDeadline)) {
+                throw new BusinessRuleException(
+                        "ORDER_IN_CANCELLATION_GRACE_PERIOD",
+                        "Đơn hàng đang trong thời gian ân hạn tự hủy của khách (30 giây đầu). Bếp vui lòng chờ hết thời gian ân hạn trước khi tiếp nhận chế biến."
+                );
             }
             order.setOrderStatus("PREPARING");
         } else if ("READY".equals(targetStatus)) {
@@ -392,7 +414,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
     }
 
     private MealOrderDto cancelOrderInternal(MealOrderEntity order, String cancellationReason,
-                                             Integer currentUserId, boolean isStaff) {
+            Integer currentUserId, boolean isStaff) {
         String currentStatus = order.getOrderStatus().toUpperCase();
         if ("CANCELLED".equals(currentStatus)) {
             return mapToDto(order);
@@ -410,7 +432,18 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
 
         if ("PENDING".equals(currentStatus)) {
             if (!isStaff && effectiveUserId != null) {
-                bookingContextPort.requireOwnedCustomerBooking(effectiveUserId, order.getRetreatBooking().getRetreatBookingId());
+                bookingContextPort.requireOwnedCustomerBooking(effectiveUserId,
+                        order.getRetreatBooking().getRetreatBookingId());
+            }
+
+            if (!isStaff) {
+                LocalDateTime deadline = order.getCreatedAt() != null ? order.getCreatedAt().plusSeconds(30)
+                        : LocalDateTime.MIN;
+                if (!LocalDateTime.now().isBefore(deadline)) {
+                    throw new BusinessRuleException(
+                            "CANCELLATION_GRACE_PERIOD_EXPIRED",
+                            "Đã quá thời gian cho phép tự hủy đơn (30 giây). Bếp đã tiếp nhận quy trình chuẩn bị.");
+                }
             }
 
             String actorRole = resolveActorRole(isStaff);
@@ -425,8 +458,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
                     String.valueOf(order.getMealOrderId()),
                     AuditLogService.SUCCESS,
                     currentStatus,
-                    auditDetail
-            );
+                    auditDetail);
 
             order.setOrderStatus("CANCELLED");
             MealOrderEntity saved = mealOrderRepository.save(order);
@@ -438,11 +470,13 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             // PREPARING or READY
             if (!isStaff) {
                 throw new BusinessRuleException("CUSTOMER_CANNOT_CANCEL_PREPARING_ORDER",
-                        "Order ID " + order.getMealOrderId() + " has already started preparation and cannot be cancelled by guest.");
+                        "Order ID " + order.getMealOrderId()
+                                + " has already started preparation and cannot be cancelled by guest.");
             }
             if (trimmedReason == null || trimmedReason.isEmpty()) {
                 throw new BusinessRuleException("CANCELLATION_REASON_REQUIRED",
-                        "A cancellation reason is required to cancel an order currently in " + currentStatus + " state.");
+                        "A cancellation reason is required to cancel an order currently in " + currentStatus
+                                + " state.");
             }
 
             String actorRole = resolveActorRole(isStaff);
@@ -455,8 +489,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
                     String.valueOf(order.getMealOrderId()),
                     AuditLogService.SUCCESS,
                     currentStatus,
-                    auditDetail
-            );
+                    auditDetail);
 
             order.setOrderStatus("CANCELLED");
             MealOrderEntity saved = mealOrderRepository.save(order);
@@ -495,7 +528,8 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
                     item.setMenuItem(menuItemRepository.findById(item.getMenuItemId()).orElse(null));
                 }
                 BigDecimal price = item.getMenuItem() != null && item.getMenuItem().getPrice() != null
-                        ? item.getMenuItem().getPrice() : BigDecimal.ZERO;
+                        ? item.getMenuItem().getPrice()
+                        : BigDecimal.ZERO;
                 BigDecimal lineTotal = price.multiply(BigDecimal.valueOf(item.getQuantity()));
                 totalAmount = totalAmount.add(lineTotal);
             }
@@ -519,8 +553,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
                         order.getId(),
                         order.getRetreatBookingId(),
                         totalAmount,
-                        LocalDateTime.now()
-                ));
+                        LocalDateTime.now()));
             }
         }
     }
@@ -554,6 +587,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         dto.setTargetTime(order.getMealType());
         dto.setStatus(order.getOrderStatus().toLowerCase());
         dto.setCustomerNotes(order.getSpecialNotes());
+        dto.setCreatedAt(order.getCreatedAt());
 
         Integer bookingId = order.getRetreatBooking() != null
                 ? order.getRetreatBooking().getRetreatBookingId()
