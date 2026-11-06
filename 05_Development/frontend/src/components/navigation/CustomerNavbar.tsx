@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useCustomer } from '../../context/CustomerContext';
 import { LanguageSwitcher } from '../common/LanguageSwitcher';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { CursorEffectToggle } from '../common/CursorEffectToggle';
 import { HeavenStayLogo } from '../common/HeavenStayLogo';
+import { UserAccountMenu } from './UserAccountMenu';
 import {
   Sparkles,
   Calendar,
@@ -24,8 +24,7 @@ import {
 export const CustomerNavbar: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const { profile, activeBooking } = useCustomer();
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+    const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on location change
@@ -59,15 +58,6 @@ export const CustomerNavbar: React.FC = () => {
     setOpenDropdown((prev) => (prev === id ? null : id));
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const isSpaActive = location.pathname.startsWith('/customer/spa');
   const isDiningActive = location.pathname.startsWith('/customer/dining');
   const isProfileActive = location.pathname === '/customer/health-profile';
@@ -99,7 +89,7 @@ export const CustomerNavbar: React.FC = () => {
           {/* Book Retreat */}
           <Link
             to="/customer/booking/new"
-            className={`hsw-customer-nav-link ${location.pathname.startsWith('/customer/booking') ? 'active' : ''}`}
+            className={`hsw-customer-nav-link hsw-nav-desktop-wide-only ${location.pathname.startsWith('/customer/booking') ? 'active' : ''}`}
           >
             <Calendar size={15} />
             <span>{t('customer.nav.bookRetreat', 'Đặt Kỳ Nghỉ')}</span>
@@ -129,6 +119,15 @@ export const CustomerNavbar: React.FC = () => {
               <ChevronDown size={12} className="hsw-dropdown-chevron" />
             </button>
             <div className="hsw-nav-dropdown" role="menu">
+              <Link
+                to="/customer/booking/new"
+                className={`hsw-nav-dropdown-item ${location.pathname.startsWith('/customer/booking') ? 'active' : ''}`}
+                role="menuitem"
+                onClick={() => setOpenDropdown(null)}
+              >
+                <Calendar size={14} />
+                <span>{t('customer.nav.bookRetreat', 'Đặt Kỳ Nghỉ')}</span>
+              </Link>
               <Link
                 to="/customer/spa"
                 className={`hsw-nav-dropdown-item ${location.pathname === '/customer/spa' ? 'active' : ''}`}
@@ -227,7 +226,7 @@ export const CustomerNavbar: React.FC = () => {
           <div className={`hsw-nav-dropdown-wrapper hsw-nav-more-wrapper ${openDropdown === 'more' ? 'is-open' : ''}`}>
             <button
               type="button"
-              className={`hsw-customer-nav-link hsw-dropdown-btn ${isMoreActive ? 'active' : ''}`}
+              className={`hsw-customer-nav-link hsw-dropdown-btn hsw-nav-more-btn ${isMoreActive ? 'active' : ''}`}
               onClick={(e) => toggleDropdown('more', e)}
               aria-expanded={openDropdown === 'more'}
               aria-haspopup="true"
@@ -274,27 +273,13 @@ export const CustomerNavbar: React.FC = () => {
           {/* Zone 3: Global Preferences */}
           <div className="hsw-customer-lang-zone" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <LanguageSwitcher />
-            <ThemeToggle />
-            <CursorEffectToggle />
+            <ThemeToggle compact />
+            <CursorEffectToggle compact />
           </div>
 
-          {/* Zone 4: Customer Profile */}
+                    {/* Zone 4: Customer Account Menu (Unified Account Dropdown & Logout) */}
           <div className="hsw-customer-profile-zone">
-            <Link to="/customer/account" style={{ textDecoration: 'none' }} aria-label="Customer account and settings">
-              <div className="hsw-customer-user-badge">
-                <div className="hsw-avatar-circle">
-                  {getInitials(profile?.fullName ?? '')}
-                </div>
-                <div style={{ textAlign: 'left' }} className="hsw-customer-user-text">
-                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {profile?.fullName ?? ''}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--accent-olive)' }}>
-                    {activeBooking ? `${activeBooking.villaNumber || 'Villa #102'} · Reserved` : 'Sanctuary Member'}
-                  </div>
-                </div>
-              </div>
-            </Link>
+            <UserAccountMenu variant="customer" />
           </div>
         </div>
       </div>

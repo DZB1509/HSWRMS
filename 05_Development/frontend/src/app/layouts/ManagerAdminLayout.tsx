@@ -6,6 +6,7 @@ import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { CursorEffectToggle } from '../../components/common/CursorEffectToggle';
+import { UserAccountMenu } from '../../components/navigation/UserAccountMenu';
 import { useAuth } from '../../hooks/useAuth';
 import { ShieldAlert, Download, Filter, Menu, X } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -44,7 +45,7 @@ export const ManagerAdminLayout: React.FC = () => {
             <Breadcrumb />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <div className="hsw-topbar-extras" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'nowrap' }}>
             {/* 1. Manager Scope Badge */}
             <div style={{
               display: 'flex',
@@ -71,9 +72,12 @@ export const ManagerAdminLayout: React.FC = () => {
             {/* 2. Global Preferences: Language | Theme | Cursor FX */}
             <LanguageSwitcher />
             <ThemeToggle />
-            <CursorEffectToggle />
+            <span className="hsw-topbar-cursor-toggle">
+              <CursorEffectToggle />
+            </span>
 
             {/* 3. Filter Scope */}
+            <span className="hsw-topbar-action-btns" style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
             <Button variant="secondary" size="sm" icon={<Filter size={13} />}>
               {t('topbar.filterScope', 'Phạm Vi Lọc')}
             </Button>
@@ -82,6 +86,11 @@ export const ManagerAdminLayout: React.FC = () => {
             <Button variant="tertiary" size="sm" icon={<Download size={13} />}>
               {t('topbar.export', 'Xuất Dữ Liệu')}
             </Button>
+
+            </span>
+
+            {/* 5. Unified User Account Menu */}
+            <UserAccountMenu variant="operational" />
           </div>
         </header>
 

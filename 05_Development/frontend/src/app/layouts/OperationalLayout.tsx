@@ -8,6 +8,7 @@ import { Calendar, Bell, Menu, X } from 'lucide-react';
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { CursorEffectToggle } from '../../components/common/CursorEffectToggle';
+import { UserAccountMenu } from '../../components/navigation/UserAccountMenu';
 
 export const OperationalLayout: React.FC = () => {
   const { role } = useAuth();
@@ -69,14 +70,14 @@ export const OperationalLayout: React.FC = () => {
 
           <Breadcrumb />
 
-          <div className="hsw-topbar-extras" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="hsw-topbar-extras" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            <div className="hsw-topbar-date" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calendar size={14} style={{ color: 'var(--accent-olive)' }} />
               <span>
                 {t('operations.common.resortDate', 'Resort Date')}: <strong>{resortDateStr}</strong>
               </span>
             </div>
-            <div style={{
+            <div className="hsw-topbar-role-badge" style={{
                   padding: '2px 8px',
               borderRadius: 'var(--radius-pill)',
               backgroundColor: 'var(--bg-soft)',
@@ -88,8 +89,10 @@ export const OperationalLayout: React.FC = () => {
             </div>
             <LanguageSwitcher />
             <ThemeToggle />
-            <CursorEffectToggle />
-            <div style={{ position: 'relative', cursor: 'pointer' }} title={t('operations.common.operationalNotifications', 'Operational Notifications')}>
+            <span className="hsw-topbar-cursor-toggle">
+              <CursorEffectToggle />
+            </span>
+            <div className="hsw-topbar-role-badge" style={{ position: 'relative', cursor: 'pointer' }} title={t('operations.common.operationalNotifications', 'Operational Notifications')}>
               <Bell size={16} />
               <span style={{
                 position: 'absolute',
@@ -101,6 +104,7 @@ export const OperationalLayout: React.FC = () => {
                 borderRadius: '50%'
               }} />
             </div>
+            <UserAccountMenu variant="operational" />
           </div>
         </header>
 

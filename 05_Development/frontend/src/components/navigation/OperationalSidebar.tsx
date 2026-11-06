@@ -22,8 +22,7 @@ import {
   Database,
   History,
   Activity,
-  LogOut,
-  Receipt
+    Receipt
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -69,7 +68,7 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.therapistDashboard', defaultLabel: 'Bảng Điều Khiển Trị Liệu', path: '/therapist/dashboard', icon: LayoutDashboard },
         { labelKey: 'operations.sidebar.dailyWorkSchedule', defaultLabel: 'Lịch Làm Việc Hàng Ngày', path: '/therapist/schedule', icon: CalendarCheck },
-        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Chi Tiết Buổi Trị Liệu & Ghi Chú', path: '/therapist/sessions/SES-301', icon: HeartHandshake }
+        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Chi Tiết Buổi Trị Liệu & Ghi Chú', path: '/therapist/schedule', icon: HeartHandshake }
       ]
     }
   ],
@@ -140,7 +139,7 @@ export const OperationalSidebar: React.FC<{
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
 }> = ({ mobileOpen = false, onCloseMobile: _onCloseMobile }) => {
-  const { currentUser, role, logout } = useAuth();
+  const { currentUser, role } = useAuth();
   const { managerDelegatedCapabilities } = useGovernance();
   const location = useLocation();
   const { t } = useTranslation();
@@ -226,16 +225,6 @@ export const OperationalSidebar: React.FC<{
         ))}
       </nav>
 
-      <div style={{ padding: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)' }}>
-        <button
-          onClick={logout}
-          className="hsw-sidebar-link"
-          style={{ width: '100%', color: 'var(--danger)', justifyContent: 'flex-start' }}
-        >
-          <LogOut size={16} />
-          <span>{t('operations.sidebar.signOut', 'Đăng Xuất')}</span>
-        </button>
-      </div>
-    </aside>
+      </aside>
   );
 };

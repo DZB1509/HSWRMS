@@ -85,7 +85,7 @@ export const MOCK_PERSONAS: Record<Role, User> = {
   fb_staff: {
     id: 'usr-fb-01',
     name: 'Chef Marcus Chen',
-    email: 'fbstaff@heavenstay.dev',
+    email: 'fnb@heavenstay.dev',
     role: 'fb_staff',
     roles: ['fb_staff'],
     title: 'Executive Wellness Chef',

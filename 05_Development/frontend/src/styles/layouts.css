@@ -290,6 +290,8 @@
 
 /* Zone 2: Main Navigation (Flexible space, min-width: 0) */
 .hsw-customer-nav-links {
+  position: relative;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: clamp(6px, 0.8vw, 12px);
@@ -352,10 +354,19 @@
   border-radius: 1px;
 }
 
+.hsw-customer-nav-links:has(.hsw-nav-dropdown-wrapper.is-open),
+.hsw-customer-nav-links:focus-within {
+  z-index: 1050;
+}
+
 .hsw-nav-dropdown-wrapper {
   position: relative;
   display: inline-flex;
   align-items: center;
+}
+
+.hsw-nav-dropdown-wrapper.is-open {
+  z-index: 1060;
 }
 
 .hsw-nav-dropdown-wrapper.is-open .hsw-dropdown-chevron {
@@ -376,7 +387,7 @@
   visibility: hidden;
   transform: translateY(4px);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1000;
+  z-index: 1070;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -416,11 +427,12 @@
 
 /* Zone 3 & 4: Actions (Language & Profile Zones, protected, flex-shrink: 0) */
 .hsw-customer-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: clamp(8px, 1vw, var(--space-3));
   flex-shrink: 0;
-  z-index: 2;
+  z-index: 20;
 }
 
 .hsw-customer-lang-zone {
@@ -458,11 +470,22 @@
 .hsw-nav-more-wrapper .hsw-nav-dropdown {
   right: 0;
   left: auto;
+  z-index: 1080;
 }
 
 @media (max-width: 1440px) {
   .hsw-customer-portal-tag {
     display: none;
+  }
+}
+
+@media (max-width: 1280px) and (min-width: 1025px) {
+  .hsw-customer-nav-links {
+    gap: 4px;
+  }
+  .hsw-customer-nav-link {
+    padding: var(--space-1) 6px;
+    font-size: 13px;
   }
 }
 
@@ -868,9 +891,51 @@ button.hsw-profile-btn:hover .hsw-avatar-circle {
     padding: var(--space-4);
   }
 
-  /* Hide non-essential topbar items on small screens */
+  /* Granular topbar responsive rules preserving account menu & language switcher */
   .hsw-operational-topbar .hsw-topbar-extras {
-    display: none;
+    display: flex !important;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .hsw-topbar-date {
+    display: none !important;
+  }
+
+  .hsw-topbar-role-badge {
+    display: none !important;
+  }
+
+  .hsw-topbar-cursor-toggle {
+    display: none !important;
+  }
+
+  .hsw-topbar-scope-text {
+    display: none !important;
+  }
+
+  .hsw-topbar-action-btns {
+    display: none !important;
+  }
+}
+
+/* Laptop width: collapse non-essential text labels */
+@media (max-width: 1280px) {
+  .hsw-topbar-date {
+    display: none !important;
+  }
+  .hsw-topbar-scope-text {
+    display: none !important;
+  }
+  .hsw-topbar-action-btns {
+    display: none !important;
+  }
+}
+
+/* Compact mobile header styling */
+@media (max-width: 640px) {
+  .hsw-account-text-wrap {
+    display: none !important;
   }
 }
 
@@ -1633,4 +1698,44 @@ button.hsw-profile-btn:hover .hsw-avatar-circle {
   font-size: 8.5px;
   letter-spacing: 0.12em;
   color: var(--accent-sand);
+}
+
+/* ==========================================================================
+   Responsive Topbar Space Management & Stacking Guard (Task D)
+   ========================================================================== */
+@media (max-width: 1440px) {
+  .hsw-lang-label-full {
+    display: none !important;
+  }
+  .hsw-lang-label-short {
+    display: inline-block !important;
+  }
+  .hsw-account-text-wrap {
+    display: none;
+  }
+  .hsw-customer-actions {
+    gap: var(--space-2) !important;
+  }
+}
+
+.hsw-customer-actions {
+  flex-shrink: 0 !important;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.hsw-customer-nav-links {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+}
+
+.hsw-nav-more-wrapper {
+  position: relative;
+  z-index: 25;
+}
+
+.hsw-nav-more-wrapper .hsw-dropdown-btn {
+  position: relative;
+  z-index: 26;
 }

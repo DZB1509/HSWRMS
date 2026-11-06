@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       manager: { email: 'manager@heavenstay.dev', pass: 'DevDemo123!' },
       receptionist: { email: 'receptionist@heavenstay.dev', pass: 'DevDemo123!' },
       therapist: { email: 'therapist@heavenstay.dev', pass: 'DevDemo123!' },
-      fb_staff: { email: 'fbstaff@heavenstay.dev', pass: 'DevDemo123!' },
+      fb_staff: { email: 'fnb@heavenstay.dev', pass: 'DevDemo123!' },
       customer: { email: 'customer@heavenstay.dev', pass: 'DevDemo123!' }
     };
     const targetCred = creds[newRole];

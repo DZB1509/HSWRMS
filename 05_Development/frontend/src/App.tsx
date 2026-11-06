@@ -3,7 +3,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './app/providers/AuthProvider';
 import { ToastProvider } from './components/common/Toast';
 import { AppRouter } from './app/router';
-import { RoleSwitcher } from './components/navigation/RoleSwitcher';
 import { SmoothScrollProvider } from './components/motion/SmoothScrollProvider';
 import { CursorProvider } from './components/motion/CursorProvider';
 import { ThemeProvider } from './context/ThemeContext';
@@ -39,7 +38,6 @@ export const App: React.FC = () => {
                           <CursorProvider>
                             <PageTransition />
                             <AppRouter />
-                            {import.meta.env.DEV && <RoleSwitcher />}
                             <DevHealthIndicator />
                           </CursorProvider>
                         </SmoothScrollProvider>

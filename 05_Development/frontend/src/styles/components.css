@@ -3090,3 +3090,17 @@
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 }
+
+
+/* Unified User Account Menu Styles */
+.hsw-account-dropdown-item:hover {
+  background-color: var(--bg-soft, #f4f1eb) !important;
+  color: var(--accent-forest, #2d3e2c) !important;
+}
+.hsw-account-signout:hover {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+}
+.hsw-account-trigger:hover {
+  border-color: var(--accent-sand, #d4af37) !important;
+}
