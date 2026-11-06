@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-11-05T18:06:00.837Z",
+  "assetVerification": {
+    "total": 19,
+    "ok": 19
+  },
+  "categoriesTested": {
+    "massage": 7,
+    "facial": 3,
+    "hydrotherapy": 2,
+    "yoga": 2,
+    "meditation": 2,
+    "bodyWrap": 2,
+    "aromatherapy": 4
+  },
+  "paginationTested": {
+    "page1Count": 9,
+    "allVisible": true,
+    "page2Count": 9
+  },
+  "bookingEntryVerified": true,
+  "screenshots": [
+    "01-all-treatments-page1.png",
+    "02-filter-massage.png",
+    "03-filter-facial.png",
+    "04-filter-hydrotherapy.png",
+    "05-filter-yoga.png",
+    "06-filter-meditation.png",
+    "07-filter-body-wrap.png",
+    "08-filter-aromatherapy.png",
+    "09-pagination-page2.png",
+    "10-responsive-mobile-view.png",
+    "11-booking-entry-navigation.png"
+  ]
+}

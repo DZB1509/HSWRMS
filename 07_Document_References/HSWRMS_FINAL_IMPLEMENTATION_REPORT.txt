@@ -1,0 +1,1162 @@
+HSWRMS — FINAL PROJECT IMPLEMENTATION REPORT
+Generated: 2026-10-31
+Repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Scope: Supplied implementation history, current repository working-tree evidence, and latest recorded tests/build/lint.
+Evidence limit: This is not a fresh live SQL Server assessment or browser end-to-end test.
+
+A. EXECUTIVE SUMMARY
+====================
+
+Project objective and scope
+HSWRMS is a resort-management system spanning M1 Authentication & Customer Management, M2 Booking & Villa Management, M3 Spa & Wellness, M4 Food & Beverage, M5 Folio/Billing/Payment/Checkout, and M6 Administration/Governance.
+
+Overall implementation status: PARTIALLY COMPLETED.
+Batch 3 implemented owner-aware M5 checkout authorization and backend-backed M6 permissions/delegation reads and writes, with H2 test coverage. Batch 4.1 recovered an isolated H2 startup and verified synthetic Customer/Admin sign-in, the Customer-owned booking, permission-matrix rendering, and a short-lived synthetic `S50:V` delegation that was created, immediately revoked, and confirmed revoked after a server-backed refresh. Batch 4.2 connected the Customer folio flow to the authenticated server booking list and persisted Folio/Invoice response, removed inferred IDs and local financial fallbacks, and verified the synthetic booking-to-Folio-to-Invoice path. Batch 4.3 static audit found no independently login-capable second Customer fixture in local/demo bootstrap; cross-customer browser acceptance is BLOCKED pending explicit approval for a minimal synthetic fixture. Feature Flags remains restricted/unavailable.
+
+Current Demo Readiness: PARTIAL; NOT READY for a complete checkout/payment demo. Batch 4.2 verified synthetic sign-in and server booking/Folio/Invoice display and refresh. Batch 4.3 cross-customer browser acceptance remains BLOCKED pending fixture approval; no browser navigation or API acceptance was performed in Batch 4.3.
+
+Current Production Readiness: NOT PRODUCTION READY. SQL Server schema/migration parity, approved migration consolidation, financial workflow verification, external payment/notification behavior, operational controls, and cross-module end-to-end evidence remain incomplete.
+
+Major achievements
+- Authentication hardening: missing account records fail closed; JWT secret has no built-in default and must be configured; demo bootstrap requires explicit local/demo profile and opt-in.
+- M2 villa status authorization and transition rules tightened; status changes route through the receptionist operation service.
+- A billing guard is checked before final stay closure after payment settlement.
+- Several frontend demo/local-only M3/M4/M5/M6 actions now use backend APIs or show explicit unavailable/error states.
+- M3 fabricated fallback identifiers and a user-accessible test conflict injector were removed from spa confirmation.
+- Unsupported dashboard/demo outputs and fake police-export data were removed.
+- Batch 3 H2 suite and frontend checks passed as recorded in the historical Batch 3 section. Batch 4 results and unavailable checks are reported separately in Section E.
+
+Critical unresolved blockers
+- M5 folio integration now resolves the authenticated Customer booking to its persisted Folio and related Invoice, with H2/API/browser evidence. Checkout finalization, cross-customer browser rejection, provider settlement and full financial workflow acceptance remain unverified.
+- M6 Admin sign-in and permission-matrix view were observed. A synthetic `S50:V` delegation was created, revoked, and confirmed after refresh. Feature Flags displayed an RBAC restriction and remains unavailable because its backend contract is absent.
+- M3/M4 resource-state, inventory and lifecycle behavior has not been validated end to end.
+- SQL Server metadata evidence, migration conflict decisions, isolated test-copy validation, restore/rollback evidence and approved migration sequence remain outstanding.
+
+B. IMPLEMENTATION HISTORY
+=========================
+
+Batch 1 — Backend Security & Business Integrity
+Objective: Harden security boundaries and address business-integrity risks across authentication, booking, billing and governance.
+Implemented changes in current working-tree diff:
+- JWT authentication rejects tokens whose referenced account is missing or inactive rather than treating a missing account row as active.
+- JWT configuration has no usable embedded default; initialization validates a configured JWT secret of at least 32 UTF-8 bytes.
+- VNPay/VietQR secret defaults were removed from shared configuration; secrets must come from runtime configuration.
+- Demo account bootstrap is restricted to local/demo profiles with APP_DEMO_BOOTSTRAP_ENABLED=true and no longer logs a demo password.
+- M2 villa status updates are role restricted, service mediated, validated against allowed values/transitions, and cannot set OCCUPIED outside check-in.
+- M5 checks the billing guard before closing a stay after payment settlement.
+- Related M2, M5 and M6 tests/configuration were updated; exact paths appear in Section G.
+Verification: Latest full backend H2 test result appears in Section E. A new JWT filter test is present in the untracked inventory and was included in the recorded full suite.
+Final status: PARTIALLY COMPLETED. Automated checks passed; live SQL Server, real payment gateway and complete customer checkout were not verified.
+
+Batch 2 — Frontend–Backend Integration
+Objective: Replace prototype/local-only module behavior with API-backed behavior where available, surface unavailable/error states, and avoid success claims without server confirmation.
+Implemented changes evidenced in the current diff and prior task results:
+- M5 Folio/payment/checkout/review pages use backend folio, invoice, transaction status, checkout and review responses; fabricated amounts/payment details and local settlement persistence were removed.
+- M4 dining context and customer order screens use backend menu/orders and API submissions; kitchen status changes are server first and followed by refresh.
+- M3 context loads API-backed treatments/sessions and confirms scheduling candidates through API; local success is not claimed.
+- M6 overview/manager/admin UI marks unsupported metrics unavailable and removes fake operational/export data.
+Verification: Frontend build and lint are recorded in Section E. No browser end-to-end evidence is included; API presence alone does not establish full integration.
+Final status: PARTIALLY COMPLETED because some backend contracts are unavailable or incompatible and no full-system run was performed.
+
+Batch 2 Continuation — M3, M4, M5 and M6 Integration Improvements
+Objective: Close integration gaps without presenting mock data as production truth.
+Implemented changes evidenced in current diff:
+- M3: context defaults to empty backend state, loads role-aware sessions, and requires confirmed API responses for cancel/completed/no-show actions. Unsupported persisted IN_PROGRESS/start-session behavior is disabled. Spa confirmation requires a current server-generated candidate and calls spaApi; fabricated fallback identifiers and test conflict controls were removed. Copy no longer claims simulated calendar/reminder delivery.
+- M4: menu/orders/inventory are loaded from F&B APIs; mock catalog merging was removed; order submission uses strict server IDs and awaits API responses; kitchen transitions/cancellation call backend endpoints; recipe details are fetched on demand; mock customer/villa fallback content was removed.
+- M5: screens use server folio/invoice/transaction data; settlement/checkout are not locally fabricated; duplicate finalization/payment calls were removed; review submission is API backed.
+- M6: unsupported metrics and sample export data were removed; feature flags show unavailable state; dashboard no longer implies unverified delegation data is authoritative.
+Verification: 705 backend tests, 0 failures, 0 errors, 10 skipped; final frontend build passed; lint passed with warnings. Details/limitations are in Section E.
+Final status: PARTIALLY COMPLETED. Authorization, missing governance contracts, and live integration/database proof remain unresolved.
+
+C. MODULE-BY-MODULE ASSESSMENT
+==============================
+
+M1 — Authentication & Customer Management
+Implemented: account/JWT security hardening; explicit demo bootstrap opt-in. Health/profile/consent/deletion functionality exists but is not certified by this report.
+Frontend-backend integration: PARTIAL; no fresh registration/sign-in/profile/consent/deletion browser/API journey was run.
+Verified: full H2 backend suite passed. No SQL Server, external identity provider or privacy-owner workflow verified.
+Gaps: health-data retention/deletion and legacy deletion-request mapping require policy/database reconciliation; consent/audit projections need policy verification; OAuth/OTP not newly exercised.
+Demo readiness: PARTIAL; configure secrets/accounts and use synthetic data, never real health data.
+
+M2 — Booking & Villa Management
+Implemented: villa operational status mutation is role restricted and service mediated; status values/transitions are validated and OCCUPIED belongs to check-in.
+Frontend-backend integration: PARTIAL; no complete booking-to-villa lifecycle test was performed here.
+Verified: latest full H2 suite passed; no SQL Server concurrency test.
+Gaps: ResortZone/PhysicalVilla relation, guest_count and package entitlement decisions remain unresolved; allocation concurrency and check-in/out need SQL Server scenario evidence; M2/M5 PaymentTransaction ownership is open.
+Demo readiness: PARTIAL; do not claim live database lifecycle acceptance from H2/build alone.
+
+M3 — Spa & Wellness Management
+Implemented: API-backed treatments/sessions and server-confirmed mutations; scheduling candidate confirmation uses server API; fabricated local fallback removed; start-session/IN_PROGRESS is unavailable.
+Frontend-backend integration: PARTIAL; resource/candidate mapping, session refresh and notification paths are not fully verified.
+Verified: H2 suite passed and frontend compiled. No live SQL Server trigger/concurrency or browser reservation/reschedule run.
+Gaps: resource state, candidate lifecycle, compatibility and refresh require contract validation; reminder retry and actual email/calendar delivery are unverified; migration/trigger consolidation remains blocked.
+Demo readiness: PARTIAL; only with working backend data and no claim of actual notification delivery.
+
+M4 — Food & Beverage Management
+Implemented: API-oriented customer menu/order and kitchen load/submit/status/cancel flows; inventory no longer merges mock catalog; recipe details are fetched from server; errors are surfaced.
+Frontend-backend integration: PARTIAL; API client calls do not prove every endpoint/lifecycle/inventory contract is supported by the current server.
+Verified: frontend build/lint and full H2 backend suite passed. No full customer-to-kitchen-to-folio browser journey or live SQL Server inventory validation.
+Gaps: inventory quantity/reservation/deduction and recipe behavior need scenario evidence; SERVED versus DELIVERED and seed-data ownership require decisions; F&B-to-Folio posting/checkout guard need end-to-end evidence; V007 seed-like DML needs separate approval.
+Demo readiness: PARTIAL; do not claim fully integrated KDS or live inventory correctness.
+
+M5 — Billing, Folio, Payment & Checkout
+Implemented: screens use server folio/invoice/transaction responses; Batch 3 added owner-aware checkout authorization while retaining Receptionist/Admin access and existing billing, transaction, lock and idempotency guards. Batch 4 adjusted the synthetic demo seed to reuse the bootstrapped Customer profile when available; this fixture change remains runtime-unverified.
+Frontend-backend integration: PARTIAL. Batch 4.2 browser acceptance verified Customer booking-to-Folio/Invoice display and refresh; payment and checkout finalization were intentionally not submitted.
+Verified: Historical Batch 3 full H2 suite: 711 tests, 0 failures, 0 errors, 10 skipped. Batch 4.1 combined targeted H2 suite: 88 tests passed. Batch 4.2 H2 targeted suite: 76 tests passed before the final reference-format correction; final focused suite: 10 tests passed. Frontend resolver/payment safety tests: 23 passed; lint/build passed. Batch 4.2 browser verified folio read and refresh; no checkout finalization or payment was submitted.
+Gaps: payment-provider settlement, checkout finalization, cross-customer browser rejection, real financial workflows, SQL Server trigger semantics and concurrency remain unverified. No real payment was initiated.
+Demo readiness: PARTIAL; NOT READY for complete checkout/payment acceptance.
+
+M6 — Administration, Governance & System Overview
+Implemented: Batch 3 replaced mock/localStorage governance permissions with backend effective-permission loading that fails closed when unavailable. Delegation reads, creation and revocation use backend APIs, with server results and errors controlling displayed state. Feature flags remain unavailable because no backend contract exists. Batch 4 corrected the stale read-only label on the delegation page.
+Frontend-backend integration: PARTIAL; Batch 4 browser acceptance for permissions, delegation reads/writes, refresh, authorization failures and feature flags did not run.
+Verified: Batch 3 full H2 suite: 711 tests, 0 failures, 0 errors, 10 skipped. No delegation browser verification is claimed. Batch 4 full backend suite result is unavailable.
+Gaps: no browser evidence; feature-flag backend contract remains absent; production role/delegation review and external operational evidence remain outstanding.
+Demo readiness: NOT DEMO READY for governance acceptance.
+
+D. CROSS-MODULE INTEGRATION
+===========================
+
+Authentication and authorization: fail-closed account checks and secret hardening are present. Batch 3 added owner-aware M5 checkout authorization and backend-backed M6 permissions/delegation. Batch 4 did not execute browser scenarios, so frontend-to-backend acceptance remains unverified.
+Booking-to-villa lifecycle: M2 status changes are validated and routed through operational service; check-in owns OCCUPIED. Full booking allocation/check-out handoff is not SQL Server verified.
+Spa reservations and outcomes: candidate confirmation is server API based; therapist mutations wait for server response. Atomic resource reservation/recovery and SQL Server trigger behavior remain unverified.
+Dining orders and kitchen lifecycle: M4 API calls and post-mutation refresh exist; inventory/lifecycle domains and M4-to-M5 posting still need complete scenario verification.
+Folio and billing: M5 screens consume server state; H2 tests support backend behavior, but Batch 4 browser acceptance, SQL Server trigger semantics and full integration remain open.
+Payment and checkout: client payment is not treated as checkout completion. Batch 3 owner-aware authorization is covered by H2 tests; Batch 4 browser checkout was blocked. No live gateway flow was tested.
+Governance and dashboards: backend effective permissions and delegation reads/writes are implemented; Batch 4 browser acceptance was blocked. Feature flags remain unavailable.
+Shared consistency: M2/M5 payment ownership, M3/M4 charge posting, package entitlements, booking/villa relation, refund rules and lifecycle constraints remain open. Do not silently choose mechanisms for unresolved Open Items.
+E. VERIFICATION RESULTS
+=======================
+
+Batch 3 implementation verification (historical, separate from Batch 4)
+- Backend H2 full suite: 711 tests; 0 failures, 0 errors, 10 skipped; BUILD SUCCESS.
+- Frontend build: passed (TypeScript and Vite); Vite emitted a >500 kB chunk-size warning.
+- Frontend lint: passed with 12 warnings.
+- These are Batch 3 results and are not Batch 4 full-suite results.
+
+Batch 4 verification
+- Targeted command `.\mvnw.cmd test "-Dtest=M5BillingAndCheckoutTests"` (run from backend): PASS; 65 tests, 0 failures, 0 errors, 0 skipped. H2 only.
+- Full backend `.\mvnw.cmd test`: started against H2, but no final result was available. Status: NOT VERIFIED / RESULT UNAVAILABLE; do not count it as passed.
+- `npm run build`: PASS (TypeScript and Vite); Vite emitted a large-chunk warning.
+- `npm run lint`: PASS with 12 warnings.
+- `git diff --check`: PASS, with line-ending conversion notices.
+- Browser acceptance: no scenario was executed. Computer Use stopped before browser interaction because it could not determine the current browser URL safely.
+
+Runtime incident and database boundary
+- Local H2 application startup failed during demo seeding because the generated schema lacked `PaymentTransaction.invoice_id`.
+- A subsequent launch fell back to the default SQL Server datasource and received `Login failed for user ''`. This was an inadvertent failed SQL Server connection attempt.
+- No successful SQL Server session, query, script execution or migration occurred. No further connection attempt was made.
+- The H2 targeted test result is test-suite evidence only; it is not browser E2E, successful standalone application startup, SQL Server or external payment evidence.
+
+Not performed in Batch 4
+- No browser scenario completed; no screenshot or browser/network evidence exists.
+- No real VNPay/VietQR payment, email, Calendar event or external OAuth/OTP verification.
+- No SQL Server query/script/migration, production deployment or operational recovery test.
+F. REMAINING BLOCKERS
+=====================
+
+1. Demo blockers
+- M5 customer-owned checkout remains browser-unverified; M6 permissions and synthetic delegation create/revoke received partial browser verification.
+- The Batch 4 M5 synthetic fixture adjustment has not been verified through a successful application startup.
+- M3/M4 resource, inventory and order lifecycle paths need end-to-end validation.
+- Unsupported feature flags remain unavailable; runtime dependencies must be configured safely before any controlled demo.
+
+2. Production blockers
+- Functional/API contract gaps above remain open.
+- No production-like SQL Server migration and acceptance run is evidenced.
+- Operational logging, backup/restore, rollback, alerting and support readiness require evidence.
+
+3. External integration blockers
+- VNPay/VietQR payment, callback and refund are unverified; no real payment was initiated.
+- M3 reminder/email/calendar delivery and retry policy are unverified.
+- External OAuth/OTP providers were not verified in Batch 4.
+
+4. Database and migration blockers
+- Phase 1.3B/1.3C evidence retains CONDITIONAL NO-GO / NO-GO; no migration is approved for execution.
+- DBA evidence is required for live trigger definitions, constraints/defaults, filtered indexes, foreign keys/trust, compatibility/version, object inventory and trustworthy history.
+- Reconcile duplicate V1_6 identifiers; V004 vs V2; overlapping V003/V1_2/V1_3/V1_4; V011/V012/V015; V014 vs V017; destructive V1_5; seed-like V007 DML.
+- Resolve M1 deletion mapping/nullability and health retention; M2 guest_count/zone/entitlement; M3 identifier/reminder/retry/trigger; M4 status/seed ownership; M5 charge/payment/refund/trigger semantics; M6 configuration/delegation decisions.
+- Before test-copy validation require verified backup, isolated restore, exact server/database identity, approved least-privilege account, writer isolation, restore point/rollback and safe non-PII data. No database was created or restored in Batch 4.
+
+5. Security and operational blockers
+- JWT/payment secrets must be securely supplied; missing JWT secret intentionally prevents initialization.
+- Preserve the approved owner-aware M5 authorization; no frontend bypass is acceptable.
+- M6 governance/delegation must remain authoritative, appropriately scoped/time-bounded and auditable.
+- Do not use real health/financial PII in demos or expose data outside approved role scope.
+
+G. COMPLETE CHANGE INVENTORY
+============================
+
+Current Batch 4 reconciliation snapshot — latest git diff --name-only returned 48 modified tracked paths. The detailed 39-path inventory below is retained as historical; the current complete path list is:
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/DevAccountBootstrap.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/controller/VillaInventoryController.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/entity/PaymentTransaction.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/ReceptionistOperationService.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/VNPayDepositService.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/M5DataInitializer.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/VNPayConfig.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/controller/CheckoutController.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/controller/VnpayWebhookController.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/security/BillingAccessEvaluator.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/CheckoutService.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/DashboardController.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/SystemOverviewService.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/security/JwtAuthenticationFilter.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/security/JwtTokenProvider.java
+- 05_Development/backend/src/main/resources/application-local.yml
+- 05_Development/backend/src/main/resources/application-sqlserver.yml
+- 05_Development/backend/src/main/resources/application.yml
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/ReceptionistOperationServiceTest.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/RetreatBookingSecurityTest.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/DelegationServiceTest.java
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/M6AdminIntegrationTests.java
+- 05_Development/backend/src/test/resources/application.yml
+- 05_Development/frontend/src/context/DiningContext.tsx
+- 05_Development/frontend/src/context/FolioContext.tsx
+- 05_Development/frontend/src/context/GovernanceContext.tsx
+- 05_Development/frontend/src/context/SpaContext.tsx
+- 05_Development/frontend/src/features/m6-admin/api/delegationApi.test.ts
+- 05_Development/frontend/src/features/m6-admin/api/delegationApi.ts
+- 05_Development/frontend/src/pages/admin/AdminDelegationPage.tsx
+- 05_Development/frontend/src/pages/admin/FeatureFlagsPage.tsx
+- 05_Development/frontend/src/pages/common/SystemOverviewPage.tsx
+- 05_Development/frontend/src/pages/customer/AlaCarteOrderPage.tsx
+- 05_Development/frontend/src/pages/customer/CheckoutConfirmationPage.tsx
+- 05_Development/frontend/src/pages/customer/DailyMealSelectionPage.tsx
+- 05_Development/frontend/src/pages/customer/FinalPaymentPage.tsx
+- 05_Development/frontend/src/pages/customer/FinalPaymentResultPage.tsx
+- 05_Development/frontend/src/pages/customer/ReviewRatingPage.tsx
+- 05_Development/frontend/src/pages/customer/SpaConfirmationPage.tsx
+- 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx
+- 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx
+- 05_Development/frontend/src/pages/manager/ManagerDashboardPage.tsx
+- 05_Development/frontend/src/pages/therapist/TherapistSchedulePage.tsx
+- 05_Development/frontend/src/pages/therapist/TherapistSessionDetailPage.tsx
+- 05_Development/frontend/src/types/dining.ts
+- 05_Development/frontend/src/types/folio.ts
+- 05_Development/frontend/src/types/spa.ts
+Historical modified tracked files (39) — recorded at original report-generation time
+Backend — security, M1, M2, M5, M6, configuration and tests:
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/config/DevAccountBootstrap.java — M1/security: explicit local/demo bootstrap opt-in; removes password logging.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/controller/VillaInventoryController.java
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/entity/PaymentTransaction.java — M2: role-protected, service-mediated villa status update.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/ReceptionistOperationService.java — M2: status allowlist, transition and check-in invariants.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/VNPayDepositService.java — M2/M5 deposit payment integration.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/VNPayConfig.java — M5 payment configuration.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/controller/VnpayWebhookController.java — M5 webhook behavior.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/CheckoutService.java — M5 billing guard before stay closure and payment secret default removal.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/controller/DashboardController.java — M6 unavailable export response.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m6admin/service/SystemOverviewService.java — M6 marks unsupported metrics/export unavailable.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/security/JwtAuthenticationFilter.java — M1/security fail-closed account lookup.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/security/JwtTokenProvider.java — M1/security configured minimum-length JWT secret.
+- 05_Development/backend/src/main/resources/application-local.yml — shared/local external JWT secret configuration.
+- 05_Development/backend/src/main/resources/application-sqlserver.yml — SQL Server profile configuration.
+- 05_Development/backend/src/main/resources/application.yml — shared secrets and explicit demo bootstrap opt-in.
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/ReceptionistOperationServiceTest.java — M2 status/operation regression tests.
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/RetreatBookingSecurityTest.java — M2 security regression tests.
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java — M5 billing/checkout regression tests.
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/M6AdminIntegrationTests.java — M6 unavailable export response regression.
+- 05_Development/backend/src/test/resources/application.yml — test runtime configuration.
+
+Frontend — M3/M4/M5/M6:
+- 05_Development/frontend/src/context/DiningContext.tsx — M4 backend menu/order/inventory state and mutations.
+- 05_Development/frontend/src/context/FolioContext.tsx — M5 backend folio, checkout, review/payment behavior.
+- 05_Development/frontend/src/context/SpaContext.tsx — M3 API-backed treatments/sessions and server-confirmed mutations.
+- 05_Development/frontend/src/pages/admin/FeatureFlagsPage.tsx — M6 unavailable state where API is absent.
+- 05_Development/frontend/src/pages/common/SystemOverviewPage.tsx — M6 removes unsupported dashboard/export claims.
+- 05_Development/frontend/src/pages/customer/AlaCarteOrderPage.tsx — M4 API submission/error handling.
+- 05_Development/frontend/src/pages/customer/CheckoutConfirmationPage.tsx — M5 single backend checkout finalization path.
+- 05_Development/frontend/src/pages/customer/DailyMealSelectionPage.tsx — M4 API submission/error handling.
+- 05_Development/frontend/src/pages/customer/FinalPaymentPage.tsx — M5 server-backed balance/payment details and response handling.
+- 05_Development/frontend/src/pages/customer/FinalPaymentResultPage.tsx — M5 server transaction-status lookup.
+- 05_Development/frontend/src/pages/customer/ReviewRatingPage.tsx — M5 API-backed review submission.
+- 05_Development/frontend/src/pages/customer/SpaConfirmationPage.tsx — M3 candidate confirmation; removes fabricated fallback/test injector.
+- 05_Development/frontend/src/pages/fb/MealOrderDetailPage.tsx — M4 API-backed order detail/status behavior.
+- 05_Development/frontend/src/pages/fb/MealPrepListPage.tsx — M4 API-backed kitchen queue and recipe details.
+- 05_Development/frontend/src/pages/manager/ManagerDashboardPage.tsx — M6 unavailable/unverified governance metrics.
+- 05_Development/frontend/src/pages/therapist/TherapistSchedulePage.tsx — M3 server-confirmed actions; unsupported start disabled.
+- 05_Development/frontend/src/pages/therapist/TherapistSessionDetailPage.tsx — M3 server-confirmed session mutation.
+- 05_Development/frontend/src/types/dining.ts — M4 API/UI state typing.
+- 05_Development/frontend/src/types/folio.ts — M5 API/payment/review typing.
+- 05_Development/frontend/src/types/spa.ts — M3 API/session typing.
+
+Report status at original inventory time:
+- HSWRMS_FINAL_IMPLEMENTATION_REPORT.txt — existing consolidated report, extended in place across later batches.
+
+Historical detailed inventory: 137 untracked files at original report-generation time; retained for provenance
+The following is a historical file-level inventory, not the current `git status` entry count. It is retained for provenance; the current status entry count is recorded in Section H.
+
+H. FINAL GIT STATE
+==================
+
+Historical report-generation state (preserved as historical evidence): the original report recorded 39 modified tracked files and 137 untracked files before that report was created, followed by 138 untracked files after its creation. Those counts are not the current Git status counts.
+
+Historical Batch 4 reconciliation preflight (superseded by Section L current counts):
+- Branch: feature/hswrms-m1-m6-integration
+- HEAD: f6a4a48350eaf7e409feccd220b2869318538d2e
+- Modified tracked paths: 48
+- Untracked status entries: 14
+- Staged paths: 0
+- No ahead/behind marker was observed in the earlier preflight; this reconciliation did not alter refs.
+- No commit or push was made. All pre-existing tracked, staged, unstaged and untracked work was preserved. No destructive Git/history operation was used.
+
+I. FINAL PROJECT VERDICT (HISTORICAL AT BATCH 4 CLOSE)
+========================
+
+Overall implementation verdict: PARTIALLY COMPLETED.
+Demo readiness: NOT DEMO READY. Batch 4.1 completed partial browser checks, while M5 checkout, cross-customer rejection, and other acceptance scenarios remain unverified. M6 synthetic delegation create/revoke passed.
+Production readiness: NOT PRODUCTION READY. SQL Server/migration evidence, business approvals, external service behavior, operational recovery, and end-to-end evidence remain outstanding.
+
+Exactly one next recommendation:
+Repair the Customer folio-to-server-booking/invoice UI integration, then resume the blocked synthetic H2 browser checkout scenarios; the approved delegation test is complete and the delegation remains revoked. Keep Feature Flags unavailable until its backend contract exists.
+End of original report body (historical; appendix and Batch 4 reconciliation follow).
+
+APPENDIX G-1 — PRE-EXISTING UNTRACKED PATH INVENTORY (137 FILES)
+------------------------------------------------------------
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/security/JwtAuthenticationFilterTest.java — M1/security regression test artifact
+- 05_Development/database/generated/HSWRMS_TEST_schema.sql — Generated SQL Server schema artifact; not executed
+- 05_Development/database/generated/HSWRMS_TEST_schema_continuation.sql — Generated SQL Server schema artifact; not executed
+- 06_Reports/PHASE_1.3A_REPOSITORY_MIGRATION_AUDIT_REPORT.md — Phase 1.3 repository/database readiness report or read-only metadata collection pack
+- 06_Reports/PHASE_1.3B_LIVE_SQLSERVER_READINESS_ASSESSMENT.md — Phase 1.3 repository/database readiness report or read-only metadata collection pack
+- 06_Reports/PHASE_1.3C-2A_DBA_BUSINESS_EVIDENCE_READINESS.md — Phase 1.3 repository/database readiness report or read-only metadata collection pack
+- 06_Reports/PHASE_1.3C_DBA_READ_ONLY_METADATA_COLLECTION.sql — Phase 1.3 repository/database readiness report or read-only metadata collection pack
+- 06_Reports/PHASE_1.3C_DBA_READ_ONLY_METADATA_COLLECTION_GUIDE.md — Phase 1.3 repository/database readiness report or read-only metadata collection pack
+- 06_Reports/PHASE_1.3C_MIGRATION_CONSOLIDATION_AND_DEPLOYMENT_DESIGN.md — Phase 1.3 repository/database readiness report or read-only metadata collection pack
+- 06_Reports/SQL_SERVER_CONNECTIVITY_BASELINE_REPORT.md — SQL Server connectivity/schema assessment report
+- 06_Reports/SQL_SERVER_SCHEMA_COMPATIBILITY_ASSESSMENT.md — SQL Server connectivity/schema assessment report
+- 06_Reports/audit-output/backup_targeted_correction_20261029/01_Task_Assignment_Reconciliation.csv — Preserved audit reconciliation/archive artifact
+- 06_Reports/audit-output/backup_targeted_correction_20261029/05_Test_Evidence_Reconciliation.csv — Preserved audit reconciliation/archive artifact
+- 06_Reports/audit-output/backup_targeted_correction_20261029/06_Test_Evidence_RECONCILED.csv — Preserved audit reconciliation/archive artifact
+- 06_Reports/audit-output/backup_targeted_correction_20261029/Correction_Log.csv — Preserved audit reconciliation/archive artifact
+- 06_Reports/audit-output/backup_targeted_correction_20261029/HSWRMS_BAO_CAO_TONG_KET_DU_AN_RECONCILED.md — Preserved audit reconciliation/archive artifact
+- 06_Reports/audit-output/backup_targeted_correction_20261029/HSWRMS_DANH_GIA_DONG_GOP_THANH_VIEN_RECONCILED.xlsx — Preserved audit reconciliation/archive artifact
+- 06_Reports/audit-output/backup_targeted_correction_20261029/TIN_NHAN_ZALO_TONG_KET_HSWRMS_REVISED.md — Preserved audit reconciliation/archive artifact
+- 06_Reports/visual-evidence/01_landing_hero.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/02_pillars_sticky_story.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/03_experiences_sticky_story.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/04_image_reveal_rounded.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/05_receptionist_dashboard.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/06_receptionist_arrivals.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/07_therapist_schedule.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/08_admin_staff.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/celestial_logo_scrolled_light_canvas.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/celestial_logo_win_off_hero.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/celestial_logo_win_on_hero.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/chrome_940px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/debug_experiences_390.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/debug_pillars_390.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_1024px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_1440px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_default_reduce_cta_hover.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_default_reduce_experiences_2col.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_default_reduce_hero.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_default_reduce_pillars_2col.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_nopref_experiences_2col.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/desktop_nopref_pillars_2col.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/dining_card_hover_win_off.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/dining_card_hover_win_on.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_dining_hash.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_spa_hash.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_1280px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_1440px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_390px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_540px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_820px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_900px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/experiences_storytelling_940px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/final_acceptance_telemetry.json — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/final_verification_summary.json — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/global_logo_and_role_consistency_telemetry.json — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/hover_card_retreat_luminous.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/hover_cta_retreat_primary.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/intermediate_600px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_celestial_hero_dark.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_celestial_scrolled_light.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_contrast_hero_dark.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_contrast_scrolled_light.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_motion_win_anim_off.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_motion_win_anim_on.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_admin.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_auth_login.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_auth_register.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_customer_dashboard.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_kitchen.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_manager.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_mobile_public.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_public_landing.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_receptionist.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_role_therapist.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_sidebar_mobile_drawer.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/logo_windows_anim_reduce.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mismatch_antigravity_experiences_2columns.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mismatch_antigravity_pillars_2columns.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mismatch_user_experiences_3cards.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mismatch_user_pillars_3columns.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_320px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_375px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_390px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_430px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_fallback_experiences_3cards.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_fallback_pillars_3col.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_long_content_320px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_step2_active.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/mobile_step3_active.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_1280px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_1440px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_390px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_540px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_820px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_900px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/pillars_storytelling_940px.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_1024x768.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_1152x864.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_1280x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_1440x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_768x1024.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_820x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_900x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_experiences_960x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_1024x768.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_1152x864.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_1280x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_1440x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_768x1024.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_820x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_900x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/responsive_pillars_960x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/snap_820px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/spa_card_hover_win_off.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/spa_card_hover_win_on.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_1024x768.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_1152x864.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_1280x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_1440x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_640x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_768x1024.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_820x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_900x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_940x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_experiences_960x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_1024x768.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_1152x864.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_1280x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_1440x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_640x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_768x1024.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_820x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_900x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_940x900.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/story_pillars_960x800.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/tablet_768px_storytelling.png — Preserved visual screenshot/telemetry evidence artifact
+- 06_Reports/visual-evidence/verification_summary_v2.json — Preserved visual screenshot/telemetry evidence artifact
+- HSWRMS_CODEX_FULL_PROJECT_HANDOVER.md — Preserved project handover; historical claims retain evidence limitations
+
+H. BATCH 3 — CUSTOMER CHECKOUT AUTHORIZATION & M6 GOVERNANCE INTEGRATION
+==========================================================================
+Update date: 2026-10-31
+Historical Batch 3 record. Its then-current counts/readiness statements are superseded by the Batch 4 reconciliation section below; the implementation and verification details remain preserved.
+
+Scope and outcome
+- M5 checkout finalization now has an explicit authorization evaluator: Receptionist/Admin staff retain access; a CUSTOMER must be authenticated and own the invoice through the persisted invoice → folio → retreat booking → customer profile/user relationship. An invoice ID is never treated as a booking ID for ownership.
+- The existing checkout service transaction, lock, unpaid-balance/billing guards, close behavior and idempotent terminal-state handling remain in place.
+- M6 GovernanceContext no longer uses localStorage or fabricated governance state. It requests effective permissions from the authenticated backend contract and fails closed when unavailable. Unsupported feature flags and unsupported governance records remain unavailable rather than being reported as successful.
+- M6 delegation UI now loads, creates, and revokes delegations through the verified backend API. Server results and errors drive the displayed state; the backend retains policy validation and audit behavior.
+- Outcome: Batch 3 implementation is PARTIALLY COMPLETED. Customer/staff checkout and delegation paths are implemented, but no browser end-to-end, SQL Server, external payment, or production environment validation was performed. Feature flags remain unavailable because no backend contract exists.
+
+Batch 3 files changed (task scope)
+Backend:
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/controller/CheckoutController.java — apply owner-aware authorization to final checkout while preserving service guards.
+- 05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/security/BillingAccessEvaluator.java — staff role and persisted invoice ownership evaluation.
+Tests:
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java — owner, non-owner, unauthenticated, wrong-role, staff, unpaid-balance, duplicate/idempotent checkout assertions; unchanged seeded folio status is captured and compared.
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/DelegationServiceTest.java — expired delegation lifecycle coverage; test actor ID is isolated from the seeded manager ID.
+- 05_Development/backend/src/test/java/com/heavenstay/hswrms/m6admin/M6AdminIntegrationTests.java — delegation API authentication, role, creation, and revocation integration coverage.
+Frontend:
+- 05_Development/frontend/src/context/GovernanceContext.tsx — remove localStorage/mock governance state and use backend effective permissions; unavailable capabilities fail closed.
+- 05_Development/frontend/src/features/m6-admin/api/delegationApi.ts — expose validated create/revoke API methods alongside reads.
+- 05_Development/frontend/src/features/m6-admin/api/delegationApi.test.ts — assert API method exposure and delegation write routes.
+- 05_Development/frontend/src/pages/admin/AdminDelegationPage.tsx — backend-backed delegation create/revoke with permission checks, validation, refresh, pending/error states.
+No configuration, migration, or report file other than this consolidated report was changed for Batch 3. No files were created or deleted by Batch 3.
+
+Verification record
+- Targeted combined Maven run: `.\mvnw.cmd test "-Dtest=M5BillingAndCheckoutTests,M6AdminIntegrationTests,DelegationServiceTest"` — 87 tests, 0 assertion failures, 1 error caused by a delegation test actor/seed-ID collision. The test actor was isolated and `DelegationServiceTest` was rerun successfully (10 tests, 0 failures/errors).
+- Full backend: `.\mvnw.cmd test` — PASS; 711 tests, 0 failures, 0 errors, 10 skipped. Uses H2 test configuration; this does not prove SQL Server behavior.
+- Frontend: `npm run build` — PASS (TypeScript build and Vite build); Vite emitted a large-chunk warning (main JS bundle about 2.76 MB uncompressed).
+- Frontend: `npm run lint` — PASS with 12 warnings (unused catch/parameters and unnecessary regex escapes).
+- Delegation API standalone test attempt: `node --test src/features/m6-admin/api/delegationApi.test.ts` — BLOCKED by Node ESM resolution of an extensionless TypeScript import (`src/api/client/apiClient`); this command did not execute the test assertions.
+- `git diff --check` — PASS; Git emitted working-copy LF-to-CRLF notices for existing modified files.
+- No browser E2E, SQL Server connection/query, SQL script execution, standalone application startup, migration execution, payment-provider call, email, staging, commit, or push occurred. Spring application contexts were started only by the Maven test suite against H2.
+
+Current readiness and blockers
+- M5 checkout authorization integration: IMPLEMENTED in code and covered by passing full H2 suite. Payment provider settlement, real financial workflows, SQL Server trigger semantics, browser journey, and concurrency behavior remain unverified.
+- M6 governance/delegation: backend-backed effective permission loading and delegation reads/writes are implemented and covered by passing full H2 suite. Feature flags remain unavailable; no browser/production authorization review was performed.
+- Demo readiness: PARTIAL only. Do not claim a complete payment/checkout or governance demo without a configured backend and a verified environment; use synthetic data.
+- Production readiness: NOT READY. SQL Server/migration evidence, external service behavior, security/privacy/business approvals and end-to-end evidence remain outstanding.
+- Git state at report update: branch `feature/hswrms-m1-m6-integration`; HEAD `f6a4a48350eaf7e409feccd220b2869318538d2e`; 46 tracked modified paths, 14 untracked status entries, 0 staged paths. Existing staged/unstaged/untracked material was preserved. No commit or push was made.
+- Consolidated report: this existing `HSWRMS_FINAL_IMPLEMENTATION_REPORT.txt` was extended in place; previous contents were retained.
+
+Batch 3 next recommendation (historical; superseded by the single current recommendation in Section I): Complete a browser-backed synthetic-data checkout and M6 delegation acceptance run against an isolated approved environment.
+
+J. BATCH 4 — BROWSER ACCEPTANCE & DEMO READINESS (RECONCILIATION)
+==================================================================
+
+Batch 4 implementation changes
+1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/M5DataInitializer.java`
+   - Associates synthetic M5 demo data with the bootstrapped Customer profile when available.
+   - This fixture change is not runtime-verified.
+2. `05_Development/frontend/src/pages/admin/AdminDelegationPage.tsx`
+   - Corrects the stale “read-only” label.
+   - No other Batch 4 functional change is attributed to this file.
+No files were created or deleted by Batch 4 implementation. This report reconciliation modifies only this existing report.
+
+Batch 4 scenario evidence (browser status)
+- M5 A — Customer-owned eligible checkout: BLOCKED. H2 application startup failed before browser testing; the fixture adjustment is unverified.
+- M5 B — Cross-customer ownership rejection: Browser BLOCKED. Targeted H2 checkout suite passed 65 tests, 0 failures/errors; this is not browser evidence.
+- M5 C — Unauthenticated, customer/staff authorization: Browser BLOCKED. Backend H2 tests passed, but browser behavior was not verified.
+- M5 D — Billing guard, duplicate handling and refresh persistence: Browser BLOCKED. Backend H2 tests passed, but browser persistence was not verified.
+- M6 A — Effective permissions and fail-closed behavior: BLOCKED.
+- M6 B — Delegation read/create/revoke and refresh: BLOCKED.
+- M6 C — Delegation authorization and validation failures: BLOCKED.
+- M6 D — Feature flags: NOT RUN in browser; unsupported backend contract remains unavailable.
+The frontend development server was available at loopback `127.0.0.1:5173`, but no page navigation occurred. Computer Use stopped before browser interaction because it could not determine the current browser URL safely; therefore no Batch 4 browser acceptance scenario was executed.
+
+Batch 4 build and verification record (historical; Batch 4.1 follow-up appears in Section K)
+- `npm run build`: PASS.
+- `npm run lint`: PASS, 12 warnings.
+- `git diff --check`: PASS, with line-ending notices.
+- Targeted H2 checkout suite: PASS, 65 tests, 0 failures, 0 errors, 0 skipped.
+- Full Batch 4 backend suite: started against H2; final result unavailable, NOT VERIFIED. Do not reuse the Batch 3 suite result as a Batch 4 result.
+- Distinct historical evidence: Batch 3 H2 full suite recorded 711 tests, 0 failures, 0 errors, 10 skipped. This is not combined with the Batch 4 targeted result.
+- Browser E2E: no scenarios executed. SQL Server: no successful connection or database operation. External payment: NOT RUN.
+
+Batch 4 runtime incident
+The local H2 application startup failed during demo seeding because the generated schema lacked `PaymentTransaction.invoice_id`. A subsequent launch fell back to the default SQL Server datasource and received `Login failed for user ''`; record this as an inadvertent failed SQL Server connection attempt. There was no successful SQL Server session, query, script execution or migration, and no further connection attempt was made.
+
+Historical Batch 4 verdict (superseded by Section L)
+Overall: PARTIALLY COMPLETED. Demo readiness: NOT DEMO READY. Production readiness: NOT PRODUCTION READY. The Batch 3 M5/M6 implementations remain H2-tested, but the M5 fixture change is unverified and no Batch 4 browser scenario ran. Feature flags remain unavailable.
+
+K. BATCH 4.1 — H2 RUNTIME RECOVERY & BROWSER READINESS
+=====================================================
+Date: 2026-10-31
+
+Scope and safety
+- Repository preflight: branch `feature/hswrms-m1-m6-integration`; HEAD `f6a4a48350eaf7e409feccd220b2869318538d2e`.
+- The working tree was already dirty. At the latest inventory: 48 modified tracked paths, 14 untracked status entries, 0 staged paths (62 status entries total). All prior content was preserved; no Git staging, commit, push, reset, checkout, rebase, merge or clean occurred.
+- All runtime processes used loopback. No SQL Server connection or query, SQL script, migration, DDL/DML against SQL Server, payment provider call, application test fixture against a real database, or restore/database creation occurred in Batch 4.1.
+
+H2 diagnosis and correction
+- Static mapping evidence: `com.heavenstay.hswrms.m2booking.entity.PaymentTransaction` and `com.heavenstay.hswrms.m5billing.entity.PaymentTransactionEntity` both map `dbo.PaymentTransaction`. M2 mapped `retreat_booking_id` but omitted `invoice_id`; M5 maps `invoice_id`. The repository SQL schema defines `invoice_id INT NULL`.
+- A captured standalone H2 run confirmed Hibernate emitted two `CREATE TABLE dbo.PaymentTransaction` statements. The first definition lacked `invoice_id`; the second definition contained it but failed with “table already exists.” The initializer then failed at `M5DataInitializer.run` while saving the deposit row because its insert included `invoice_id`; H2 reported `Column \"INVOICE_ID\" not found`.
+- Added a read-only `invoice_id` column mapping in the M2 entity (`insertable=false`, `updatable=false`) to model the existing shared-table column without giving M2 write ownership. Added a focused H2 regression test that asserts the generated shared table accepts a read-only select of `invoice_id`.
+- Browser testing found the local/demo account bootstrap ran after M5 seeding. M5 had already created the Customer account without a password, so the bootstrap correctly preserved it and skipped creating a usable password hash. Ordered `DevAccountBootstrap` before the seed runner; this retains the no-overwrite credential rule.
+- Focused test `M5BillingAndCheckoutTests#sharedPaymentTransactionSchemaIncludesInvoiceTargetColumn`: PASS; 1 test, 0 failures/errors/skips. Combined targeted suite `M5BillingAndCheckoutTests,M6AdminIntegrationTests,DelegationServiceTest`: PASS; 88 tests, 0 failures/errors/skips. Synthetic M5 seed log reported Folio ID 1 and Invoice ID 1.
+- The duplicate second table-create attempt still logs a non-fatal “already exists” warning. No production schema or migration was changed.
+
+Isolated runtime and endpoint evidence
+- Before launch, effective configuration was explicitly checked: profile `local`; unique `jdbc:h2:mem:...` URL; `org.h2.Driver`; H2 dialect; `127.0.0.1:8080`; CORS allowed only `http://127.0.0.1:5173`; synthetic bootstrap and seed enabled; scheduling disabled; no dev-token shortcut. Hikari logs confirmed H2 and no SQL Server driver/connection attempt appears in the Batch 4.1 runtime log.
+- Spring Boot started successfully, the local synthetic Customer, Admin and Manager accounts were bootstrapped, M5 seed completed, and both listeners were bound to 127.0.0.1 (backend 8080, frontend 5173). Frontend returned HTTP 200 and browser showed `API: UP`; CORS preflight returned 200 with the exact loopback origin.
+- `/` and `/actuator/health` returned 401 without authentication. They were not treated as public health evidence; successful authenticated browser flows and Spring startup logs establish runtime readiness for this scoped test.
+
+Browser acceptance evidence
+- Public home opened at `http://127.0.0.1:5173/` and rendered the HSWRMS landing page.
+- Synthetic Customer sign-in initially failed because of runner ordering; after the bootstrap-order correction, sign-in succeeded and the Customer dashboard showed Demo Customer.
+- Customer booking list showed owned booking `HSW-BK-1` / record ID 1 (checked-in stay, 2026-10-28 through 2026-10-31). The booking detail rendered the seeded package, villa and deposit information.
+- M5 checkout: BLOCKED. `/customer/folio` stated “No verified retreat booking ID found for live synchronization” and displayed fallback/local state despite the owned booking being present in the booking list. No invoice checkout, payment, finalization, or state-changing request was submitted. Cross-customer rejection, unpaid-balance guard, duplicate finalization and refresh persistence were NOT RUN in browser.
+- Synthetic Admin sign-in succeeded. The permissions matrix rendered its role rows; the delegation page rendered an empty list (0 records). This verifies visible UI behavior but not every backend authorization branch.
+- Feature Flags route displayed “Access Restricted (RBAC)” for the Admin session and required `manage_feature_flags`; no feature-flag API was invented or called. Marked BLOCKED for the requested unavailable-state acceptance.
+- Admin staff page verified synthetic Manager ID 5 (`manager@heavenstay.dev`). With explicit user approval, created `DEL-1` for Manager ID 5 and permission `S50:V`, effective 21:31–21:36 local time; immediately revoked it. The server showed ACTIVE then REVOKED, and a subsequent list refresh retained REVOKED with 0 active / 1 total. Delegation create, revoke and refresh: PASS.
+- No browser screenshot artifact was saved. The recorded evidence is the observed accessibility/page text and loopback HTTP/startup output.
+
+Current verification and readiness
+- `git diff --check`: PASS; only existing LF-to-CRLF notices were emitted.
+- Frontend build/lint results are unchanged historical Batch 4 results from Section E; they were not rerun in Batch 4.1 because frontend files were not modified.
+- Batch 4.1 verdict: PARTIALLY COMPLETED. H2 runtime recovery: PASS. Browser readiness: PASS for the exact loopback target. Demo readiness: NOT DEMO READY because Customer checkout remains disconnected from the server-owned booking/invoice and additional M5/M6 acceptance remains incomplete. Production readiness: NOT PRODUCTION READY. No SQL Server validation was attempted.
+- Current change inventory adds `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/entity/PaymentTransaction.java` to the 47-path Batch 4 list. The existing untracked inventory remains 14 entries; no generated report or screenshot was added in this phase.
+
+Historical next recommendation at the close of Batch 4.1:
+Repair the Customer folio-to-server-booking/invoice integration, then resume the blocked synthetic H2 browser checkout scenarios; keep the delegation revoked and Feature Flags unavailable until its backend contract exists.
+END OF REPORT
+
+L. BATCH 4.2 — CUSTOMER FOLIO → SERVER BOOKING/INVOICE INTEGRATION
+==================================================================
+Date: 2026-10-31
+
+Objective and scope
+- Connected the authenticated Customer folio experience to the server-owned booking list and the booking's persisted Folio/Invoice response. No payment, checkout finalization, external notification, migration, SQL Server operation, or second synthetic Customer fixture was used.
+- Existing `HSWRMS_FINAL_IMPLEMENTATION_REPORT.txt` was updated in place; no competing final report was created.
+
+Root cause and correction
+- `GET /api/v1/customer/bookings` returns persisted `retreatBookingId` and canonical `HSW-BK-{id}` reference. The CustomerContext request previously ran before authentication and did not reliably refresh after sign-in, leaving an empty list.
+- Customer folio selection relied on inferred reference-to-ID mappings and local/demo fallback values. This could show unverified local financial figures and select an arbitrary booking when multiple bookings existed.
+- Folio API `GET /api/v1/billing/folios/{bookingId}` resolves the booking, then its Folio, then the Invoice by Folio ID. `BillingAccessEvaluator` enforces booking/invoice ownership. The API emitted a noncanonical `HSW-{88000+id}` display reference; changed it to the already-used canonical `HSW-BK-{id}`.
+- Customer booking loading now follows authenticated customer identity and exposes errors; stale responses are guarded. Folio selection requires a unique eligible booking or explicit choice. Customer routes resolve IDs only against the authenticated server booking list; reference codes are never converted into guessed numeric IDs. Customer folio rendering requires a server response and has retry/error states. Financial values and invoice/booking query identifiers come from backend response fields. Simulated unsettled-order controls and fabricated local financial fallbacks were removed.
+- Receptionist folio navigation now uses persisted `retreatBookingId`; customer payment/confirmation route resolution uses the server booking list and keeps booking ID distinct from invoice ID.
+
+Files modified in Batch 4.2 (all existing tracked files; no files created or deleted)
+1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/FolioBillingService.java`
+2. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java`
+3. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/RetreatBookingServiceAuthorizationTest.java`
+4. `05_Development/frontend/src/context/CustomerContext.tsx`
+5. `05_Development/frontend/src/context/FolioContext.tsx`
+6. `05_Development/frontend/src/types/customer.ts`
+7. `05_Development/frontend/src/features/m5-billing/utils/bookingResolver.ts`
+8. `05_Development/frontend/src/features/m5-billing/utils/bookingResolver.test.ts`
+9. `05_Development/frontend/src/features/m5-billing/utils/paymentSafety.test.ts`
+10. `05_Development/frontend/src/features/m5-billing/api/billingApi.ts`
+11. `05_Development/frontend/src/pages/customer/FolioInvoicePage.tsx`
+12. `05_Development/frontend/src/pages/customer/FinalPaymentPage.tsx`
+13. `05_Development/frontend/src/pages/customer/CheckoutConfirmationPage.tsx`
+14. `05_Development/frontend/src/pages/receptionist/ReceptionistBookingsPage.tsx`
+
+Verification matrix
+| Area | Evidence / result | Status and boundary |
+|---|---|---|
+| Backend H2 regression suite before final reference-format correction | `.\mvnw.cmd test "-Dtest=M5BillingAndCheckoutTests,RetreatBookingServiceAuthorizationTest"`; 76 tests, 0 failures, 0 errors, 0 skipped | PASS; H2 only |
+| Final backend focused suite | `.\mvnw.cmd test "-Dtest=M5BillingAndCheckoutTests#folioResponseUsesPersistedBookingFolioInvoiceRelationships,RetreatBookingServiceAuthorizationTest"`; 10 tests, 0 failures, 0 errors, 0 skipped | PASS; verifies final canonical reference change and booking authorization tests |
+| Frontend targeted tests | `node --experimental-strip-types --test src/features/m5-billing/utils/bookingResolver.test.ts src/features/m5-billing/utils/paymentSafety.test.ts`; 23 passed, 0 failed | PASS |
+| Frontend lint | `npm run lint`; exit 0, 12 warnings (reported as pre-existing/unrelated) | PASS with warnings |
+| Frontend production build | `npm run build`; TypeScript/Vite success, 2,723 modules; 2.76 MB main JS chunk warning | PASS with bundle-size warning |
+| Browser Customer sign-in and booking | Synthetic Customer sign-in; booking list/detail showed `HSW-BK-1`, persisted ID 1 | PASS; isolated demo fixture |
+| Browser folio | `/customer/folio` showed `HSW-BK-1` and backend values (package 24,500,000; deposit 7,350,000; due 19,418,000) | PASS; server response only |
+| Booking/Folio/Invoice relationship | Authenticated API returned booking ID 1, Folio ID 1, Invoice ID 1; relationship follows persisted booking then Folio ID lookup | PASS; no IDs inferred from display text |
+| Browser refresh persistence | Reload of folio route retained `HSW-BK-1` and server amounts | PASS |
+| Cross-Customer browser denial | No second approved synthetic Customer booking fixture was available | NOT RUN; automated authorization coverage exists, browser scenario not claimed |
+| Payment and checkout finalization | No payment or finalization action submitted | NOT RUN by scope; no gateway interaction |
+| Admin governance | Permission matrix rendered; fresh isolated Batch 4.2 delegation list showed zero records | Partial UI evidence; no delegation created in this batch. Batch 4.1 approved temporary grant had been revoked in its separate H2 instance |
+| Feature Flags | Not re-tested in this batch; Batch 4.1 showed RBAC restriction and missing backend contract | BLOCKED / unavailable |
+
+Runtime and safety boundary
+- Backend ran only on `127.0.0.1:8080` with explicitly configured `local` profile and unique in-memory H2 database (`jdbc:h2:mem:hswrms_batch42...`); synthetic bootstrap/seed enabled, scheduling disabled, dev-token shortcut disabled. Frontend used the existing local Vite server on `127.0.0.1:5173`.
+- H2 runtime was stopped after acceptance; the pre-existing Vite process was preserved. No SQL Server connection or database operation occurred in Batch 4.2; no SQL script, migration, database restore, real customer data, real health/financial PII, payment gateway, email, or Calendar service was used.
+- No staging, commit, push, reset, checkout, rebase, merge, or clean occurred. Pre-existing working-tree edits and untracked artifacts were preserved.
+
+Current readiness and remaining evidence
+- Overall status: PARTIALLY COMPLETED.
+- Customer server-backed folio read/refresh: IMPLEMENTED for the exercised synthetic H2 path.
+- Complete demo checkout/payment: NOT READY. Cross-Customer browser denial, checkout finalization, settlement, payment callback/refund behavior, and broader M3/M4/M5 flows remain unverified.
+- Production readiness: NOT PRODUCTION READY. Live SQL Server schema/migration evidence, migration approval, SQL Server trigger/concurrency testing, restore/rollback controls, and external integration evidence remain outstanding.
+
+Exactly one current next recommendation:
+Identify or obtain approval for a second synthetic Customer booking fixture, then verify that Customer A cannot access Customer B's booking/folio through browser navigation and the corresponding API; do not submit a payment.
+M. BATCH 4.3 — CROSS-CUSTOMER BOOKING & FOLIO AUTHORIZATION ACCEPTANCE
+========================================================================
+Date: 2026-10-31
+
+Overall status: BLOCKED at the browser-acceptance entry gate. The repository does not contain a second independently login-capable Customer fixture in local/demo bootstrap and M5 runtime seed. Per task instructions, no Customer account, profile, booking, Folio, Invoice, or seed ownership was added or changed. Explicit user approval is pending before a minimal isolated synthetic fixture may be introduced. No cross-customer browser acceptance is claimed.
+
+Preflight and preservation
+- Expected branch verified: `feature/hswrms-m1-m6-integration`.
+- Expected HEAD verified: `f6a4a48350eaf7e409feccd220b2869318538d2e`.
+- Initial status was 58 modified tracked paths, 14 untracked status entries, 0 staged paths. Existing work was preserved. This batch added no source, test, configuration, seed, or migration changes; this report was edited in place.
+- No application runtime/browser session was started for Batch 4.3. No SQL Server, migration, payment gateway, real customer/health/financial data, or checkout browser action was used. Existing H2 tests were the only DB execution and used isolated `jdbc:h2:mem:testdb` contexts.
+- Existing approved temporary delegation remains revoked per Batch 4.1 record; no delegation action occurred in Batch 4.3.
+
+Phase A — fixture discovery
+- `DevAccountBootstrap` defines exactly one Customer account seed: `customer@heavenstay.dev` (`Demo Customer`), with one Customer profile created/healed. Other bootstrap users are staff roles.
+- `M5DataInitializer` seeds one Customer booking and its related Folio/Invoice, associated with that same demo Customer profile. It does not seed a second Customer account/profile or an independently owned second booking/Folio/Invoice set.
+- `M5BillingAndCheckoutTests` contains in-test synthetic cross-owner fixtures, including a second user/profile and generated Customer tokens and test bookings/invoices. These exist inside test contexts/transactions and are not local/demo browser-login fixtures. They do not satisfy the independent browser sign-in requirement.
+- Required approval before continuing Phase D: add a minimal, clearly synthetic second Customer account with distinct authentication, Customer profile, separate booking and, if supported by the current billing contract, separate Folio/Invoice, strictly to isolated local H2 demo seed. Approval must explicitly authorize that fixture scope. No fixture was created in this batch.
+
+Phase B — authorization contract audit (static source review)
+- Booking list: `GET /api/v1/customer/bookings` → `RetreatBookingController.getCustomerBookings` → `RetreatBookingService.getCustomerBookings(CustomUserDetails)` → resolve CustomerProfile from authenticated user → `findByCustomerProfileIdOrderByCreatedAtDesc`. The service scopes list results to the resolved profile.
+- Booking detail: `GET /api/v1/customer/bookings/{id}` → `RetreatBookingService.getBookingDetail(id, userDetails)` → load persisted booking then `validateBookingAccess` against authenticated Customer/profile; staff role rules are handled by service policy. Existing booking security tests include owner, other-customer denial, unauthenticated, and Receptionist cases.
+- Folio: `GET /api/v1/billing/folios/{bookingId}` → controller `@PreAuthorize` calls `BillingAccessEvaluator.canAccessBooking`; the evaluator obtains authenticated user ID from `CustomUserDetails` and checks `RetreatBookingRepository.existsByIdAndCustomerUserId`. The service then resolves the persisted booking and Folio by retreat booking ID.
+- Invoice: `GET /api/v1/billing/invoices/{invoiceId}` and `GET /api/v1/invoices/{invoiceId}/pdf` → `@PreAuthorize` calls `canAccessInvoice`; existing invoice access checks persisted invoice ownership through `InvoiceRepository.existsByIdAndCustomerUserId`. Compatibility fallback can interpret an ID as a booking only when no invoice with that ID exists; checkout finalization uses stricter `canFinalizeCheckout`, requiring an actual persisted invoice owned by the Customer.
+- Checkout: payment endpoint `/api/v1/billing/invoices/{invoiceId}/pay` uses `canAccessInvoice`; finalization `/api/v1/billing/invoices/{invoiceId}/finalize-checkout` uses `canFinalizeCheckout`. VNPay payment URL creation checks persisted booking/invoice ownership and validates that supplied booking/invoice identities match. Billing guard and idempotency behavior have existing H2 test coverage. `BillingAccessEvaluator` was not changed.
+- Frontend resolver: `resolveCustomerBookingId` only resolves an explicit ID/reference that matches the authenticated Customer booking-list response, or auto-selects when exactly one eligible booking exists. Unknown IDs/references return null. Folio page waits for booking list and requires a server folio response. `FolioContext` retains an in-memory folio map; the current folio route gates Customer selection through the current server booking list, but a cross-account browser refresh/cache-switch scenario was not executed, so no runtime cache-isolation claim is made.
+- Error disclosure: M5 `@PreAuthorize` ownership checks return authorization denial before controller data retrieval for unauthorized booking/folio/invoice IDs. M2 detail statically loads by ID before owner validation and uses a distinct not-found exception versus owner-denial business exception; the API exception mapping was not exercised in this batch, so uniform non-disclosure of booking existence is NOT VERIFIED and deserves explicit regression review. No private DTO is returned by the denied service path in inspected code.
+- Identity relationship is enforced from authenticated User ID through CustomerProfile to booking ownership, then booking to Folio and Folio to Invoice. No assumption that booking, Folio and Invoice numeric identifiers are equal is used by the reviewed access checks.
+
+Regression tests found (not newly authored)
+- `RetreatBookingSecurityTest` has 18 test cases including unauthenticated and cross-customer booking IDOR denial.
+- `RetreatBookingServiceAuthorizationTest` has 9 cases, including own booking access, other-customer denial, and staff access behavior.
+- `M5BillingAndCheckoutTests` contains tests for unauthenticated billing rejection, unauthorized folio access, checkout ownership/guard/idempotency, staff access, and mixed booking/invoice identifier authorization. Some tests assert denial status/state but there is no independently seeded local/demo Customer B for browser use.
+- No tests were modified. No additional tests were authored in Batch 4.3 because the required browser fixture approval is pending and the existing test suite contains stateful checkout/payment cases incompatible with the task's no-payment/no-finalization safety boundary.
+
+Phase C/D/E verification matrix
+| Scenario/check | Result | Evidence/limitation |
+|---|---|---|
+| Two independently login-capable local/demo Customers with separate persisted stays | BLOCKED | Bootstrap/runtime seed contain only one Customer fixture |
+| Customer A own booking/folio/invoice in browser | NOT RUN | Requires isolated runtime and Phase D fixture gate; prior Batch 4.2 owner flow remains historical evidence only |
+| Customer A direct navigation/API attempt to Customer B booking/folio/invoice | BLOCKED | No approved independent Customer B browser fixture; no browser/API requests made |
+| Customer B own records and switch back/cache isolation | BLOCKED | Same missing fixture; no runtime acceptance |
+| Existing H2 authorization suites | INTERRUPTED / NO FINAL RESULT | Command: `.\\mvnw.cmd test "-Dtest=RetreatBookingSecurityTest,RetreatBookingServiceAuthorizationTest,M5BillingAndCheckoutTests"`. Booking security: 18 passed; booking service authorization: 9 passed; M5 suite began but was interrupted before final result after log review showed tests invoke internal `processPayment` / `finalizeCheckout` in ephemeral H2 contexts. No full suite pass is claimed. |
+| Frontend resolver/payment safety tests | PASS | `node --experimental-strip-types --test src/features/m5-billing/utils/bookingResolver.test.ts src/features/m5-billing/utils/paymentSafety.test.ts`; 23 passed, 0 failed |
+| Frontend build | PASS | `npm run build`; TypeScript/Vite passed, 2,723 modules; large 2.76 MB JS chunk warning |
+| Frontend lint | PASS WITH WARNINGS | `npm run lint`; exit 0, 12 warnings in unrelated files |
+| `git diff --check` | PASS | Existing LF/CRLF notices only |
+| Payment / checkout / external services | NOT PERFORMED by browser/operator | Test harness internally executed some synthetic H2 payment/finalization methods before interruption; no gateway, persistent DB, real payment, or app/browser checkout action. This is disclosed rather than counted as “none occurred.” |
+| SQL Server boundary | PASS | Hikari test log confirmed `jdbc:h2:mem:testdb`; no SQL Server connection/fallback, query, script, or migration occurred |
+
+H2 test execution incident disclosure
+The requested focused integration-test command included test cases that call the application’s payment and checkout-finalization service methods against disposable H2 in-memory contexts. Test logs recorded synthetic CASH payment/finalization events before the command was interrupted. These were not browser/operator checkout actions and did not contact an external payment gateway; the in-memory test contexts were shut down. The command has no final test summary and is recorded as INTERRUPTED, not passed. No further M5 integration test was run.
+
+Batch 4.3 change inventory
+- Modified: `HSWRMS_FINAL_IMPLEMENTATION_REPORT.txt` (existing report updated in place).
+- Created: none.
+- Deleted: none.
+- Source/configuration/migration/seed/test files: unchanged by this batch.
+
+Current repository state and readiness
+- Branch `feature/hswrms-m1-m6-integration`; HEAD `f6a4a48350eaf7e409feccd220b2869318538d2e`.
+- Current status after documentation update: 58 modified tracked paths, 14 untracked status entries, 0 staged paths; the already-untracked report remains untracked. No stage, commit, push, reset, clean, checkout, rebase, or merge occurred.
+- Overall Batch 4.3 status: BLOCKED. Demo readiness: PARTIAL; cross-customer authorization acceptance NOT READY. Production readiness: NOT PRODUCTION READY.
+- Phase D cannot start until explicit approval is supplied for adding the isolated synthetic Customer B fixture. Authorization paths are statically guarded and prior test cases exist, but browser acceptance and test coverage of M2 error non-disclosure remain incomplete.
+
+Exactly one next recommendation:
+Approve or decline adding a minimal isolated synthetic Customer B account/profile/booking/Folio/Invoice fixture for local H2 browser acceptance; until explicit approval, keep Batch 4.3 blocked and do not create that fixture.
+
+N. BATCH 4.3 CONTINUATION — CUSTOMER B ISOLATED H2 FIXTURE & CROSS-CUSTOMER AUTHORIZATION
+==========================================================================================
+Date: 2026-10-31
+
+Overall status: PARTIAL. The approved isolated H2 fixture, focused regression tests, frontend build/lint, and non-browser authorization tests completed. Browser acceptance is BLOCKED because the Windows Computer Use runtime stopped the browser interaction after it could not determine the current browser URL with sufficient confidence. No browser scenario is claimed as passed in this continuation.
+
+Approval, preflight, and preservation
+- The user explicitly approved adding one synthetic Customer B fixture solely to the isolated local/demo H2 seed for cross-customer authorization acceptance.
+- Branch and HEAD verified before this continuation: `feature/hswrms-m1-m6-integration`, `f6a4a48350eaf7e409feccd220b2869318538d2e`.
+- The repository's existing modifications and untracked artifacts were preserved. No destructive Git operation, stage, commit, push, branch change, or checkout occurred.
+- The application was started only after configuring Spring profile `local`, a unique in-memory URL `jdbc:h2:mem:hswrms_batch43_20261031` (with H2 driver/dialect), `127.0.0.1:8080`, explicit demo bootstrap opt-in, and disabled scheduling/dev-token shortcut. Startup logs confirmed active profile `local`, the intended H2 URL, Customer B bootstrap and booking fixture ID 2. No SQL Server datasource was used.
+
+Fixture and isolation behavior
+- `DevAccountBootstrap` adds `customer-b@heavenstay.dev` as a synthetic Customer account through the established password-encoding/profile/consent bootstrap, retaining the existing shared local/demo demo-account credential mechanism. The credential itself is intentionally not recorded here.
+- `M5DataInitializer` adds exactly one Customer B acceptance booking, plus its zero-balance OPEN Folio and DRAFT Invoice. The booking uses a clearly synthetic marker, PENDING status, no assigned physical villa, and existing seeded package/category relationships. It creates no payment transaction and no unrelated customer service records.
+- Fixture seeding returns unless a `local` or `demo` profile is active and `app.demo.bootstrap-enabled=true`. It resolves Customer B from the bootstrap-created account/profile, does not create the account/profile itself, and identifies the booking by its marker. Related Folio/Invoice creation is checked before insertion. The fixture is ensured after normal seed and on the already-seeded startup path, making repeated initialization idempotent without hardcoded generated IDs.
+- Customer A's existing fixture was not intentionally changed by the Customer B initializer.
+
+Authorization and cache corrections
+- Customer booking detail now resolves the authenticated Customer profile and queries by booking ID plus profile ID. A foreign booking ID and a nonexistent ID use the same generic not-found result; staff access continues through the existing staff path.
+- Focused backend tests assert owner-scoped booking lookup and indistinguishable foreign/missing booking detail behavior. The existing BillingAccessEvaluator ownership checks for Folio/Invoice remain in place; the selected read-authorization test checks both customers' booking/Folio/Invoice reads and verifies no returned data on denials. Checkout authorization was evaluated through the non-mutating `canFinalizeCheckout` guard only.
+- Customer booking state is cleared when a different identity begins loading. Folio, checkout/review caches, latest transaction and errors are cleared when authenticated identity changes or logs out; stale in-flight folio responses are not cached under the new identity. The Folio page clears selection/data/errors when the user ID changes.
+
+Continuation file inventory
+Modified by this continuation:
+1. `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/DevAccountBootstrap.java`
+2. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/repository/RetreatBookingRepository.java`
+3. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m2booking/service/RetreatBookingService.java`
+4. `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/M5DataInitializer.java`
+5. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/RetreatBookingSecurityTest.java`
+6. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m2booking/RetreatBookingServiceAuthorizationTest.java`
+7. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java`
+8. `05_Development/frontend/src/context/CustomerContext.tsx`
+9. `05_Development/frontend/src/context/FolioContext.tsx`
+10. `05_Development/frontend/src/pages/customer/FolioInvoicePage.tsx`
+11. `HSWRMS_FINAL_IMPLEMENTATION_REPORT.txt` (this report, already untracked before this continuation)
+
+Created by this continuation:
+1. `05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/config/M5DataInitializerCustomerBFixtureTest.java`
+
+Deleted: none. No application configuration, schema, migration, SQL Server script, or unrelated report was modified by this continuation. Other pre-existing repository changes are outside this continuation inventory and remain preserved.
+
+Automated verification
+| Command | Result | Scope |
+|---|---|---|
+| `.\mvnw.cmd test "-Dtest=M5DataInitializerCustomerBFixtureTest,RetreatBookingServiceAuthorizationTest#customerBookingDetailDoesNotDiscloseExistence,M5BillingAndCheckoutTests#crossCustomerBookingFolioInvoiceReadAuthorization"` | Exit 0; 5 tests, 0 failures, 0 errors, 0 skipped | Focused H2 tests only; verified against `jdbc:h2:mem:testdb`; no payment/finalization service invocation in the selected methods |
+| `node --experimental-strip-types --test src/features/m5-billing/utils/bookingResolver.test.ts src/features/m5-billing/utils/paymentSafety.test.ts` | Exit 0; 23 passed, 0 failed | Frontend resolver and payment-safety unit tests |
+| `npm run lint` | Exit 0; 12 warnings | Warnings were in other frontend files; none in the newly changed cache files |
+| `npm run build` | Exit 0; TypeScript/Vite build succeeded, 2,723 modules | Existing large JavaScript bundle warning (approximately 2.76 MB) |
+
+One initial targeted Maven attempt failed due to an unnecessary Mockito stub; after removing that stub, the exact focused command above completed successfully. The failed attempt did not invoke payment or checkout finalization. No broad M5 integration suite was run in this continuation.
+
+Browser acceptance matrix
+| Scenario | Status | Evidence / reason |
+|---|---|---|
+| Customer A reads own booking, Folio and Invoice in browser | BLOCKED | Browser session was not safely navigable to the local demo after the Computer Use runtime failed to determine the current URL; no scenario result is claimed |
+| Customer B normal login and own booking/Folio/Invoice | BLOCKED | Same browser tool stop condition |
+| A→B and B→A cross-customer booking/Folio/Invoice navigation and denial | BLOCKED | Same browser tool stop condition; automated focused H2 read-authorization tests passed but are not browser evidence |
+| Customer account switch and stale-data/cache isolation | BLOCKED | Browser switch/reload observation could not be completed; cache clearing is covered by source change, not browser evidence |
+| Unauthorized checkout/finalization | NOT RUN | Explicitly prohibited |
+
+The Computer Use runtime's returned stop instruction required ending browser automation for this turn because it could not identify the browser URL confidently. No direct browser API calls, checkout buttons, payment buttons, or state-changing browser actions were attempted after that stop.
+
+Safety and runtime shutdown
+- H2-only boundary: PASS for the started application runtime; active `local` profile and intended unique in-memory H2 URL were confirmed in startup evidence. Focused automated tests also used H2.
+- No SQL Server connection, SQL Server script, migration, database restore, or SQL query was performed.
+- No `processPayment`, `finalizeCheckout`, payment gateway, VNPay, webhook, settlement, or payment simulation was executed in this continuation. The read-only checkout ownership guard was called by the focused authorization test; it did not finalize checkout.
+- The H2 backend session started for this continuation was stopped. Post-stop listener check showed only the pre-existing Vite listener on `127.0.0.1:5173`; it was preserved.
+- No files were deleted, no changes were staged, committed, or pushed, and no destructive Git command was used.
+
+Readiness and conclusion
+- Batch 4.3: PARTIAL; acceptance criteria were not fully met because both customers' browser login/read/denial and account-switch checks are unverified. Focused H2 authorization and fixture tests do not substitute for those browser checks.
+- Demo readiness for cross-customer ownership acceptance: NOT READY.
+- Production readiness: NOT READY. This work validates only isolated H2 behavior; SQL Server schema, migrations, trigger/concurrency behavior and production data controls remain unverified.
+- Current verified Git identity remains branch `feature/hswrms-m1-m6-integration`, HEAD `f6a4a48350eaf7e409feccd220b2869318538d2e`. Existing tracked and untracked work was preserved.
+
+Exactly one next recommendation:
+Resume browser acceptance only after the Computer Use runtime can safely identify and navigate the local HSWRMS URL, then execute the read-only two-customer matrix without touching payment or checkout actions.
+
+PHASE 5.8.4 — POST-CONSOLIDATION AUDIT ADDENDUM (2026-11-01)
+============================================================
+
+A. REPOSITORY INTEGRITY
+-----------------------
+Canonical repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+Branch: feature/hswrms-m1-m6-integration
+Local HEAD: 417c3770076f626a4eb9978406f72a9cd6a13f91
+Remotes: isp-origin is the intended GitLab remote; origin is GitHub and was not used for push.
+Pre-audit and current working-tree inventory: 0 staged, 63 modified tracked paths, 151 untracked paths (214 total with --untracked-files=all).
+Preservation stash: stash@{0} remains present. Recovery snapshot: HSWRMS-original-recovery-snapshot-20261101 remains readable.
+Clone check: unchanged at feature/hswrms-m1-m6-integration / 417c3770076f626a4eb9978406f72a9cd6a13f91; 10 modified and 9 untracked status entries.
+Diff checks passed. `git fsck --full --no-reflogs --connectivity-only` exited 0 with no connectivity errors; it reported dangling objects, which were left untouched. No merge/rebase/cherry-pick/revert operation was in progress.
+
+GitLab branch check: `isp-origin` resolved to the configured GitLab repository. After fetching feature/hswrms-m1-m6-integration, remote HEAD was 75cbf858c545c859adc636a9383025ca3da94e25. The local HEAD is its ancestor (not a diverged history); the remote contains 6 commits beyond local. Those remote commits modify 30 paths and overlap 11 locally modified paths, including CheckoutService, FolioBillingService, VNPayConfig, application.yml, M5BillingAndCheckoutTests, FolioContext, billingApi, and customer payment/checkout pages. The remote commits also change M1 OTP issuance and V011/V012/V015/schema files. These sensitive M5 and migration overlaps were not reconciled in this phase. A normal fast-forward push of local changes is therefore not currently possible without first integrating and auditing those remote changes.
+
+No files were staged, committed, pushed, reset, cleaned, or deleted in Phase 5.8.4. The task stops before commit/push pending safe reconciliation of the six remote commits and the sensitive overlaps.
+
+B. FILE AUDIT
+--------------
+Modified tracked paths: 63, consisting of HSWRMS application source, tests, UI/API integration, and runtime/test configuration. The M5 payment/checkout-related changes were statically reviewed, but their payment, checkout, settlement, and finalization flows were not executed.
+
+Untracked paths: 151, classified as follows:
+- 13 source/test candidates: 9 backend Java files and 4 frontend identity/governance helper/test files.
+- 1 unavailable, un-routed FeatureFlagsPage artifact: excluded from the commit candidate set.
+- 2 generated database schema SQL outputs: excluded as generated artifacts.
+- 8 Phase 1.3/SQL readiness documents and tools: documentation candidates; no SQL was executed.
+- 7 audit-backup spreadsheet/CSV/message artifacts: excluded as backup and potentially personal/team information.
+- 118 visual-evidence image/telemetry artifacts: excluded as generated binary evidence, including debug/mismatch captures.
+- 1 HSWRMS_FINAL_IMPLEMENTATION_REPORT.txt: updated in place with this addendum; candidate for documentation commit after GitLab history is reconciled.
+- 1 HSWRMS_CODEX_FULL_PROJECT_HANDOVER.md: excluded because it contains credential-like configuration examples and is not required for this phase.
+
+`.gitignore` excludes build targets, node_modules, dist, environment-local files, logs, caches, IDE files, and the legacy extracted folder. No dependency, build-output, local database/dump, private-key, or environment file was present among the 151 untracked paths. Credential scanning found environment substitutions and development/test-only credential references; no secret values are reproduced here. The existing demo bootstrap credential constant remains a local/demo mechanism and is not logged by the modified code. No recovery snapshot copy was found inside the repository.
+
+Files approved for actual staging: none, because the GitLab branch has unreconciled overlapping commits. All working-tree changes remain intact and unstaged. No uncertain, generated, backup, or binary evidence artifacts were staged.
+
+C. MODULE AUDIT
+----------------
+M1 — PARTIAL. Deletion request status mapping is explicit and unknown statuses fail; deletion loading, errors, submit/cancel, bookings, and deletion state are scoped against current identity. Backend HealthDataDeletionRequestServiceTest (12) and CustomerEndpointRoleAuthorizationTests (12) passed. HealthProfilePage uses the authenticated health-profile API. Residual privacy gap: CustomerContext still initializes and persists legacy profile/wellness context data under global localStorage keys, and existing consumers read wellness context; that legacy cache is not identity-scoped. This behavior was not changed here and requires a separate health-data privacy correction before claiming full M1 customer isolation.
+
+M3.0–M3.4 — PARTIAL, focused H2 verified. Identity-scoped booking/session state, stale-response guards, server-backed candidate/reservation/lifecycle paths, scheduler configuration, and the test-profile outbox/provider boundary are present. Tests verified H2 and disabled scheduled workers; inert Calendar/notification/dispatch adapters were asserted. SpaServiceTests (29), SpaSecurityTests (5), SchedulingConfigTest (3), and SpaTestIsolationIntegrationTest (3) passed. No real email, Calendar, outbox delivery, browser E2E, SQL Server, or concurrency/recovery suite was run.
+
+M3.5 readiness checklist:
+- COMPLETED: ConfirmReservationRequest requires treatmentId, therapistId, roomId, scheduledStartAt, and scheduledEndAt with @NotNull. GenerateCandidatesRequest requires treatmentId and preferredDate. SpaBookingController applies @Valid to both request bodies.
+- PARTIALLY COMPLETED: Service validation rechecks package/stay context, treatment state, therapist qualification/status, room compatibility/status, resource overlap, ownership, and lifecycle. The tested H2 service suite covers related business and invalid-state paths.
+- NOT VERIFIED: No focused test was found that submits each omitted/null required field through the HTTP boundary and asserts validation response behavior; no explicit reversed/zero-length interval contract test was found in the reviewed M3 tests.
+- BLOCKED from a complete readiness claim: SQL Server behavior and end-to-end reservation validation remain unverified; do not infer SQL Server parity from H2.
+
+M6 — PARTIAL, backend/H2 and frontend unit verified. Effective capabilities use /auth/me, explicit mappings, identity matching, stale-request suppression, and fail-closed error/loading states. This audit found permission-code routes could consult cached permissions before /auth/me completed. RoleGuard now waits for permission verification for both requiredCapability and requiredPermission routes; a focused helper and tests cover loading/error/ready behavior. Backend DelegationServiceTest (10), M6AdminIntegrationTests (12), JwtAuthenticationFilterTest (1), and frontend governance/delegation/dashboard tests passed. Feature Flag context behavior remains absent; the retained page is unavailable and un-routed. No permission grants use mock/localStorage state.
+
+D. VERIFICATION
+----------------
+Frontend focused tests: `npm exec --no -- tsx --test src/utils/identityScopedState.test.ts src/features/m3-spa/alternativeRejectionSafety.test.ts src/context/governanceAuthorization.test.ts src/features/m6-admin/api/delegationApi.test.ts src/features/m6-admin/api/adminDashboardApi.test.ts` — exit 0; 60 passed, 0 failed.
+Frontend lint: `npm run lint` — exit 0; 12 existing warnings in unrelated UI files.
+Frontend build: `npm run build` — exit 0; TypeScript/Vite build succeeded; generated JavaScript bundle is about 2.74 MB and triggers Vite's >500 KB warning.
+Backend focused profile: `mvnw.cmd -Dspring.profiles.active=test -Dtest=HealthDataDeletionRequestServiceTest,CustomerEndpointRoleAuthorizationTests,DelegationServiceTest,M6AdminIntegrationTests,JwtAuthenticationFilterTest,SchedulingConfigTest,SpaTestIsolationIntegrationTest,SpaServiceTests,SpaSecurityTests,RetreatBookingServiceAuthorizationTest,RetreatBookingSecurityTest test` — the initial aggregate ran 115 tests and exposed two failures in RetreatBookingServiceAuthorizationTest caused by missing findById stubs for its cancellation path after the read-path test setup changed. The assertions were retained; the fixture was corrected. All other 105 tests passed in that run. Rerun: `mvnw.cmd -Dspring.profiles.active=test -Dtest=RetreatBookingServiceAuthorizationTest test` — exit 0; 10 passed, 0 failed/errors/skipped. Combined coverage across the initial aggregate plus focused rerun: all 115 distinct tests passed. Test resources show in-memory H2; scheduled tasks were disabled.
+
+No SQL Server connection, migration execution, production DDL/DML, live email/Calendar delivery, payment/checkout/finalization flow, browser E2E, or production deployment was performed. Test Spring application contexts started only under the explicit test profile.
+
+E. GIT OPERATIONS AND READINESS
+--------------------------------
+Commit hashes/messages: none created in this phase.
+GitLab push: not attempted. The fetched GitLab branch is 6 commits ahead and overlaps local financial, configuration, and migration changes. No remote history was overwritten.
+Local/remote branch equality: no; local HEAD 417c377 is an ancestor of GitLab HEAD 75cbf85.
+Repository consolidation: local fast-forward consolidation remains present, but final GitLab synchronization is incomplete.
+Demo Ready: NOT VERIFIED by this audit; no browser acceptance was run.
+Production Ready: NO. SQL Server/migration validation, financial-flow verification, browser end-to-end evidence, and resolution of the residual health-data local-storage isolation issue remain outstanding.
+
+Exactly one next recommendation:
+Reconcile the six fetched GitLab commits—especially the 11 M5/configuration overlap paths and V015/schema changes—in a reviewed working tree, then rerun the required safe checks before preparing a fast-forwardable GitLab push.
+PHASE 5.8.5 — GITLAB REMOTE RECONCILIATION & PRE-PUSH READINESS (2026-11-01)
+============================================================================
+
+Result: STOPPED BEFORE INTEGRATION, COMMIT, OR PUSH under the explicit stop conditions. The incoming remote commits cannot be safely reconciled while the M3 migration ownership conflict and M5 financial/security conflicts remain unresolved.
+
+Git baseline and preservation
+- Canonical repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+- Branch/local HEAD: feature/hswrms-m1-m6-integration / 417c3770076f626a4eb9978406f72a9cd6a13f91
+- Fetched GitLab remote isp-origin HEAD: 75cbf858c545c859adc636a9383025ca3da94e25; local is an ancestor, remote is six commits ahead, not diverged.
+- Working-tree inventory remains 0 staged, 63 modified tracked paths, 151 untracked paths (214 total). Existing edits and artifacts were preserved.
+- stash@{0} remains present; recovery snapshot HSWRMS-original-recovery-snapshot-20261101 exists and is readable. GitLab clone was not changed.
+- Read-only detailed reconciliation record: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-original-recovery-snapshot-20261101\phase-5.8.5-reconciliation-20261101\PHASE_5.8.5_RECONCILIATION_RECORD.txt
+
+Incoming commits and disposition
+1. df14b0fe466a318b7bb689627d765c4b7f2542ac — M1 pessimistic user locking for OTP issuance; changes UserRepository/AuthService and adds OtpIssuanceConcurrencyTest. Candidate for later review; not integrated or run.
+2. 06c91a44e6568ba9b2ae739c87984f2be88843dd — adapts three auth test classes to locking; depends on commit 1. Not integrated or run.
+3. 11999f000f836f2ff06aeee76bf168ee6712d90d — merge commit; first-parent delta includes M6 feature-flag removal and governance/docs/routes/locales plus M1 lock changes. No merge was performed in this phase.
+4. 0d2e8f95cbc2c0843274b3ee43c33ceab0c2fab3 — M1 deletion-cancellation ownership test update. Not integrated or run.
+5. 7b2e2b059d58dfb6f6c2b7a44b8f67f21f3f92ad — modifies V011/V012, adds incoming V015 reminder migration and changes schema. BLOCKED by duplicate V015 and overlap with local V016; DBA history/forward migration decision is required.
+6. 75cbf858c545c859adc636a9383025ca3da94e25 — M5 payment/checkout integration across backend, config, tests and frontend. BLOCKED by the M5 conflicts below.
+
+Remote changes affect 30 paths. The actual local path-overlap set was rechecked and contains 11 modified tracked paths: VNPayConfig.java; CheckoutService.java; FolioBillingService.java; backend application.yml; M5BillingAndCheckoutTests.java; FolioContext.tsx; billingApi.ts; CheckoutConfirmationPage.tsx; FinalPaymentPage.tsx; FinalPaymentResultPage.tsx; FolioInvoicePage.tsx. No untracked incoming-path collision was found. None of these overlaps was copied, overwritten, staged, or reconciled. Full incoming path inventory and commit details are in the external reconciliation record above.
+
+M3 migration and schema decisions
+- Incoming V015__m3_spa_session_reminder_columns.sql duplicates local V015__m3_reconcile_spa_session_identifier_types.sql.
+- Local V016__m3_spa_session_reminder_and_trigger_reconciliation.sql already owns reminder columns, status constraint/index, and trigger reconciliation. Ownership and version sequencing require an approved DBA-backed plan; no renumbering was guessed.
+- Incoming edits to V011/V012 change session identifier types in already-versioned migrations. Repository evidence cannot establish whether those versions were applied in existing databases or safely rewrite their history. Require trustworthy migration history and approved forward-migration/consolidation decision.
+- No SQL Server connection, SQL query, migration execution, database restore, or DDL/DML was performed. Phase 1.3 remains NO-GO; DBA evidence and isolated restore validation are outstanding.
+
+M5 financial/security decisions
+- Remote default VNPay configuration includes hardcoded merchant credentials. Values are intentionally omitted from this report. This violates the no-embedded-secret configuration requirement.
+- Remote VNPay simulation access and caller-selected/fallback identifiers do not preserve the local persisted-invoice owner check through BillingAccessEvaluator; fallback behavior can select or create financial records.
+- Remote service settlement behavior can close a stay/release a villa and mark nonterminal dining orders DELIVERED and Spa sessions COMPLETED following payment. No approved lifecycle rule authorizes these transitions; payment success is not checkout completion.
+- Remote VNPay/VietQR invoice/booking identifier fallback and automatic invoice creation can conflate IDs or target the wrong record.
+- The local owner-aware invoice checkout guard and existing balance/transaction/idempotency protections were left untouched. No payment, settlement, refund, checkout finalization, gateway, webhook, or simulation was executed. These conflicts require secure configuration and explicit ownership/identifier/lifecycle contracts before integration.
+
+M1, tests, readiness
+- OTP issuance locking and deletion ownership changes may be compatible, but were not integrated or executed; transaction, rate-limit, enumeration, identity-binding, expiry, resend, and mocked-adapter behavior need a focused follow-up.
+- No tests or application startup were run for Phase 5.8.5 because unresolved sensitive conflicts met the explicit stop condition. Phase 5.8.4 test results are unchanged and do not validate incoming commits.
+- Prior Phase 5.8.4 follow-ups remain: identity-scoped legacy wellness/profile localStorage privacy correction; focused M3.5 HTTP validation tests for missing required fields and reversed/zero-length intervals.
+- Backend H2 status remains limited to prior recorded focused results. Browser acceptance remains incomplete. Demo readiness and production readiness are NOT READY. Phase 1.3 migration readiness remains NO-GO.
+- No stage, commit, or push occurred. Pre-push readiness: NOT READY; do not push until the migration and M5 blockers are resolved and the required focused checks pass. GitHub origin was not used.
+
+Exactly one next recommendation:
+Obtain a DBA-approved migration history/version ownership decision and a security/business-approved M5 remediation contract, then resume reconciliation from the preserved working tree without changing remote history.
+
+PHASE 5.8.6 — FINAL SAFE RECONCILIATION, COMMIT & GITLAB PUSH (2026-11-01)
+============================================================================
+
+Overall result: BLOCKED. Required migration and M5 security/business gates remain unresolved. No incoming source changes were integrated; no files were staged, committed, or pushed.
+
+Repository and preservation
+- Canonical repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules
+- Branch/local HEAD: feature/hswrms-m1-m6-integration / 417c3770076f626a4eb9978406f72a9cd6a13f91
+- GitLab isp-origin HEAD: 75cbf858c545c859adc636a9383025ca3da94e25; remote remains six commits ahead, local is ancestor. `origin` (GitHub) was not used.
+- Final status after report update: 0 staged, 63 modified tracked paths, 151 untracked paths. Stash stash@{0} and the original recovery snapshot remain available. Existing GitLab clone was not changed.
+- Before report editing, created a separate recovery checkpoint outside the canonical repository at E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-original-recovery-snapshot-20261101\phase-5.8.6-checkpoint-20261101. It contains pre-edit copies of this report and the Phase 5.8.5 reconciliation record, plus a manifest recording branch, commit IDs, status, and SHA-256 hashes. The original snapshot was not overwritten.
+- Detailed commit/path dependency matrix, all 11 local overlap dispositions, DBA/security/business evidence requests and candidate test plan are in PHASE_5.8.6_FINAL_RECONCILIATION.txt in that checkpoint.
+
+Six-commit disposition
+1. df14b0fe466a318b7bb689627d765c4b7f2542ac — M1 pessimistic OTP issuance locking. Review candidate only; SQL Server lock semantics, transaction boundaries, rate limits, expiry/resend, identity binding and enumeration controls are not all demonstrated. Not integrated or tested.
+2. 06c91a44e6568ba9b2ae739c87984f2be88843dd — auth test stubs updated for locking API. Dependent on commit 1; not integrated or tested.
+3. 11999f000f836f2ff06aeee76bf168ee6712d90d — merge delta includes M6 feature-flag removal and governance/docs/router changes plus M1 changes. Local governance/feature-flag working changes make blind merge unsafe; no merge performed.
+4. 0d2e8f95cbc2c0843274b3ee43c33ceab0c2fab3 — deletion-cancellation ownership test candidate; depends on preceding chain; not integrated or run.
+5. 7b2e2b059d58dfb6f6c2b7a44b8f67f21f3f92ad — migration changes BLOCKED: incoming V015 duplicates local V015, overlaps local V016 ownership, and V011/V012 alter already-versioned migrations without trustworthy history/DBA approval.
+6. 75cbf858c545c859adc636a9383025ca3da94e25 — M5 payment changes BLOCKED: hardcoded gateway credentials, weak/ambiguous invoice ownership and identifier fallback/record-creation behavior, and settlement transitions that can close stays or mark Dining/Spa records complete outside approved module lifecycle rules.
+
+All 11 modified local overlap paths were reviewed and left untouched: VNPayConfig.java, CheckoutService.java, FolioBillingService.java, backend application.yml, M5BillingAndCheckoutTests.java, FolioContext.tsx, billingApi.ts, CheckoutConfirmationPage.tsx, FinalPaymentPage.tsx, FinalPaymentResultPage.tsx and FolioInvoicePage.tsx. No complete staged allowlist can be justified while gates remain open.
+
+Verification and readiness
+- No tests were run because no changes were integrated; no test success is claimed for incoming commits. Focused H2 tests are planned in the external reconciliation record after an approved safe candidate is selected.
+- `git diff --check` and `git diff --cached --check` passed. No database, SQL, migration, application, external OTP/email/calendar, gateway, payment, settlement, refund, or checkout finalization operation occurred.
+- Phase 1.3 database gate: NO-GO. Demo readiness: NOT READY / not verified. Production readiness: NOT READY.
+- Commit hash/message: none. Push: not attempted. No remote history changed.
+
+Exactly one next recommendation:
+Obtain trustworthy DBA migration history plus an approved migration ownership/forward-migration plan, and obtain Security/Business approval for a corrected M5 ownership, identifier, configuration, settlement and lifecycle contract; then resume reconciliation from the preserved checkpoint.
+
+PHASE 5.8.7 — SAFE INDEPENDENT INTEGRATION & BLOCKER RESOLUTION (2026-11-01)
+============================================================================
+
+Overall result: PARTIALLY COMPLETED; GitLab reconciliation and push remain BLOCKED. Safe M1 work was applied to the unstaged working tree and verified. No remote history was merged and no commit/push was made.
+
+Changes integrated (working tree only)
+- Applied the independent M1 OTP row-lock patch and matching auth test stubs from df14b0fe466a318b7bb689627d765c4b7f2542ac and 06c91a44e6568ba9b2ae739c87984f2be88843dd.
+- Applied the cross-customer deletion-cancellation ownership test from 0d2e8f95cbc2c0843274b3ee43c33ceab0c2fab3.
+- Adapted OtpIssuanceConcurrencyTest with bounded barrier assertion and executor shutdown/await cleanup.
+- Files: UserRepository.java; AuthService.java; AuthServiceRegressionTest.java; AuthServiceSsoFacebookTest.java; AuthServiceTest.java; HealthDataDeletionRequestServiceTest.java; new OtpIssuanceConcurrencyTest.java. Full paths and detailed review are in PHASE_5.8.7_SAFE_INTEGRATION_RECORD.txt in the Phase 5.8.7 external checkpoint.
+- These paths were verified clean before changes and copied into the new preservation checkpoint. Existing modified/untracked work was preserved.
+
+Tests
+- Command from 05_Development/backend: `& .\mvnw.cmd '-Dspring.profiles.active=test' '-Dtest=AuthServiceTest,AuthServiceSsoFacebookTest,AuthServiceRegressionTest,HealthDataDeletionRequestServiceTest,OtpIssuanceConcurrencyTest' test`
+- Exit code 0; 45 tests run, 45 passed, 0 failures, 0 errors, 0 skipped. Class counts: regression 5, SSO Facebook 9, AuthServiceTest 17, deletion ownership 13, OTP concurrency 1.
+- Log confirmed active `test` profile and Hikari `jdbc:h2:mem:testdb` from test resources. EmailDeliveryAdapter was mocked in the concurrency test. No real OTP email was sent.
+- Warnings/info: unrelated unchecked operations warning in InventoryServiceTest compilation; JVM class-sharing warning; Spring open-in-view warning; Google/Facebook SSO not configured informational messages. The first attempt used an unquoted PowerShell `-D` argument and failed at Maven argument parsing before tests; the quoted command above is the successful rerun.
+- `git diff --check` and `git diff --cached --check` passed. No SQL Server test was run; SQL Server pessimistic-lock behavior remains unverified.
+
+Other incoming work
+- The incoming governance documentation’s no-feature-flag wording is already present at local HEAD in API_CONTRACT.md, DEVELOPMENT_STATUS.md and MODULE_OWNERSHIP.md; no files changed for these docs.
+- Local modified GovernanceContext remains backend-authorized with /auth/me permission loading and fail-closed behavior; delegation remains backend API-backed. It was not overwritten. The local FeatureFlagsPage is inert and unrouted; it remains untouched/un-staged.
+- No merge commit, M3 migration, or M5 implementation was integrated. No frontend/M5 path changed.
+
+Remaining blockers
+- DBA evidence/approval: trusted V011/V012 migration history; ownership/sequence of incoming V015 versus local V015 and local V016; approved forward-only migration plan. Phase 1.3 remains NO-GO.
+- Security/Business approval/remediation: remove hardcoded gateway defaults; preserve persisted-invoice owner checks; define distinct booking/Folio/invoice IDs; remove guessed fallback/automatic financial record creation; preserve locks/idempotency/balance guards; define payment settlement versus checkout and module-owned Dining/Spa transitions.
+- M1 rate limiting/resend policy is not added by the row lock and must not be mistaken for concurrency protection. Current focused tests do not establish SQL Server lock semantics.
+- Six-commit remote history is not integrated. Current local branch remains six commits behind GitLab. No staging, commit, or push occurred.
+
+Current repository identity: feature/hswrms-m1-m6-integration at 417c3770076f626a4eb9978406f72a9cd6a13f91; isp-origin GitLab HEAD 75cbf858c545c859adc636a9383025ca3da94e25. Demo readiness NOT READY; production readiness NOT READY. Snapshot, stash and GitLab clone remain preserved.
+
+Exactly one next action:
+Obtain trustworthy DBA migration history/forward-plan approval and Security/Business approval for the corrected M5 credential, ownership, identifier and lifecycle contract before integrating the remaining remote history.
+
+PHASE 5.8.8 — SELECTIVE GOVERNANCE INTEGRATION & REMOTE DEPENDENCY REVIEW (2026-11-01)
+====================================================================================
+
+Result: governance review complete; no additional source integration was necessary or safe. The M6 changes in merge commit 11999f000f836f2ff06aeee76bf168ee6712d90d already match the local committed tree. The only local work added by this phase is this report section. Prior Phase 5.8.7 M1 patches remain unstaged and intact.
+
+State and preservation
+- Branch/local HEAD: feature/hswrms-m1-m6-integration / 417c3770076f626a4eb9978406f72a9cd6a13f91.
+- Fetched isp-origin GitLab HEAD: 75cbf858c545c859adc636a9383025ca3da94e25. Local HEAD remains an ancestor; branch remains six commits behind.
+- Working tree: 0 staged, 69 modified tracked, 152 untracked. Phase 5.8.7 M1 changes are present (UserRepository/AuthService and four modified test files; new OtpIssuanceConcurrencyTest).
+- stash@{0}, original recovery snapshot, and Phase 5.8.7 checkpoint are present. Before editing this report, saved copy at E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-original-recovery-snapshot-20261101\phase-5.8.7-m1-checkpoint-20261101\HSWRMS_FINAL_IMPLEMENTATION_REPORT.before-5.8.8.txt (SHA256: 901BCE146A0E33EC4196FC5DAA27A2BE8E6D02AF51AEA00648A947332B2F9FC9). No other repository file was changed in this phase.
+
+Phase 5.8.7 M1 integration remains validated by the exact focused test run recorded above: 45 tests, 0 failures/errors/skips, explicit test profile, H2 in-memory database, mocked email adapter. No M1 test was rerun in this phase because no M1 code changed.
+
+Commit/path dependency map
+1. df14b0fe466a318b7bb689627d765c4b7f2542ac: M1 OTP row lock, AuthService calls, new concurrency test. Applied as an unstaged worktree patch in 5.8.7; SQL Server lock behavior remains unverified.
+2. 06c91a44e6568ba9b2ae739c87984f2be88843dd: auth unit test stubs for lock API. Applied in 5.8.7.
+3. 11999f000f836f2ff06aeee76bf168ee6712d90d: merge of commit 2 with local 417c377. `git diff 417c377 11999f` shows only the six M1 paths from commits 1–2. Therefore its M6 docs, governance, route, locale, dashboard and type changes already exist in local HEAD. No merge commit was applied to history.
+4. 0d2e8f95cbc2c0843274b3ee43c33ceab0c2fab3: deletion-request cross-customer test. Applied as unstaged test-only patch in 5.8.7 and included in the 45-pass run.
+5. 7b2e2b059d58dfb6f6c2b7a44b8f67f21f3f92ad: V011/V012/V015/schema M3 changes. BLOCKED by duplicate V015/local V016 ownership and missing trustworthy DBA migration history/forward-only plan.
+6. 75cbf858c545c859adc636a9383025ca3da94e25: M5 payment/checkout/config/API changes. BLOCKED by credential, persisted invoice ownership, identifier fallback/record creation and unapproved settlement lifecycle issues.
+
+Selective governance path classification
+- ALREADY MATCHES LOCAL (no patch needed): API_CONTRACT.md; DEVELOPMENT_STATUS.md; MODULE_OWNERSHIP.md; Breadcrumb.tsx; mockGovernance.ts; adminDashboardApi.ts and adminDashboardApi.test.ts; en/fr/ja/vi/zh-CN operations.json; governance.ts; screen.ts. The relevant feature-flag permission, translation, screen and API metrics are absent from the local current implementation where checked.
+- ROUTE / DASHBOARD PATHS: `router/index.tsx`, `AdminDashboardPage.tsx`, and `ManagerDashboardPage.tsx` have local working-tree modifications. The feature-flag route is absent; ManagerDashboard renders delegation as unavailable where there is no verified read contract and displays finite metric values only. Preserved local files; no replacement was applied.
+- LOCAL WORK CONFLICT / PRESERVE: GovernanceContext.tsx, application-dev.yml and other locally modified M6/dashboard state were not overwritten. GovernanceContext's current local implementation uses backend `/auth/me` effective permissions, identity-scoped loading state, fail-closed authorization, and backend delegation API operations. The untracked FeatureFlagsPage.tsx remains inert/unrouted and untouched.
+- FeatureFlagsPage deletion in merge commit is relative to its first parent; local untracked inert page is preserved. No incoming route, translation or mock behavior was copied in this phase.
+- No M6 path required a new code or documentation change. M1, migration, and M5 paths are accounted for above and in the Phase 5.8.5/5.8.7 records.
+
+Remaining synchronization dependency and decisions
+- A normal fast-forward push is NOT possible now: the remote branch is six commits ahead. Advancing to remote history would incorporate commits 5 and 6, which remain blocked; pushing a local-only commit would not be a fast-forward. Do not bypass this by rewriting or selectively omitting remote history.
+- DBA must provide trustworthy migration history, clarify whether V011/V012 ran, establish V015/V016 ownership/sequence, and approve a forward-only migration consolidation plan.
+- Security/Business must approve a corrected M5 contract: no embedded merchant credentials; authenticated ownership of persisted invoices; strict distinction of booking/Folio/invoice IDs; no guessed ID fallback or automatic financial records; preserve locks/idempotency/balance/transaction guards; payment settlement must not implicitly close the stay; Dining/Spa transitions stay in their authorized services and lifecycle rules.
+- No new tests were needed or run in Phase 5.8.8. `git diff --check` and cached diff check pass. No SQL/database operation, test, application startup, stage, commit or push occurred in this phase.
+- Phase 1.3 remains NO-GO. Demo and production readiness remain NOT READY.
+
+Exactly one next action:
+Obtain the DBA migration-history/forward-plan decision and Security/Business approval for the corrected M5 contract before attempting to reconcile the remaining GitLab history.
+
+PHASE 5.8.9 — SAFE REMOTE INTEGRATION & MERGE PREPARATION (2026-11-01)
+========================================================================
+
+Overall status: PARTIALLY COMPLETED. Prior safe M1 work remains locally integrated and verified. The remaining M6 merge changes already match local HEAD. No additional code changes were needed. The full remote branch cannot safely be incorporated or pushed while M3/M5 blockers remain.
+
+A. Actual state and preservation
+- Canonical repository: E:\FU_Learning\5.Spring2025_Semester5\ISP392_Ver2\HSWRMS-audit-all-modules.
+- Branch/local HEAD: feature/hswrms-m1-m6-integration / 417c3770076f626a4eb9978406f72a9cd6a13f91.
+- Fetched GitLab isp-origin HEAD: 75cbf858c545c859adc636a9383025ca3da94e25. `git merge-base --is-ancestor HEAD isp-origin/...` succeeded; reverse ancestry failed. Local is six commits behind, not diverged.
+- Working tree: 0 staged, 69 modified tracked, 152 untracked (221 total). No unexpected paths appeared relative to Phase 5.8.8; the M1 integration remains among those changes. `stash@{0}`, original recovery snapshot, and Phase 5.8.7 M1 checkpoint remain present.
+- Before this report append, a copy was saved into the existing Phase 5.8.7 checkpoint directory: HSWRMS_FINAL_IMPLEMENTATION_REPORT.before-5.8.9.txt (SHA256: B01D417B39C1E53E626623CF686D5FD16EFA443D4692B921DC32592B53660ACC). No new backup directory was created.
+- Phase 5.8.7 focused M1 changes remain: row-lock method and calls; updated unit test stubs; bounded concurrency test; deletion ownership test. M1 changes are unstaged; no commit was created.
+
+B. Six-commit path-level integration matrix
+Commit 1 — df14b0fe466a318b7bb689627d765c4b7f2542ac (OTP row locking)
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m1identity/repository/UserRepository.java` — ALREADY INTEGRATED LOCALLY in Phase 5.8.7 working tree; pessimistic lock query.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m1identity/service/AuthService.java` — ALREADY INTEGRATED LOCALLY; row lock within transactional registration, pending SSO registration, Facebook-link OTP, and password-reset OTP flows.
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/m1identity/service/OtpIssuanceConcurrencyTest.java` — ALREADY INTEGRATED LOCALLY with bounded barrier and executor cleanup adaptation. H2 only; SQL Server lock behavior not proven.
+Commit 2 — 06c91a44e6568ba9b2ae739c87984f2be88843dd (auth test stubs; depends on commit 1)
+- `AuthServiceRegressionTest.java`, `AuthServiceSsoFacebookTest.java`, `AuthServiceTest.java` under `05_Development/backend/src/test/java/com/heavenstay/hswrms/m1identity/service/` — ALREADY INTEGRATED LOCALLY; mocks match the lock repository API.
+Commit 3 — 11999f000f836f2ff06aeee76bf168ee6712d90d (merge remote branch with local 417c377)
+- `05_Development/backend/src/main/resources/application-dev.yml` — merge tree already matches local HEAD for the M6 merge; the later remote M5 modification is BLOCKED with commit 6, so preserve current local configuration.
+- `05_Development/docs/API_CONTRACT.md`, `DEVELOPMENT_STATUS.md`, `MODULE_OWNERSHIP.md` — ALREADY MATCH LOCAL; unsupported Feature Flag wording is absent locally.
+- `05_Development/frontend/src/app/router/index.tsx` — local working-tree file preserved; feature-flag route is absent. Later M5 payment route changes are BLOCKED.
+- `05_Development/frontend/src/components/navigation/Breadcrumb.tsx` — ALREADY MATCHES local no-feature-flag route labels.
+- `05_Development/frontend/src/context/GovernanceContext.tsx` — LOCAL WORK intentionally preserved; backend `/auth/me` permission source, identity-scoped load state, fail-closed guard inputs, backend delegation APIs retained.
+- `05_Development/frontend/src/data/mockGovernance.ts` — ALREADY MATCHES local state with no Feature Flag behavior.
+- `05_Development/frontend/src/features/m6-admin/api/adminDashboardApi.ts` and `adminDashboardApi.test.ts` — ALREADY MATCH local no-Feature-Flag dashboard contract.
+- `05_Development/frontend/src/i18n/locales/{en,fr,ja,vi,zh-CN}/operations.json` — ALREADY MATCH local no-Feature-Flag translation resources.
+- `05_Development/frontend/src/pages/admin/AdminDashboardPage.tsx` and `05_Development/frontend/src/pages/manager/ManagerDashboardPage.tsx` — LOCAL WORK intentionally preserved; do not overwrite. Current Manager page reports unavailable delegation status rather than inventing a delegation read contract and guards non-finite metrics.
+- `05_Development/frontend/src/pages/admin/FeatureFlagsPage.tsx` — remote merge deletes its first-parent tracked version; local path is an inert, untracked, unrouted stub and is PRESERVED as explicitly required.
+- `05_Development/frontend/src/types/governance.ts` and `types/screen.ts` — ALREADY MATCH local no-feature-flag capability/screen types.
+- Commit 3 also contains the commit 1/2 M1 path changes listed above; their disposition remains ALREADY INTEGRATED LOCALLY.
+Evidence: `git diff 417c377 11999f -- <M6 paths>` found no M6 tree delta; the complete `git diff 417c377 11999f` contains only the six M1 files from commits 1/2.
+Commit 4 — 0d2e8f95cbc2c0843274b3ee43c33ceab0c2fab3 (deletion ownership test; follows merge)
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/m1identity/service/HealthDataDeletionRequestServiceTest.java` — ALREADY INTEGRATED LOCALLY as a test-only cross-customer denial/unchanged-target assertion.
+Commit 5 — 7b2e2b059d58dfb6f6c2b7a44b8f67f21f3f92ad (M3 migrations/schema)
+- `05_Development/database/migrations/V011__m3_spa_schedule_history.sql` — BLOCKED pending DBA evidence about applied migration history; no historical rewrite.
+- `05_Development/database/migrations/V012__m3_spa_dispatch_outbox.sql` — BLOCKED pending DBA evidence about applied migration history; no historical rewrite.
+- `05_Development/database/migrations/V015__m3_spa_session_reminder_columns.sql` — BLOCKED; duplicate version V015 and overlaps local V016 reminder/trigger ownership.
+- `05_Development/database/schema.sql` — BLOCKED with the M3 migration changes; baseline/migration ownership must be approved together.
+Commit 6 — 75cbf858c545c859adc636a9383025ca3da94e25 (M5 payment/checkout)
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/CorsConfig.java` — BLOCKED pending security review of new payment/simulation exposure and origins.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/config/SecurityConfig.java` — BLOCKED; endpoint authorization must preserve owner-aware financial access.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/config/VNPayConfig.java` — local overlap intentionally supersedes unsafe remote defaults; local hash-secret fallback is blank. Remote contains hardcoded credentials (values omitted).
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/controller/PaymentController.java` — BLOCKED pending approved payment API/ownership contract.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/controller/VNPaySimulationController.java` — REJECT current remote behavior: simulation authorization/identifier fallback can bypass owner validation or select/create records.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/CheckoutService.java` — local overlap; BLOCKED by settlement/checkout lifecycle and ownership differences.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/FolioBillingService.java` — local overlap; REJECT auto-transitioning Dining to DELIVERED and Spa to COMPLETED without their approved owning-service transitions.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/VNPayService.java` — BLOCKED by invoice/booking ID fallback, record creation and callback contract.
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m5billing/service/VietQrService.java` — BLOCKED by ambiguous invoice selection/creation behavior.
+- `05_Development/backend/src/main/resources/application-dev.yml` — BLOCKED by remote payment defaults/config changes; preserve local config pending secret and simulation policy review.
+- `05_Development/backend/src/main/resources/application.yml` — local overlap; BLOCKED pending environment-only secret configuration and safe profile defaults.
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/m5billing/M5BillingAndCheckoutTests.java` — local overlap; test updates depend on unsafe or unapproved payment behavior and require a corrected contract before selection.
+- `05_Development/frontend/src/app/router/index.tsx` — BLOCKED remote M5 payment route additions; current local router is preserved.
+- `05_Development/frontend/src/context/FolioContext.tsx` — local overlap; BLOCKED until backend-authoritative ownership and response contract are settled.
+- `05_Development/frontend/src/features/m5-billing/api/billingApi.ts` — local overlap; BLOCKED by identifier/endpoint contract.
+- `05_Development/frontend/src/pages/customer/CheckoutConfirmationPage.tsx`, `FinalPaymentPage.tsx`, `FinalPaymentResultPage.tsx`, `FolioInvoicePage.tsx` — local overlaps; BLOCKED pending no-fabricated-success, ownership, and payment/finalization contract.
+
+Current worktree overlap against all 30 paths in `git diff 417c377 75cbf85`: 18 paths. Seven are the selected M1/deletion-test paths above; the remaining eleven are the local M5/config/payment UI overlaps: VNPayConfig.java, CheckoutService.java, FolioBillingService.java, application.yml, M5BillingAndCheckoutTests.java, FolioContext.tsx, billingApi.ts, CheckoutConfirmationPage.tsx, FinalPaymentPage.tsx, FinalPaymentResultPage.tsx, FolioInvoicePage.tsx. The incoming new M1 concurrency test is an untracked path collision and was locally adapted. No incoming path was overwritten.
+
+C. Merge feasibility and strategy
+- A direct merge now would be a fast-forward because local 417c377 is an ancestor of remote 75cbf85. It would adopt the remote final tree, including blocked M3/M5 contents; it cannot selectively preserve local M3/M5 working versions as a fast-forward. Local worktree modifications also overlap incoming paths.
+- A future tree-preserving merge could be made only after first creating a reviewed local-side commit/preservation plan, then merging the remote descendant and resolving individual files. No `-X ours/theirs` blanket option is appropriate. Resolution would have to preserve approved owner-aware local M5 behavior, remove/replace unsafe new payment endpoints only under an approved contract, and settle M3 version/checksum ownership with DBA evidence. New files and their route/security dependencies must be audited, not merely left on the merge parent.
+- M3 cannot be resolved from repository evidence: need trusted database migration history, applied status of V011/V012, decision on duplicate V015/local V016 ownership, and DBA-approved forward-only plan. No SQL Server connection/migration was attempted.
+- M5 requires Security/Business decisions: no embedded credentials; exact customer/staff authorization; ownership through persisted invoice; distinct booking/Folio/invoice identity contract; no caller-selected/fallback IDs or auto-created records; callback/idempotency contract; payment settlement must not imply checkout or stay closure; Dining and Spa lifecycle transitions remain owned by their respective services. Preserve balance, lock, transaction and idempotency guards. No gateway/payment/settlement/refund/finalization was run.
+- Therefore merge is NOT SAFE NOW. The smallest unblock is the DBA evidence/plan plus Security/Business-approved M5 contract; then path-level resolution and safe focused tests are required before a normal merge/push can be prepared.
+
+D. Verification
+- Reran from `05_Development/backend`: `& .\mvnw.cmd '-Dspring.profiles.active=test' '-Dtest=AuthServiceTest,AuthServiceSsoFacebookTest,AuthServiceRegressionTest,HealthDataDeletionRequestServiceTest,OtpIssuanceConcurrencyTest' test`.
+- Exit code 0; BUILD SUCCESS; 45 tests, 0 failures, 0 errors, 0 skipped (class counts 17, 9, 5, 13, 1 respectively). Log confirms active profile `test`, Hikari `jdbc:h2:mem:testdb`; concurrency test uses mocked EmailDeliveryAdapter. Spring Boot context started within the test. No separate application startup, SQL Server, or migration occurred. Existing compile/JVM/Spring warnings and SSO-not-configured info were non-failing.
+- `git diff --check` and `git diff --cached --check` passed. No conflict markers found in the inspected changed code/config files. No config was changed this phase. Static scan of existing local config diffs found the VNPay hash-secret fallback blank in worktree (HEAD version had a nonblank fallback); application secrets use environment placeholders. Remote embedded credentials remain excluded.
+- Prior focused test results from Phase 5.8.4/5.8.7 are historical evidence; the 45-test command above is the only test suite run in this phase. H2 results do not establish SQL Server locking, migrations, Demo readiness, or Production readiness.
+
+E. Final state
+- No new safe source change remained missing: safe M1 changes were already applied in Phase 5.8.7, and M6 governance/docs/routes/locales/types are already represented in local HEAD. No source file changed in Phase 5.8.9; only this report section was appended.
+- Normal GitLab push is NOT technically possible from current local HEAD: remote is six commits ahead, so a push from 417c377 would be non-fast-forward. Incorporating remote history without its final M3/M5 changes requires a reviewed diverged merge after external decisions; a direct fast-forward is unsafe.
+- No stage, commit, merge, rebase, reset, clean, SQL/database operation, payment operation, external email, or push occurred. Phase 1.3 remains NO-GO; Demo readiness NOT READY; Production readiness NOT READY.
+- Final branch/HEAD/remote remain feature/hswrms-m1-m6-integration / 417c3770076f626a4eb9978406f72a9cd6a13f91 / 75cbf858c545c859adc636a9383025ca3da94e25. Status remains 0 staged, 69 modified tracked, 152 untracked.
+
+Exactly one next recommendation:
+Obtain the DBA migration-history/forward-only decision and Security/Business approval for the M5 ownership, identifier, credential, callback, and lifecycle contract; then prepare a path-level merge resolution with those signed decisions.
+
+
+================================================================================
+PHASE 5.8.10 — M1 IDENTITY-SCOPED PRIVACY & M3 HTTP VALIDATION
+Date: 2026-11-01
+================================================================================
+
+Overall result: COMPLETED for the two scoped technical gaps; project remains NOT READY for demo or production.
+
+A. M1 identity-scoped profile and wellness state
+
+- Replaced CustomerContext's global profile/wellness localStorage hydration and persistence with identity-scoped namespaced keys. Keys are `hsw_customer_profile_v1:<URI-encoded authenticated user ID>` and `hsw_wellness_profile_v1:<URI-encoded authenticated user ID>`, with identity envelopes checked on reads. CustomerContext is the sole production reader/writer of those namespaced values.
+- The old unscoped keys `hsw_customer_profile_v1` and `hsw_wellness_profile_v1` are no longer read, hydrated, migrated, overwritten, or removed. Their existing values are left untouched. The unused global `hsw_deletion_request_v1` had no production readers/writers. The former `hsw_customer_bookings_v1` removal was removed so this code no longer silently deletes that key.
+- Missing/non-Customer identity exposes null profile/wellness state and cannot read/write private cache values. An authenticated profile fallback uses only the authenticated identity/name/email and blank non-health fields; wellness state remains unavailable until the scoped cache has loaded. Blank health defaults do not imply consent or fabricate health values.
+- Identity-scoped reducers and identity/request checks clear the exposed in-memory data during switch/logout and reject stale responses. Profile, wellness, booking, and deletion state are identity-tagged. Scoped writes are guarded by the identity initiating them.
+- Consumer audit: CustomerDashboardPage, AccountSettingsPage, RetreatBookingPage, ReviewRatingPage, CustomerNavbar, PublicNavbar, DiningContext, DailyMealSelectionPage, AlaCarteOrderPage, DietaryMenuPage, and HealthProfilePage. DailyMealSelectionPage, AlaCarteOrderPage, and DietaryMenuPage now derive identity from the authenticated Customer context; account-specific selection/cart state remounts on identity changes. Nullable profile access now fails closed or renders blank; account-specific form pages remount by authenticated user ID. DailyMealSelectionPage no longer uses a hardcoded Customer ID or a mock dietary projection when private wellness data is unavailable. HealthProfilePage is keyed by authenticated identity, cancels stale initial loads on unmount, requires an identity before loading, and no longer preselects a fabricated stress level.
+- Other localStorage uses found by source scan are auth-session/token storage, theme, cursor preference, language preference, and mock staff data; none are used as profile/wellness context. Those unrelated preference keys were not changed.
+- Focused tests cover A/B isolation, B-only writes, logout and account-switch clearing, late A response rejection, missing identity, legacy-key non-hydration/preservation, and unrelated theme preference preservation. This establishes the identified browser-cache isolation behavior only; it is not a health-data privacy certification. Legacy global values remain physically stored but have no production reader in the audited source.
+
+B. M3 HTTP-boundary validation
+
+- Existing @Valid controller bindings and GlobalExceptionHandler were verified: invalid DTO requests return HTTP 400 with the established `VALIDATION_ERROR` code and `errors` array.
+- Added `@AssertTrue` request validation to require `scheduledEndAt` strictly after `scheduledStartAt`; missing/null fields continue to be reported by existing @NotNull constraints.
+- Added MockMvc coverage for all five confirmation fields omitted and explicitly null (10 invalid requests), both candidate fields omitted and explicitly null (4), reversed and zero-length intervals (2), plus valid candidate and confirmation requests reaching their controller services (2). Invalid requests assert 400 and verify that neither mocked scheduling nor reservation service is invoked. Valid requests assert HTTP 200/201 and expected service invocation.
+- First focused Maven attempt exposed an immutable-map bug in the new test harness (not application behavior); the test body builder was corrected. Final command passed.
+
+C. Files changed for Phase 5.8.10
+
+Backend:
+- `05_Development/backend/src/main/java/com/heavenstay/hswrms/m3spa/dto/request/ConfirmReservationRequest.java`
+- `05_Development/backend/src/test/java/com/heavenstay/hswrms/m3spa/SpaBookingValidationTests.java` (new)
+
+Frontend:
+- `05_Development/frontend/src/api/health/healthProfileApi.ts`
+- `05_Development/frontend/src/components/navigation/CustomerNavbar.tsx`
+- `05_Development/frontend/src/components/navigation/PublicNavbar.tsx`
+- `05_Development/frontend/src/context/CustomerContext.tsx`
+- `05_Development/frontend/src/pages/customer/AccountSettingsPage.tsx`
+- `05_Development/frontend/src/pages/customer/AlaCarteOrderPage.tsx`
+- `05_Development/frontend/src/pages/customer/DietaryMenuPage.tsx`
+- `05_Development/frontend/src/pages/customer/CustomerDashboardPage.tsx`
+- `05_Development/frontend/src/pages/customer/DailyMealSelectionPage.tsx`
+- `05_Development/frontend/src/pages/customer/HealthProfilePage.tsx`
+- `05_Development/frontend/src/pages/customer/RetreatBookingPage.tsx`
+- `05_Development/frontend/src/pages/customer/ReviewRatingPage.tsx`
+- `05_Development/frontend/src/types/customer.ts`
+- `05_Development/frontend/src/utils/customerPrivateStorage.ts` (new)
+- `05_Development/frontend/src/utils/customerPrivateStorage.test.ts` (new)
+
+`identityScopedState.ts` and its test were pre-existing untracked utilities used by this work and were not modified in this phase. No migration, schema, M5 payment/checkout, or configuration file was changed for this phase.
+
+D. Verification
+
+- Frontend command: `node --experimental-strip-types --test src/utils/customerPrivateStorage.test.ts src/utils/identityScopedState.test.ts` — 11 tests passed, 0 failures, 0 skipped.
+- Frontend command: `npm run lint` — exit 0; warnings only (unused catch/underscore bindings in existing files and existing unnecessary escapes in RetreatBookingPage). No lint errors.
+- Frontend command: `npm run build` — exit 0 (`tsc -b` and Vite production build succeeded). Vite reported the existing large-chunk warning (~2.74 MB minified JavaScript); no build errors.
+- Backend command from `05_Development/backend`: `& .\mvnw.cmd '-Dspring.profiles.active=test' '-Dtest=SpaBookingValidationTests,SpaServiceTests,SpaSecurityTests' test` — BUILD SUCCESS; 38 tests, 0 failures, 0 errors, 0 skipped (SpaBookingValidationTests 4, SpaSecurityTests 5, SpaServiceTests 29). Logs confirm active `test` profile and Hikari `jdbc:h2:mem:testdb`; test configuration is isolated H2. New controller tests mock both mutation-capable services. H2 is not SQL Server evidence.
+- `git diff --check` and `git diff --cached --check` passed. Changed-file review found no secret additions or unrelated M3/M5 changes for this phase. No SQL Server connection or SQL Server queries, migrations, external email/Calendar actions, payment, checkout finalization, or standalone application startup occurred. Backend tests booted Spring test contexts and used isolated in-memory H2 only.
+- Historical prior-phase test results are not counted as Phase 5.8.10 execution.
+
+E. Project readiness and repository state
+
+- Branch/HEAD: `feature/hswrms-m1-m6-integration` / `417c3770076f626a4eb9978406f72a9cd6a13f91`.
+- Current complete worktree: 0 staged paths, 78 modified tracked paths, 31 untracked status entries (109 status entries total). This includes preserved work from earlier phases; the Phase 5.8.10 file list above identifies the files in this phase. No commit or push occurred.
+- M1 browser profile/wellness identity isolation: IMPLEMENTED and focused-test verified, with the limitations stated above.
+- M3 HTTP request validation: IMPLEMENTED and focused-test verified against isolated H2 plus mocked services. SQL Server behavior and migrations were not tested.
+- Existing M3 migration blockers remain unchanged: V011/V012 applied history, duplicate V015 and local V016 ownership, and the DBA-approved forward-only migration plan.
+- Existing M5 blockers remain unchanged: merchant credentials, invoice/booking/Folio identity and ownership, payment callbacks/idempotency, settlement versus checkout, and Dining/Spa lifecycle ownership.
+- Demo readiness: NOT READY. Production readiness: NOT READY. Focused isolated tests do not resolve end-to-end integrations or external approvals.
+
+Exactly one next action:
+Obtain DBA-verified applied migration history and a forward-only ownership decision for M3 V011/V012/V015/V016 before any migration validation or integration.

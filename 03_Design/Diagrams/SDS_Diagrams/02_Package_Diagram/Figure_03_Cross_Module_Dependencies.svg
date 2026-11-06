@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1300" viewBox="0 0 2000 1300"><defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L9 3 L0 6Z" fill="#4F6F8F"/></marker></defs><rect width="100%" height="100%" fill="white"/><text x="70" y="74" font-family="Arial" font-size="42" font-weight="700" fill="#173B63" text-anchor="start">Cross-module callers and data-context references</text>
+<text x="70" y="110" font-family="Arial" font-size="22" font-weight="400" fill="#5C6B78" text-anchor="start">Solid = service invocation; dashed = repository/context read; direction is caller -&gt; dependency; source-level only.</text>
+<line x1="500" y1="650" x2="1480" y2="490" stroke="#2471A3" stroke-width="5" marker-end="url(#a)"/>
+<polygon points="1480,490 1467.3781705838803,499.8330779611662 1464.9061466665207,484.6919314673397" fill="#2471A3"/>
+<line x1="500" y1="925" x2="1480" y2="545" stroke="#2471A3" stroke-width="5" marker-end="url(#a)"/>
+<polygon points="1480,545 1469.6816265639004,557.2282938152955 1464.13520460039,542.924363488347" fill="#2471A3"/>
+<polyline points="110,640 78,640 78,412 110,412" fill="none" stroke="#A67C00" stroke-width="4" stroke-dasharray="9 7"/>
+<polygon points="110,412 95.95867900975404,419.67080861766726 95.95867900975404,404.32919138233274" fill="#A67C00"/>
+<polyline points="110,700 58,700 58,220 110,220" fill="none" stroke="#A67C00" stroke-width="4" stroke-dasharray="9 7"/>
+<polygon points="110,220 95.95867900975404,227.67080861766726 95.95867900975404,212.32919138233274" fill="#A67C00"/>
+<polyline points="110,900 38,900 38,412 110,412" fill="none" stroke="#A67C00" stroke-width="4" stroke-dasharray="9 7"/>
+<polygon points="110,412 95.95867900975404,419.67080861766726 95.95867900975404,404.32919138233274" fill="#A67C00"/>
+<polyline points="305,160 305,128 1950,128 1950,845 1910,845" fill="none" stroke="#2471A3" stroke-width="4"/>
+<polygon points="1910,845 1924.041320990246,837.3291913823327 1924.041320990246,852.6708086176673" fill="#2471A3"/>
+<polyline points="1695,935 1695,1058 22,1058 22,250 110,250" fill="none" stroke="#A67C00" stroke-width="4" stroke-dasharray="9 7"/>
+<polygon points="110,250 95.95867900975404,257.67080861766726 95.95867900975404,242.32919138233274" fill="#A67C00"/>
+<line x1="500" y1="930" x2="1480" y2="875" stroke="#2471A3" stroke-width="4" marker-end="url(#a)"/>
+<polygon points="1480,875 1466.410568264788,883.4455517945255 1465.5509119122419,868.1280386037024" fill="#2471A3"/>
+<rect x="110" y="160" width="390" height="125" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="3"/>
+<text x="305.0" y="210" font-family="Arial" font-size="25" font-weight="700" fill="#173B63" text-anchor="middle">M1 Identity / profile</text>
+<rect x="110" y="350" width="390" height="125" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="3"/>
+<text x="305.0" y="400" font-family="Arial" font-size="25" font-weight="700" fill="#173B63" text-anchor="middle">M2 Booking / stay</text>
+<rect x="110" y="590" width="390" height="145" rx="10" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<text x="305.0" y="640" font-family="Arial" font-size="25" font-weight="700" fill="#173B63" text-anchor="middle">M3 Spa scheduling</text>
+<rect x="110" y="865" width="390" height="145" rx="10" fill="#DDEFEA" stroke="#4F6F8F" stroke-width="3"/>
+<text x="305.0" y="915" font-family="Arial" font-size="25" font-weight="700" fill="#173B63" text-anchor="middle">M4 F&amp;B / KDS</text>
+<rect x="1480" y="430" width="430" height="170" rx="10" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<text x="1695.0" y="480" font-family="Arial" font-size="25" font-weight="700" fill="#173B63" text-anchor="middle">M5 Folio / billing</text>
+<rect x="1480" y="790" width="430" height="145" rx="10" fill="#F2F4F7" stroke="#4F6F8F" stroke-width="3"/>
+<text x="1695.0" y="840" font-family="Arial" font-size="25" font-weight="700" fill="#173B63" text-anchor="middle">M6 permissions / admin</text>
+<rect x="874.0" y="533" width="232" height="29" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="990" y="557" font-family="Arial" font-size="22" font-weight="700" fill="#173B63" text-anchor="middle">M3 direct charge call</text>
+<rect x="752.5" y="756" width="535" height="28" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="1020" y="779" font-family="Arial" font-size="21" font-weight="700" fill="#173B63" text-anchor="middle">M4 idempotent charge; event listener also calls M5</text>
+<rect x="508.0" y="596" width="284" height="27" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="650" y="618" font-family="Arial" font-size="20" font-weight="400" fill="#5C6B78" text-anchor="middle">M3 reads M1 profile / consent</text>
+<rect x="509.0" y="668" width="282" height="27" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="650" y="690" font-family="Arial" font-size="20" font-weight="400" fill="#5C6B78" text-anchor="middle">M3 reads M2 booking context</text>
+<rect x="509.0" y="848" width="282" height="27" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="650" y="870" font-family="Arial" font-size="20" font-weight="400" fill="#5C6B78" text-anchor="middle">M4 reads M2 booking context</text>
+<rect x="787.5" y="130" width="425" height="27" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="1000" y="152" font-family="Arial" font-size="20" font-weight="700" fill="#173B63" text-anchor="middle">M1 calls M6 permission / parameter / audit</text>
+<rect x="818.5" y="1018" width="363" height="27" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="1000" y="1040" font-family="Arial" font-size="20" font-weight="700" fill="#5C6B78" text-anchor="middle">M6 reads M1 user / role repositories</text>
+<rect x="880.5" y="921" width="199" height="27" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="980" y="943" font-family="Arial" font-size="20" font-weight="700" fill="#173B63" text-anchor="middle">M4 audit call to M6</text>
+<rect x="600" y="1100" width="1000" height="105" rx="8" fill="#F8FAFC" stroke="#AAB9C8" stroke-width="2"/>
+<text x="625" y="1128" font-family="Arial" font-size="18" font-weight="400" fill="#5C6B78" text-anchor="start">M4 also reads M1 dietary context; M3/M4 read M2 booking context.</text>
+<text x="625" y="1158" font-family="Arial" font-size="18" font-weight="400" fill="#5C6B78" text-anchor="start">M5 also reads cross-module repositories; ownership is not implied.</text>
+<text x="625" y="1188" font-family="Arial" font-size="18" font-weight="400" fill="#5C6B78" text-anchor="start">No direct M3 -&gt; M4 dependency was found in the reviewed scan.</text></svg>

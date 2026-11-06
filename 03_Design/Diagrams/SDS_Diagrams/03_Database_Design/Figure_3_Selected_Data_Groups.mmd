@@ -1,0 +1,7 @@
+erDiagram
+    RetreatBooking ||--o{ SpaSession : has
+    RetreatBooking ||--o{ MealOrder : has
+    RetreatBooking ||--o| Folio : anchors
+    Folio ||--o{ FolioItem : contains
+    Folio ||--o| Invoice : snapshots
+    Invoice ||--o{ PaymentTransaction : records

@@ -1,0 +1,11 @@
+flowchart LR
+A[Request] --> B[Read-only candidate generation]
+B --> C[Indivisible time + qualified therapist + compatible room]
+C --> D[Final revalidation and transactional reservation]
+D -->|conflict| E[Reject; no partial reservation; prior session retained]
+D -->|success| F[Persist session / history / outbox]
+F --> G[Worker claim and provider dispatch]
+G --> H[Sent / retry / final failure]
+I[Confirmation: PENDING to CONFIRMED / DECLINED / EXPIRED]
+J[Cross-customer recovery requires mutual consent; workflow partial]
+K[Defaults 5 attempts; 30s, 1m, 2m, 4m; SQL Server / providers unverified]

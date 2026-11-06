@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1810" viewBox="0 0 1900 1810"><defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L9 3 L0 6Z" fill="#4F6F8F"/></marker></defs><rect width="100%" height="100%" fill="white"/><text x="70" y="74" font-family="Arial" font-size="42" font-weight="700" fill="#173B63" text-anchor="start">M6 Permission, delegation, configuration and audit classes</text>
+<text x="70" y="110" font-family="Arial" font-size="22" font-weight="400" fill="#5C6B78" text-anchor="start">Representative classes and operations from current source; the diagram is selective and source-level, not runtime verification.</text>
+<line x1="337.5" y1="285.0" x2="952.5" y2="264.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="952.5,264.0 938.7286352384505,272.14552101491074 938.2050802741932,256.81283991880383" fill="#8B9CAD"/>
+<text x="645.0" y="274.5" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">catalog lookup</text>
+<line x1="952.5" y1="264.0" x2="1567.5" y2="250.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="1567.5,250.0 1553.636890579478,257.98837888401863 1553.287740967036,242.65073519459733" fill="#8B9CAD"/>
+<text x="1260.0" y="257.0" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">permission FK</text>
+<line x1="337.5" y1="720.0" x2="952.5" y2="685.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="952.5,685.0 938.9172073740122,693.4562251909118 938.0455176848961,678.1393920821585" fill="#8B9CAD"/>
+<text x="645.0" y="702.5" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">grant/revoke</text>
+<line x1="952.5" y1="685.0" x2="1567.5" y2="685.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="1567.5,685.0 1553.458679009754,692.6708086176673 1553.458679009754,677.3291913823327" fill="#8B9CAD"/>
+<text x="1260.0" y="685.0" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">delegated scope</text>
+<line x1="952.5" y1="264.0" x2="1567.5" y2="685.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="1567.5,685.0 1551.5803865846779,683.3981545933842 1560.246502594987,670.7386264548092" fill="#8B9CAD"/>
+<text x="1260.0" y="474.5" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">permission FK</text>
+<line x1="337.5" y1="1120.0" x2="952.5" y2="1120.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="952.5,1120.0 938.4586790097541,1127.6708086176673 938.4586790097541,1112.3291913823327" fill="#8B9CAD"/>
+<text x="645.0" y="1120.0" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">config/audit path</text>
+<rect x="70" y="165" width="535" height="235" rx="8" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="70" y="165" width="535" height="56" fill="#173B63"/>
+<text x="84" y="200" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">PermissionService</text>
+<text x="84" y="219" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.service</text>
+<text x="83" y="257" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">PermissionRepository</text>
+<text x="83" y="284" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">RolePermissionRepository</text>
+<text x="83" y="311" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">delegation repositories</text>
+<line x1="78" y1="318" x2="597" y2="318" stroke="#4F6F8F" stroke-width="2"/>
+<text x="83" y="350" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">effectiveCodes(userId): Set&lt;String&gt;</text>
+<text x="83" y="377" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">userHas(userId, code): boolean</text>
+<rect x="685" y="165" width="535" height="194" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="685" y="165" width="535" height="56" fill="#173B63"/>
+<text x="699" y="200" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">Permission</text>
+<text x="699" y="219" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.entity</text>
+<text x="698" y="257" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">permissionId: Integer</text>
+<text x="698" y="284" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">moduleOrScreen: String</text>
+<text x="698" y="311" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">actionType: String</text>
+<text x="698" y="338" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">isDelegable: boolean</text>
+<rect x="1300" y="165" width="535" height="167" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1300" y="165" width="535" height="56" fill="#173B63"/>
+<text x="1314" y="200" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">RolePermission</text>
+<text x="1314" y="219" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.entity</text>
+<text x="1313" y="257" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">roleId: Integer (M1 Role)</text>
+<text x="1313" y="284" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">permissionId: Integer</text>
+<text x="1313" y="311" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">composite key</text>
+<rect x="70" y="600" width="535" height="235" rx="8" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="70" y="600" width="535" height="56" fill="#173B63"/>
+<text x="84" y="635" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">DelegationService</text>
+<text x="84" y="654" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.service</text>
+<text x="83" y="692" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">RightDelegationRepository</text>
+<text x="83" y="719" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">AuditLogService</text>
+<line x1="78" y1="726" x2="597" y2="726" stroke="#4F6F8F" stroke-width="2"/>
+<text x="83" y="758" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">create(request, actor)</text>
+<text x="83" y="785" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">revoke(delegationId, actor)</text>
+<text x="83" y="812" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">refreshStatuses()</text>
+<rect x="685" y="600" width="535" height="167" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="685" y="600" width="535" height="56" fill="#173B63"/>
+<text x="699" y="635" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">RightDelegation</text>
+<text x="699" y="654" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.entity</text>
+<text x="698" y="692" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">grantor / manager user IDs</text>
+<text x="698" y="719" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">validFrom / validUntil</text>
+<text x="698" y="746" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">delegationStatus / revokedAt</text>
+<rect x="1300" y="600" width="535" height="167" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1300" y="600" width="535" height="56" fill="#173B63"/>
+<text x="1314" y="635" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">RightDelegationPermission</text>
+<text x="1314" y="654" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.entity</text>
+<text x="1313" y="692" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">delegationId: Integer</text>
+<text x="1313" y="719" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">permissionId: Integer</text>
+<text x="1313" y="746" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">composite key</text>
+<rect x="70" y="1035" width="535" height="167" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="70" y="1035" width="535" height="56" fill="#173B63"/>
+<text x="84" y="1070" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">SystemConfiguration</text>
+<text x="84" y="1089" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.entity</text>
+<text x="83" y="1127" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">configurationKey: String</text>
+<text x="83" y="1154" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">configurationValue: String?</text>
+<text x="83" y="1181" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">managerEditable: boolean</text>
+<rect x="685" y="1035" width="535" height="167" rx="8" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="685" y="1035" width="535" height="56" fill="#173B63"/>
+<text x="699" y="1070" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">AuditLogService / AuditLog</text>
+<text x="699" y="1089" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m6admin.service/entity</text>
+<text x="698" y="1127" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">record(...) / search(...)</text>
+<text x="698" y="1154" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">nullable actor / delegation refs</text>
+<text x="698" y="1181" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">oldValue / newValue</text>
+<rect x="70" y="1455" width="1765" height="310" rx="8" fill="#F8FAFC" stroke="#AAB9C8" stroke-width="2"/>
+<text x="90" y="1487" font-family="Arial" font-size="17" font-weight="400" fill="#5C6B78" text-anchor="start">Role and User are M1 identity references. Permission and delegation services exist, but complete consumer mapping, deployed authorization coverage and</text>
+<text x="90" y="1518" font-family="Arial" font-size="17" font-weight="400" fill="#5C6B78" text-anchor="start">audit immutability are not established. Revision 1.1 is user-confirmed strategic direction, not formal organizational approval.</text></svg>

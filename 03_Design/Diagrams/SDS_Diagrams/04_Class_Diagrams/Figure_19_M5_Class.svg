@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1810" viewBox="0 0 1900 1810"><defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L9 3 L0 6Z" fill="#4F6F8F"/></marker></defs><rect width="100%" height="100%" fill="white"/><text x="70" y="74" font-family="Arial" font-size="42" font-weight="700" fill="#173B63" text-anchor="start">M5 Folio, invoice, payment and checkout classes</text>
+<text x="70" y="110" font-family="Arial" font-size="22" font-weight="400" fill="#5C6B78" text-anchor="start">Representative classes and operations from current source; the diagram is selective and source-level, not runtime verification.</text>
+<line x1="337.5" y1="299.0" x2="952.5" y2="250.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="952.5,250.0 939.1122750323727,258.7617817931726 937.8937961754897,243.46862879351806" fill="#8B9CAD"/>
+<text x="645.0" y="274.5" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">post / lookup</text>
+<line x1="952.5" y1="250.0" x2="1567.5" y2="264.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="1567.5,264.0 1553.287740967036,271.34926480540264 1553.636890579478,256.01162111598137" fill="#8B9CAD"/>
+<text x="1260.0" y="257.0" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">folio FK</text>
+<line x1="952.5" y1="250.0" x2="337.5" y2="699.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="337.5,699.0 344.3174276276947,684.5251017087807 353.3636787874391,696.9158466157802" fill="#8B9CAD"/>
+<text x="645.0" y="474.5" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">formal snapshot</text>
+<line x1="337.5" y1="699.0" x2="952.5" y2="699.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="952.5,699.0 938.4586790097541,706.6708086176673 938.4586790097541,691.3291913823327" fill="#8B9CAD"/>
+<text x="645.0" y="699.0" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">optional invoice FK</text>
+<line x1="1567.5" y1="692.0" x2="337.5" y2="699.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="337.5,699.0 351.4974393082548,691.2494069380645 351.5847479111716,706.5907757362966" fill="#8B9CAD"/>
+<text x="952.5" y="695.5" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">finalization</text>
+<line x1="337.5" y1="1127.0" x2="952.5" y2="699.0" stroke="#8B9CAD" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="952.5,699.0 945.3566607585191,713.3168678306786 936.5932084633839,700.7245239953792" fill="#8B9CAD"/>
+<text x="645.0" y="913.0" font-family="Arial" font-size="15" font-weight="400" fill="#5C6B78" text-anchor="middle">callback outcome</text>
+<rect x="70" y="165" width="535" height="262" rx="8" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="70" y="165" width="535" height="56" fill="#173B63"/>
+<text x="84" y="200" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">FolioBillingService</text>
+<text x="84" y="219" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.service</text>
+<text x="83" y="257" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">FolioRepository</text>
+<text x="83" y="284" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">FolioItemRepository</text>
+<text x="83" y="311" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">InvoiceRepository</text>
+<line x1="78" y1="318" x2="597" y2="318" stroke="#4F6F8F" stroke-width="2"/>
+<text x="83" y="350" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">postFolioCharge(request)</text>
+<text x="83" y="377" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">postFolioChargeIdempotent(request)</text>
+<text x="83" y="404" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">validateBillingGuard(bookingId)</text>
+<rect x="685" y="165" width="535" height="167" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="685" y="165" width="535" height="56" fill="#173B63"/>
+<text x="699" y="200" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">FolioEntity</text>
+<text x="699" y="219" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.entity</text>
+<text x="698" y="257" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">folioId: Long</text>
+<text x="698" y="284" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">retreatBookingId: Integer</text>
+<text x="698" y="311" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">totalCharges / totalPaid</text>
+<rect x="1300" y="165" width="535" height="194" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1300" y="165" width="535" height="56" fill="#173B63"/>
+<text x="1314" y="200" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">FolioItemEntity</text>
+<text x="1314" y="219" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.entity</text>
+<text x="1313" y="257" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">folioItemId: Long</text>
+<text x="1313" y="284" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">folioId: Long</text>
+<text x="1313" y="311" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">sourceMealOrderId: Integer?</text>
+<text x="1313" y="338" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">sourceSpaSessionId: Long?</text>
+<rect x="70" y="600" width="535" height="194" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="70" y="600" width="535" height="56" fill="#173B63"/>
+<text x="84" y="635" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">InvoiceEntity</text>
+<text x="84" y="654" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.entity</text>
+<text x="83" y="692" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">invoiceId: Long</text>
+<text x="83" y="719" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">folioId: Long</text>
+<text x="83" y="746" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">finalAmount: BigDecimal</text>
+<text x="83" y="773" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">invoiceStatus: String</text>
+<rect x="685" y="600" width="535" height="194" rx="8" fill="#FFF0C2" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="685" y="600" width="535" height="56" fill="#173B63"/>
+<text x="699" y="635" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">PaymentTransactionEntity</text>
+<text x="699" y="654" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.entity</text>
+<text x="698" y="692" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">transactionId: Long</text>
+<text x="698" y="719" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">invoiceId: Long?</text>
+<text x="698" y="746" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">bookingId: Integer?</text>
+<text x="698" y="773" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">paymentStatus: String</text>
+<rect x="1300" y="600" width="535" height="181" rx="8" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1300" y="600" width="535" height="56" fill="#173B63"/>
+<text x="1314" y="635" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">CheckoutService</text>
+<text x="1314" y="654" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.service</text>
+<text x="1313" y="692" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">folio / invoice / payment services</text>
+<line x1="1308" y1="699" x2="1827" y2="699" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1313" y="731" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">processPayment(...)</text>
+<text x="1313" y="758" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">finalizeCheckout(bookingId)</text>
+<rect x="70" y="1035" width="535" height="181" rx="8" fill="#FCE4D6" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="70" y="1035" width="535" height="56" fill="#173B63"/>
+<text x="84" y="1070" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">VNPayService</text>
+<text x="84" y="1089" font-family="Arial" font-size="16" font-weight="400" fill="#D8E7F4" text-anchor="start">m5billing.service</text>
+<text x="83" y="1127" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">payment repositories / configuration</text>
+<line x1="78" y1="1134" x2="597" y2="1134" stroke="#4F6F8F" stroke-width="2"/>
+<text x="83" y="1166" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">createPaymentUrl(...)</text>
+<text x="83" y="1193" font-family="Arial" font-size="20" font-weight="400" fill="#173B63" text-anchor="start">processCallback(...)</text>
+<rect x="70" y="1455" width="1765" height="310" rx="8" fill="#F8FAFC" stroke="#AAB9C8" stroke-width="2"/>
+<text x="90" y="1487" font-family="Arial" font-size="17" font-weight="400" fill="#5C6B78" text-anchor="start">Folio is mutable; Invoice is a formal snapshot. Charge posting, payment initiation/callback, PaymentTransaction state and checkout completion are</text>
+<text x="90" y="1518" font-family="Arial" font-size="17" font-weight="400" fill="#5C6B78" text-anchor="start">distinct. Source-key filtered unique indexes exist in schema.sql; SQL Server enforcement and VNPay operation are not verified. M2 still contains a</text>
+<text x="90" y="1549" font-family="Arial" font-size="17" font-weight="400" fill="#5C6B78" text-anchor="start">duplicate PaymentTransaction mapping.</text></svg>

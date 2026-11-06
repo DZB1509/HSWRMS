@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#000000" />
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="white" />
+  <text x="70" y="65" text-anchor="start" font-family="Arial" font-size="30" font-weight="700" fill="#000000">M5 Checkout finalization sequence</text>
+  <text x="70" y="106" text-anchor="start" font-family="Arial" font-size="20" font-weight="400" fill="#000000">Finalize-checkout is separate from payment initiation; a paid VNPay callback can also close the stay after its billing guard.</text>
+  <rect x="4.0" y="170" width="252" height="76" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="130" y="200" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Receptionist UI</text>
+  <line x1="130" y1="246" x2="130" y2="930" stroke="#000000" stroke-width="1.5" stroke-dasharray="8 8" />
+  <rect x="339.0" y="170" width="252" height="76" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="465" y="200" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Checkout</text>
+  <text x="465" y="218" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Controller</text>
+  <line x1="465" y1="246" x2="465" y2="930" stroke="#000000" stroke-width="1.5" stroke-dasharray="8 8" />
+  <rect x="674.0" y="170" width="252" height="76" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="800" y="200" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Checkout</text>
+  <text x="800" y="218" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Service</text>
+  <line x1="800" y1="246" x2="800" y2="930" stroke="#000000" stroke-width="1.5" stroke-dasharray="8 8" />
+  <rect x="1009.0" y="170" width="252" height="76" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="1135" y="200" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Invoice / Folio /</text>
+  <text x="1135" y="218" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Booking repos</text>
+  <line x1="1135" y1="246" x2="1135" y2="930" stroke="#000000" stroke-width="1.5" stroke-dasharray="8 8" />
+  <rect x="1344.0" y="170" width="252" height="76" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="1470" y="200" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="#000000">Payment + billing guards</text>
+  <line x1="1470" y1="246" x2="1470" y2="930" stroke="#000000" stroke-width="1.5" stroke-dasharray="8 8" />
+  <rect x="459.0" y="302.0" width="12" height="556.0" fill="#ffffff" stroke="#000000" stroke-width="1" />
+  <rect x="794.0" y="372.0" width="12" height="416.0" fill="#ffffff" stroke="#000000" stroke-width="1" />
+  <rect x="1129.0" y="442.0" width="12" height="66.0" fill="#ffffff" stroke="#000000" stroke-width="1" />
+  <rect x="1464.0" y="582.0" width="12" height="66.0" fill="#ffffff" stroke="#000000" stroke-width="1" />
+  <line x1="130" y1="300" x2="465" y2="300" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="143" y="271" width="308" height="25" fill="#ffffff" />
+  <text x="297" y="292" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">POST finalize-checkout(invoiceId)</text>
+  <line x1="465" y1="370" x2="800" y2="370" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="508" y="341" width="248" height="25" fill="#ffffff" />
+  <text x="632" y="362" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">finalizeCheckout(invoiceId)</text>
+  <line x1="800" y1="440" x2="1135" y2="440" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="820" y="411" width="294" height="25" fill="#ffffff" />
+  <text x="967" y="432" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">load invoice; lock folio + booking</text>
+  <line x1="800" y1="510" x2="1135" y2="510" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="822" y="481" width="290" height="25" fill="#ffffff" />
+  <text x="967" y="502" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">refresh invoice from current folio</text>
+  <line x1="800" y1="580" x2="1470" y2="580" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="976" y="551" width="318" height="25" fill="#ffffff" />
+  <text x="1135" y="572" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">sum successful payments + credits</text>
+  <line x1="800" y1="650" x2="1470" y2="650" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="982" y="621" width="307" height="25" fill="#ffffff" />
+  <text x="1135" y="642" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">validate pending / balance guards</text>
+  <line x1="800" y1="720" x2="800" y2="720" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow)" />
+  <rect x="644" y="691" width="313" height="25" fill="#ffffff" />
+  <text x="800" y="712" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">reject due balance; else close stay</text>
+  <line x1="800" y1="790" x2="465" y2="790" stroke="#000000" stroke-width="1.5" stroke-dasharray="12 8" marker-end="url(#arrow)" />
+  <rect x="484" y="761" width="296" height="25" fill="#ffffff" />
+  <text x="632" y="782" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">FinalizeCheckoutResponseDTO</text>
+  <line x1="465" y1="860" x2="130" y2="860" stroke="#000000" stroke-width="1.5" stroke-dasharray="12 8" marker-end="url(#arrow)" />
+  <rect x="223" y="831" width="148" height="25" fill="#ffffff" />
+  <text x="297" y="852" text-anchor="middle" font-family="Arial" font-size="19" font-weight="400" fill="#000000">checkout result</text>
+  <rect x="70" y="960" width="1460" height="105" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="92" y="993" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#000000">Separate VNPay flow: create-payment-url persists PaymentTransaction=PENDING; verify-return processes callback.</text>
+  <text x="92" y="1013" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#000000">Successful confirmation may set PaymentTransaction=SUCCESSFUL; if Invoice becomes PAID and guard passes, Folio/Booking close.</text>
+  <text x="92" y="1033" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#000000">Otherwise callback does not close the stay; finalize-checkout rejects unpaid balance. Live gateway/SQL Server behavior unverified.</text>
+  <rect x="70" y="1080" width="1460" height="85" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+  <text x="92" y="1111" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#000000">Legend: solid arrow = observed source request/call; dashed arrow = response/return.</text>
+  <text x="92" y="1131" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#000000">Static source only; runtime, SQL Server/provider behavior, and test execution are not inferred.</text>
+</svg>

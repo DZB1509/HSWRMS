@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100"><defs><marker id="arrow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#315b7d"/></marker></defs><rect width="100%" height="100%" fill="white"/>
+<text x="70" y="69" text-anchor="start" font-family="Arial" font-size="34" font-weight="700" fill="#9c0006">Figure 3 — Selected schema relationships</text>
+<text x="70" y="109" text-anchor="start" font-family="Arial" font-size="21" font-weight="400" fill="#546e7a">Static ERD excerpt from schema.sql; explicit FK and UNIQUE/nullability declarations only.</text>
+<text x="70" y="133" text-anchor="start" font-family="Arial" font-size="21" font-weight="400" fill="#546e7a">This is not a live SQL Server catalog or complete database ERD.</text>
+<rect x="80" y="410" width="300" height="160" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="230.0" y="445" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">RetreatBooking</text>
+<line x1="92" y1="458" x2="368" y2="458" stroke="#c9b458" stroke-width="2"/>
+<text x="96" y="490" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK retreat_booking_id</text>
+<text x="96" y="514" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">FK customer_profile_id</text>
+<rect x="500" y="165" width="285" height="150" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="642.5" y="200" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">SpaSession</text>
+<line x1="512" y1="213" x2="773" y2="213" stroke="#c9b458" stroke-width="2"/>
+<text x="516" y="245" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK spa_session_id</text>
+<text x="516" y="269" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">FK retreat_booking_id</text>
+<rect x="500" y="410" width="285" height="150" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="642.5" y="445" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">MealOrder</text>
+<line x1="512" y1="458" x2="773" y2="458" stroke="#c9b458" stroke-width="2"/>
+<text x="516" y="490" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK meal_order_id</text>
+<text x="516" y="514" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">FK retreat_booking_id</text>
+<rect x="500" y="665" width="285" height="150" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="642.5" y="700" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">Folio</text>
+<line x1="512" y1="713" x2="773" y2="713" stroke="#c9b458" stroke-width="2"/>
+<text x="516" y="745" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK folio_id</text>
+<text x="516" y="769" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">FK retreat_booking_id UNIQUE</text>
+<rect x="980" y="500" width="300" height="150" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="1130.0" y="535" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">FolioItem</text>
+<line x1="992" y1="548" x2="1268" y2="548" stroke="#c9b458" stroke-width="2"/>
+<text x="996" y="580" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK folio_item_id</text>
+<text x="996" y="604" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">FK folio_id</text>
+<text x="996" y="628" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">nullable source IDs</text>
+<rect x="980" y="760" width="290" height="145" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="1125.0" y="795" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">Invoice</text>
+<line x1="992" y1="808" x2="1258" y2="808" stroke="#c9b458" stroke-width="2"/>
+<text x="996" y="840" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK invoice_id</text>
+<text x="996" y="864" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">FK folio_id UNIQUE</text>
+<rect x="1400" y="760" width="330" height="145" rx="10" fill="#fff2cc" stroke="#7f6000" stroke-width="3"/>
+<text x="1565.0" y="795" text-anchor="middle" font-family="Arial" font-size="23" font-weight="700" fill="#5d4600">PaymentTransaction</text>
+<line x1="1412" y1="808" x2="1718" y2="808" stroke="#c9b458" stroke-width="2"/>
+<text x="1416" y="840" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">PK transaction_id</text>
+<text x="1416" y="864" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">nullable FK invoice / booking</text>
+<line x1="380" y1="445" x2="500" y2="240" stroke="#315b7d" stroke-width="4" marker-end="url(#arrow)"/>
+<text x="395" y="323" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">1 → 0..*</text>
+<rect x="395" y="305" width="112" height="29" fill="white"/><text x="395" y="326" font-family="Arial" font-size="18" fill="#243746">1 → 0..*</text>
+<line x1="380" y1="485" x2="500" y2="485" stroke="#315b7d" stroke-width="4" marker-end="url(#arrow)"/>
+<text x="395" y="466" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">1 → 0..*</text>
+<rect x="395" y="448" width="112" height="29" fill="white"/><text x="395" y="469" font-family="Arial" font-size="18" fill="#243746">1 → 0..*</text>
+<line x1="380" y1="520" x2="500" y2="740" stroke="#315b7d" stroke-width="4" marker-end="url(#arrow)"/>
+<text x="400" y="628" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">1 → 0..1</text>
+<rect x="400" y="610" width="112" height="29" fill="white"/><text x="400" y="631" font-family="Arial" font-size="18" fill="#243746">1 → 0..1</text>
+<line x1="785" y1="730" x2="980" y2="575" stroke="#315b7d" stroke-width="4" marker-end="url(#arrow)"/>
+<text x="835" y="648" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">1 → 0..*</text>
+<rect x="835" y="630" width="112" height="29" fill="white"/><text x="835" y="651" font-family="Arial" font-size="18" fill="#243746">1 → 0..*</text>
+<line x1="785" y1="765" x2="980" y2="835" stroke="#315b7d" stroke-width="4" marker-end="url(#arrow)"/>
+<text x="835" y="808" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">1 → 0..1</text>
+<rect x="835" y="790" width="112" height="29" fill="white"/><text x="835" y="811" font-family="Arial" font-size="18" fill="#243746">1 → 0..1</text>
+<line x1="1270" y1="835" x2="1400" y2="835" stroke="#315b7d" stroke-width="4" marker-end="url(#arrow)"/>
+<text x="1290" y="818" text-anchor="start" font-family="Arial" font-size="18" font-weight="400" fill="#243746">1 → 0..*</text>
+<rect x="1290" y="800" width="112" height="29" fill="white"/><text x="1290" y="821" font-family="Arial" font-size="18" fill="#243746">1 → 0..*</text>
+<rect x="70" y="955" width="1660" height="105" rx="8" fill="#f7f9fb" stroke="#c0cbd4" stroke-width="2"/>
+<text x="92" y="992" text-anchor="start" font-family="Arial" font-size="20" font-weight="400" fill="#455a64">Legend: solid arrows are schema FOREIGN KEYs; labels show parent-to-child optionality from FK plus UNIQUE/nullability.</text>
+<text x="92" y="1015" text-anchor="start" font-family="Arial" font-size="20" font-weight="400" fill="#455a64">Selected excerpt only. PaymentTransaction has nullable booking_id and invoice_id with a payment-type XOR check; deployment state is unverified.</text>
+</svg>

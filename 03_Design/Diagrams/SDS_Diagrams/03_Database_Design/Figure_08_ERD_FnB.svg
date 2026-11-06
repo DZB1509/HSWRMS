@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1280" viewBox="0 0 1900 1280"><defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L9 3 L0 6Z" fill="#4F6F8F"/></marker></defs><rect width="100%" height="100%" fill="white"/><text x="70" y="74" font-family="Arial" font-size="42" font-weight="700" fill="#173B63" text-anchor="start">F&amp;B menu, order and inventory</text>
+<text x="70" y="110" font-family="Arial" font-size="22" font-weight="400" fill="#5C6B78" text-anchor="start">Selected declared schema relationships; package entitlement references M2 package data.</text>
+<line x1="342.5" y1="285.0" x2="947.5" y2="285.0" stroke="#7189A3" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="947.5,285.0 933.4586790097541,292.67080861766726 933.4586790097541,277.32919138233274" fill="#7189A3"/>
+<rect x="590.0" y="273.0" width="110" height="24" rx="0" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="645.0" y="290.0" font-family="Arial" font-size="15" font-weight="700" fill="#173B63" text-anchor="middle">1 : 0..*</text>
+<line x1="1552.5" y1="285.0" x2="947.5" y2="600.0" stroke="#7189A3" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="947.5,600.0 956.4118347599353,586.7116893018109 963.4968127599475,600.3193454605643" fill="#7189A3"/>
+<rect x="1195.0" y="430.5" width="110" height="24" rx="0" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="1250.0" y="447.5" font-family="Arial" font-size="15" font-weight="700" fill="#173B63" text-anchor="middle">1 : 0..*</text>
+<line x1="342.5" y1="600.0" x2="947.5" y2="600.0" stroke="#7189A3" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="947.5,600.0 933.4586790097541,607.6708086176673 933.4586790097541,592.3291913823327" fill="#7189A3"/>
+<rect x="590.0" y="588.0" width="110" height="24" rx="0" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="645.0" y="605.0" font-family="Arial" font-size="15" font-weight="700" fill="#173B63" text-anchor="middle">1 : 0..*</text>
+<line x1="342.5" y1="600.0" x2="1552.5" y2="600.0" stroke="#7189A3" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="1552.5,600.0 1538.458679009754,607.6708086176673 1538.458679009754,592.3291913823327" fill="#7189A3"/>
+<rect x="892.5" y="588.0" width="110" height="24" rx="0" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="947.5" y="605.0" font-family="Arial" font-size="15" font-weight="700" fill="#173B63" text-anchor="middle">1 : 0..*</text>
+<line x1="342.5" y1="915.0" x2="947.5" y2="915.0" stroke="#7189A3" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="947.5,915.0 933.4586790097541,922.6708086176673 933.4586790097541,907.3291913823327" fill="#7189A3"/>
+<rect x="590.0" y="903.0" width="110" height="24" rx="0" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="645.0" y="920.0" font-family="Arial" font-size="15" font-weight="700" fill="#173B63" text-anchor="middle">1 : 0..*</text>
+<line x1="1552.5" y1="285.0" x2="947.5" y2="915.0" stroke="#7189A3" stroke-width="2" marker-end="url(#a)"/>
+<polygon points="947.5,915.0 951.6929881888758,899.5591823387507 962.7584812305781,910.1855685137187" fill="#7189A3"/>
+<rect x="1195.0" y="588.0" width="110" height="24" rx="0" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0"/>
+<text x="1250.0" y="605.0" font-family="Arial" font-size="15" font-weight="700" fill="#173B63" text-anchor="middle">1 : 0..*</text>
+<rect x="75" y="155" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="75" y="155" width="535" height="48" fill="#173B63"/>
+<text x="87" y="186" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">RetreatPackage (M2)</text>
+<text x="90" y="238" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK retreat_package_id INT</text>
+<text x="90" y="272" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">M2-owned package</text>
+<rect x="680" y="155" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="680" y="155" width="535" height="48" fill="#173B63"/>
+<text x="692" y="186" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">PackageFnBEntitlement</text>
+<text x="695" y="238" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK entitlement_id INT</text>
+<text x="695" y="272" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">FK/UNIQUE retreat_package_id INT</text>
+<text x="695" y="306" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">breakfast/lunch/dinner counts</text>
+<text x="695" y="340" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">total_meals INT</text>
+<rect x="1285" y="155" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1285" y="155" width="535" height="48" fill="#173B63"/>
+<text x="1297" y="186" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">MenuItem</text>
+<text x="1300" y="238" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK menu_item_id INT</text>
+<text x="1300" y="272" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">item_name NVARCHAR(150)</text>
+<text x="1300" y="306" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">price DECIMAL(18,2)</text>
+<text x="1300" y="340" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">availability CHECK</text>
+<rect x="75" y="470" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="75" y="470" width="535" height="48" fill="#173B63"/>
+<text x="87" y="501" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">Ingredient</text>
+<text x="90" y="553" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK ingredient_id INT</text>
+<text x="90" y="587" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">ingredient_name NVARCHAR(150)</text>
+<rect x="680" y="470" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="680" y="470" width="535" height="48" fill="#173B63"/>
+<text x="692" y="501" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">MenuItemIngredient</text>
+<text x="695" y="553" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK/FK menu_item_id INT</text>
+<text x="695" y="587" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK/FK ingredient_id INT</text>
+<text x="695" y="621" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">required_quantity DECIMAL</text>
+<rect x="1285" y="470" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1285" y="470" width="535" height="48" fill="#173B63"/>
+<text x="1297" y="501" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">IngredientBatch</text>
+<text x="1300" y="553" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK ingredient_batch_id INT</text>
+<text x="1300" y="587" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">FK ingredient_id INT</text>
+<text x="1300" y="621" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">expiration_date DATE</text>
+<text x="1300" y="655" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">remaining_quantity DECIMAL</text>
+<rect x="75" y="785" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="75" y="785" width="535" height="48" fill="#173B63"/>
+<text x="87" y="816" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">MealOrder</text>
+<text x="90" y="868" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK meal_order_id INT</text>
+<text x="90" y="902" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">FK retreat_booking_id INT</text>
+<text x="90" y="936" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">order_type CHECK</text>
+<text x="90" y="970" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">order_status CHECK</text>
+<rect x="680" y="785" width="535" height="260" rx="8" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="680" y="785" width="535" height="48" fill="#173B63"/>
+<text x="692" y="816" font-family="Arial" font-size="25" font-weight="700" fill="#FFFFFF" text-anchor="start">MealOrderItem</text>
+<text x="695" y="868" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">PK meal_order_item_id INT</text>
+<text x="695" y="902" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">FK meal_order_id INT</text>
+<text x="695" y="936" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">FK menu_item_id INT</text>
+<text x="695" y="970" font-family="Arial" font-size="24" font-weight="400" fill="#203040" text-anchor="start">quantity INT</text>
+<rect x="75" y="1080" width="1745" height="160" rx="8" fill="#F8FAFC" stroke="#AAB9C8" stroke-width="2"/>
+<text x="95" y="1115" font-family="Arial" font-size="20" font-weight="400" fill="#5C6B78" text-anchor="start">MenuItemIngredient is the recipe join. IngredientBatch declares expiry and usable quantity columns. Schema constraints do not prove deployed</text>
+<text x="95" y="1147" font-family="Arial" font-size="20" font-weight="400" fill="#5C6B78" text-anchor="start">inventory behavior. Entitlement enforcement and service-location policy remain unverified.</text></svg>

@@ -1,0 +1,8 @@
+flowchart LR
+M3[M3 SPA] -->|non-idempotent; catches/logs| F[Folio posting]
+M4[M4 delivered A_LA_CARTE] -->|idempotent sourceMealOrderId| F
+F --> I[Invoice snapshot] --> P[PaymentTransaction / VNPay scope]
+P --> G[Checkout guard: balance + unresolved charges]
+G -->|unpaid / unresolved| B[Blocked]
+G -->|guards pass| C[Stay close; SQL Server unverified]
+N[Target M5-owned idempotent contract is not enforced by M3 path]

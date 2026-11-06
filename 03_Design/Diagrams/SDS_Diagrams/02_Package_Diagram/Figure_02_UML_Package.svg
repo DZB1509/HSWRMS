@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="1580" viewBox="0 0 2100 1580"><defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L9 3 L0 6Z" fill="#4F6F8F"/></marker></defs><rect width="100%" height="100%" fill="white"/><text x="70" y="74" font-family="Arial" font-size="42" font-weight="700" fill="#173B63" text-anchor="start">UML package view - Java source packages</text>
+<text x="70" y="110" font-family="Arial" font-size="22" font-weight="400" fill="#5C6B78" text-anchor="start">Names follow declarations beneath com.heavenstay.hswrms; grouped packages and representative types are source-observed.</text>
+<rect x="70" y="140" width="1960" height="1400" rx="15" fill="#F9FBFD" stroke="#7890A8" stroke-width="4"/>
+<text x="100" y="183" font-family="Arial" font-size="28" font-weight="700" fill="#173B63" text-anchor="start">com.heavenstay.hswrms</text>
+<rect x="110" y="210" width="1880" height="170" rx="10" fill="#F2F4F7" stroke="#4F6F8F" stroke-width="3"/>
+<text x="135" y="243" font-family="Arial" font-size="23" font-weight="700" fill="#173B63" text-anchor="start">Shared packages</text>
+<rect x="135" y="270" width="340" height="85" rx="6" fill="#FFFFFF" stroke="#7890A8" stroke-width="2"/>
+<text x="145" y="302" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">config</text>
+<text x="145" y="328" font-family="Arial" font-size="19" font-weight="400" fill="#5C6B78" text-anchor="start">security / CORS / scheduler</text>
+<rect x="500" y="270" width="340" height="85" rx="6" fill="#FFFFFF" stroke="#7890A8" stroke-width="2"/>
+<text x="510" y="302" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">security</text>
+<text x="510" y="328" font-family="Arial" font-size="19" font-weight="400" fill="#5C6B78" text-anchor="start">JWT filter / token provider</text>
+<rect x="865" y="270" width="340" height="85" rx="6" fill="#FFFFFF" stroke="#7890A8" stroke-width="2"/>
+<text x="875" y="302" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">common.api</text>
+<text x="875" y="328" font-family="Arial" font-size="19" font-weight="400" fill="#5C6B78" text-anchor="start">response envelope</text>
+<rect x="1230" y="270" width="340" height="85" rx="6" fill="#FFFFFF" stroke="#7890A8" stroke-width="2"/>
+<text x="1240" y="302" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">common.exception</text>
+<text x="1240" y="328" font-family="Arial" font-size="19" font-weight="400" fill="#5C6B78" text-anchor="start">error mapping</text>
+<rect x="1595" y="270" width="340" height="85" rx="6" fill="#FFFFFF" stroke="#7890A8" stroke-width="2"/>
+<text x="1605" y="302" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">common.util</text>
+<text x="1605" y="328" font-family="Arial" font-size="19" font-weight="400" fill="#5C6B78" text-anchor="start">utilities</text>
+<rect x="110" y="420" width="595" height="410" rx="10" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="110" y="420" width="595" height="54" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="2"/>
+<text x="124" y="453" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">&lt;&lt;package&gt;&gt; m1identity</text>
+<text x="125" y="512" font-family="Arial" font-size="22" font-weight="700" fill="#5C6B78" text-anchor="start">Subpackages</text>
+<text x="128" y="541" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">controller</text>
+<text x="408" y="541" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">dto</text>
+<text x="128" y="576" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">entity</text>
+<text x="408" y="576" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">repository</text>
+<text x="128" y="611" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service</text>
+<line x1="125" y1="625" x2="685" y2="625" stroke="#BAC7D3" stroke-width="1"/>
+<text x="125" y="726" font-family="Arial" font-size="21" font-weight="700" fill="#5C6B78" text-anchor="start">Representative types</text>
+<text x="128" y="755" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">AuthService</text>
+<text x="128" y="779" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">HealthProfileService</text>
+<text x="128" y="803" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">ConsentService</text>
+<rect x="740" y="420" width="595" height="410" rx="10" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="740" y="420" width="595" height="54" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="2"/>
+<text x="754" y="453" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">&lt;&lt;package&gt;&gt; m2booking</text>
+<text x="755" y="512" font-family="Arial" font-size="22" font-weight="700" fill="#5C6B78" text-anchor="start">Subpackages</text>
+<text x="758" y="541" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">controller</text>
+<text x="1038" y="541" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">dto</text>
+<text x="758" y="576" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">entity</text>
+<text x="1038" y="576" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">repository</text>
+<text x="758" y="611" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service</text>
+<line x1="755" y1="625" x2="1315" y2="625" stroke="#BAC7D3" stroke-width="1"/>
+<text x="755" y="726" font-family="Arial" font-size="21" font-weight="700" fill="#5C6B78" text-anchor="start">Representative types</text>
+<text x="758" y="755" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">RetreatBookingService</text>
+<text x="758" y="779" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">VillaAvailabilityService</text>
+<rect x="1370" y="420" width="595" height="410" rx="10" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1370" y="420" width="595" height="54" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1384" y="453" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">&lt;&lt;package&gt;&gt; m3spa</text>
+<text x="1385" y="512" font-family="Arial" font-size="22" font-weight="700" fill="#5C6B78" text-anchor="start">Subpackages</text>
+<text x="1388" y="541" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">config</text>
+<text x="1668" y="541" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">controller</text>
+<text x="1388" y="576" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">dto</text>
+<text x="1668" y="576" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">entity</text>
+<text x="1388" y="611" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">port</text>
+<text x="1668" y="611" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">repository</text>
+<text x="1388" y="646" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">scheduler</text>
+<text x="1668" y="646" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service</text>
+<text x="1388" y="681" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service.event</text>
+<line x1="1385" y1="695" x2="1945" y2="695" stroke="#BAC7D3" stroke-width="1"/>
+<text x="1385" y="726" font-family="Arial" font-size="21" font-weight="700" fill="#5C6B78" text-anchor="start">Representative types</text>
+<text x="1388" y="755" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">SchedulingEngineService</text>
+<text x="1388" y="779" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">SpaSessionService</text>
+<text x="1388" y="803" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">Recovery</text>
+<text x="1388" y="827" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">OutboxWorker</text>
+<rect x="110" y="870" width="595" height="410" rx="10" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="110" y="870" width="595" height="54" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="2"/>
+<text x="124" y="903" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">&lt;&lt;package&gt;&gt; m4fnb</text>
+<text x="125" y="962" font-family="Arial" font-size="22" font-weight="700" fill="#5C6B78" text-anchor="start">Subpackages</text>
+<text x="128" y="991" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">config</text>
+<text x="408" y="991" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">controller</text>
+<text x="128" y="1026" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">dto</text>
+<text x="408" y="1026" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">entity</text>
+<text x="128" y="1061" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">event</text>
+<text x="408" y="1061" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">integration</text>
+<text x="128" y="1096" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">mapper</text>
+<text x="408" y="1096" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">repository</text>
+<text x="128" y="1131" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service</text>
+<line x1="125" y1="1145" x2="685" y2="1145" stroke="#BAC7D3" stroke-width="1"/>
+<text x="125" y="1176" font-family="Arial" font-size="21" font-weight="700" fill="#5C6B78" text-anchor="start">Representative types</text>
+<text x="128" y="1205" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">FnbKdsOrderServiceImpl</text>
+<text x="128" y="1229" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">InventoryService</text>
+<text x="128" y="1253" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">FnbFolioEventListener</text>
+<rect x="740" y="870" width="595" height="410" rx="10" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="740" y="870" width="595" height="54" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="2"/>
+<text x="754" y="903" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">&lt;&lt;package&gt;&gt; m5billing</text>
+<text x="755" y="962" font-family="Arial" font-size="22" font-weight="700" fill="#5C6B78" text-anchor="start">Subpackages</text>
+<text x="758" y="991" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">config</text>
+<text x="1038" y="991" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">controller</text>
+<text x="758" y="1026" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">dto</text>
+<text x="1038" y="1026" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">entity</text>
+<text x="758" y="1061" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">integration</text>
+<text x="1038" y="1061" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">repository</text>
+<text x="758" y="1096" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">security</text>
+<text x="1038" y="1096" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service</text>
+<line x1="755" y1="1110" x2="1315" y2="1110" stroke="#BAC7D3" stroke-width="1"/>
+<text x="755" y="1176" font-family="Arial" font-size="21" font-weight="700" fill="#5C6B78" text-anchor="start">Representative types</text>
+<text x="758" y="1205" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">FolioBillingService</text>
+<text x="758" y="1229" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">CheckoutService</text>
+<text x="758" y="1253" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">VNPayService</text>
+<rect x="1370" y="870" width="595" height="410" rx="10" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="3"/>
+<rect x="1370" y="870" width="595" height="54" rx="10" fill="#DCEAF7" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1384" y="903" font-family="Arial" font-size="24" font-weight="700" fill="#173B63" text-anchor="start">&lt;&lt;package&gt;&gt; m6admin</text>
+<text x="1385" y="962" font-family="Arial" font-size="22" font-weight="700" fill="#5C6B78" text-anchor="start">Subpackages</text>
+<text x="1388" y="991" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">controller</text>
+<text x="1668" y="991" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">dto</text>
+<text x="1388" y="1026" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">entity</text>
+<text x="1668" y="1026" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">job</text>
+<text x="1388" y="1061" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">repository</text>
+<text x="1668" y="1061" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">security</text>
+<text x="1388" y="1096" font-family="Arial" font-size="21" font-weight="400" fill="#203040" text-anchor="start">service</text>
+<line x1="1385" y1="1110" x2="1945" y2="1110" stroke="#BAC7D3" stroke-width="1"/>
+<text x="1385" y="1176" font-family="Arial" font-size="21" font-weight="700" fill="#5C6B78" text-anchor="start">Representative types</text>
+<text x="1388" y="1205" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">DelegationService</text>
+<text x="1388" y="1229" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">PermissionService</text>
+<text x="1388" y="1253" font-family="Arial" font-size="20" font-weight="400" fill="#203040" text-anchor="start">AuditLogService</text>
+<rect x="135" y="1305" width="1840" height="210" rx="8" fill="#F8FAFC" stroke="#AAB9C8" stroke-width="2"/>
+<text x="155" y="1334" font-family="Arial" font-size="20" font-weight="700" fill="#5C6B78" text-anchor="start">Observed package dependencies (dashed UML dependency arrow: client -&gt; supplier)</text>
+<rect x="155" y="1350" width="500" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="405.0" y="1375" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m1identity.controller</text>
+<rect x="815" y="1350" width="440" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1035.0" y="1375" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m1identity.service</text>
+<rect x="1430" y="1350" width="500" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1680.0" y="1375" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m1identity.repository / entity</text>
+<line x1="655" y1="1371" x2="815" y2="1371" stroke="#4F6F8F" stroke-width="2" stroke-dasharray="9 7" marker-end="url(#a)"/>
+<polygon points="815,1371 800.9586790097541,1378.6708086176673 800.9586790097541,1363.3291913823327" fill="#4F6F8F"/>
+<line x1="1255" y1="1371" x2="1430" y2="1371" stroke="#4F6F8F" stroke-width="2" stroke-dasharray="9 7" marker-end="url(#a)"/>
+<polygon points="1430,1371 1415.958679009754,1378.6708086176673 1415.958679009754,1363.3291913823327" fill="#4F6F8F"/>
+<rect x="155" y="1430" width="450" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="380.0" y="1455" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m3spa.service</text>
+<rect x="680" y="1430" width="360" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="860.0" y="1455" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m3spa.port</text>
+<line x1="605" y1="1451" x2="680" y2="1451" stroke="#4F6F8F" stroke-width="2" stroke-dasharray="9 7" marker-end="url(#a)"/>
+<polygon points="680,1451 665.9586790097541,1458.6708086176673 665.9586790097541,1443.3291913823327" fill="#4F6F8F"/>
+<rect x="1100" y="1430" width="420" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1310.0" y="1455" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m4fnb.event</text>
+<rect x="1600" y="1430" width="350" height="42" rx="3" fill="#FFFFFF" stroke="#4F6F8F" stroke-width="2"/>
+<text x="1775.0" y="1455" font-family="Arial" font-size="18" font-weight="700" fill="#173B63" text-anchor="middle">&lt;&lt;package&gt;&gt; m4fnb.integration</text>
+<line x1="1520" y1="1451" x2="1600" y2="1451" stroke="#4F6F8F" stroke-width="2" stroke-dasharray="9 7" marker-end="url(#a)"/>
+<polygon points="1600,1451 1585.958679009754,1458.6708086176673 1585.958679009754,1443.3291913823327" fill="#4F6F8F"/></svg>
