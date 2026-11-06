@@ -7,6 +7,8 @@ import com.heavenstay.hswrms.m2booking.entity.RetreatBooking;
 import com.heavenstay.hswrms.m2booking.repository.RetreatBookingRepository;
 import com.heavenstay.hswrms.m3spa.entity.RetreatPackageSpaTreatment;
 import com.heavenstay.hswrms.m3spa.repository.RetreatPackageSpaTreatmentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -19,6 +21,8 @@ import java.util.Optional;
 @Component
 @Transactional(readOnly = true)
 public class DefaultCustomerStayAdapter implements CustomerStayPort {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultCustomerStayAdapter.class);
 
     private final RetreatBookingRepository bookingRepository;
     private final CustomerProfileRepository customerProfileRepository;
@@ -53,11 +57,23 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
                 if (cpOpt.isPresent()) {
                     CustomerProfile cp = cpOpt.get();
                     List<RetreatBooking> bookings = bookingRepository.findByCustomerProfileIdOrderByCreatedAtDesc(cp.getCustomerProfileId());
+                    RetreatBooking targetBooking = null;
                     for (RetreatBooking b : bookings) {
-                        String status = b.getBookingStatus();
-                        if ("CONFIRMED".equalsIgnoreCase(status) || "CHECKED_IN".equalsIgnoreCase(status)) {
-                            return Optional.of(mapToStayContext(b, cp, userId));
+                        if ("CHECKED_IN".equalsIgnoreCase(b.getBookingStatus())) {
+                            targetBooking = b;
+                            break;
                         }
+                    }
+                    if (targetBooking == null) {
+                        for (RetreatBooking b : bookings) {
+                            if ("CONFIRMED".equalsIgnoreCase(b.getBookingStatus())) {
+                                targetBooking = b;
+                                break;
+                            }
+                        }
+                    }
+                    if (targetBooking != null) {
+                        return Optional.of(mapToStayContext(targetBooking, cp, userId));
                     }
                 }
             } catch (Exception ignored) {
@@ -71,9 +87,9 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
                              "       b.booking_status, cp.customer_profile_id, u.full_name, u.email, p.package_name " +
                              "FROM dbo.RetreatBooking b " +
                              "INNER JOIN dbo.CustomerProfile cp ON b.customer_profile_id = cp.customer_profile_id " +
-                             "INNER JOIN dbo.\"User\" u ON cp.user_id = u.user_id " +
+                             "INNER JOIN dbo.[User] u ON cp.user_id = u.user_id " +
                              "LEFT JOIN dbo.RetreatPackage p ON b.retreat_package_id = p.retreat_package_id " +
-                             "WHERE u.user_id = ? AND b.booking_status IN ('CONFIRMED', 'CHECKED_IN')";
+                             "WHERE u.user_id = ? AND b.booking_status IN ('CHECKED_IN', 'CONFIRMED') ORDER BY CASE WHEN b.booking_status = 'CHECKED_IN' THEN 1 ELSE 2 END, b.created_at DESC";
                 List<StayContextDto> stays = jdbcTemplate.query(sql, (rs, rowNum) -> {
                     StayContextDto dto = new StayContextDto(
                             rs.getInt("retreat_booking_id"),
@@ -128,7 +144,7 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
                              "       b.booking_status, cp.customer_profile_id, cp.user_id, u.full_name, u.email, p.package_name " +
                              "FROM dbo.RetreatBooking b " +
                              "INNER JOIN dbo.CustomerProfile cp ON b.customer_profile_id = cp.customer_profile_id " +
-                             "INNER JOIN dbo.\"User\" u ON cp.user_id = u.user_id " +
+                             "INNER JOIN dbo.[User] u ON cp.user_id = u.user_id " +
                              "LEFT JOIN dbo.RetreatPackage p ON b.retreat_package_id = p.retreat_package_id " +
                              "WHERE b.retreat_booking_id = ?";
                 List<StayContextDto> stays = jdbcTemplate.query(sql, (rs, rowNum) -> {

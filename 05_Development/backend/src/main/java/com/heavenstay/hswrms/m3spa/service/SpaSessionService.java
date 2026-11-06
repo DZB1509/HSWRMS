@@ -105,6 +105,15 @@ public class SpaSessionService {
 
     @Transactional
     public SpaSessionDto confirmReservation(ConfirmReservationRequest req, Integer authenticatedUserId, boolean isStaff) {
+        if (req == null) {
+            throw new BusinessRuleException("Reservation request cannot be null.");
+        }
+        if (req.getScheduledStartAt() == null || req.getScheduledEndAt() == null) {
+            throw new BusinessRuleException("Scheduled start and end times are required.");
+        }
+        if (!req.getScheduledStartAt().isBefore(req.getScheduledEndAt())) {
+            throw new BusinessRuleException("Scheduled start time must be strictly before scheduled end time.");
+        }
         Integer resolvedBookingId;
         StayContextDto stay = null;
         if (!isStaff && authenticatedUserId != null) {
@@ -127,6 +136,9 @@ public class SpaSessionService {
         } else {
             throw new BusinessRuleException("Authenticated customer context or retreat booking ID is required.");
         }
+
+        // 1b. Validate Stay-Period Boundary Enforcement (BR-M3-02)
+        validateStayWindow(stay, req.getScheduledStartAt(), req.getScheduledEndAt());
 
         // 2. Validate Treatment
         SpaTreatment treatment = treatmentRepository.findById(req.getTreatmentId())
@@ -582,6 +594,38 @@ public class SpaSessionService {
             } catch (Exception ex) {
                 log.error("Failed to publish SpaScheduleAcceptedEvent: {}", ex.getMessage());
             }
+        }
+    }
+
+    public void validateStayWindow(StayContextDto stay, LocalDateTime startAt, LocalDateTime endAt) {
+        if (stay == null) {
+            throw new BusinessRuleException("Authoritative customer stay context is required for spa reservation validation.");
+        }
+        if (stay.getCheckInDate() == null) {
+            throw new BusinessRuleException("Stay context is invalid: check-in date is missing.");
+        }
+        if (stay.getCheckOutDate() == null) {
+            throw new BusinessRuleException("Stay context is invalid: check-out date is missing.");
+        }
+        if (stay.getCheckInDate().isAfter(stay.getCheckOutDate())) {
+            throw new BusinessRuleException("Stay context is invalid: check-in date (" + stay.getCheckInDate()
+                    + ") cannot be after check-out date (" + stay.getCheckOutDate() + ").");
+        }
+        if (startAt == null || endAt == null) {
+            throw new BusinessRuleException("Scheduled start and end times are required.");
+        }
+        if (!startAt.isBefore(endAt)) {
+            throw new BusinessRuleException("Scheduled start time must be strictly before scheduled end time.");
+        }
+        LocalDate startDate = startAt.toLocalDate();
+        LocalDate endDate = endAt.toLocalDate();
+        if (startDate.isBefore(stay.getCheckInDate()) || startDate.isAfter(stay.getCheckOutDate())) {
+            throw new BusinessRuleException("Spa session scheduled date (" + startDate
+                    + ") falls outside customer stay window (" + stay.getCheckInDate() + " to " + stay.getCheckOutDate() + ").");
+        }
+        if (endDate.isBefore(stay.getCheckInDate()) || endDate.isAfter(stay.getCheckOutDate())) {
+            throw new BusinessRuleException("Spa session scheduled end date (" + endDate
+                    + ") falls outside customer stay window (" + stay.getCheckInDate() + " to " + stay.getCheckOutDate() + ").");
         }
     }
 

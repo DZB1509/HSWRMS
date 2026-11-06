@@ -4,7 +4,7 @@
  * Shows treatments included in retreat + extras available for purchase.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
@@ -14,13 +14,22 @@ import {
   Star,
   Leaf,
   ChevronRight,
+  ChevronLeft,
   Search,
   Filter,
   Heart,
   Shield,
   CalendarCheck,
+  RotateCcw,
 } from 'lucide-react';
 import type { TreatmentCategory, LocalizedString, SpaTreatment } from '../../types/spa';
+import { useSpaTreatments } from '../../features/m3-spa/hooks/useSpaFeature';
+import { SPA_TREATMENTS_INVENTORY } from '../../data/mockSpaInventory';
+import {
+  resolveSpaTreatmentLocalized,
+  resolveSpaTreatmentDescriptionLocalized,
+  resolveSpaTreatmentCategory,
+} from '../../i18n/dynamicContent';
 
 const CATEGORY_FILTERS: { key: TreatmentCategory | 'all'; labelKey: string; defaultLabel: string; icon: React.ReactNode }[] = [
   { key: 'all', labelKey: 'spa.categories.all', defaultLabel: 'All Treatments', icon: <Sparkles size={16} /> },
@@ -33,7 +42,110 @@ const CATEGORY_FILTERS: { key: TreatmentCategory | 'all'; labelKey: string; defa
   { key: 'aromatherapy', labelKey: 'spa.categories.aromatherapy', defaultLabel: 'Aromatherapy', icon: <Heart size={16} /> },
 ];
 
-import { useSpaTreatments } from '../../features/m3-spa/hooks/useSpaFeature';
+/**
+ * Maps a treatment's raw category or attributes to one or more customer filter category keys:
+ * 'massage' | 'facial' | 'hydrotherapy' | 'yoga' | 'meditation' | 'body_wrap' | 'aromatherapy'
+ */
+export function matchesTreatmentCategoryFilter(treatment: SpaTreatment, filterKey: TreatmentCategory | 'all'): boolean {
+  if (filterKey === 'all') return true;
+
+  const rawCat = (treatment.category || '').toLowerCase();
+  const nameEn = (treatment.name?.en || '').toLowerCase();
+  const nameVi = (treatment.name?.vi || '').toLowerCase();
+
+  // 1. Exact match with filterKey
+  if (rawCat === filterKey) return true;
+
+  switch (filterKey) {
+    case 'massage':
+      return (
+        rawCat.includes('massage') ||
+        rawCat.includes('traditional') ||
+        rawCat.includes('detox therapy') ||
+        rawCat.includes('maternal') ||
+        rawCat.includes('holistic detox') ||
+        rawCat.includes('herbal therapy') ||
+        nameEn.includes('massage') ||
+        nameEn.includes('acupressure') ||
+        nameEn.includes('compress') ||
+        nameVi.includes('massage') ||
+        nameVi.includes('bấm huyệt')
+      );
+
+    case 'facial':
+      return (
+        rawCat.includes('facial') ||
+        nameEn.includes('facial') ||
+        nameEn.includes('guasha') ||
+        nameEn.includes('collagen') ||
+        nameEn.includes('hydration') ||
+        nameVi.includes('mặt') ||
+        nameVi.includes('guasha') ||
+        nameVi.includes('collagen')
+      );
+
+    case 'hydrotherapy':
+      return (
+        rawCat.includes('hydro') ||
+        nameEn.includes('vichy') ||
+        (nameEn.includes('bath') && !nameEn.includes('sound')) ||
+        nameVi.includes('thủy trị liệu') ||
+        nameVi.includes('ngâm bồn') ||
+        nameVi.includes('tắm thảo dược')
+      );
+
+    case 'yoga':
+      return (
+        rawCat.includes('yoga') ||
+        rawCat.includes('movement') ||
+        nameEn.includes('yoga') ||
+        nameEn.includes('pranayama') ||
+        nameVi.includes('yoga')
+      );
+
+    case 'meditation':
+      return (
+        rawCat.includes('mindfulness') ||
+        rawCat.includes('energy healing') ||
+        rawCat.includes('meditation') ||
+        nameEn.includes('meditation') ||
+        nameEn.includes('sound bath') ||
+        nameEn.includes('pranayama') ||
+        nameVi.includes('thiền') ||
+        nameVi.includes('chuông xoay')
+      );
+
+    case 'body_wrap':
+      return (
+        rawCat.includes('wrap') ||
+        rawCat.includes('scrub') ||
+        nameEn.includes('wrap') ||
+        nameEn.includes('scrub') ||
+        nameEn.includes('polish') ||
+        nameVi.includes('quấn') ||
+        nameVi.includes('ủ khoáng') ||
+        nameVi.includes('tẩy tế bào chết')
+      );
+
+    case 'aromatherapy':
+      return (
+        rawCat.includes('aroma') ||
+        rawCat.includes('herbal') ||
+        rawCat.includes('ayurveda') ||
+        nameEn.includes('aromatherapy') ||
+        nameEn.includes('shirodhara') ||
+        nameEn.includes('compress') ||
+        nameEn.includes('red dao') ||
+        nameVi.includes('thảo dược') ||
+        nameVi.includes('oải hương') ||
+        nameVi.includes('dao đỏ') ||
+        nameVi.includes('nhỏ dầu')
+      );
+
+    default:
+      return false;
+  }
+}
 
 export const SpaTreatmentListPage: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
@@ -51,43 +163,136 @@ export const SpaTreatmentListPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<TreatmentCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Map backend treatments to UI model, or fallback to mock if backend empty
+  // Map backend treatments to UI model, with authentic 5-language localization
   const activeTreatments: SpaTreatment[] = useMemo(() => {
     if (backendTreatments && backendTreatments.length > 0) {
-      return backendTreatments.map((bt) => {
-        const existing = fallbackTreatments.find((ft) => ft.id === String(bt.treatmentId) || ft.name.en.toLowerCase() === bt.treatmentName.toLowerCase());
+      return backendTreatments.map((bt, idx) => {
+        const trtId = bt.treatmentId || (idx + 1);
+        const trtCode = (bt as any).treatmentCode || (bt as any).code;
+        const rawName = bt.treatmentName || '';
+        const rawDesc = bt.description || '';
+
+        const localizedName = resolveSpaTreatmentLocalized(trtId || trtCode || rawName, rawName);
+        const localizedDesc = resolveSpaTreatmentDescriptionLocalized(trtId || trtCode || rawName, rawDesc);
+
+        const existing = fallbackTreatments.find((ft) => ft.id === String(trtId) || ft.id === trtCode);
+        const inv = SPA_TREATMENTS_INVENTORY.find(i => 
+          (i.treatmentCode && trtCode && i.treatmentCode === trtCode) ||
+          i.treatmentName.toLowerCase() === rawName.toLowerCase()
+        ) || SPA_TREATMENTS_INVENTORY[(trtId || 1) - 1] || SPA_TREATMENTS_INVENTORY[idx];
+        const fallbackImg = inv?.image || '/assets/spa/fallback.jpg';
+        const imageUrl = (existing?.imageUrl && existing.imageUrl.trim().length > 0) ? existing.imageUrl : fallbackImg;
         return {
-          id: String(bt.treatmentId),
-          name: existing ? existing.name : { en: bt.treatmentName, vi: bt.treatmentName, 'zh-CN': bt.treatmentName, ja: bt.treatmentName, fr: bt.treatmentName },
-          category: (bt.category ? bt.category.toLowerCase() : (existing?.category || 'massage')) as TreatmentCategory,
-          description: existing ? existing.description : { en: bt.description || '', vi: bt.description || '', 'zh-CN': bt.description || '', ja: bt.description || '', fr: bt.description || '' },
+          id: String(trtId),
+          name: localizedName,
+          category: (bt.category ? bt.category : (existing?.category || 'Body Massage')) as TreatmentCategory,
+          description: localizedDesc,
           durationMinutes: bt.durationMinutes,
           price: bt.basePrice,
           isIncludedInRetreat: bt.isIncluded,
-          imageUrl: existing ? existing.imageUrl : 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80',
-          benefits: existing ? existing.benefits : [],
-          contraindications: existing ? existing.contraindications : [],
+          imageUrl,
+          benefits: (existing?.benefits && existing.benefits.length > 0) ? existing.benefits : (inv?.pricingRule ? [{ vi: inv.pricingRule, en: inv.pricingRule, 'zh-CN': inv.pricingRule, ja: inv.pricingRule, fr: inv.pricingRule }] : []),
+          contraindications: (existing?.contraindications && existing.contraindications.length > 0) ? existing.contraindications : (inv?.contraindications ? [inv.contraindications] : []),
         };
       });
     }
-    return fallbackTreatments;
+    return fallbackTreatments.map((ft, idx) => {
+      const trtId = idx + 1;
+      const localizedName = resolveSpaTreatmentLocalized(ft.id || trtId, ft.name.vi);
+      const localizedDesc = resolveSpaTreatmentDescriptionLocalized(ft.id || trtId, typeof ft.description === 'string' ? ft.description : ft.description?.vi);
+      return {
+        ...ft,
+        name: localizedName,
+        description: localizedDesc,
+      };
+    });
   }, [backendTreatments, fallbackTreatments]);
 
-  const filtered = activeTreatments.filter((tr) => {
-    if (activeCategory !== 'all' && tr.category !== activeCategory) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        tr.name.en.toLowerCase().includes(q) ||
-        tr.name.vi.toLowerCase().includes(q) ||
-        tr.category.toLowerCase().includes(q)
-      );
-    }
-    return true;
+  // Compute category badge counts based on active treatments
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: activeTreatments.length };
+    CATEGORY_FILTERS.forEach((cf) => {
+      if (cf.key !== 'all') {
+        counts[cf.key] = activeTreatments.filter((t) => matchesTreatmentCategoryFilter(t, cf.key)).length;
+      }
+    });
+    return counts;
+  }, [activeTreatments]);
+
+  // Filter treatments by category taxonomy and search query (null-safe and multi-language resilient)
+  const filtered = useMemo(() => {
+    return activeTreatments.filter((tr) => {
+      if (!matchesTreatmentCategoryFilter(tr, activeCategory)) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const qCompact = q.replace(/\s+/g, '');
+        const safeLower = (v: unknown): string => (typeof v === 'string' ? v.toLowerCase() : '');
+        const nameMatches =
+          safeLower(tr.name?.en).includes(q) ||
+          safeLower(tr.name?.vi).includes(q) ||
+          safeLower(tr.name?.['zh-CN']).includes(q) ||
+          safeLower(tr.name?.ja).includes(q) ||
+          safeLower(tr.name?.fr).includes(q) ||
+          (qCompact.length >= 3 && (
+            safeLower(tr.name?.en).replace(/\s+/g, '').includes(qCompact) ||
+            safeLower(tr.name?.vi).replace(/\s+/g, '').includes(qCompact)
+          ));
+        const catMatches = safeLower(tr.category).includes(q) || (qCompact.length >= 3 && safeLower(tr.category).replace(/\s+/g, '').includes(qCompact));
+        const descMatches =
+          typeof tr.description === 'string'
+            ? safeLower(tr.description).includes(q) || (qCompact.length >= 3 && safeLower(tr.description).replace(/\s+/g, '').includes(qCompact))
+            : Boolean(
+                safeLower(tr.description?.en).includes(q) ||
+                safeLower(tr.description?.vi).includes(q) ||
+                safeLower(tr.description?.['zh-CN']).includes(q) ||
+                safeLower(tr.description?.ja).includes(q) ||
+                safeLower(tr.description?.fr).includes(q) ||
+                (qCompact.length >= 3 && (
+                  safeLower(tr.description?.en).replace(/\s+/g, '').includes(qCompact) ||
+                  safeLower(tr.description?.vi).replace(/\s+/g, '').includes(qCompact)
+                ))
+              );
+        return nameMatches || catMatches || descMatches;
+      }
+      return true;
+    });
+  }, [activeTreatments, activeCategory, searchQuery]);
+
+  // Responsive Pagination: 9 per page on desktop (>=1024px), 6 on tablet/mobile (<1024px)
+  const [pageSize, setPageSize] = useState<number>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) return 6;
+    return 9;
   });
 
-  const includedTreatments = filtered.filter((t) => t.isIncludedInRetreat);
-  const extraTreatments = filtered.filter((t) => !t.isIncludedInRetreat);
+  useEffect(() => {
+    const handleResize = () => {
+      setPageSize(window.innerWidth < 1024 ? 6 : 9);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Auto-reset to page 1 on filter or search query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, searchQuery]);
+
+  const totalMatching = filtered.length;
+  const totalPages = Math.ceil(totalMatching / pageSize) || 1;
+
+  // Sliced items for current active page
+  const paginatedTreatments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const includedTreatments = paginatedTreatments.filter((t) => t.isIncludedInRetreat);
+  const extraTreatments = paginatedTreatments.filter((t) => !t.isIncludedInRetreat);
+
+  const startIndex = totalMatching > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endIndex = Math.min(currentPage * pageSize, totalMatching);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -154,7 +359,7 @@ export const SpaTreatmentListPage: React.FC = () => {
           <Search size={18} />
           <input
             type="text"
-            placeholder={t('spa.searchPlaceholder', 'Search treatments...')}
+            placeholder={t('spa.searchPlaceholder', 'Search treatments by name, technique, or category...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             id="spa-treatment-search"
@@ -171,6 +376,7 @@ export const SpaTreatmentListPage: React.FC = () => {
             >
               {cat.icon}
               <span>{t(cat.labelKey, cat.defaultLabel)}</span>
+              <span className="spa-chip-count">{categoryCounts[cat.key] || 0}</span>
             </button>
           ))}
         </div>
@@ -178,7 +384,7 @@ export const SpaTreatmentListPage: React.FC = () => {
 
       {/* Included Treatments Section */}
       {includedTreatments.length > 0 && (
-        <section className="spa-section">
+        <section className="spa-section" id="section-included-treatments">
           <div className="spa-section-header">
             <div className="spa-section-badge spa-section-badge--included">
               <Leaf size={16} />
@@ -198,7 +404,17 @@ export const SpaTreatmentListPage: React.FC = () => {
               >
                 {/* 1. Image */}
                 <div className="spa-card-image">
-                  <img src={treatment.imageUrl} alt={localize(treatment.name)} loading="lazy" />
+                  <img
+                    src={treatment.imageUrl}
+                    alt={localize(treatment.name)}
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.includes('fallback.jpg')) {
+                        target.src = '/assets/spa/fallback.jpg';
+                      }
+                    }}
+                  />
                   <div className="spa-card-badge-overlay">
                     <span className="spa-card-included-tag">
                       <Leaf size={13} />
@@ -213,7 +429,9 @@ export const SpaTreatmentListPage: React.FC = () => {
 
                   {/* 3. Category */}
                   <div className="spa-card-category-row">
-                    <span className="spa-card-category-badge">{treatment.category}</span>
+                    <span className="spa-card-category-badge">
+                      {resolveSpaTreatmentCategory(treatment.id, i18n.language, treatment.category)}
+                    </span>
                   </div>
 
                   {/* 4. Short Description */}
@@ -233,6 +451,7 @@ export const SpaTreatmentListPage: React.FC = () => {
 
                   {/* 6. Clear High-Emphasis CTA */}
                   <button
+                    type="button"
                     className="spa-card-cta spa-card-cta--primary"
                     id={`spa-book-${treatment.id}`}
                     onClick={(e) => {
@@ -252,7 +471,7 @@ export const SpaTreatmentListPage: React.FC = () => {
 
       {/* Extra Treatments Section */}
       {extraTreatments.length > 0 && (
-        <section className="spa-section">
+        <section className="spa-section" id="section-extra-treatments">
           <div className="spa-section-header">
             <div className="spa-section-badge spa-section-badge--extra">
               <Star size={16} />
@@ -272,7 +491,17 @@ export const SpaTreatmentListPage: React.FC = () => {
               >
                 {/* 1. Image */}
                 <div className="spa-card-image">
-                  <img src={treatment.imageUrl} alt={localize(treatment.name)} loading="lazy" />
+                  <img
+                    src={treatment.imageUrl}
+                    alt={localize(treatment.name)}
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.includes('fallback.jpg')) {
+                        target.src = '/assets/spa/fallback.jpg';
+                      }
+                    }}
+                  />
                   <div className="spa-card-badge-overlay">
                     <span className="spa-card-price-tag">
                       {formatPrice(treatment.price)}
@@ -286,7 +515,9 @@ export const SpaTreatmentListPage: React.FC = () => {
 
                   {/* 3. Category */}
                   <div className="spa-card-category-row">
-                    <span className="spa-card-category-badge">{treatment.category}</span>
+                    <span className="spa-card-category-badge">
+                      {resolveSpaTreatmentCategory(treatment.id, i18n.language, treatment.category)}
+                    </span>
                   </div>
 
                   {/* 4. Short Description */}
@@ -305,6 +536,7 @@ export const SpaTreatmentListPage: React.FC = () => {
 
                   {/* 6. Clear High-Emphasis CTA */}
                   <button
+                    type="button"
                     className="spa-card-cta spa-card-cta--extra"
                     id={`spa-book-${treatment.id}`}
                     onClick={(e) => {
@@ -322,12 +554,80 @@ export const SpaTreatmentListPage: React.FC = () => {
         </section>
       )}
 
+      {/* Pagination Bar (Shown only when matching items exceed page size) */}
+      {totalPages > 1 && (
+        <div className="spa-pagination" id="spa-catalog-pagination">
+          <div className="spa-pagination-info">
+            <span>
+              {t('spa.showingRange', 'Showing {{start}}–{{end}} of {{total}} treatments', {
+                start: startIndex,
+                end: endIndex,
+                total: totalMatching,
+              })}
+            </span>
+          </div>
+
+          <div className="spa-pagination-controls">
+            <button
+              type="button"
+              className="spa-pagination-btn spa-pagination-btn--prev"
+              id="btn-pagination-prev"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              aria-label="Previous Page"
+            >
+              <ChevronLeft size={16} />
+              <span>{t('spa.prev', 'Previous')}</span>
+            </button>
+
+            <div className="spa-pagination-pages">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className={`spa-pagination-page-btn ${currentPage === page ? 'spa-pagination-page-btn--active' : ''}`}
+                  id={`btn-pagination-page-${page}`}
+                  onClick={() => setCurrentPage(page)}
+                  aria-current={currentPage === page ? 'page' : undefined}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="spa-pagination-btn spa-pagination-btn--next"
+              id="btn-pagination-next"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              aria-label="Next Page"
+            >
+              <span>{t('spa.next', 'Next')}</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Empty State */}
       {filtered.length === 0 && (
-        <div className="spa-empty-state">
+        <div className="spa-empty-state" id="spa-empty-state">
           <Filter size={48} />
           <h3>{t('spa.noResults', 'No treatments found')}</h3>
-          <p>{t('spa.noResultsDesc', 'Try adjusting your search or filter criteria.')}</p>
+          <p>{t('spa.noResultsDesc', 'Try adjusting your search query or category filter.')}</p>
+          <button
+            type="button"
+            className="spa-btn-reset-filters"
+            id="btn-reset-filters"
+            onClick={() => {
+              setActiveCategory('all');
+              setSearchQuery('');
+            }}
+          >
+            <RotateCcw size={16} />
+            <span>{t('spa.resetFilters', 'Reset Filters')}</span>
+          </button>
         </div>
       )}
     </div>

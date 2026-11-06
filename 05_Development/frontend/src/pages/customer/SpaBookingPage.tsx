@@ -16,6 +16,10 @@ import { useSpa } from '../../context/SpaContext';
 import { useSpaTreatments } from '../../features/m3-spa/hooks/useSpaFeature';
 import { spaApi } from '../../features/m3-spa/api/spaApi';
 import {
+  resolveSpaTreatmentLocalized,
+  resolveSpaTreatmentDescriptionLocalized,
+} from '../../i18n/dynamicContent';
+import {
   Clock,
   Sparkles,
   ChevronRight,
@@ -56,13 +60,13 @@ export const SpaBookingPage: React.FC = () => {
       return backendTreatments.map((bt) => ({
         id: String(bt.treatmentId),
         treatmentId: bt.treatmentId,
-        name: { en: bt.treatmentName, vi: bt.treatmentName, 'zh-CN': bt.treatmentName, ja: bt.treatmentName, fr: bt.treatmentName },
+        name: resolveSpaTreatmentLocalized((bt as any).treatmentCode || bt.treatmentName || bt.treatmentId, bt.treatmentName),
         category: bt.category || 'massage',
         durationMinutes: bt.durationMinutes,
         price: bt.basePrice,
         isIncludedInRetreat: bt.isIncluded,
-        description: { en: bt.description || '', vi: bt.description || '', 'zh-CN': bt.description || '', ja: bt.description || '', fr: bt.description || '' },
-        imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80',
+        description: resolveSpaTreatmentDescriptionLocalized((bt as any).treatmentCode || bt.treatmentName || bt.treatmentId, bt.description || ''),
+        imageUrl: '/assets/spa/fallback.jpg',
       }));
     }
     return fallbackTreatments.map((ft) => ({

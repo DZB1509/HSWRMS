@@ -35,14 +35,8 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
 
 
-  const numericSessionId = id ? Number(id) : null;
+  const numericSessionId = id ? (Number(id.replace(/\D/g, '')) || null) : null;
   const { detail: session, loading, error, recordOutcome } = useTherapistSessionDetail(numericSessionId);
-  if (loading) {
-    return <div className="therapist-session-detail"><p style={{ padding: '2rem' }}>Loading session...</p></div>;
-  }
-  if (error) {
-    return <div className="therapist-session-detail"><p style={{ padding: '2rem', color: 'red' }}>Error: {error}</p></div>;
-  }
 
   const [therapistNotes, setTherapistNotes] = useState('');
   const [actionResult, setActionResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -66,14 +60,20 @@ export const TherapistSessionDetailPage: React.FC = () => {
     }
   };
 
-  if (!session) {
+  if (loading) {
+    return <div className="therapist-session-detail"><p style={{ padding: '2rem' }}>Loading session...</p></div>;
+  }
+  if (error || !session) {
     return (
       <div className="therapist-session-detail" id="screen-33-therapist-session-detail">
-        <div className="therapist-session-empty">
-          <HeartHandshake size={48} />
+        <div className="therapist-session-empty" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+          <HeartHandshake size={48} style={{ margin: '0 auto 1rem', color: 'var(--text-tertiary)' }} />
           <h2>{t('therapist.sessionNotFound', 'Session not found')}</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+            {error ? error : t('therapist.sessionNotFoundDesc', 'The requested session could not be found or you do not have permission to view it.')}
+          </p>
           <button className="hsw-btn hsw-btn-primary" onClick={() => navigate('/therapist/schedule')}>
-            {t('therapist.backToSchedule', 'Back to Schedule')}
+            {t('therapist.backToSchedule', 'Back to Daily Schedule')}
           </button>
         </div>
       </div>

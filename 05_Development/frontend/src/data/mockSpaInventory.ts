@@ -22,7 +22,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Huyết áp cao (cần chỉnh nhiệt độ đá dưới 45°C), da mỏng nhạy cảm",
     "description": "Massage Đá Nóng Núi Lửa Himalaya (Himalayan Hot Stone). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-mass-01-himalayan-hot-stone.jpg"
   },
   {
     "id": "TRT-SPA-MASS-02",
@@ -40,7 +40,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Thoát vị đĩa đệm (tránh tác động lực ép vuông góc trực tiếp lên đốt sống L4-L5)",
     "description": "Massage Cơ Sâu Bấm Huyệt (Deep Tissue Massage). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-mass-02-deep-tissue.jpg"
   },
   {
     "id": "TRT-SPA-MASS-03",
@@ -58,7 +58,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Hạ huyết áp tư thế, viêm hạch lành tính (cần dùng lực siêu nhẹ < 4kPa)",
     "description": "Trị Liệu Dẫn Lưu Bạch Huyết (Lymphatic Drainage). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-mass-03-lymphatic-drainage.jpg"
   },
   {
     "id": "TRT-SPA-MASS-04",
@@ -76,7 +76,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Phụ nữ có thai (tuyệt đối không bấm huyệt Hợp Cốc, Tam Âm Giao, Kiên Tỉnh)",
     "description": "Bấm Huyệt Y Học Cổ Truyền (Vietnamese Acupressure). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-mass-04-vietnamese-acupressure.jpg"
   },
   {
     "id": "TRT-SPA-MASS-05",
@@ -94,7 +94,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Da mỏng sau điều trị laser, người tiểu đường mất cảm giác ngoại biên",
     "description": "Trị Liệu Thảo Dược Cổ Truyền (Herbal Compress Therapy). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-mass-05-herbal-compress.jpg"
   },
   {
     "id": "TRT-SPA-MASS-06",
@@ -112,7 +112,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "[PENDING_MEDICAL_REVIEW]: Phù chân nhiều (chỉ xoa vuốt nhẹ hướng tâm, không ấn huyệt mắt cá chân). Cần BS Sản khoa/Chuyên môn y tế xác minh phạm vi thao tác.",
     "description": "Massage Mẹ Bầu An Yên (Nurturing Prenatal Massage). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-mass-06-prenatal-massage.jpg"
   },
   {
     "id": "TRT-SPA-HEAL-01",
@@ -130,7 +130,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Có cấy ghép kim loại lớn trong cơ thể (không đặt chuông gõ trực tiếp lên vị trí đó)",
     "description": "Liệu Pháp Chuông Xoay Tây Tạng (Tibetan Sound Bath). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-heal-01-tibetan-sound-bath.jpg"
   },
   {
     "id": "TRT-SPA-HEAL-02",
@@ -148,7 +148,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Huyết áp quá thấp, chứng sợ không gian kín khi nhắm mắt (Claustrophobia)",
     "description": "Nhỏ Dầu Ấm Luân Xa Trán (Ayurvedic Shirodhara). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-heal-02-ayurvedic-shirodhara.jpg"
   },
   {
     "id": "TRT-SPA-HEAL-03",
@@ -166,7 +166,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Vừa ăn no dưới 2 tiếng (phải đợi tiêu hóa hết), đang đặt vòng tránh thai mới",
     "description": "Bấm Huyệt Thải Độc Bụng (Chi Nei Tsang Abdominal). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-heal-03-chi-nei-tsang-abdominal.jpg"
   },
   {
     "id": "TRT-SPA-FACE-01",
@@ -184,7 +184,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Vừa tiêm Botox/Filler dưới 14 ngày (tránh tác động lực gây dịch chuyển thuốc)",
     "description": "Nâng Cơ Mặt Guasha Ngọc Thạch (Jade Guasha Facelift). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-face-01-jade-guasha-facelift.jpg"
   },
   {
     "id": "TRT-SPA-FACE-02",
@@ -202,7 +202,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Tiền sử dị ứng với chiết xuất thực vật (cần kiểm tra trước tại vùng da cổ tay)",
     "description": "Cấp Ẩm Phục Hồi Tế Bào Da (Deep Hydration & Cellular Repair). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-face-02-deep-hydration-repair.jpg"
   },
   {
     "id": "TRT-SPA-FACE-03",
@@ -220,7 +220,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Làn da nhạy cảm mỏng manh (giảm nồng độ AHA/Enzyme tẩy tế bào chết ban đầu)",
     "description": "Trẻ Hóa Tế Bào Tảo Biển Hữu Cơ (Organic Marine Collagen). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-face-03-marine-collagen.jpg"
   },
   {
     "id": "TRT-SPA-BODY-01",
@@ -238,7 +238,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Vừa waxing lông toàn thân dưới 24h (tránh kích ứng rát da)",
     "description": "Tẩy Tế Bào Chết Cà Phê & Dừa (Dak Lak Coffee & Coconut Polish). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1519735777090-ec97162dc266?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-body-01-coffee-coconut-polish.jpg"
   },
   {
     "id": "TRT-SPA-BODY-02",
@@ -256,7 +256,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Chứng sợ bị quấn chặt kín (Claustrophobia) - cần nới lỏng vùng ngực",
     "description": "Ủ Khoáng Nóng Thảo Dược Núi Cao (Warm Mineral Body Wrap). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-body-02-warm-mineral-wrap.jpg"
   },
   {
     "id": "TRT-SPA-HYDRO-01",
@@ -274,7 +274,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Huyết áp dao động thất thường (cần duy trì nhiệt độ nước ấm ổn định 37°C)",
     "description": "Thủy Trị Liệu Vòi Phun Vichy Shower (Vichy Rain Therapy). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-hydro-01-vichy-rain-therapy.jpg"
   },
   {
     "id": "TRT-SPA-HYDRO-02",
@@ -292,7 +292,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Huyết áp thấp (giới hạn thời gian ngâm bồn không quá 20 phút liên tục)",
     "description": "Ngâm Bồn Khoáng Thảo Dược Dao Đỏ (Red Dao Herbal Bath). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-hydro-02-red-dao-herbal-bath.jpg"
   },
   {
     "id": "TRT-SPA-YOGA-01",
@@ -310,7 +310,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Huyết áp cao không kiểm soát (tránh tư thế dốc ngược đầu Downward Dog quá lâu)",
     "description": "Yoga Trị Liệu Chỉnh Trục Cột Sống 1-1 (Therapeutic Spine Yoga). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-yoga-01-spine-therapy-yoga.jpg"
   },
   {
     "id": "TRT-SPA-YOGA-02",
@@ -328,7 +328,7 @@ export const SPA_TREATMENTS_INVENTORY: SpaTreatmentItem[] = [
     "precautions": "Khách có tiền sử hen suyễn cấp (tránh kỹ thuật thở mạnh Kapalabhati kéo dài)",
     "description": "Hít Thở Năng Lượng & Thiền Định (Pranayama & Meditation). Giá cơ sở một buổi. Nằm trong số buổi được hưởng của gói Retreat: Không thu phí thêm; Vượt hạn ngạch hoặc gọi thêm: Tính phí phát sinh ghi nợ Folio (M5).",
     "status": "ACTIVE",
-    "image": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80"
+    "image": "/assets/spa/spa-yoga-02-pranayama-meditation.jpg"
   }
 ];
 

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import type { LocalizedString, SessionChargeType, SpaConflictType } from '../../types/spa';
 import type { SchedulingCandidate, BackendSpaSession } from '../../features/m3-spa/types/spaTypes';
+import { resolveSpaTreatmentName } from '../../i18n/dynamicContent';
 
 interface PendingBookingData {
   bookingReference?: string;
@@ -88,9 +89,6 @@ export const SpaConfirmationPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiConfirmedSession, setApiConfirmedSession] = useState<BackendSpaSession | null>(null);
   const [loadingSession, setLoadingSession] = useState<boolean>(Boolean(sessionId));
-  if (loadingSession) {
-    return <div className="spa-confirmation-page"><div className="spa-loading">Loading session...</div></div>;
-  }
 
   useEffect(() => {
     if (sessionId && !isNaN(Number(sessionId))) {
@@ -171,11 +169,15 @@ export const SpaConfirmationPage: React.FC = () => {
     }
   };
 
+  if (loadingSession) {
+    return <div className="spa-confirmation-page"><div className="spa-loading">Loading session...</div></div>;
+  }
+
   // ── CASE 1: Displaying an already confirmed session ────
   const displaySession = apiConfirmedSession || confirmedSession;
   if (displaySession) {
     const sessionTreatment = 'treatmentName' in displaySession && typeof displaySession.treatmentName === 'string'
-      ? { name: { en: displaySession.treatmentName, vi: displaySession.treatmentName }, imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80', durationMinutes: displaySession.durationMinutes }
+      ? { name: { en: displaySession.treatmentName, vi: displaySession.treatmentName }, imageUrl: '/assets/spa/fallback.jpg', durationMinutes: displaySession.durationMinutes }
       : getTreatmentById((displaySession as any).treatmentId);
     const therapistName = 'therapistName' in displaySession ? (displaySession as any).therapistName : getTherapistById((displaySession as any).therapistId)?.name || 'Assigned Therapist';
     const roomName = 'roomName' in displaySession ? (displaySession as any).roomName : getRoomById((displaySession as any).roomId)?.name || 'Treatment Room';
@@ -300,7 +302,9 @@ export const SpaConfirmationPage: React.FC = () => {
   // ── CASE 2: Review & Confirm Pending Booking (Pre-Mutation) ──
   const candidate = locationState?.selectedCandidate;
   if (candidate || (pendingTreatment && pendingTherapist && pendingRoom)) {
-    const reviewTreatmentName = candidate ? candidate.treatmentName : localize(pendingTreatment?.name);
+    const reviewTreatmentName = candidate
+      ? resolveSpaTreatmentName(candidate.treatmentName, i18n.language, candidate.treatmentName)
+      : localize(pendingTreatment?.name);
     const reviewTherapistName = candidate ? candidate.therapistName : pendingTherapist?.name;
     const reviewRoomName = candidate ? candidate.roomName : (pendingRoom ? localize(pendingRoom.name) : '');
     const reviewDate = candidate ? candidate.date : pendingDate;
@@ -375,7 +379,7 @@ export const SpaConfirmationPage: React.FC = () => {
           {/* Session Details */}
           <div className="spa-confirmation-details">
             <div className="spa-confirmation-treatment">
-              <img src={pendingTreatment?.imageUrl || 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80'} alt={reviewTreatmentName} className="spa-confirmation-img" />
+              <img src={pendingTreatment?.imageUrl || '/assets/spa/fallback.jpg'} alt={reviewTreatmentName} className="spa-confirmation-img" />
               <div className="spa-confirmation-treatment-info">
                 <h2>{reviewTreatmentName}</h2>
                 {reviewIsIncluded ? (

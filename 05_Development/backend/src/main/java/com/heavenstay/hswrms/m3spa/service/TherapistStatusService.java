@@ -1,17 +1,24 @@
 package com.heavenstay.hswrms.m3spa.service;
 
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m1identity.entity.User;
+import com.heavenstay.hswrms.m1identity.repository.UserRepository;
+import com.heavenstay.hswrms.m3spa.dto.response.TherapistRosterDto;
 import com.heavenstay.hswrms.m3spa.entity.Therapist;
+import com.heavenstay.hswrms.m3spa.entity.TherapistTreatmentQualification;
 import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
 import com.heavenstay.hswrms.m3spa.repository.TherapistRepository;
+import com.heavenstay.hswrms.m3spa.repository.TherapistTreatmentQualificationRepository;
 import com.heavenstay.hswrms.m3spa.service.event.TherapistStatusChangedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Service managing therapist lifecycle and operational statuses (BR-M3-13).
@@ -26,12 +33,62 @@ public class TherapistStatusService {
     private static final Logger log = LoggerFactory.getLogger(TherapistStatusService.class);
 
     private final TherapistRepository therapistRepository;
+    private final TherapistTreatmentQualificationRepository qualificationRepository;
+    private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public TherapistStatusService(TherapistRepository therapistRepository,
+                                  TherapistTreatmentQualificationRepository qualificationRepository,
+                                  UserRepository userRepository,
                                   ApplicationEventPublisher eventPublisher) {
         this.therapistRepository = therapistRepository;
+        this.qualificationRepository = qualificationRepository;
+        this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Retrieves the operational therapist roster for managers and administrators (BR-M3-13).
+     * Populates real names from User and qualifications/specialties from TherapistTreatmentQualification.
+     * Sensitive customer health notes, passwords, and PII are strictly excluded.
+     *
+     * @return list of TherapistRosterDto
+     */
+    @Transactional(readOnly = true)
+    public List<TherapistRosterDto> getTherapistRoster() {
+        List<Therapist> therapists = therapistRepository.findAll(Sort.by(Sort.Direction.ASC, "therapistId"));
+        return therapists.stream().map(t -> {
+            String name = userRepository.findById(t.getUserId())
+                    .map(User::getFullName)
+                    .orElse("Therapist #" + t.getTherapistId());
+
+            List<TherapistTreatmentQualification> quals =
+                    qualificationRepository.findByTherapist_TherapistId(t.getTherapistId());
+
+            String specialty = quals.stream()
+                    .map(q -> q.getTreatment().getTreatmentName())
+                    .distinct()
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("General Wellness & Spa Therapy");
+
+            List<String> qualificationCodes = quals.stream()
+                    .map(q -> {
+                        String code = q.getTreatment().getRequiredQualificationCode();
+                        return (code != null && !code.isBlank()) ? code : q.getTreatment().getTreatmentCode();
+                    })
+                    .filter(c -> c != null && !c.isBlank())
+                    .distinct()
+                    .toList();
+
+            return new TherapistRosterDto(
+                    t.getTherapistId(),
+                    t.getUserId(),
+                    name,
+                    specialty,
+                    qualificationCodes,
+                    t.getTherapistStatus()
+            );
+        }).toList();
     }
 
     /**
@@ -72,4 +129,3 @@ public class TherapistStatusService {
         return saved;
     }
 }
-

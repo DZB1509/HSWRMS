@@ -37,7 +37,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 90,
     price: 0,
     isIncludedInRetreat: true,
-    imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-mass-02-deep-tissue.jpg',
     benefits: [
       { vi: 'Giảm căng thẳng cơ bắp', en: 'Muscle tension relief', 'zh-CN': '缓解肌肉紧张', ja: '筋肉の緊張緩和', fr: 'Soulagement des tensions musculaires' },
       { vi: 'Cải thiện tuần hoàn máu', en: 'Improved blood circulation', 'zh-CN': '改善血液循环', ja: '血行促進', fr: 'Amélioration de la circulation sanguine' },
@@ -65,7 +65,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 75,
     price: 1800000,
     isIncludedInRetreat: false,
-    imageUrl: 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-mass-01-himalayan-hot-stone.jpg',
     benefits: [
       { vi: 'Giảm đau cơ mãn tính', en: 'Chronic pain relief', 'zh-CN': '慢性疼痛缓解', ja: '慢性的な痛みの緩和', fr: 'Soulagement de la douleur chronique' },
       { vi: 'Cải thiện giấc ngủ', en: 'Improved sleep quality', 'zh-CN': '改善睡眠质量', ja: '睡眠の質の向上', fr: 'Amélioration de la qualité du sommeil' },
@@ -92,7 +92,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 60,
     price: 2200000,
     isIncludedInRetreat: false,
-    imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-face-01-jade-guasha-facelift.jpg',
     benefits: [
       { vi: 'Tái tạo da', en: 'Skin regeneration', 'zh-CN': '皮肤再生', ja: '肌の再生', fr: 'Régénération de la peau' },
       { vi: 'Chống lão hóa', en: 'Anti-aging', 'zh-CN': '抗衰老', ja: 'アンチエイジング', fr: 'Anti-âge' },
@@ -119,7 +119,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 60,
     price: 0,
     isIncludedInRetreat: true,
-    imageUrl: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-hydro-02-red-dao-herbal-bath.jpg',
     benefits: [
       { vi: 'Thanh lọc cơ thể', en: 'Body detoxification', 'zh-CN': '身体排毒', ja: 'ボディデトックス', fr: 'Détoxification du corps' },
       { vi: 'Thư giãn hệ thần kinh', en: 'Nervous system relaxation', 'zh-CN': '神经系统放松', ja: '神経系のリラクゼーション', fr: 'Relaxation du système nerveux' },
@@ -146,7 +146,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 60,
     price: 0,
     isIncludedInRetreat: true,
-    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-yoga-02-pranayama-meditation.jpg',
     benefits: [
       { vi: 'Tăng tính linh hoạt', en: 'Increased flexibility', 'zh-CN': '增强柔韧性', ja: '柔軟性の向上', fr: 'Flexibilité accrue' },
       { vi: 'Giảm stress và lo âu', en: 'Stress and anxiety reduction', 'zh-CN': '减轻压力和焦虑', ja: 'ストレスと不安の軽減', fr: 'Réduction du stress et de l\'anxiété' },
@@ -173,7 +173,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 45,
     price: 0,
     isIncludedInRetreat: true,
-    imageUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-heal-01-tibetan-sound-bath.jpg',
     benefits: [
       { vi: 'Cải thiện tập trung', en: 'Improved focus', 'zh-CN': '提高专注力', ja: '集中力の向上', fr: 'Amélioration de la concentration' },
       { vi: 'An bình nội tâm', en: 'Inner peace', 'zh-CN': '内心平静', ja: '心の平和', fr: 'Paix intérieure' },
@@ -200,7 +200,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 90,
     price: 1500000,
     isIncludedInRetreat: false,
-    imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-body-02-warm-mineral-wrap.jpg',
     benefits: [
       { vi: 'Thải độc sâu qua da', en: 'Deep skin detoxification', 'zh-CN': '皮肤深层排毒', ja: '肌のディープデトックス', fr: 'Détoxification cutanée profonde' },
       { vi: 'Nuôi dưỡng da toàn thân', en: 'Full-body skin nourishment', 'zh-CN': '全身皮肤滋养', ja: '全身肌の栄養補給', fr: 'Nutrition cutanée complète' },
@@ -227,7 +227,7 @@ export const INITIAL_TREATMENTS: SpaTreatment[] = [
     durationMinutes: 60,
     price: 1200000,
     isIncludedInRetreat: false,
-    imageUrl: 'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '/assets/spa/spa-mass-03-lymphatic-drainage.jpg',
     benefits: [
       { vi: 'Thư giãn tinh thần', en: 'Mental relaxation', 'zh-CN': '精神放松', ja: 'メンタルリラクゼーション', fr: 'Relaxation mentale' },
       { vi: 'Hỗ trợ hô hấp', en: 'Respiratory support', 'zh-CN': '呼吸系统支持', ja: '呼吸器のサポート', fr: 'Soutien respiratoire' },

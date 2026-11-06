@@ -3,6 +3,7 @@ package com.heavenstay.hswrms.m3spa.controller;
 import com.heavenstay.hswrms.common.api.ApiResponse;
 import com.heavenstay.hswrms.m3spa.dto.request.CompleteSessionRequest;
 import com.heavenstay.hswrms.m3spa.dto.response.SpaSessionDto;
+import com.heavenstay.hswrms.m3spa.dto.response.TherapistRosterDto;
 import com.heavenstay.hswrms.m3spa.dto.response.TherapistSessionDetailDto;
 import com.heavenstay.hswrms.m3spa.entity.Therapist;
 import com.heavenstay.hswrms.m3spa.entity.enums.TherapistStatus;
@@ -31,6 +32,18 @@ public class TherapistController {
                                TherapistStatusService therapistStatusService) {
         this.spaSessionService = spaSessionService;
         this.therapistStatusService = therapistStatusService;
+    }
+
+    /**
+     * Screen 32: Manager Therapist Operational Roster (BR-M3-13).
+     * Returns all registered therapists with operational status, real names, and qualifications.
+     * Enforces MANAGER / ADMIN role authorization.
+     */
+    @GetMapping({"", "/roster"})
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<TherapistRosterDto>>> getTherapistRoster() {
+        List<TherapistRosterDto> roster = therapistStatusService.getTherapistRoster();
+        return ResponseEntity.ok(ApiResponse.ok(roster));
     }
 
     /**
@@ -104,7 +117,7 @@ public class TherapistController {
      * for all active upcoming sessions assigned to this therapist.
      */
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Therapist>> updateTherapistStatus(
             @PathVariable Integer id,
             @RequestBody Map<String, String> body

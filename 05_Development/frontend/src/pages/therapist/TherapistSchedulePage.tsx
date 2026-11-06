@@ -40,9 +40,6 @@ export const TherapistSchedulePage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
   const { sessions: daySessions, loading } = useTherapistSchedule(selectedDate);
-  if (loading) {
-    return <div className="therapist-schedule"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
-  }
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | string | null): string => {
@@ -74,6 +71,10 @@ export const TherapistSchedulePage: React.FC = () => {
     day: 'numeric',
     year: 'numeric',
   });
+
+  if (loading) {
+    return <div className="therapist-schedule"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
+  }
 
   return (
     <div className="therapist-schedule" id="screen-32-therapist-daily-schedule" style={{ maxWidth: '1440px', margin: '0 auto' }}>

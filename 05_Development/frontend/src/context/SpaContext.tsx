@@ -20,6 +20,11 @@ import type {
 } from '../types/spa';
 import { spaApi } from '../features/m3-spa/api/spaApi';
 import { useAuth } from '../hooks/useAuth';
+import { SPA_TREATMENTS_INVENTORY } from '../data/mockSpaInventory';
+import {
+  resolveSpaTreatmentLocalized,
+  resolveSpaTreatmentDescriptionLocalized,
+} from '../i18n/dynamicContent';
 import {
   createIdentityScopedState,
   identityScopedReducer,
@@ -94,13 +99,30 @@ export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const sessionRequest = role === 'therapist' ? spaApi.getTherapistDashboard() : spaApi.getMySpaSessions();
     Promise.allSettled([spaApi.getTreatments(), sessionRequest]).then(([treatmentResult, sessionResult]) => {
       if (!active) return;
-      if (treatmentResult.status === 'fulfilled') setTreatments(treatmentResult.value.map(item => {
+      if (treatmentResult.status === 'fulfilled') setTreatments(treatmentResult.value.map((item, idx) => {
         const name = item.treatmentName;
-        const localized = { vi:name,en:name,'zh-CN':name,ja:name,fr:name };
-        return { id:String(item.treatmentId), name:localized, category:(item.category.toLowerCase() as SpaTreatment['category']), description:{...localized,vi:item.description,en:item.description,'zh-CN':item.description,ja:item.description,fr:item.description}, durationMinutes:item.durationMinutes, price:item.basePrice, isIncludedInRetreat:item.isIncluded, imageUrl:'', benefits:[], contraindications:[] };
+        const localized = resolveSpaTreatmentLocalized(item.treatmentId || (item as any).treatmentCode || item.treatmentName, name);
+        const inv = SPA_TREATMENTS_INVENTORY.find(i => 
+          i.treatmentName.toLowerCase() === item.treatmentName.toLowerCase() ||
+          (item.treatmentId && i.treatmentCode.endsWith(String(item.treatmentId).padStart(2, '0')))
+        ) || SPA_TREATMENTS_INVENTORY[idx] || SPA_TREATMENTS_INVENTORY[item.treatmentId - 1];
+        const imageUrl = inv?.image || '/assets/spa/fallback.jpg';
+        const localizedDesc = resolveSpaTreatmentDescriptionLocalized(item.treatmentId || (item as any).treatmentCode || item.treatmentName, item.description || inv?.description || name);
+        return { 
+          id:String(item.treatmentId), 
+          name:localized, 
+          category:((item.category ? item.category.toLowerCase() : 'body massage') as SpaTreatment['category']), 
+          description:localizedDesc, 
+          durationMinutes:item.durationMinutes, 
+          price:item.basePrice, 
+          isIncludedInRetreat:item.isIncluded, 
+          imageUrl, 
+          benefits: inv?.pricingRule ? [{ vi: inv.pricingRule, en: inv.pricingRule, 'zh-CN': inv.pricingRule, ja: inv.pricingRule, fr: inv.pricingRule }] : [], 
+          contraindications: inv?.contraindications ? [inv.contraindications] : [] 
+        };
       }));
       const nextSessions = sessionResult.status === 'fulfilled' ? sessionResult.value.map(item => {
-        const name = { vi:item.treatmentName,en:item.treatmentName,'zh-CN':item.treatmentName,ja:item.treatmentName,fr:item.treatmentName };
+        const name = resolveSpaTreatmentLocalized(item.treatmentId || item.treatmentName, item.treatmentName);
         const resource = { vi:item.roomName,en:item.roomName,'zh-CN':item.roomName,ja:item.roomName,fr:item.roomName };
         const status = item.sessionStatus === 'COMPLETED' ? 'completed' : item.sessionStatus === 'NO_SHOW' ? 'no_show' : item.sessionStatus === 'CANCELLED' ? 'cancelled' : item.confirmationStatus === 'PENDING' ? 'booked' : 'confirmed';
         return { id:String(item.spaSessionId), bookingReference:item.bookingReference, customerId:'', customerName:item.customerName, treatmentId:String(item.treatmentId), treatmentName:name, therapistId:String(item.therapistId), therapistName:item.therapistName, roomId:String(item.roomId), roomName:resource, date:item.date, startTime:item.startTime, endTime:item.endTime, durationMinutes:item.durationMinutes, status, chargeType:item.isIncluded ? 'included' : 'extra', price:item.basePrice, customerSpecialRequest:item.customerNote, createdAt:item.scheduledStartAt } as SpaSession;
@@ -121,22 +143,22 @@ export const SpaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ── Lookups ────────────────────────────────
 
   const getTreatmentById = useCallback(
-    (id: string) => treatments.find((t) => t.id.toLowerCase() === id.toLowerCase()),
+    (id: string | number) => treatments.find((t) => id != null && String(t.id).toLowerCase() === String(id).toLowerCase()),
     [treatments]
   );
 
   const getTherapistById = useCallback(
-    (id: string) => therapists.find((t) => t.id.toLowerCase() === id.toLowerCase()),
+    (id: string | number) => therapists.find((t) => id != null && String(t.id).toLowerCase() === String(id).toLowerCase()),
     [therapists]
   );
 
   const getRoomById = useCallback(
-    (id: string) => rooms.find((r) => r.id.toLowerCase() === id.toLowerCase()),
+    (id: string | number) => rooms.find((r) => id != null && String(r.id).toLowerCase() === String(id).toLowerCase()),
     [rooms]
   );
 
   const getSessionById = useCallback(
-    (id: string) => sessions.find((s) => s.id.toLowerCase() === id.toLowerCase()),
+    (id: string | number) => sessions.find((s) => id != null && String(s.id).toLowerCase() === String(id).toLowerCase()),
     [sessions]
   );
 

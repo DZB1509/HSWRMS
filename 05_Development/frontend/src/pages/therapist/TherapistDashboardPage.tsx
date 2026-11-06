@@ -29,9 +29,6 @@ export const TherapistDashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [sessions, setSessions] = React.useState<BackendSpaSession[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
-  if (loading) {
-    return <div className="therapist-dashboard"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
-  }
 
   React.useEffect(() => {
     spaApi.getTherapistDashboard()
@@ -70,6 +67,10 @@ export const TherapistDashboardPage: React.FC = () => {
     day: 'numeric',
     year: 'numeric',
   });
+
+  if (loading) {
+    return <div className="therapist-dashboard"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
+  }
 
   return (
     <div className="therapist-dashboard" id="screen-31-therapist-dashboard" style={{ maxWidth: '1440px', margin: '0 auto' }}>

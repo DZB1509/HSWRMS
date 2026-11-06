@@ -21,7 +21,8 @@ import {
   List as ListIcon,
   PowerOff,
   ShieldAlert,
-  ShieldCheck
+  ShieldCheck,
+  User
 } from 'lucide-react';
 import {
   SPA_TREATMENTS_INVENTORY,
@@ -48,7 +49,7 @@ import { AddRetreatPackageFullModal } from '../../components/operations/AddRetre
 import { SpaTreatmentDetailModal } from '../../components/operations/SpaTreatmentDetailModal';
 import { RetreatPackageDetailModal } from '../../components/operations/RetreatPackageDetailModal';
 
-type ActiveTab = 'treatments' | 'packages' | 'rooms' | 'rules';
+type ActiveTab = 'treatments' | 'packages' | 'rooms' | 'rules' | 'therapists';
 
 export const SpaManagementPage: React.FC = () => {
   const { role } = useAuth();
@@ -540,6 +541,107 @@ export const SpaManagementPage: React.FC = () => {
     });
   };
 
+
+  // Therapist Operational Roster (BR-M3-13 & Trigger 3B)
+  interface TherapistOperationalItem {
+    therapistId: number;
+    userId: number;
+    name: string;
+    specialty: string;
+    qualifications: string[];
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  }
+
+  const [therapists, setTherapists] = useState<TherapistOperationalItem[]>([]);
+  const [loadingTherapists, setLoadingTherapists] = useState<boolean>(false);
+  const [therapistError, setTherapistError] = useState<string | null>(null);
+  const [therapistActionMsg, setTherapistActionMsg] = useState<string | null>(null);
+  const [isUpdatingTherapist, setIsUpdatingTherapist] = useState<boolean>(false);
+
+  const loadTherapists = async () => {
+    setLoadingTherapists(true);
+    setTherapistError(null);
+    try {
+      const authHeaders = getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/therapist`, { headers: authHeaders });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || `Loi may chu (${res.status})`);
+      }
+      const json = await res.json();
+      const dataList = json.data || [];
+      const mapped: TherapistOperationalItem[] = dataList.map((item: any) => ({
+        therapistId: item.therapistId,
+        userId: item.userId,
+        name: item.name || `KTV #${item.therapistId}`,
+        specialty: item.specialty || 'General Wellness',
+        qualifications: Array.isArray(item.qualifications) ? item.qualifications : [],
+        status: item.status || 'ACTIVE',
+      }));
+      setTherapists(mapped);
+    } catch (err: any) {
+      console.error('Failed to load therapists:', err);
+      setTherapistError(err.message || 'Khong the ket noi den CSDL SQL Server.');
+    } finally {
+      setLoadingTherapists(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'therapists') {
+      loadTherapists();
+    }
+  }, [activeTab]);
+
+  const handleUpdateTherapistStatus = async (therapistId: number, targetStatus: 'ACTIVE' | 'SUSPENDED') => {
+    setIsUpdatingTherapist(true);
+    setTherapistActionMsg(null);
+    try {
+      const authHeaders = getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/therapist/${therapistId}/status`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          status: targetStatus,
+          reason: targetStatus === 'SUSPENDED' ? 'Emergency medical suspension' : 'Restored to duty',
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || `Loi may chu (${res.status})`);
+      }
+
+      setTherapists((prev) =>
+        prev.map((t) => (t.therapistId === therapistId ? { ...t, status: targetStatus } : t))
+      );
+
+      // Re-fetch authoritative roster state from backend
+      await loadTherapists();
+
+      const msg = `Therapist #${therapistId} status changed to ${targetStatus}. Trigger 3B recovery invoked.`;
+      setTherapistActionMsg(msg);
+      showToast(msg, targetStatus === 'SUSPENDED' ? 'warning' : 'success');
+
+      logAuditEvent({
+        actorId: role === 'admin' ? 'usr-admin' : 'usr-mgr-01',
+        actorName: role === 'admin' ? 'Quan tri vien' : 'Sarah Jenkins',
+        actorRole: role || 'manager',
+        action: 'UPDATE',
+        dataCategory: 'SECURITY_GOVERNANCE',
+        targetRef: `THERAPIST-${therapistId}`,
+        result: 'SUCCESS',
+        detailsKey: 'audit.updateTherapistStatus',
+        detailsFallback: msg,
+      });
+    } catch (err: any) {
+      console.error('Failed to update therapist status:', err);
+      showToast(`Khong the cap nhat trang thai: ${err.message || 'Loi mang'}`, 'error');
+    } finally {
+      setIsUpdatingTherapist(false);
+    }
+  };
+
   // Stats
   const activeTreatmentsCount = treatments.filter((t) => t.status === 'ACTIVE').length;
   const inactiveTreatmentsCount = treatments.filter((t) => t.status === 'INACTIVE').length;
@@ -874,6 +976,28 @@ export const SpaManagementPage: React.FC = () => {
         >
           <Layers size={16} />
           Ràng Buộc Kỹ Thuật (Rule Matrix)
+        </button>
+
+        <button
+          type="button"
+          id="tab-therapists"
+          onClick={() => setActiveTab('therapists')}
+          style={{
+            padding: '10px 18px',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'therapists' ? '2px solid var(--primary-accent)' : '2px solid transparent',
+            color: activeTab === 'therapists' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'therapists' ? 700 : 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.92rem'
+          }}
+        >
+          <User size={16} />
+          Chuyen Vien (Therapists) ({loadingTherapists ? '...' : therapists.length})
         </button>
       </div>
 
@@ -1799,6 +1923,267 @@ export const SpaManagementPage: React.FC = () => {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+
+      {/* 5. Therapists Management Tab (BR-M3-13 & Trigger 3B) */}
+      {activeTab === 'therapists' && (
+        <div style={{ marginTop: '20px' }} id="manager-therapists-panel">
+          <div style={{
+            background: 'rgba(46, 125, 90, 0.08)',
+            border: '1px solid rgba(46, 125, 90, 0.25)',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '14px'
+          }}>
+            <ShieldAlert size={24} style={{ color: '#2E7D5A', flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#2E7D5A' }}>
+                  Dieu Phoi & Kiem Soat Trang Thai Chuyen Vien (BR-M3-13 / Trigger 3B)
+                </h4>
+                <button
+                  type="button"
+                  id="btn-refresh-therapists"
+                  onClick={loadTherapists}
+                  disabled={loadingTherapists}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(46, 125, 90, 0.3)',
+                    background: '#ffffff',
+                    color: '#2E7D5A',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <RefreshCw size={12} className={loadingTherapists ? 'animate-spin' : ''} />
+                  <span>Lam moi</span>
+                </button>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Khi chuyen vien chuyen sang trang thai <strong>SUSPENDED</strong> hoac <strong>INACTIVE</strong>, dong thoi Trigger 3B tren SQL Server se tu dong quet va dieu phoi lai cac phien spa sap dien ra sang chuyen vien thay the co du nang luc va phong trong tuong thich.
+              </p>
+            </div>
+          </div>
+
+          {therapistActionMsg && (
+            <div id="therapist-action-success" style={{
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              color: '#065f46',
+              marginBottom: '20px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <CheckCircle2 size={18} />
+              <span>{therapistActionMsg}</span>
+            </div>
+          )}
+
+          {loadingTherapists ? (
+            <div id="therapists-loading" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              padding: '60px 20px',
+              color: 'var(--text-secondary)',
+              fontSize: '0.95rem'
+            }}>
+              <RefreshCw size={20} className="animate-spin" />
+              <span>Dang tai danh sach chuyen vien tu CSDL SQL Server...</span>
+            </div>
+          ) : therapistError ? (
+            <div id="therapists-error" style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '12px',
+              padding: '24px',
+              textAlign: 'center',
+              color: '#991b1b',
+              margin: '20px 0'
+            }}>
+              <AlertTriangle size={32} style={{ margin: '0 auto 10px', color: '#dc2626' }} />
+              <p style={{ margin: '0 0 16px', fontWeight: 600 }}>{therapistError}</p>
+              <button
+                type="button"
+                id="btn-retry-therapists"
+                onClick={loadTherapists}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Thu lai (Retry)
+              </button>
+            </div>
+          ) : therapists.length === 0 ? (
+            <div id="therapists-empty" style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: 'var(--text-secondary)',
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              border: '1px dashed var(--border-subtle)'
+            }}>
+              <User size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+              <p style={{ margin: 0, fontWeight: 500 }}>Chua co chuyen vien nao trong he thong.</p>
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+              gap: '20px'
+            }}>
+              {therapists.map((t) => (
+              <div
+                key={t.therapistId}
+                id={`therapist-card-${t.therapistId}`}
+                style={{
+                  background: 'var(--bg-surface)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '20px',
+                  boxShadow: 'var(--shadow-xs)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        color: t.status === 'ACTIVE' ? '#2E7D5A' : '#dc2626',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700
+                      }}>
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {t.name}
+                        </h3>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          KTV ID: #{t.therapistId} · User ID: #{t.userId}
+                        </span>
+                      </div>
+                    </div>
+
+                    <span
+                      id={`therapist-status-${t.therapistId}`}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        backgroundColor: t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: t.status === 'ACTIVE' ? '#276749' : '#b91c1c',
+                        border: `1px solid ${t.status === 'ACTIVE' ? 'rgba(46, 125, 90, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                      }}
+                    >
+                      {t.status}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.4 }}>
+                    <strong>Chuyen mon:</strong> {t.specialty}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '18px' }}>
+                    {t.qualifications.map((q) => (
+                      <span key={q} style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        background: 'var(--surface-muted, #f1f5f9)',
+                        fontSize: '0.75rem',
+                        fontFamily: 'monospace',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        {q}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '14px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  {t.status === 'ACTIVE' ? (
+                    <button
+                      type="button"
+                      id={`btn-suspend-therapist-${t.therapistId}`}
+                      disabled={isUpdatingTherapist}
+                      onClick={() => handleUpdateTherapistStatus(t.therapistId, 'SUSPENDED')}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #f87171',
+                        backgroundColor: '#fee2e2',
+                        color: '#b91c1c',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <PowerOff size={14} />
+                      <span>Tam Dinh Chi (Suspend)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      id={`btn-activate-therapist-${t.therapistId}`}
+                      disabled={isUpdatingTherapist}
+                      onClick={() => handleUpdateTherapistStatus(t.therapistId, 'ACTIVE')}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #86efac',
+                        backgroundColor: '#dcfce7',
+                        color: '#15803d',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <ShieldCheck size={14} />
+                      <span>Kich Hoat Lai (Activate)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            </div>
+          )}
         </div>
       )}
 
