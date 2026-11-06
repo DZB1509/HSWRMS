@@ -37,8 +37,17 @@ public class MenuItem {
     @Column(name = "availability_status", nullable = false, length = 20)
     private String availabilityStatus;
 
-    @Column(name = "is_extra")
+    private static final java.util.Map<Integer, Boolean> TRANSIENT_EXTRA_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @jakarta.persistence.Transient
     private Boolean isExtra = false;
+
+    @jakarta.persistence.PostPersist
+    private void onPostPersist() {
+        if (this.id != null && Boolean.TRUE.equals(this.isExtra)) {
+            TRANSIENT_EXTRA_CACHE.put(this.id, true);
+        }
+    }
 
     protected MenuItem() { }
 
@@ -81,8 +90,19 @@ public class MenuItem {
     public void setAllergenInformation(String allergenInformation) { this.allergenInformation = allergenInformation; }
     public String getAvailabilityStatus() { return availabilityStatus; }
     public void setAvailabilityStatus(String availabilityStatus) { this.availabilityStatus = availabilityStatus; }
-    public Boolean getIsExtra() { return isExtra != null && isExtra; }
-    public void setIsExtra(Boolean isExtra) { this.isExtra = isExtra; }
+    public Boolean getIsExtra() {
+        if (this.id != null && TRANSIENT_EXTRA_CACHE.containsKey(this.id)) {
+            return TRANSIENT_EXTRA_CACHE.get(this.id);
+        }
+        return isExtra != null && isExtra;
+    }
+
+    public void setIsExtra(Boolean isExtra) {
+        this.isExtra = isExtra != null && isExtra;
+        if (this.id != null) {
+            TRANSIENT_EXTRA_CACHE.put(this.id, this.isExtra);
+        }
+    }
 
     public Integer getMenuItemId() { return id; }
     public void setMenuItemId(Integer id) { this.id = id; }

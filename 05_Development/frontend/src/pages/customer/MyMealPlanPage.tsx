@@ -34,7 +34,7 @@ export const MyMealPlanPage: React.FC = () => {
       setCancellingOrderId(null);
     }
   };
-  const { activeBooking } = useCustomer();
+  const { activeBooking, profile } = useCustomer();
   const navigate = useNavigate();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
@@ -48,12 +48,34 @@ export const MyMealPlanPage: React.FC = () => {
   const [extraOrdersPage, setExtraOrdersPage] = useState(1);
   const extraOrdersPageSize = 6;
 
-  const customerId = 'usr-cust-01';
+  const customerId = profile?.id || 'usr-cust-01';
 
   const handleTabChange = (tab: 'meal_plan' | 'extra_orders') => {
     setActiveTab(tab);
     setExtraOrdersPage(1);
   };
+
+  // Filter for active booking (or match customerId)
+  const mySelections = mealSelections.filter(
+    (s) => (activeBooking && s.bookingId === activeBooking.id) || (customerId && s.customerId === customerId)
+  );
+
+  const myOrders = alaCarteOrders.filter(
+    (o) => (activeBooking && o.bookingId === activeBooking.id) || (customerId && o.customerId === customerId)
+  );
+
+  // Timer effect: updates every second only while there are pending orders
+  useEffect(() => {
+    const hasPendingDaily = mySelections.some((s) => s.status === 'pending');
+    const hasPendingExtra = myOrders.some((o) => o.status === 'pending');
+    if (!hasPendingDaily && !hasPendingExtra) return;
+
+    const interval = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [mySelections, myOrders]);
 
   if (!activeBooking) {
     return (
@@ -87,28 +109,6 @@ export const MyMealPlanPage: React.FC = () => {
       </div>
     );
   }
-
-  // Filter for active booking (or match customerId)
-  const mySelections = mealSelections.filter(
-    (s) => (s.bookingId === activeBooking.id || s.customerId === customerId)
-  );
-
-  const myOrders = alaCarteOrders.filter(
-    (o) => (o.bookingId === activeBooking.id || o.customerId === customerId)
-  );
-
-  // Timer effect: updates every second only while there are pending orders
-  useEffect(() => {
-    const hasPendingDaily = mySelections.some((s) => s.status === 'pending');
-    const hasPendingExtra = myOrders.some((o) => o.status === 'pending');
-    if (!hasPendingDaily && !hasPendingExtra) return;
-
-    const interval = setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [mySelections, myOrders]);
 
   const getCancellationCountdown = (createdAt?: string | null): { isEligible: boolean; remainingSeconds: number; hasValidTimestamp: boolean } => {
     if (!createdAt) {

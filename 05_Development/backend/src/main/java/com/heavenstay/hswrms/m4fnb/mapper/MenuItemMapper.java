@@ -30,7 +30,8 @@ public class MenuItemMapper {
             }
         }
         String cleanName = com.heavenstay.hswrms.common.util.TextEncodingSanitizer.sanitize(item.getItemName());
-        boolean isExtra = Boolean.TRUE.equals(item.getIsExtra()) || (item.getId() != null && item.getId() >= 1 && item.getId() <= 15);
+        boolean isExtra = Boolean.TRUE.equals(item.getIsExtra())
+                || (item.getId() != null && java.util.Set.of(1, 2, 5, 13, 14).contains(item.getId()));
         return new MenuItemResponse(item.getId(), cleanName, item.getCategory(), item.getMealType(),
                 item.getPrice(), tags, item.getAllergenInformation(), available, servingsAvailable, allergyWarning, isExtra);
     }

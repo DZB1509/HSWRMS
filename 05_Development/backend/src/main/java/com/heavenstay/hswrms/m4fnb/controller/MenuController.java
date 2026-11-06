@@ -42,10 +42,9 @@ public class MenuController {
         boolean isCustomer = currentUser != null && currentUser.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()));
         Integer targetUserId = isCustomer ? currentUser.getUserId() : customerId;
-        boolean shouldFilter = isCustomer ? (filterByDietary == null || Boolean.TRUE.equals(filterByDietary))
-                                          : (targetUserId != null && Boolean.TRUE.equals(filterByDietary));
-        List<MenuItemResponse> menu = shouldFilter && targetUserId != null
-                ? menuService.getPersonalizedMenu(targetUserId, date)
+        boolean filterStrict = Boolean.TRUE.equals(filterByDietary);
+        List<MenuItemResponse> menu = targetUserId != null
+                ? menuService.getCustomerMenu(targetUserId, date, filterStrict)
                 : menuService.getManagementMenu(date);
         return ResponseEntity.ok(ApiResponse.ok(menu));
     }

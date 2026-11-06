@@ -123,27 +123,25 @@ public class MenuService {
         return responses;
     }
 
-    public List<MenuItemResponse> getPersonalizedMenu(Integer customerUserId, LocalDate asOfDate) {
+    public List<MenuItemResponse> getCustomerMenu(Integer customerUserId, LocalDate asOfDate, boolean filterOutConflicts) {
         DietaryProfilePort profilePort = dietaryProfilePortProvider.getIfAvailable();
-        if (profilePort == null) {
-            throw new BusinessRuleException("M1_DIETARY_INTEGRATION_UNAVAILABLE",
-                    "The personalized menu is unavailable until the M1 dietary profile adapter is configured.");
-        }
-        DietaryProfilePort.FoodProfileProjection profile = profilePort.getFoodProfileForUser(customerUserId);
-        if (profile == null) {
-            throw new BusinessRuleException("M1_DIETARY_PROFILE_UNAVAILABLE",
-                    "The personalized menu is unavailable until M1 provides the customer's food profile.");
-        }
+        DietaryProfilePort.FoodProfileProjection profile = (profilePort != null && customerUserId != null)
+                ? profilePort.getFoodProfileForUser(customerUserId)
+                : null;
         List<MenuItem> items = menuItemRepository.findAllByOrderByItemNameAsc();
         List<MenuItemIngredient> recipes = recipesForMenu(items);
-        List<MenuItemResponse> personalizedItems = new ArrayList<>();
+        List<MenuItemResponse> responses = new ArrayList<>(items.size());
         for (MenuItem item : items) {
-            if (conflictsWithFoodProfile(item, profile)) {
+            if (filterOutConflicts && profile != null && conflictsWithFoodProfile(item, profile)) {
                 continue;
             }
-            personalizedItems.add(toResponse(item, asOfDate, recipesFor(item.getId(), recipes), null));
+            responses.add(toResponse(item, asOfDate, recipesFor(item.getId(), recipes), profile));
         }
-        return personalizedItems;
+        return responses;
+    }
+
+    public List<MenuItemResponse> getPersonalizedMenu(Integer customerUserId, LocalDate asOfDate) {
+        return getCustomerMenu(customerUserId, asOfDate, true);
     }
 
     @Transactional

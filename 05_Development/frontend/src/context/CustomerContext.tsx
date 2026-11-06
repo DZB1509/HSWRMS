@@ -299,7 +299,7 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     writeCustomerPrivateValue(localStorage, 'wellness', identity, next);
   };
 
-  const activeBooking = bookings.find((b) => b.status === 'upcoming' || b.status === 'in_stay') || null;
+  const activeBooking = bookings.find((b) => b.status === 'in_stay') || bookings.find((b) => b.status === 'upcoming') || null;
 
   const refreshDeletionRequests = useCallback(async () => {
     const identity = customerIdentity;

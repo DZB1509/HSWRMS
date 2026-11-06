@@ -47,7 +47,7 @@ export const RETREAT_PACKAGES_METADATA: Record<string, RetreatPackageCulinaryMet
     durationNights: 2,
     regimen: 'Thực đơn Detox thanh lọc, nước ép lạnh hữu cơ, không đường & không chất béo bão hòa',
     targetCalories: '1.200 - 1.400 kcal/ngày',
-    itemIds: [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 4, 6],
+    itemIds: [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 3, 4, 6, 7, 8, 9, 10, 11, 12],
   },
   'RET-DETOX-05': {
     code: 'RET-DETOX-05',
@@ -56,7 +56,7 @@ export const RETREAT_PACKAGES_METADATA: Record<string, RetreatPackageCulinaryMet
     durationNights: 4,
     regimen: 'Liệu trình ăn kiêng gián đoạn / Plant-based chuyên sâu, trà thảo mộc đào thải kim loại nặng',
     targetCalories: '1.300 - 1.500 kcal/ngày',
-    itemIds: [106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 3, 7],
+    itemIds: [106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 3, 4, 6, 7, 8, 9, 10, 11, 12],
   },
   'RET-SLEEP-03': {
     code: 'RET-SLEEP-03',
