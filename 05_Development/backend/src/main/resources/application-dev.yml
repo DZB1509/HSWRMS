@@ -8,15 +8,15 @@ logging:
 
 ---
 # Dedicated SQL Server datasource for dev profile.
-# Activates only when local (in-memory H2) profile is NOT active.
+# Activates when dev profile is active.
 spring:
   config:
     activate:
       on-profile: "dev & !local"
   datasource:
-    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
-    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:sa}}
-    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:123}}
+    url: ${HSWRMS_DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:HSWRMS_TEST};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
+    username: ${HSWRMS_DB_USERNAME:${DB_USERNAME:hswrms_app_user}}
+    password: ${HSWRMS_DB_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:

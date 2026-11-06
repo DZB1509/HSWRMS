@@ -10,7 +10,9 @@ import type {
   FnbDietaryProjection
 } from '../types/dining';
 import { useCustomer } from './CustomerContext';
+import { useAuth } from '../app/providers/AuthProvider';
 import { fnbApi } from '../features/m4-fnb/api/fnbApi';
+import { MOCK_MENU_ITEMS } from '../data/mockDining';
 import type { IngredientDemandResponse } from '../features/m4-fnb/types/fnbDto';
 
 const DiningContext = createContext<DiningContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [lastInventorySyncTime, setLastInventorySyncTime] = useState<string | null>(null);
   const [inventorySyncStatus, setInventorySyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
+  const { isAuthenticated } = useAuth();
   const { profile, wellnessProfile, activeBooking } = useCustomer();
 
   // Fetch live menu catalog with available servings from backend
@@ -34,12 +37,41 @@ export const DiningProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const backendMenu = await fnbApi.getMenu(asOfDate);
       setMenuItems(backendMenu.map(item => {
+        const mockMatch = MOCK_MENU_ITEMS.find(m => 
+          m.backendId === item.id || 
+          m.name.vi.toLowerCase() === item.itemName.toLowerCase() ||
+          m.name.en.toLowerCase() === item.itemName.toLowerCase() ||
+          item.itemName.toLowerCase().includes(m.name.vi.toLowerCase()) ||
+          m.name.vi.toLowerCase().includes(item.itemName.toLowerCase())
+        );
         const value = item.itemName;
-        const category = (['starter','main','dessert','beverage','wellness_drink'].includes(String(item.category).toLowerCase()) ? String(item.category).toLowerCase() : 'main') as DietaryMenuItem['category'];
+        const localizedName = mockMatch?.name || { vi: value, en: value, 'zh-CN': value, ja: value, fr: value };
+        const itemDesc = (item as any).description || '';
+        const localizedDesc = mockMatch?.description || { vi: itemDesc, en: itemDesc, 'zh-CN': itemDesc, ja: itemDesc, fr: itemDesc };
+        const image = mockMatch?.image || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80';
+        const rawCat = String(item.category || '').toLowerCase();
+        const category = (['starter','main','dessert','beverage','wellness_drink'].includes(rawCat) 
+          ? rawCat 
+          : (mockMatch?.category || 'main')) as DietaryMenuItem['category'];
         const rawTags = Array.isArray(item.dietaryTags) ? item.dietaryTags.join(' ') : String(item.dietaryTags || '');
         const tags = rawTags.toLowerCase();
         const allergens = (item.allergenInformation || '').toLowerCase();
-        return { id: String(item.id), backendId: item.id, name: {vi:value,en:value,'zh-CN':value,ja:value,fr:value}, description:{vi:'',en:'','zh-CN':'',ja:'',fr:''}, image:'', category, mealPeriods:[(item.mealType || 'all_day').toLowerCase() as MealPeriod], dietaryTags: (['vegetarian','vegan','gluten_free','dairy_free','pescatarian'] as const).filter(tag => tags.includes(tag)) as DietaryMenuItem['dietaryTags'], allergenTags: (['nuts','shellfish','soy','eggs','fish','dairy'] as const).filter(tag => allergens.includes(tag)) as DietaryMenuItem['allergenTags'], price:item.price, isExtra:item.price > 0, available:item.available, availableServings:(item as any).availableServings ?? item.servingsAvailable ?? 0 };
+        const mealPeriod = (item.mealType || 'all_day').toLowerCase() as MealPeriod;
+        return { 
+          id: String(item.id), 
+          backendId: item.id, 
+          name: localizedName, 
+          description: localizedDesc, 
+          image, 
+          category, 
+          mealPeriods: [mealPeriod], 
+          dietaryTags: (['vegetarian','vegan','gluten_free','dairy_free','pescatarian'] as const).filter(tag => tags.includes(tag)) as DietaryMenuItem['dietaryTags'], 
+          allergenTags: (['nuts','shellfish','soy','eggs','fish','dairy'] as const).filter(tag => allergens.includes(tag)) as DietaryMenuItem['allergenTags'], 
+          price: item.price, 
+          isExtra: item.price > 0, 
+          available: item.available, 
+          availableServings: (item as any).availableServings ?? item.servingsAvailable ?? 0 
+        };
       }));
       setError(null); setIsInventoryStale(false);
     } catch (err) {
@@ -79,7 +111,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
     refreshMenu();
     // Do NOT call refreshInventory() globally on mount, as customers do not have ROLE_F&B STAFF.
     // Kitchen operational pages (MealPrepListPage, FnbDashboardPage) invoke refreshInventory() directly.
-  }, [refreshMenu]);
+  }, [refreshMenu, isAuthenticated]);
 
   useEffect(() => {
     const rawId = String(activeBooking?.id || '').trim();

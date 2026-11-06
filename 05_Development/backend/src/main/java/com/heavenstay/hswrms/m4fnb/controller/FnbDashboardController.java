@@ -21,7 +21,9 @@ public class FnbDashboardController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<FnbDashboardResponse>> getDashboard(
-            @RequestParam(required = false) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.ok(dashboardService.getDashboard(date == null ? LocalDate.now() : date)));
+            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) LocalDate asOfDate) {
+        LocalDate targetDate = date != null ? date : (asOfDate != null ? asOfDate : LocalDate.now());
+        return ResponseEntity.ok(ApiResponse.ok(dashboardService.getDashboard(targetDate)));
     }
 }

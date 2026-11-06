@@ -27,6 +27,7 @@ export interface MenuItemResponse {
   available: boolean;
   servingsAvailable: number;
   allergenWarning: boolean;
+  description?: string | null;
 }
 
 export interface MenuAvailabilityResponse {
@@ -193,10 +194,19 @@ export interface IngredientDemandResponse {
 }
 
 export interface FnbDashboardResponse {
-  retreatMealOrders: number;
-  alaCarteOrders: number;
-  pendingOrders: number;
-  preparingOrders: number;
+  kpis?: {
+    totalOrders: number;
+    retreatMealOrders: number;
+    alaCarteOrders: number;
+    pendingOrders: number;
+    preparingOrders: number;
+    dietaryAlerts: number;
+  };
+  retreatMealOrders?: number;
+  alaCarteOrders?: number;
+  pendingOrders?: number;
+  preparingOrders?: number;
+  todaysMealOrders?: KitchenOrderResponse[];
   menuAvailability: MenuAvailabilityResponse[];
   ingredientDemand: IngredientDemandResponse[];
 }

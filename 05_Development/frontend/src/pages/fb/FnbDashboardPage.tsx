@@ -67,13 +67,16 @@ export const FnbDashboardPage: React.FC = () => {
   // Prep queue from dining context for the selected date
   const todaysList = getDailyPrepList(resortDate);
 
-  const mealsToPrepare = dashboardMetrics?.retreatMealOrders ?? todaysList.filter((item) => item.type === 'retreat_meal').length;
-  const extraOrders = dashboardMetrics?.alaCarteOrders ?? todaysList.filter((item) => item.type === 'a_la_carte').length;
-  const dietaryAlerts = todaysList.filter((item) => item.dietaryNotes.length > 0).length;
-  const pendingCount = dashboardMetrics?.pendingOrders ?? todaysList.filter((item) => item.status === 'pending').length;
-  const preparingCount = dashboardMetrics?.preparingOrders ?? todaysList.filter((item) => item.status === 'preparing').length;
+  const kpis = dashboardMetrics?.kpis;
+  const mealsToPrepare = kpis?.retreatMealOrders ?? dashboardMetrics?.retreatMealOrders ?? todaysList.filter((item) => item.type === 'retreat_meal').length;
+  const extraOrders = kpis?.alaCarteOrders ?? dashboardMetrics?.alaCarteOrders ?? todaysList.filter((item) => item.type === 'a_la_carte').length;
+  const dietaryAlerts = kpis?.dietaryAlerts ?? (dashboardMetrics as any)?.dietaryAlerts ?? todaysList.filter((item) => item.dietaryNotes.length > 0).length;
+  const pendingCount = kpis?.pendingOrders ?? dashboardMetrics?.pendingOrders ?? todaysList.filter((item) => item.status === 'pending').length;
+  const preparingCount = kpis?.preparingOrders ?? dashboardMetrics?.preparingOrders ?? todaysList.filter((item) => item.status === 'preparing').length;
 
-  // Shortage calculations
+  // Demand and shortage calculations
+  const totalRequiredQuantity = ingredientDemand.reduce((sum, item) => sum + (item.requiredQuantity || 0), 0);
+  const hasActiveDemand = totalRequiredQuantity > 0 || mealsToPrepare > 0 || extraOrders > 0;
   const shortages = ingredientDemand.filter((item) => item.status === 'SHORTAGE' || item.shortfall > 0);
   const shortageCount = shortages.length;
 
@@ -269,7 +272,7 @@ export const FnbDashboardPage: React.FC = () => {
             View Demand Table
           </a>
         </div>
-      ) : (
+      ) : hasActiveDemand && shortageCount === 0 ? (
         <div
           style={{
             background: 'var(--surface-success, #edf7ee)',
@@ -288,7 +291,46 @@ export const FnbDashboardPage: React.FC = () => {
             <strong>All Raw Materials Covered:</strong> Usable stock in the kitchen meets all active meal order requirements for {resortDate}.
           </div>
         </div>
-      )}
+      ) : !hasActiveDemand && apiOnline ? (
+        <div
+          style={{
+            background: 'var(--bg-soft, #f4f1eb)',
+            border: '1px solid var(--border-subtle, #e5e2dc)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3) var(--space-4)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+          id="fnb-no-orders-scheduled-banner"
+        >
+          <Calendar size={18} style={{ color: 'var(--accent-forest, #2d3e2c)', flexShrink: 0 }} />
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary, #4a4a4a)', fontWeight: 500 }}>
+            <strong>{t('fnb.dashboard.noDemandTitle', 'Không có đơn ăn cần chuẩn bị cho ngày')} {resortDate}:</strong>{' '}
+            {t('fnb.dashboard.noDemandDesc', 'Bếp chưa ghi nhận khẩu phần thực dưỡng hoặc gọi món a-la-carte cần chế biến. Nhu cầu nguyên liệu phát sinh bằng 0.')}
+          </div>
+        </div>
+      ) : !apiOnline ? (
+        <div
+          style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3) var(--space-4)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+          id="fnb-raw-material-offline-banner"
+        >
+          <AlertCircle size={20} style={{ color: '#dc2626' }} />
+          <div style={{ fontSize: '13px', color: '#991b1b', fontWeight: 500 }}>
+            <strong>Chưa kết nối Backend:</strong> Đang kết nối hoặc không thể truy cập dịch vụ F&B. Vui lòng kiểm tra API status.
+          </div>
+        </div>
+      ) : null}
 
       {/* 2. 4-KPI Compact Grid */}
       <div className="hsw-fb-kpi-grid">

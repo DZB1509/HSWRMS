@@ -1949,6 +1949,9 @@ CREATE TABLE dbo.FolioItem (
 
     voided_adjustment_request_id INT NULL,
 
+    adjusted_amount     DECIMAL(18,2) NOT NULL
+        CONSTRAINT DF_FolioItem_AdjustedAmount DEFAULT (0),
+
 
 
     CONSTRAINT FK_FolioItem_Folio

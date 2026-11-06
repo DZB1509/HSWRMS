@@ -116,6 +116,9 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             }
             order.getItems().clear();
             order.setOrderStatus("PENDING");
+            if (request.getNotes() != null) {
+                order.setSpecialNotes(request.getNotes().trim());
+            }
         } else {
             order = new MealOrderEntity();
             order.setRetreatBooking(booking);
@@ -124,6 +127,9 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             order.setOrderType("DAILY_MEAL");
             order.setOrderStatus("PENDING");
             order.setCreatedAt(LocalDateTime.now());
+            if (request.getNotes() != null) {
+                order.setSpecialNotes(request.getNotes().trim());
+            }
         }
 
         MealOrderEntity saved = mealOrderRepository.save(order);
@@ -170,6 +176,22 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         order.setOrderType("A_LA_CARTE");
         order.setOrderStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
+
+        StringBuilder specialNotesBuilder = new StringBuilder();
+        if (request.getLocation() != null && !request.getLocation().isBlank()) {
+            specialNotesBuilder.append("Location: ").append(request.getLocation().trim());
+        }
+        if (request.getItems() != null) {
+            for (AlaCarteItemRequest itemReq : request.getItems()) {
+                if (itemReq.getNotes() != null && !itemReq.getNotes().isBlank()) {
+                    if (specialNotesBuilder.length() > 0) specialNotesBuilder.append("; ");
+                    specialNotesBuilder.append(itemReq.getNotes().trim());
+                }
+            }
+        }
+        if (specialNotesBuilder.length() > 0) {
+            order.setSpecialNotes(specialNotesBuilder.toString());
+        }
 
         MealOrderEntity saved = mealOrderRepository.save(order);
 
@@ -231,7 +253,7 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
             }
 
             // Check if guest has allergy notes
-            if (hasDietaryAlerts(o.getRetreatBooking())) {
+            if (hasDietaryAlerts(o)) {
                 dietaryAlerts++;
             }
         }
@@ -503,13 +525,24 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         }
     }
 
-    private boolean hasDietaryAlerts(RetreatBooking booking) {
-        if (booking == null || booking.getCustomerProfileId() == null) {
-            return false;
+    private boolean hasDietaryAlerts(MealOrderEntity order) {
+        if (order == null) return false;
+        Integer bookingId = order.getRetreatBooking() != null
+                ? order.getRetreatBooking().getRetreatBookingId()
+                : order.getRetreatBookingId();
+        if (bookingId == null) return false;
+
+        RetreatBooking booking = order.getRetreatBooking();
+        if (booking == null && bookingRepository != null) {
+            booking = bookingRepository.findById(bookingId).orElse(null);
         }
-        DietaryProfilePort.FoodProfileProjection profile =
-                dietaryProfilePort.getFoodProfileForCustomerProfile(booking.getCustomerProfileId());
-        return !profile.foodAllergies().isEmpty() || !profile.dietaryPreferences().isEmpty();
+        Integer profileId = booking != null ? booking.getCustomerProfileId() : null;
+        if (profileId != null) {
+            DietaryProfilePort.FoodProfileProjection profile =
+                    dietaryProfilePort.getFoodProfileForCustomerProfile(profileId);
+            return profile != null && (!profile.foodAllergies().isEmpty() || !profile.dietaryPreferences().isEmpty());
+        }
+        return false;
     }
 
     private MealPrepEntryDto mapToPrepEntryDto(MealOrderEntity order) {
@@ -520,21 +553,40 @@ public class FnbKdsOrderServiceImpl implements FnbKdsOrderService {
         dto.setMealPeriod(order.getMealType());
         dto.setTargetTime(order.getMealType());
         dto.setStatus(order.getOrderStatus().toLowerCase());
+        dto.setCustomerNotes(order.getSpecialNotes());
 
-        RetreatBooking booking = order.getRetreatBooking();
-        if (booking != null) {
+        Integer bookingId = order.getRetreatBooking() != null
+                ? order.getRetreatBooking().getRetreatBookingId()
+                : order.getRetreatBookingId();
+
+        if (bookingId != null) {
             BookingContextPort.FnbBookingContext bookingCtx =
-                    bookingContextPort.getKitchenBookingContext(booking.getRetreatBookingId());
-            dto.setCustomerName(bookingCtx.guestFullName());
-            dto.setVillaNumber(bookingCtx.villaNumber());
+                    bookingContextPort.getKitchenBookingContext(bookingId);
+            if (bookingCtx != null) {
+                dto.setCustomerName(bookingCtx.guestFullName());
+                dto.setVillaNumber(bookingCtx.villaNumber());
+            }
 
-            // Sensitive data minimization projection: Only dietary & allergies via DietaryProfilePort
-            DietaryProfilePort.FoodProfileProjection profile =
-                    dietaryProfilePort.getFoodProfileForCustomerProfile(booking.getCustomerProfileId());
-            List<String> dietaryNotes = new ArrayList<>();
-            dietaryNotes.addAll(profile.foodAllergies());
-            dietaryNotes.addAll(profile.dietaryPreferences());
-            dto.setDietaryNotes(dietaryNotes);
+            RetreatBooking booking = order.getRetreatBooking();
+            if (booking == null && bookingRepository != null) {
+                booking = bookingRepository.findById(bookingId).orElse(null);
+            }
+            Integer profileId = booking != null ? booking.getCustomerProfileId() : null;
+            if (profileId != null) {
+                DietaryProfilePort.FoodProfileProjection profile =
+                        dietaryProfilePort.getFoodProfileForCustomerProfile(profileId);
+                List<String> dietaryNotes = new ArrayList<>();
+                dietaryNotes.addAll(profile.foodAllergies());
+                dietaryNotes.addAll(profile.dietaryPreferences());
+                dto.setDietaryNotes(dietaryNotes);
+            } else if (bookingCtx != null && bookingCtx.customerUserId() != null) {
+                DietaryProfilePort.FoodProfileProjection profile =
+                        dietaryProfilePort.getFoodProfileForUser(bookingCtx.customerUserId());
+                List<String> dietaryNotes = new ArrayList<>();
+                dietaryNotes.addAll(profile.foodAllergies());
+                dietaryNotes.addAll(profile.dietaryPreferences());
+                dto.setDietaryNotes(dietaryNotes);
+            }
         }
 
         List<MealOrderItemDto> itemDtos = new ArrayList<>();

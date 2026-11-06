@@ -335,6 +335,12 @@ export const fnbApi = {
         status: d.status || d.alert || (d.shortfall > 0 ? 'SHORTAGE' : 'COVERED'),
       }));
     }
+    if (unwrapped && unwrapped.kpis) {
+      unwrapped.retreatMealOrders = unwrapped.kpis.retreatMealOrders;
+      unwrapped.alaCarteOrders = unwrapped.kpis.alaCarteOrders;
+      unwrapped.pendingOrders = unwrapped.kpis.pendingOrders;
+      unwrapped.preparingOrders = unwrapped.kpis.preparingOrders;
+    }
     return unwrapped;
   },
 

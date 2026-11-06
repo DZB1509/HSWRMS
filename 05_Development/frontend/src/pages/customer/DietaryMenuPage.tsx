@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDining } from '../../context/DiningContext';
 import type { DietaryMenuItem, MealPeriod, LocalizedString } from '../../types/dining';
@@ -11,9 +11,17 @@ import { DietaryBadgeList } from '../../components/dining/DietaryBadgeList';
 
 const DietaryMenuPageForIdentity: React.FC = () => {
   const { t, i18n } = useTranslation('customer');
-  const { menuItems, getDietaryProjection } = useDining();
+  const { menuItems, getDietaryProjection, refreshMenu } = useDining();
   const { profile } = useCustomer();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (menuItems.length === 0 && refreshMenu) {
+      setIsLoading(true);
+      refreshMenu().finally(() => setIsLoading(false));
+    }
+  }, [menuItems.length, refreshMenu]);
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | null): string => {
@@ -221,8 +229,20 @@ const DietaryMenuPageForIdentity: React.FC = () => {
         })}
       </div>
 
+      {/* Loading state */}
+      {isLoading && filteredItems.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 'var(--space-12) var(--space-6)', color: 'var(--text-secondary)' }}>
+          <div className="spin" style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
+            <Coffee size={32} style={{ color: 'var(--accent-forest)' }} />
+          </div>
+          <p style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+            {t('dining.menu.loading', 'Loading dietary menu offerings...')}
+          </p>
+        </div>
+      )}
+
       {/* Empty State (Requirement 42) */}
-      {filteredItems.length === 0 && (
+      {!isLoading && filteredItems.length === 0 && (
         <div
           style={{
             textAlign: 'center',
