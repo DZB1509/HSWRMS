@@ -27,6 +27,10 @@ import {
   type VillaCategoryDto,
   type BookingCalculationResponse,
 } from '../../api/booking/retreatBookingApi';
+import {
+  resolvePackageName,
+  resolveVillaCategoryName,
+} from '../../i18n/dynamicContent';
 
 export const RetreatBookingPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -598,7 +602,7 @@ const RetreatBookingPageForIdentity: React.FC = () => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                           <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: isSelected ? 'var(--accent-forest)' : 'var(--text-primary)' }}>
-                            {pkg.packageName} ({pkg.packageCode})
+                            {resolvePackageName(pkg.packageCode || pkg.packageName, i18n.language, pkg.packageName)} ({pkg.packageCode})
                           </span>
                           <span style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--accent-forest)' }}>
                             {formatVND(pkg.basePrice, i18n.language)}
@@ -653,7 +657,7 @@ const RetreatBookingPageForIdentity: React.FC = () => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                           <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: isSelected ? 'var(--accent-forest)' : 'var(--text-primary)' }}>
-                            {cat.categoryName}
+                            {resolveVillaCategoryName(cat.categoryName, i18n.language, cat.categoryName)}
                           </span>
                           <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
                             {cat.priceModifier > 0 ? `+${formatVND(cat.priceModifier, i18n.language)}` : 'Đã bao gồm'}

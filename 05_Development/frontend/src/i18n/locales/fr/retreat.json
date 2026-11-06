@@ -6,7 +6,9 @@
     "filterAll": "Tous les Séjours",
     "filterShort": "Escapade Courte (3 Jours)",
     "filterMedium": "Immersion Signature (5 Jours)",
-    "filterLong": "Transformation Profonde (7 Jours)"
+    "filterLong": "Transformation Profonde (7 Jours)",
+    "filterFourDays": "4 Jours · Rétablissement",
+    "noPackagesFound": "Aucun forfait de retraite correspondant à la durée sélectionnée n'a été trouvé dans la base de données."
   },
   "detail": {
     "backToList": "Retour à la collection des séjours",
@@ -23,6 +25,36 @@
     "readyToBook": "Prêt à Entamer Votre Parenthèse Bien-être ?",
     "ctaBookHero": "Réserver le Séjour Maintenant",
     "ctaBook": "Réserver ce Séjour",
-    "depositNote": "Le versement d'un acompte garantit votre villa privée et l'accès prioritaire au calendrier des thérapeutes."
+    "depositNote": "Le versement d'un acompte garantit votre villa privée et l'accès prioritaire au calendrier des thérapeutes.",
+    "notFoundTitle": "Forfait de retraite introuvable",
+    "notFoundDesc": "Impossible de trouver les informations de ce forfait de retraite dans la base de données (MSG01 : aucun résultat).",
+    "targetGuest": "Idéal pour : ",
+    "treatmentsTitle": "Soins & Thérapies",
+    "includedTreatmentsHeading": "Soins de bien-être inclus",
+    "dietaryHeading": "Programme de nutrition bien-être",
+    "organicNutrition": "Nutrition pure et artisanale",
+    "policyTitle": "Politiques & Suppléments",
+    "includedNotice": "Inclusions et conditions du forfait",
+    "villasTitle": "Hébergements de sérénité",
+    "eligibleVillas": "Villas sanctuaires éligibles pour cette retraite"
+  },
+  "retreat": {
+    "detail": {
+      "notFoundTitle": "Forfait de retraite introuvable",
+      "notFoundDesc": "Impossible de trouver les informations de ce forfait de retraite dans la base de données (MSG01 : aucun résultat).",
+      "targetGuest": "Idéal pour : ",
+      "treatmentsTitle": "Soins & Thérapies",
+      "includedTreatmentsHeading": "Soins de bien-être inclus",
+      "dietaryHeading": "Programme de nutrition bien-être",
+      "organicNutrition": "Nutrition pure et artisanale",
+      "policyTitle": "Politiques & Suppléments",
+      "includedNotice": "Inclusions et conditions du forfait",
+      "villasTitle": "Hébergements de sérénité",
+      "eligibleVillas": "Villas sanctuaires éligibles pour cette retraite"
+    },
+    "list": {
+      "filterFourDays": "4 Jours · Rétablissement",
+      "noPackagesFound": "Aucun forfait de retraite correspondant à la durée sélectionnée n'a été trouvé dans la base de données."
+    }
   }
 }

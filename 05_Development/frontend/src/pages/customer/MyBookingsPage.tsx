@@ -19,6 +19,10 @@ import {
   type CustomerBookingSummary,
 } from '../../api/booking/retreatBookingApi';
 import { formatVND } from '../../i18n';
+import {
+  resolvePackageName,
+  resolveVillaCategoryName,
+} from '../../i18n/dynamicContent';
 
 type FilterTab = 'all' | 'upcoming' | 'completed' | 'cancelled';
 
@@ -259,8 +263,8 @@ export const MyBookingsPage: React.FC = () => {
           !loading && !loadError && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
               {filteredBookings.map((b) => {
-                const pkgName = b.packageName;
-                const villaName = b.requestedCategoryName;
+                const pkgName = resolvePackageName((b as any).packageCode || b.packageName, i18n.language, b.packageName);
+                const villaName = resolveVillaCategoryName(b.requestedCategoryName, i18n.language, b.requestedCategoryName);
 
                 return (
                   <div

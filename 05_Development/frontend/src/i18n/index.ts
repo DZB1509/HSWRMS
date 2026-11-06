@@ -68,95 +68,65 @@ const getInitialLanguage = (): SupportedLanguageCode => {
   return 'vi';
 };
 
-const resources = {
-  vi: {
-    common: {
-      ...viCommon,
-      landing: viLanding,
-      retreat: viRetreat,
-      auth: viAuth,
-      customer: viCustomer,
-      operations: viOperations,
-      ...viNav,
+const deepMerge = (...objects: any[]): any => {
+  const result: any = {};
+  for (const obj of objects) {
+    if (!obj || typeof obj !== 'object') continue;
+    for (const [key, val] of Object.entries(obj)) {
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        result[key] = deepMerge(result[key] || {}, val);
+      } else {
+        result[key] = val;
+      }
+    }
+  }
+  return result;
+};
+
+const buildLocaleResources = (
+  common: any,
+  nav: any,
+  landing: any,
+  retreat: any,
+  auth: any,
+  customer: any,
+  operations: any
+) => {
+  const mergedCommon = deepMerge(
+    common,
+    nav,
+    { landing, retreat, auth, customer, operations },
+    customer,
+    operations
+  );
+  mergedCommon.common = common;
+
+  return {
+    common: mergedCommon,
+    navigation: nav,
+    landing,
+    retreat,
+    auth: {
+      ...auth,
+      auth,
     },
-    navigation: viNav,
-    landing: viLanding,
-    retreat: viRetreat,
-    auth: viAuth,
-    customer: viCustomer,
+    customer: {
+      ...customer,
+      customer,
+    },
     operations: {
-      ...viOperations,
-      operations: viOperations,
+      ...operations,
+      operations,
     },
-  },
-  en: {
-    common: {
-      ...enCommon,
-      landing: enLanding,
-      retreat: enRetreat,
-      auth: enAuth,
-      customer: enCustomer,
-      operations: enOperations,
-      ...enNav,
-    },
-    navigation: enNav,
-    landing: enLanding,
-    retreat: enRetreat,
-    auth: enAuth,
-    customer: enCustomer,
-    operations: enOperations,
-  },
-  'zh-CN': {
-    common: {
-      ...zhCommon,
-      landing: zhLanding,
-      retreat: zhRetreat,
-      auth: zhAuth,
-      customer: zhCustomer,
-      operations: zhOperations,
-      ...zhNav,
-    },
-    navigation: zhNav,
-    landing: zhLanding,
-    retreat: zhRetreat,
-    auth: zhAuth,
-    customer: zhCustomer,
-    operations: zhOperations,
-  },
-  ja: {
-    common: {
-      ...jaCommon,
-      landing: jaLanding,
-      retreat: jaRetreat,
-      auth: jaAuth,
-      customer: jaCustomer,
-      operations: jaOperations,
-      ...jaNav,
-    },
-    navigation: jaNav,
-    landing: jaLanding,
-    retreat: jaRetreat,
-    auth: jaAuth,
-    customer: jaCustomer,
-    operations: jaOperations,
-  },
-  fr: {
-    common: {
-      ...frCommon,
-      landing: frLanding,
-      retreat: frRetreat,
-      auth: frAuth,
-      customer: frCustomer,
-      operations: frOperations,
-      ...frNav,
-    },
-    navigation: frNav,
-    landing: frLanding,
-    retreat: frRetreat,
-    auth: frAuth,
-    customer: frCustomer,
-    operations: frOperations,
-  },
+  };
+};
+
+const resources = {
+  vi: buildLocaleResources(viCommon, viNav, viLanding, viRetreat, viAuth, viCustomer, viOperations),
+  en: buildLocaleResources(enCommon, enNav, enLanding, enRetreat, enAuth, enCustomer, enOperations),
+  'zh-CN': buildLocaleResources(zhCommon, zhNav, zhLanding, zhRetreat, zhAuth, zhCustomer, zhOperations),
+  ja: buildLocaleResources(jaCommon, jaNav, jaLanding, jaRetreat, jaAuth, jaCustomer, jaOperations),
+  fr: buildLocaleResources(frCommon, frNav, frLanding, frRetreat, frAuth, frCustomer, frOperations),
 };
 
 
@@ -177,8 +147,14 @@ export const changeLanguage = (langCode: SupportedLanguageCode) => {
   i18n.changeLanguage(langCode);
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_LANG_KEY, langCode);
+    window.dispatchEvent(new CustomEvent('hswrms_language_changed', { detail: { lang: langCode } }));
   }
 };
+
+if (typeof window !== 'undefined') {
+  (window as any).hswrmsChangeLanguage = changeLanguage;
+  (window as any).hswrmsI18n = i18n;
+}
 
 /**
  * Currency Formatting: VND remains the project pricing currency.

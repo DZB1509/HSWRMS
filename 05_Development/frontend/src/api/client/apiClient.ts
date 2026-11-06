@@ -53,9 +53,11 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
   }
 
   const token = getAuthToken();
+  const currentLang = (typeof window !== 'undefined' && localStorage.getItem('hswrms_language')) || 'vi';
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    'Accept-Language': currentLang,
     ...(headers as Record<string, string>),
   };
 

@@ -1,7 +1,7 @@
 {
   "nav": {
-    "retreats": "疗愈假期",
-    "villas": "下榻居所",
+    "retreats": "疗愈套餐",
+    "villas": "静谧别墅",
     "spa": "水疗与理疗",
     "dining": "养生美馔",
     "experiences": "沉浸体验",
@@ -27,5 +27,7 @@
     "zh-CN": "简体中文",
     "ja": "日本語",
     "fr": "Français"
-  }
+  },
+  "retreats": "疗愈套餐",
+  "villas": "静谧别墅"
 }

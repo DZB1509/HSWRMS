@@ -24,6 +24,10 @@ import {
   identityScopedReducer,
   selectIdentityScopedState,
 } from '../utils/identityScopedState';
+import {
+  resolvePackageLocalized,
+  resolveVillaCategoryLocalized,
+} from '../i18n/dynamicContent';
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
@@ -214,29 +218,26 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const nights = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
           const days = nights + 1;
 
+          const localizedRetreatName = resolvePackageLocalized(
+            (s as any).packageCode || s.retreatPackageId || s.packageName,
+            packageTitle
+          );
+          const localizedVillaType = resolveVillaCategoryLocalized(
+            s.requestedVillaCategoryId || s.requestedCategoryName,
+            villaTitle
+          );
+
           return {
             id: String(s.retreatBookingId),
             bookingReference: bookingRef,
             retreatSlug: (s.packageName || 'retreat').toLowerCase().replace(/\s+/g, '-'),
-            retreatName: {
-              vi: packageTitle,
-              en: packageTitle,
-              'zh-CN': packageTitle,
-              ja: packageTitle,
-              fr: packageTitle,
-            },
+            retreatName: localizedRetreatName,
             heroImage: '/images/hero-resort-cliff.jpg',
             startDate: s.checkInDate,
             endDate: s.checkOutDate,
             days,
             nights,
-            villaType: {
-              vi: villaTitle,
-              en: villaTitle,
-              'zh-CN': villaTitle,
-              ja: villaTitle,
-              fr: villaTitle,
-            },
+            villaType: localizedVillaType,
             villaNumber: s.assignedVillaNumber || undefined,
             status,
             totalPrice: s.totalEstimatedAmount,

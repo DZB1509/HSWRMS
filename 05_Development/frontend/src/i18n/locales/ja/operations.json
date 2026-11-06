@@ -40,8 +40,7 @@
     "manager": "マネージャー",
     "admin": "管理者",
     "delegatedAdministration": "委譲された管理権限",
-    "businessParametersDelegated": "ビジネスパラメータ（委譲済）",
-    "bookingHistory": "予約履歴"
+    "businessParametersDelegated": "ビジネスパラメータ（委譲済）"
   },
   "payment": {
     "requiredDeposit": "所要デポジット",
@@ -65,8 +64,8 @@
     "shiftOverview": "シフト概況",
     "resortDate": "リゾート日付",
     "dateValue": "2026年9月24日 木曜日",
-    "role": "権限",
-    "operationalNotifications": "運営通知",
+    "role": "役割",
+    "operationalNotifications": "業務通知",
     "today": "本日",
     "customer": "お客様",
     "bookingRef": "予約番号",
@@ -111,7 +110,9 @@
     "assignNow": "今すぐ割り当て",
     "arrivedAt": "{{time}} 到着済",
     "nightsRetreat": "{{count}}泊リトリート",
-    "toDate": "〜 {{date}}"
+    "toDate": "〜 {{date}}",
+    "closeMenu": "メニューを閉じる",
+    "openMenu": "メニューを開く"
   },
   "dashboard": {
     "title": "フロントデスク・受付オペレーション",
@@ -153,7 +154,8 @@
     "submittedToPolice": "管轄局へ提出済み",
     "submitAllReady": "準備完了分を一括提出",
     "noArrivalsFound": "条件に一致する到着データは見つかりませんでした。",
-    "emptySearchHelper": "検索条件を変更するか、ステータス絞り込みを解除してください。"
+    "emptySearchHelper": "検索条件を変更するか、ステータス絞り込みを解除してください。",
+    "noArrivals": "本日の到着予定ゲストはいません（SQL Server：0 件）"
   },
   "checkIn": {
     "title": "チェックイン手続き・滞在届情報",
@@ -327,7 +329,8 @@
     "folioStatusNote": "チェックアウト時フォリオ転記待ち — チェックアウト時に最終精算されます。",
     "readyToConfirm": "すべての前提条件が有効です",
     "incompletePill": "選択が未完了です",
-    "confirmAction": "追加スパセッションを確定する"
+    "confirmAction": "追加スパセッションを確定する",
+    "step3DisabledHint": "前提条件：ステップ2でトリートメントを選択してください"
   },
   "therapist": {
     "dashboard": "セラピストダッシュボード",
@@ -393,25 +396,36 @@
     "colRoom": "施術室",
     "colStatus": "状態",
     "colAction": "操作",
-    "start": "開始"
+    "start": "開始",
+    "title": "セラピスト",
+    "scheduled": "予約済み",
+    "scheduleSubtitle": "選択された日の担当セッション一覧",
+    "sessionNotFoundDesc": "指定されたセッションが見つからないか、閲覧権限がありません。",
+    "sessionNoShow": "不参加（No-Show）として記録"
   },
   "fnb": {
     "dashboard": {
-      "title": "F&B ダッシュボード",
-      "subtitle": "本日の厨房調理および配膳業務の概要。",
-      "viewPrepList": "調理リスト全体を表示",
-      "retreatMeals": "リトリート食事（本日）",
-      "extraOrders": "アラカルト追加注文",
-      "dietaryAlerts": "アレルギー・制限事項",
-      "pendingPreparing": "調理待ち / 調理中",
-      "urgentQueue": "緊急調理キュー（プレビュー）",
-      "noQueue": "調理キューに注文はありません。",
+      "title": "調理・厨房ダッシュボード",
+      "subtitle": "毎日の食事注文、バッチ仕込み、食物アレルギー警告をリアルタイムで管理します。",
+      "viewPrepList": "仕込みキューを開く",
+      "retreatMeals": "リトリート定食",
+      "extraOrders": "アラカルト注文",
+      "dietaryAlerts": "食事・アレルギー警告",
+      "pendingPreparing": "保留中 / 調理中",
+      "urgentQueue": "優先仕込みキュー",
+      "noQueue": "現在処理待ちの厨房伝票はありません。",
       "customer": "お客様",
       "villa": "ヴィラ",
       "items": "品目数",
       "status": "状態",
       "action": "操作",
-      "viewDetails": "詳細"
+      "viewDetails": "詳細",
+      "shortageBannerTitle": "調理原材料の不足が検出されました",
+      "shortageBannerDesc": "本日の食事オーダーを満たすための現在利用可能な厨房在庫が不足しています。補充が行われない場合、一部メニューの提供が休止される可能性があります。",
+      "noDemandTitle": "この日の食事オーダーはありません：",
+      "noDemandDesc": "指定された日付にはリトリートミールやアラカルトの調理予定はありません。原材料の必要需要はゼロです。",
+      "rawMaterialTitle": "原材料需要＆在庫不足モニタリング",
+      "viewAll": "すべて表示"
     },
     "prepList": {
       "title": "日別調理・配膳キュー",
@@ -425,9 +439,9 @@
       "typeExtra": "アラカルト",
       "status": "ステータス",
       "allStatuses": "全ステータス",
-      "statusPending": "調理待ち",
+      "statusPending": "待機中",
       "statusPreparing": "調理中",
-      "statusReady": "調理完了",
+      "statusReady": "配膳準備完了",
       "statusDelivered": "配膳済み",
       "dietaryAttention": "アレルギー等注意のみ",
       "colTime": "時間帯 / 時間",
@@ -442,41 +456,68 @@
       "viewDetails": "詳細",
       "noResults": "条件に一致する調理品目はありません。",
       "clearFilters": "フィルター解除",
-      "pageShowing": "{{total}} 件中 {{start}}–{{end}} 件を表示"
+      "pageShowing": "{{total}} 件中 {{start}}–{{end}} 件を表示",
+      "dietaryAttentionOnly": "アレルギー注意料理のみ",
+      "resetFilters": "フィルターリセット",
+      "details": "レシピ・分量詳細",
+      "batchScalingTitle": "バッチ仕込み量換算",
+      "batchScalingSubtitle": "滞在客定員に基づいて自動計算",
+      "servingsVolume": "目標ボリューム",
+      "servingsCount": "提供数",
+      "ingredientName": "原材料",
+      "unit": "単位",
+      "statusCancelled": "キャンセル済み",
+      "physicalStockTitle": "実際の厨房利用可能在庫（FEFO先入れ先出し）",
+      "physicalStockSubtitle": "有効なロットからの実質利用可能原材料数（FEFO：新鮮、良好、期限間近優先）。",
+      "searchIngredientPlaceholder": "原材料名を検索...",
+      "noMatchingOrders": "選択された日付とフィルターに一致する調理品目はありません。",
+      "hideRecipe": "レシピを折りたたむ",
+      "viewRecipe": "レシピを表示"
     },
     "orderDetail": {
-      "notFound": "注文が見つかりません",
+      "notFound": "オーダーが見つかりません",
       "backToList": "調理キューに戻る",
-      "subtitle": "調理詳細および食事制限要件。",
-      "orderItems": "注文品目",
+      "subtitle": "調理詳細およびゲストの食事配慮事項。",
+      "orderItems": "注文内容",
       "itemsCount": "品",
-      "customerNotes": "お客様からの調理リクエスト",
-      "deliveryInfo": "お届け先情報",
+      "customerNotes": "リゾート滋養ダイニングサービス＆注意事項",
+      "deliveryInfo": "配膳情報",
       "customerName": "お客様氏名",
       "location": "お届け先",
-      "targetTime": "希望時刻",
-      "dietaryProfile": "アレルギー・食事制限",
-      "allergiesTitle": "アレルギー・要厳重警戒",
-      "dietaryPreferencesTitle": "食事制限・志向",
+      "targetTime": "予定時間",
+      "dietaryProfile": "アレルギー＆食事制限",
+      "allergiesTitle": "最重要アレルギー注意項目",
+      "dietaryPreferencesTitle": "食事の好み",
       "noAllergies": "このお客様には特別なアレルギーや食事制限の記録はありません。",
-      "privacyNote": "個人情報保護について：調理に必要な食事情報のみを表示しています。医療詳細は非表示です。",
-      "orderTypeRetreat": "リトリート食事",
+      "privacyNote": "プライバシー告知：調理に直接関係する食事制限情報のみがF&Bチームに表示されます。",
+      "orderTypeRetreat": "リトリート規定食",
       "orderTypeExtra": "アラカルト注文",
-      "statusLabel": "調理ステータス"
+      "statusLabel": "ステータス"
     },
     "prep": {
-      "time": "時間",
-      "customer": "お客様",
-      "type": "種別",
+      "time": "時間帯 / 区分",
+      "customer": "ゲスト＆ヴィラ",
+      "type": "オーダー種別",
       "status": "ステータス",
-      "typeRetreat": "リトリート食事",
-      "typeExtra": "アラカルト"
+      "typeRetreat": "リトリート規定食",
+      "typeExtra": "アラカルト",
+      "items": "品目",
+      "action": "操作",
+      "details": "詳細"
     },
     "status": {
       "pending": "調理待ち",
       "preparing": "調理中",
       "ready": "調理完了",
-      "delivered": "配膳済み"
+      "delivered": "配膳済み",
+      "cancelled": "キャンセル済み"
+    },
+    "inventory": {
+      "consumed": "出庫完了",
+      "notConfigured": "レシピ未設定",
+      "insufficient": "在庫不足",
+      "failed": "出庫エラー",
+      "pending": "出庫待ち"
     }
   },
   "manager": {
@@ -510,7 +551,9 @@
       "spaStream": "スパ・セラピー",
       "fnbStream": "養生ダイニング",
       "revenueLabel": "売上",
-      "amountLabel": "金額"
+      "amountLabel": "金額",
+      "totalRevenue": "総売上",
+      "exportExcel": "Excel出力 (.xlsx)"
     },
     "occupancy": {
       "title": "ヴィラ稼働状況・稼働率レポート",
@@ -580,15 +623,303 @@
     }
   },
   "operations": {
+    "common": {
+      "dashboard": "レセプション管理ダッシュボード",
+      "arrivals": "本日の到着リスト",
+      "checkIn": "チェックイン手続き・滞在届",
+      "villaAssignment": "ヴィラ割り当て",
+      "villaStatus": "ヴィラステータス管理",
+      "shiftOverview": "シフト概況",
+      "resortDate": "リゾート日付",
+      "dateValue": "2026年9月24日 木曜日",
+      "role": "役割",
+      "operationalNotifications": "業務通知",
+      "today": "本日",
+      "customer": "お客様",
+      "bookingRef": "予約番号",
+      "retreat": "リトリートプラン",
+      "dates": "滞在日程",
+      "partySize": "宿泊人数",
+      "villa": "ヴィラ",
+      "status": "ステータス",
+      "action": "操作",
+      "actions": "操作一覧",
+      "search": "お客様名または予約番号を検索...",
+      "filter": "絞り込み",
+      "all": "すべて",
+      "saveDraft": "下書き保存",
+      "back": "戻る",
+      "continue": "次へ進む",
+      "complete": "チェックイン完了",
+      "protectedSensitiveData": "保護された機密情報 — 滞在居住コンプライアンス規則に厳密に準拠して処理されます。",
+      "wellnessProfileCompleted": "ウェルネスカルテ登録完了",
+      "persons": "名様",
+      "nights": "泊",
+      "customerSolo": "1名様（シングル）",
+      "customerCount": "{{count}}名様",
+      "notAssigned": "未割り当て",
+      "view": "確認",
+      "viewDetails": "詳細を確認",
+      "manage": "管理",
+      "resolve": "対応する",
+      "eta": "到着予定 (ETA)",
+      "deposit": "デポジット",
+      "residenceDecl": "滞在届",
+      "package": "プラン",
+      "stayDates": "滞在日程",
+      "packageCategory": "該当ヴィラ種別",
+      "showingVillas": "{{count}}件のヴィラを表示",
+      "currentAssigned": "現在割当",
+      "alreadyAssigned": "割り当て済み",
+      "occupiedByCustomer": "滞在中：{{name}}様 ({{ref}})",
+      "allCategories": "全カテゴリー",
+      "allStates": "全ステータス",
+      "change": "変更",
+      "assignNow": "今すぐ割り当て",
+      "arrivedAt": "{{time}} 到着済",
+      "nightsRetreat": "{{count}}泊リトリート",
+      "toDate": "〜 {{date}}",
+      "closeMenu": "メニューを閉じる",
+      "openMenu": "メニューを開く"
+    },
+    "pagination": {
+      "label": "テーブルページネーション",
+      "showing": "表示中",
+      "perPage": "件表示",
+      "firstPage": "最初のページ",
+      "previousPage": "前のページ",
+      "goToPage": "ページへ移動",
+      "nextPage": "次のページ",
+      "lastPage": "最後のページ",
+      "page": "ページ",
+      "of": "/"
+    },
+    "fnb": {
+      "dashboard": {
+        "title": "調理・厨房ダッシュボード",
+        "subtitle": "毎日の食事注文、バッチ仕込み、食物アレルギー警告をリアルタイムで管理します。",
+        "viewPrepList": "仕込みキューを開く",
+        "retreatMeals": "リトリート定食",
+        "extraOrders": "アラカルト注文",
+        "dietaryAlerts": "食事・アレルギー警告",
+        "pendingPreparing": "保留中 / 調理中",
+        "urgentQueue": "優先仕込みキュー",
+        "noQueue": "現在処理待ちの厨房伝票はありません。",
+        "customer": "お客様",
+        "villa": "ヴィラ",
+        "items": "品目数",
+        "status": "状態",
+        "action": "操作",
+        "viewDetails": "詳細"
+      },
+      "prepList": {
+        "title": "日別調理・配膳キュー",
+        "subtitle": "全お客様の注文の調理および配膳ステータスを管理します。",
+        "date": "対象日",
+        "search": "お客様名 / ヴィラ番号で検索",
+        "searchPlaceholder": "例：Jane Doe, 102",
+        "type": "注文種別",
+        "allTypes": "全種別",
+        "typeRetreat": "リトリート食事",
+        "typeExtra": "アラカルト",
+        "status": "ステータス",
+        "allStatuses": "全ステータス",
+        "statusPending": "調理待ち",
+        "statusPreparing": "調理中",
+        "statusReady": "調理完了",
+        "statusDelivered": "配膳済み",
+        "dietaryAttention": "アレルギー等注意のみ",
+        "colTime": "時間帯 / 時間",
+        "colCustomer": "お客様 (ヴィラ)",
+        "colItems": "品目",
+        "colAlerts": "食事制限・配慮",
+        "colStatus": "ステータス",
+        "colAction": "操作",
+        "badgeRetreat": "リトリート",
+        "badgeExtra": "アラカルト",
+        "noAlerts": "なし",
+        "viewDetails": "詳細",
+        "noResults": "条件に一致する調理品目はありません。",
+        "clearFilters": "フィルター解除",
+        "pageShowing": "{{total}} 件中 {{start}}–{{end}} 件を表示",
+        "dietaryAttentionOnly": "アレルギー注意料理のみ",
+        "resetFilters": "フィルターリセット",
+        "details": "レシピ・分量詳細",
+        "batchScalingTitle": "バッチ仕込み量換算",
+        "batchScalingSubtitle": "滞在客定員に基づいて自動計算",
+        "servingsVolume": "目標ボリューム",
+        "servingsCount": "提供数",
+        "ingredientName": "原材料",
+        "unit": "単位"
+      },
+      "orderDetail": {
+        "notFound": "注文が見つかりません",
+        "backToList": "調理キューに戻る",
+        "subtitle": "調理詳細および食事制限要件。",
+        "orderItems": "注文品目",
+        "itemsCount": "品",
+        "customerNotes": "お客様からの調理リクエスト",
+        "deliveryInfo": "お届け先情報",
+        "customerName": "お客様氏名",
+        "location": "お届け先",
+        "targetTime": "希望時刻",
+        "dietaryProfile": "アレルギー・食事制限",
+        "allergiesTitle": "アレルギー・要厳重警戒",
+        "dietaryPreferencesTitle": "食事制限・志向",
+        "noAllergies": "このお客様には特別なアレルギーや食事制限の記録はありません。",
+        "privacyNote": "個人情報保護について：調理に必要な食事情報のみを表示しています。医療詳細は非表示です。",
+        "orderTypeRetreat": "リトリート食事",
+        "orderTypeExtra": "アラカルト注文",
+        "statusLabel": "調理ステータス"
+      },
+      "prep": {
+        "time": "時間",
+        "customer": "お客様",
+        "type": "種別",
+        "status": "ステータス",
+        "typeRetreat": "リトリート食事",
+        "typeExtra": "アラカルト"
+      },
+      "status": {
+        "pending": "調理待ち",
+        "preparing": "調理中",
+        "ready": "調理完了",
+        "delivered": "配膳済み"
+      }
+    },
     "sidebar": {
-      "therapistUtilization": "セラピスト稼働率"
+      "operationalSuite": "運営管理スイート",
+      "operationsDept": "オペレーション",
+      "signOut": "ログアウト",
+      "frontDeskOperations": "フロントデスク運営",
+      "frontDeskDashboard": "レセプション管理ボード",
+      "dailyArrivals": "本日の到着リスト",
+      "villaManagement": "ヴィラ管理",
+      "bookingHistory": "予約履歴",
+      "customerServicesFolio": "ゲストサービス・会計",
+      "manualExtraSpa": "スパ追加予約受付",
+      "customerFolioInvoice": "利用明細・請求書",
+      "finalPaymentCheckout": "最終精算・チェックアウト",
+      "therapistSchedule": "セラピストスケジュール",
+      "therapistDashboard": "セラピストダッシュボード",
+      "dailyWorkSchedule": "日次業務スケジュール",
+      "sessionDetailsNotes": "施術詳細・カルテメモ",
+      "kitchenOperations": "厨房・料飲オペレーション",
+      "fbDashboard": "料飲ダッシュボード",
+      "dailyMealPrepQueue": "日次調理キュー",
+      "mealOrderAllergies": "食事オーダー・アレルギー情報",
+      "managementCockpit": "経営・総括コックピット",
+      "managerDashboard": "支配人ダッシュボード",
+      "revenueAnalytics": "収益分析",
+      "occupancyReports": "稼働率レポート",
+      "therapistUtilization": "セラピスト稼働率",
+      "governanceCompliance": "ガバナンス・法規遵守",
+      "systemOverviewPoliceExport": "システム総括・当局提出出力",
+      "administration": "システム管理",
+      "adminDashboard": "管理者ダッシュボード",
+      "staffAccounts": "スタッフアカウント",
+      "masterDataManagement": "マスタデータ管理",
+      "securityGovernance": "セキュリティ・権限設定",
+      "businessParameters": "業務パラメータ",
+      "permissionMatrix": "権限マトリクス",
+      "managerDelegation": "権限委任設定",
+      "sensitiveDataAuditLog": "機密データ監査ログ",
+      "systemOverviewDashboard": "システム稼働概要",
+      "manager": "マネージャー",
+      "admin": "管理者",
+      "delegatedAdministration": "委譲された管理権限",
+      "businessParametersDelegated": "ビジネスパラメータ（委譲済）"
+    },
+    "adminDashboard": {
+      "kpiTotalAuditRecords": "監査レコード総数",
+      "kpiTotalAuditRecordsSub": "サーバーサイド過去監査レコード総数",
+      "kpiStaff": "スタッフアカウント"
+    },
+    "flags": {
+      "pageTitle": "機能フラグ＆運用トグル管理",
+      "systemScope": "システム機能範囲",
+      "pageSubtitle": "顧客セルフサービス機能や法令順守データ出力ジョブを安全に有効化・一時停止します。",
+      "safetyTitle": "セキュリティと安全性の境界は不変です（無効化不可）",
+      "safetyDesc": "中核となる安全制約（RBACデータ最小化、セラピスト＋施術室の空き確認、チェックアウト前フォリオ未払金確認）は基盤保護機能であり無効化できません。",
+      "modularTitle": "設定可能な機能モジュール",
+      "highImpact": "重大な影響",
+      "scope": "適用範囲",
+      "lastModified": "最終更新",
+      "immutableTitle": "保護された中核統制（アーキテクチャ保護）",
+      "alwaysEnforced": "常時適用中",
+      "confirmTitle": "重大な機能フラグ変更の確認",
+      "confirmPrompt": "以下の運用ステータスを変更しようとしています：",
+      "confirmAuditNote": "この変更は直ちに反映され、管理者監査ログにタイムスタンプ付きで記録されます。",
+      "applyToggle": "変更を適用"
+    },
+    "masterData": {
+      "pageTitle": "ウェルネスリゾート マスターデータ管理",
+      "pageSubtitle": "リトリートパッケージ、スパ＆セラピーメニュー、ヴィラ客室グレードを定義する中央マスターデータです。",
+      "taxonomyTitle": "世界ウェルネス機関（GWI）分類基準に準拠",
+      "taxonomyDesc": "すべてのパッケージ、トリートメント、ヴィラは一般的なホテル分類ではなく、本格的なウェルネスリゾート用語に準拠しています。",
+      "tabPackages": "リトリートパッケージ",
+      "colWellnessGoal": "ウェルネス目標",
+      "colSpaSessions": "含まれるスパ回数",
+      "colTreatment": "トリートメント施術名",
+      "colPractitioner": "必要な有資格セラピスト",
+      "colVillaCat": "ヴィラカテゴリー",
+      "colCount": "棟数",
+      "colRate": "基本料金 / 泊 (VND)",
+      "editRecordTitle": "マスターデータレコードの編集",
+      "colRecordName": "正式名称",
+      "colBenchmarkPrice": "基準価格 (VND)"
+    },
+    "audit": {
+      "exportCsv": "変更不可 CSV監査レポート出力"
+    },
+    "staffDetail": {
+      "reactivatedToast": "スタッフアカウントの利用権限を復旧しました",
+      "suspendedToast": "スタッフアカウントを一時停止しました",
+      "backToList": "スタッフ名簿に戻る",
+      "btnSuspend": "アカウントを一時停止",
+      "btnRestore": "アカウントを再有効化",
+      "metadataTitle": "プロフィール＆連絡先情報",
+      "rbacScopeTitle": "RBAC 業務認可および権限スコープ",
+      "minimizationRuleTitle": "BR-03 データ最小化およびプライバシー保護方針",
+      "credentialSafetyNotice": "認証ハッシュ、パスワード、セッションはID層で厳格に管理され、スタッフカードには保持されません。",
+      "confirmSuspendTitle": "スタッフアカウント一時停止の確認",
+      "confirmRestoreTitle": "アカウント再有効化の確認",
+      "confirmSuspendDesc": "このアカウントを一時停止すると、リゾート業務システムへのアクセス権が直ちに無効化されます。割り当てられたセッションやタスクは監査用に保持されます。",
+      "confirmRestoreDesc": "このスタッフアカウントを再開すると、割り当てられたRBACロールに対応するすべての業務権限が復旧します。",
+      "btnExecuteSuspend": "一時停止を実行",
+      "btnExecuteRestore": "アクセス権を復元"
+    },
+    "staffList": {
+      "createdToast": "サーバー上で新しいスタッフアカウントを正常に作成しました",
+      "pageTitle": "スタッフ名簿＆アクセスガバナンス",
+      "pageSubtitle": "リゾート公式スタッフ一覧、役職ロール割り当て、業務運用権限を管理します。",
+      "addStaffBtn": "新規アカウント作成",
+      "privacyBannerTitle": "認証情報の保護＆アクセス最小化",
+      "privacyBannerDesc": "パスワードハッシュ、OAuthトークン、秘密鍵は管理画面に一切表示されません。スタッフの権限はRBACマトリクスによって厳格に制御されます。",
+      "totalStaff": "総スタッフ数",
+      "totalStaffSub": "システムに登録されているスタッフ",
+      "activeAccounts": "有効アカウント",
+      "activeAccountsSub": "業務ログインが許可されています",
+      "suspendedAccounts": "一時停止アカウント",
+      "suspendedAccountsSub": "アクセス権が一時的に停止されています",
+      "filterAllRoles": "すべてのロール",
+      "filterAllStatuses": "すべてのステータス",
+      "personnelLabel": "名",
+      "colMember": "スタッフ",
+      "colDept": "部署",
+      "colLastActive": "最終ログイン",
+      "titleLabel": "役職 / 職種",
+      "confirmCreate": "アカウント作成を確定"
+    },
+    "arrivals": {
+      "noArrivals": "本日の到着予定ゲストはいません（SQL Server：0 件）"
     }
   },
   "topbar": {
-    "managerScope": "マネージャー限定権限",
-    "adminClearance": "システム管理者権限",
-    "filterScope": "フィルター",
-    "export": "レポート出力"
+    "managerScope": "リゾート支配人権限範囲",
+    "adminClearance": "管理者権限クリアランス",
+    "filterScope": "フィルター範囲",
+    "export": "データ出力"
   },
   "adminDashboard": {
     "title": "システム管理・ガバナンスコックピット",
@@ -621,7 +952,10 @@
     "ruleBr06Title": "BR-06: マネージャーの最小権限と職務分離",
     "ruleBr06Desc": "マネージャーは経営分析の閲覧に厳格に限定されます。完全な管理者権限を継承することは決してなく、明示的に委譲された権限のみを行使できます。",
     "descStaff": "スタッフアカウント、権限ロール、勤務状況、RBACセキュリティ境界の管理（画面 10 & 11）。",
-    "descMasterData": "ウェルネスタクソノミーに基づくリトリートパッケージ、スパ、ヴィラ分類の管理（画面 12）。"
+    "descMasterData": "ウェルネスタクソノミーに基づくリトリートパッケージ、スパ、ヴィラ分類の管理（画面 12）。",
+    "kpiTotalAuditRecords": "監査レコード総数",
+    "kpiTotalAuditRecordsSub": "サーバーサイド過去監査レコード総数",
+    "kpiStaff": "スタッフアカウント"
   },
   "params": {
     "pageTitle": "ビジネスパラメータと運用しきい値",
@@ -700,7 +1034,8 @@
     "colTargetRef": "対象参照",
     "colResult": "結果",
     "colDetails": "メタデータコンテキスト",
-    "noEvents": "指定された条件に一致する監査イベントは見つかりませんでした。"
+    "noEvents": "指定された条件に一致する監査イベントは見つかりませんでした。",
+    "exportCsv": "変更不可 CSV監査レポート出力"
   },
   "managerDashboard": {
     "title": "経営管理監督コックピット",
@@ -772,112 +1107,112 @@
     },
     "permissions": {
       "categories": {
-        "experience": "Customer Retreat Experience",
-        "frontDesk": "Front Desk Operations",
-        "wellness": "Spa & Therapy Fulfillment",
-        "culinary": "Culinary & F&B Operations",
-        "management": "Management Analytics & Oversight",
-        "governance": "Governance & System Administration"
+        "experience": "お客様のリトリート体験",
+        "frontDesk": "フロント業務およびチェックイン・アウト",
+        "wellness": "スパ＆セラピー施術",
+        "culinary": "調理・栄養管理・厨房運営",
+        "management": "管理者向け分析・監査",
+        "governance": "システム統制および権限ガバナンス"
       },
       "bookRetreat": {
-        "name": "Book Retreat Package & Pay Deposit",
-        "desc": "Browse packages, select retreat dates, configure villa category, and execute deposit via VNPay."
+        "name": "リトリートパッケージ予約とデポジット決済",
+        "desc": "パッケージ一覧の閲覧、日程選択、ヴィラ部屋タイプ設定、VNPayによるデポジット決済。"
       },
       "manageHealth": {
-        "name": "Manage Own Sensitive Health & Dietary Profile",
-        "desc": "Provide explicit consent to record allergies, dietary restrictions, and physical contraindications."
+        "name": "健康・食事プロフィールの管理",
+        "desc": "病歴アンケート、食事制限、アレルギー情報の登録と更新。"
       },
       "deleteHealth": {
-        "name": "Request Post-Retreat Health Data Deletion",
-        "desc": "Exercise statutory right to erase or anonymize health notes after retreat completion (BR-07)."
+        "name": "滞在終了後の健康データ削除申請",
+        "desc": "GDPRおよび医療プライバシー規範に基づき、機密健康データの完全削除を申請。"
       },
       "viewOwnFolio": {
-        "name": "View In-House Consolidated Folio",
-        "desc": "Read-only access to own villa charges, deposits, and invoice line items."
+        "name": "自身の客房Folioおよびスパ請求の確認",
+        "desc": "客室請求明細、スパ追加利用料、最終領収書のリアルタイム閲覧。"
       },
       "viewArrivals": {
-        "name": "View Daily Guest Arrivals & Schedules",
-        "desc": "Access expected customer arrivals, arrival times, and check-in preparation status."
+        "name": "当日の到着・出発予定の確認",
+        "desc": "当日到着、滞在中、および出発予定の全ゲストリストの閲覧。"
       },
       "checkInGuest": {
-        "name": "Perform Guest Check-In & Collect Residence ID",
-        "desc": "Verify guest identity, collect passport/CCCD details for Law on Residence compliance, and activate stay."
+        "name": "ゲストのチェックイン登録と身元確認",
+        "desc": "ゲストの身元確認、ルームカードの発行、滞在プロフィールの有効化。"
       },
       "assignVillas": {
-        "name": "Assign Physical Villas & Update Operational Status",
-        "desc": "Allocate available villas to bookings and transition villa statuses (Cleaning, Available, Maintenance)."
+        "name": "ヴィラ部屋番号の割当と予約ロック",
+        "desc": "確定した予約に対して専用ウェルネスヴィラを割り当て、ロック。"
       },
       "bookExtraSpa": {
-        "name": "Manual Front Desk Extra Spa Booking",
-        "desc": "Schedule walk-up or concierge extra spa sessions with strict 2D resource validation (Therapist + Room)."
+        "name": "フロントでのスパおよび追加飲食予約代行",
+        "desc": "フロント端末よりゲストの追加スパセッションや飲食利用を代理入力。"
       },
       "checkoutProcess": {
-        "name": "Consolidate Folio, Collect Payment & Checkout",
-        "desc": "Generate consolidated tax invoice, collect final payment, and complete checkout after verifying zero unpaid charges (BR-02)."
+        "name": "請求確定と最終チェックアウト処理",
+        "desc": "未精算金額の照合、最終領収書の記録、チェックアウト完了登録。"
       },
       "viewTherapistSchedule": {
-        "name": "View Personal Assigned Therapy Schedule",
-        "desc": "Access assigned daily therapy and yoga sessions with guest arrival times and treatment rooms."
+        "name": "セラピスト個別勤務表と施術室の確認",
+        "desc": "セラピスト毎日の施術スケジュール、担当施術室、予約枠の閲覧。"
       },
       "viewHealthNotes": {
-        "name": "View Treatment-Relevant Clinical Health Notes",
-        "desc": "Inspect strictly physical contraindications, injuries, and focus areas for assigned therapy guests (BR-03)."
+        "name": "施術に関連する健康上の禁忌事項の閲覧",
+        "desc": "知る必要性の原則に基づき、担当施術に関連する健康制限のみを閲覧。"
       },
       "completeSpa": {
-        "name": "Record Spa Session Outcomes (Completed / No-Show)",
-        "desc": "Mark therapy sessions completed with practitioner notes or register customer no-show."
+        "name": "施術完了の確認とカルテ記録の承認",
+        "desc": "スパセッションの完了マーク、施術効果およびアフターケア提案の記録。"
       },
       "viewMealPrep": {
-        "name": "View Kitchen Daily Meal Preparation Queue",
-        "desc": "Access daily meal orders aggregated by meal window, delivery villa, and prep status."
+        "name": "毎日の仕込み計画とKDS厨房伝票の確認",
+        "desc": "調理スケジュール、食材バッチ所要量、各ヴィラへの配膳タスクの閲覧。"
       },
       "viewDietaryWarnings": {
-        "name": "View Food-Related Allergy & Dietary Warnings",
-        "desc": "Inspect strictly culinary allergen tags and food preferences without access to general health records (BR-03)."
+        "name": "アレルギー注意喚起と食事制限の確認",
+        "desc": "ナッツ、甲殻類、グルテンなどのアレルギー警告の確認。"
       },
       "updateMealStatus": {
-        "name": "Update Meal Status (Preparing / Ready / Delivered)",
-        "desc": "Progress meal orders through kitchen prep stages to delivery."
+        "name": "調理・配膳ステータスの更新",
+        "desc": "KDS画面で料理ステータスを準備中、調理完了、配膳済みに更新。"
       },
       "viewRevenue": {
-        "name": "View Revenue & Financial Performance Reports",
-        "desc": "Access aggregated financial reporting across package base fees, spa revenue, and dining revenue."
+        "name": "リゾート売上レポートと財務分析の閲覧",
+        "desc": "日次総売上、ADR、スパ付加価値、飲食利益率の分析閲覧。"
       },
       "viewOccupancy": {
-        "name": "View Villa Occupancy & Inventory Utilization",
-        "desc": "Inspect real-time resort occupancy rates, villa category performance, and maintenance ratios."
+        "name": "ヴィラ稼働率と客室予測レポートの閲覧",
+        "desc": "客室稼働率、清掃ステータス、将来の予約予測のモニタリング。"
       },
       "viewTherapistReports": {
-        "name": "View Practitioner Utilization & Workload Reports",
-        "desc": "Monitor aggregate treatment minutes, scheduled sessions, and completion ratios by therapist."
+        "name": "セラピスト稼働率と業務負荷分析の閲覧",
+        "desc": "セラピストごとの業務負荷、勤務実績、施術枠配分のバランス分析。"
       },
       "viewManagerDashboard": {
-        "name": "Access Executive Management Cockpit",
-        "desc": "Executive cockpit summarizing key operational KPIs and direct navigation to authorized analytical reports."
+        "name": "管理部門オペレーションダッシュボードへのアクセス",
+        "desc": "部門横断の主要KPI指標および緊急課題への対応ハブの利用。"
       },
       "exportPolice": {
-        "name": "Export Daily Police Residence Declarations",
-        "desc": "Generate official metadata export file for local police temporary residence compliance (Law on Residence 2020)."
+        "name": "警察・宿泊届出リストのエクスポート",
+        "desc": "法令に基づく滞在ゲストの公式届出データを標準形式で出力。"
       },
       "configureParams": {
-        "name": "Configure System Business Parameters",
-        "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
+        "name": "全社ビジネスパラメータと重要ルールの設定",
+        "desc": "デポジット比率、キャンセル猶予期間、各種サービス料率の調整。"
       },
       "viewMatrix": {
-        "name": "Inspect System RBAC Permission Matrix",
-        "desc": "Review cross-role functional capability allocations and security boundary definitions."
+        "name": "RBAC権限マトリックスの閲覧と管理",
+        "desc": "システム各ロールに対する機能権限マッピングルールの閲覧と保守。"
       },
       "delegateRights": {
-        "name": "Delegate Limited Admin Rights to Manager",
-        "desc": "Grant time-bounded, scoped subset of administrative capabilities to Resort Operations Manager."
+        "name": "マネージャーへの一時的権限委譲の実行",
+        "desc": "承認プロセスの下で、当直マネージャーへ指定の管理権限を一時付与。"
       },
       "viewAuditLog": {
-        "name": "View Sensitive Data Access Audit Log",
-        "desc": "Inspect chronological metadata log of sensitive health, identity, and financial access events."
+        "name": "機密データ操作とシステムセキュリティログの監査",
+        "desc": "健康データ、請求変更、特権昇格に関する監査ログの追跡・調査。"
       },
       "viewSystemOverview": {
-        "name": "View System-Wide Operational Health & Compliance",
-        "desc": "Cross-module rollup of bookings, villas, treatments, dining, and daily police export status."
+        "name": "システム全体アーキテクチャとクラスタ健全性の監視",
+        "desc": "サービス呼び出し、DB接続プール、外部APIゲートウェイの動作監視。"
       },
       "boundaries": {
         "healthConsent": "Strict privacy boundary: Sensitive health records require explicit self-consent under Decree 13.",
@@ -932,7 +1267,27 @@
     "statusSuspended": "停止中",
     "statusPending": "有効化待ち",
     "createdSuccess": "スタッフアカウントが正常に発行されました。",
-    "validationRequired": "氏名と有効な業務メールアドレスを入力してください。"
+    "validationRequired": "氏名と有効な業務メールアドレスを入力してください。",
+    "createdToast": "サーバー上で新しいスタッフアカウントを正常に作成しました",
+    "pageTitle": "スタッフ名簿＆アクセスガバナンス",
+    "pageSubtitle": "リゾート公式スタッフ一覧、役職ロール割り当て、業務運用権限を管理します。",
+    "addStaffBtn": "新規アカウント作成",
+    "privacyBannerTitle": "認証情報の保護＆アクセス最小化",
+    "privacyBannerDesc": "パスワードハッシュ、OAuthトークン、秘密鍵は管理画面に一切表示されません。スタッフの権限はRBACマトリクスによって厳格に制御されます。",
+    "totalStaff": "総スタッフ数",
+    "totalStaffSub": "システムに登録されているスタッフ",
+    "activeAccounts": "有効アカウント",
+    "activeAccountsSub": "業務ログインが許可されています",
+    "suspendedAccounts": "一時停止アカウント",
+    "suspendedAccountsSub": "アクセス権が一時的に停止されています",
+    "filterAllRoles": "すべてのロール",
+    "filterAllStatuses": "すべてのステータス",
+    "personnelLabel": "名",
+    "colMember": "スタッフ",
+    "colDept": "部署",
+    "colLastActive": "最終ログイン",
+    "titleLabel": "役職 / 職種",
+    "confirmCreate": "アカウント作成を確定"
   },
   "staffDetail": {
     "pageTitle": "スタッフアカウント権限およびプロフィール",
@@ -967,7 +1322,22 @@
     "suspendSuccess": "スタッフアカウントが正常に停止されました。",
     "reactivateSuccess": "スタッフアカウントが再開されました。",
     "notFound": "スタッフアカウントが見つかりません。",
-    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:",
+    "reactivatedToast": "スタッフアカウントの利用権限を復旧しました",
+    "suspendedToast": "スタッフアカウントを一時停止しました",
+    "backToList": "スタッフ名簿に戻る",
+    "btnSuspend": "アカウントを一時停止",
+    "btnRestore": "アカウントを再有効化",
+    "metadataTitle": "プロフィール＆連絡先情報",
+    "rbacScopeTitle": "RBAC 業務認可および権限スコープ",
+    "minimizationRuleTitle": "BR-03 データ最小化およびプライバシー保護方針",
+    "credentialSafetyNotice": "認証ハッシュ、パスワード、セッションはID層で厳格に管理され、スタッフカードには保持されません。",
+    "confirmSuspendTitle": "スタッフアカウント一時停止の確認",
+    "confirmRestoreTitle": "アカウント再有効化の確認",
+    "confirmSuspendDesc": "このアカウントを一時停止すると、リゾート業務システムへのアクセス権が直ちに無効化されます。割り当てられたセッションやタスクは監査用に保持されます。",
+    "confirmRestoreDesc": "このスタッフアカウントを再開すると、割り当てられたRBACロールに対応するすべての業務権限が復旧します。",
+    "btnExecuteSuspend": "一時停止を実行",
+    "btnExecuteRestore": "アクセス権を復元"
   },
   "masterData": {
     "title": "マスターデータ管理",
@@ -996,6 +1366,50 @@
     "editModalTitle": "マスターデータ項目を設定",
     "nameLabel": "表示名",
     "priceLabel": "掲載価格 (VND)",
-    "saveSuccess": "マスターデータ項目が正常に更新されました。"
+    "saveSuccess": "マスターデータ項目が正常に更新されました。",
+    "pageTitle": "ウェルネスリゾート マスターデータ管理",
+    "pageSubtitle": "リトリートパッケージ、スパ＆セラピーメニュー、ヴィラ客室グレードを定義する中央マスターデータです。",
+    "taxonomyTitle": "世界ウェルネス機関（GWI）分類基準に準拠",
+    "taxonomyDesc": "すべてのパッケージ、トリートメント、ヴィラは一般的なホテル分類ではなく、本格的なウェルネスリゾート用語に準拠しています。",
+    "tabPackages": "リトリートパッケージ",
+    "colWellnessGoal": "ウェルネス目標",
+    "colSpaSessions": "含まれるスパ回数",
+    "colTreatment": "トリートメント施術名",
+    "colPractitioner": "必要な有資格セラピスト",
+    "colVillaCat": "ヴィラカテゴリー",
+    "colCount": "棟数",
+    "colRate": "基本料金 / 泊 (VND)",
+    "editRecordTitle": "マスターデータレコードの編集",
+    "colRecordName": "正式名称",
+    "colBenchmarkPrice": "基準価格 (VND)"
+  },
+  "pagination": {
+    "label": "テーブルページネーション",
+    "showing": "表示中",
+    "perPage": "件表示",
+    "firstPage": "最初のページ",
+    "previousPage": "前のページ",
+    "goToPage": "ページへ移動",
+    "nextPage": "次のページ",
+    "lastPage": "最後のページ",
+    "page": "ページ",
+    "of": "/"
+  },
+  "flags": {
+    "pageTitle": "機能フラグ＆運用トグル管理",
+    "systemScope": "システム機能範囲",
+    "pageSubtitle": "顧客セルフサービス機能や法令順守データ出力ジョブを安全に有効化・一時停止します。",
+    "safetyTitle": "セキュリティと安全性の境界は不変です（無効化不可）",
+    "safetyDesc": "中核となる安全制約（RBACデータ最小化、セラピスト＋施術室の空き確認、チェックアウト前フォリオ未払金確認）は基盤保護機能であり無効化できません。",
+    "modularTitle": "設定可能な機能モジュール",
+    "highImpact": "重大な影響",
+    "scope": "適用範囲",
+    "lastModified": "最終更新",
+    "immutableTitle": "保護された中核統制（アーキテクチャ保護）",
+    "alwaysEnforced": "常時適用中",
+    "confirmTitle": "重大な機能フラグ変更の確認",
+    "confirmPrompt": "以下の運用ステータスを変更しようとしています：",
+    "confirmAuditNote": "この変更は直ちに反映され、管理者監査ログにタイムスタンプ付きで記録されます。",
+    "applyToggle": "変更を適用"
   }
 }

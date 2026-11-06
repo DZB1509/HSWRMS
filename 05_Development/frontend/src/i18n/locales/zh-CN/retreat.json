@@ -6,7 +6,9 @@
     "filterAll": "全部套餐",
     "filterShort": "短途焕活 (3天)",
     "filterMedium": "经典疗愈 (5天)",
-    "filterLong": "全维蜕变 (7天)"
+    "filterLong": "全维蜕变 (7天)",
+    "filterFourDays": "4天 · 身心重塑",
+    "noPackagesFound": "数据库中未找到符合所选天数的养生疗愈套餐。"
   },
   "detail": {
     "backToList": "返回疗愈套餐列表",
@@ -23,6 +25,36 @@
     "readyToBook": "准备好开始您的蜕变之旅了吗？",
     "ctaBookHero": "立即预订疗愈",
     "ctaBook": "立即预订该套餐",
-    "depositNote": "支付定金可锁定私属别墅与理疗师黄金专属时段。"
+    "depositNote": "支付定金可锁定私属别墅与理疗师黄金专属时段。",
+    "notFoundTitle": "养生疗愈套餐未找到",
+    "notFoundDesc": "在数据库中未检索到该养生疗愈套餐的信息（MSG01：无检索结果）。",
+    "targetGuest": "适合人群：",
+    "treatmentsTitle": "疗程与水疗项目",
+    "includedTreatmentsHeading": "已包含的健康水疗疗程",
+    "dietaryHeading": "养生膳食营养计划",
+    "organicNutrition": "纯然滋养餐饮",
+    "policyTitle": "政策与附加费用",
+    "includedNotice": "套餐权益与条款",
+    "villasTitle": "静谧住宿空间",
+    "eligibleVillas": "适用于此疗愈套餐的别墅房型"
+  },
+  "retreat": {
+    "detail": {
+      "notFoundTitle": "养生疗愈套餐未找到",
+      "notFoundDesc": "在数据库中未检索到该养生疗愈套餐的信息（MSG01：无检索结果）。",
+      "targetGuest": "适合人群：",
+      "treatmentsTitle": "疗程与水疗项目",
+      "includedTreatmentsHeading": "已包含的健康水疗疗程",
+      "dietaryHeading": "养生膳食营养计划",
+      "organicNutrition": "纯然滋养餐饮",
+      "policyTitle": "政策与附加费用",
+      "includedNotice": "套餐权益与条款",
+      "villasTitle": "静谧住宿空间",
+      "eligibleVillas": "适用于此疗愈套餐的别墅房型"
+    },
+    "list": {
+      "filterFourDays": "4天 · 身心重塑",
+      "noPackagesFound": "数据库中未找到符合所选天数的养生疗愈套餐。"
+    }
   }
 }

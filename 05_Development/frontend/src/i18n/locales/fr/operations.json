@@ -40,8 +40,7 @@
     "manager": "Manager",
     "admin": "Admin",
     "delegatedAdministration": "Administration Déléguée",
-    "businessParametersDelegated": "Paramètres Opérationnels (Délégués)",
-    "bookingHistory": "Historique des réservations"
+    "businessParametersDelegated": "Paramètres Opérationnels (Délégués)"
   },
   "payment": {
     "requiredDeposit": "Acompte Requis",
@@ -63,10 +62,10 @@
     "villaAssignment": "Attribution de Villa",
     "villaStatus": "Gestion des Villas",
     "shiftOverview": "Aperçu du Service",
-    "resortDate": "Date du Domaine",
+    "resortDate": "Date du complexe",
     "dateValue": "Jeudi 24 septembre 2026",
     "role": "Rôle",
-    "operationalNotifications": "Notifications Opérationnelles",
+    "operationalNotifications": "Notifications opérationnelles",
     "today": "Aujourd'hui",
     "customer": "Client",
     "bookingRef": "Réf. Réservation",
@@ -111,7 +110,9 @@
     "assignNow": "Attribuer Immédiatement",
     "arrivedAt": "Arrivé à {{time}}",
     "nightsRetreat": "Retraite de {{count}} Nuits",
-    "toDate": "au {{date}}"
+    "toDate": "au {{date}}",
+    "closeMenu": "Fermer le menu",
+    "openMenu": "Ouvrir le menu"
   },
   "dashboard": {
     "title": "Opérations de Réception & Accueil",
@@ -153,7 +154,8 @@
     "submittedToPolice": "Transmis aux Autorités",
     "submitAllReady": "Transmettre les Déclarations Prêtes",
     "noArrivalsFound": "Aucune arrivée ne correspond aux critères de filtre.",
-    "emptySearchHelper": "Essayez de modifier vos termes de recherche ou de réinitialiser les filtres."
+    "emptySearchHelper": "Essayez de modifier vos termes de recherche ou de réinitialiser les filtres.",
+    "noArrivals": "Aucune arrivée prévue pour cette date (SQL Server : 0 dossier)"
   },
   "checkIn": {
     "title": "Enregistrement & Informations de Résidence",
@@ -327,7 +329,8 @@
     "folioStatusNote": "En attente d'inscription au folio — sera finalisé et réglé lors du départ.",
     "readyToConfirm": "Toutes les conditions préalables sont valides",
     "incompletePill": "Sélections incomplètes",
-    "confirmAction": "Confirmer la séance de spa supplémentaire"
+    "confirmAction": "Confirmer la séance de spa supplémentaire",
+    "step3DisabledHint": "Prérequis : Sélectionnez un soin à l'étape 2"
   },
   "therapist": {
     "dashboard": "Tableau de Bord Thérapeute",
@@ -393,25 +396,36 @@
     "colRoom": "SUITE / SALLE",
     "colStatus": "STATUT",
     "colAction": "ACTION",
-    "start": "Démarrer"
+    "start": "Démarrer",
+    "title": "Thérapeute",
+    "scheduled": "Planifié",
+    "scheduleSubtitle": "Vos rendez-vous assignés pour la date sélectionnée",
+    "sessionNotFoundDesc": "La séance demandée est introuvable ou vous n'avez pas la permission de la consulter.",
+    "sessionNoShow": "Enregistré comme non présenté (No-Show)"
   },
   "fnb": {
     "dashboard": {
-      "title": "Tableau de Bord F&B",
-      "subtitle": "Aperçu des opérations culinaires pour aujourd'hui.",
-      "viewPrepList": "Voir la liste de préparation complète",
-      "retreatMeals": "Repas de retraite (Aujourd'hui)",
-      "extraOrders": "Commandes À la carte",
-      "dietaryAlerts": "Alertes diététiques / Allergies",
+      "title": "Tableau de bord cuisine et restauration",
+      "subtitle": "Suivi des commandes de repas, préparation des lots d'ingrédients et alertes d'allergies alimentaires.",
+      "viewPrepList": "Voir la file de préparation",
+      "retreatMeals": "Repas forfait retraite",
+      "extraOrders": "Commandes à la carte",
+      "dietaryAlerts": "Alertes allergies et régimes",
       "pendingPreparing": "En attente / En préparation",
-      "urgentQueue": "File de préparation urgente (Aperçu)",
-      "noQueue": "Aucun élément dans la file de préparation.",
+      "urgentQueue": "Préparation prioritaire",
+      "noQueue": "Aucun ticket en attente en cuisine actuellement.",
       "customer": "Client",
       "villa": "Villa",
       "items": "Articles",
       "status": "Statut",
       "action": "Action",
-      "viewDetails": "Détails"
+      "viewDetails": "Détails",
+      "shortageBannerTitle": "PÉNURIE DE MATIÈRES PREMIÈRES DÉTECTÉE",
+      "shortageBannerDesc": "Le stock de cuisine disponible est insuffisant pour honorer les commandes de repas d'aujourd'hui. Certains plats risquent d'être indisponibles sans réapprovisionnement.",
+      "noDemandTitle": "Aucune commande de repas planifiée pour le",
+      "noDemandDesc": "Aucun repas de retraite ni plat à la carte n'est requis pour cette date. Le besoin en matières premières est de zéro.",
+      "rawMaterialTitle": "Surveillance des besoins en matières premières et des ruptures",
+      "viewAll": "Voir tout"
     },
     "prepList": {
       "title": "File Quotidienne de Préparation des Repas",
@@ -425,10 +439,10 @@
       "typeExtra": "À la carte",
       "status": "Statut",
       "allStatuses": "Tous les statuts",
-      "statusPending": "En attente",
-      "statusPreparing": "En préparation",
-      "statusReady": "Prêt",
-      "statusDelivered": "Livré",
+      "statusPending": "EN ATTENTE",
+      "statusPreparing": "EN PRÉPARATION",
+      "statusReady": "PRÊT",
+      "statusDelivered": "LIVRÉ",
       "dietaryAttention": "Attention diététique uniquement",
       "colTime": "Heure / Créneau",
       "colCustomer": "Client (Villa)",
@@ -442,41 +456,68 @@
       "viewDetails": "Détails",
       "noResults": "Aucune préparation ne correspond aux filtres actuels.",
       "clearFilters": "Effacer les filtres",
-      "pageShowing": "Affichage {{start}}–{{end}} sur {{total}}"
+      "pageShowing": "Affichage {{start}}–{{end}} sur {{total}}",
+      "dietaryAttentionOnly": "Plats avec alerte allergie uniquement",
+      "resetFilters": "Réinitialiser les filtres",
+      "details": "Détails de la recette et des portions",
+      "batchScalingTitle": "Calcul de production par lot",
+      "batchScalingSubtitle": "Calculé automatiquement selon le quota des hôtes",
+      "servingsVolume": "Volume cible",
+      "servingsCount": "Nombre de portions",
+      "ingredientName": "Ingrédient",
+      "unit": "Unité",
+      "statusCancelled": "ANNULÉ",
+      "physicalStockTitle": "Stock cuisine utilisable réel (FEFO)",
+      "physicalStockSubtitle": "Ingrédients physiques exploitables issus de lots valides (FEFO).",
+      "searchIngredientPlaceholder": "Rechercher un ingrédient...",
+      "noMatchingOrders": "Aucun élément de préparation ne correspond à la date et aux filtres sélectionnés.",
+      "hideRecipe": "Masquer la recette",
+      "viewRecipe": "Voir la recette"
     },
     "orderDetail": {
-      "notFound": "Commande non trouvée",
-      "backToList": "Retour à la file",
-      "subtitle": "Détails de préparation et contraintes alimentaires.",
-      "orderItems": "Articles commandés",
+      "notFound": "Commande introuvable",
+      "backToList": "Retour à la file de préparation",
+      "subtitle": "Détails de préparation et exigences diététiques.",
+      "orderItems": "Articles de la commande",
       "itemsCount": "articles",
-      "customerNotes": "Instructions de préparation du client",
+      "customerNotes": "Service de restauration bien-être et remarques",
       "deliveryInfo": "Informations de livraison",
       "customerName": "Nom du client",
       "location": "Lieu",
-      "targetTime": "Heure cible",
-      "dietaryProfile": "Régime & Allergies",
-      "allergiesTitle": "Allergies & Vigilance accrue",
-      "dietaryPreferencesTitle": "Préférences diététiques",
+      "targetTime": "Heure souhaitée",
+      "dietaryProfile": "Régime et allergies",
+      "allergiesTitle": "Allergies et vigilance renforcée",
+      "dietaryPreferencesTitle": "Préférences alimentaires",
       "noAllergies": "Aucune allergie ni restriction diététique enregistrée pour ce client.",
-      "privacyNote": "Confidentialité : Seules les restrictions culinaires sont affichées. Les dossiers médicaux sont protégés.",
+      "privacyNote": "Avis de confidentialité : Seules les restrictions culinaires sont visibles pour l'équipe F&B.",
       "orderTypeRetreat": "Repas de retraite",
-      "orderTypeExtra": "Commande À la carte",
-      "statusLabel": "Statut de préparation"
+      "orderTypeExtra": "Commande à la carte",
+      "statusLabel": "Statut"
     },
     "prep": {
-      "time": "Heure",
-      "customer": "Client",
-      "type": "Type",
+      "time": "Heure / Période",
+      "customer": "Client & Villa",
+      "type": "Type de commande",
       "status": "Statut",
       "typeRetreat": "Repas de retraite",
-      "typeExtra": "À la carte"
+      "typeExtra": "À la carte",
+      "items": "Articles",
+      "action": "Action",
+      "details": "Détails"
     },
     "status": {
       "pending": "En attente",
       "preparing": "En préparation",
       "ready": "Prêt",
-      "delivered": "Livré"
+      "delivered": "Livré",
+      "cancelled": "Annulé"
+    },
+    "inventory": {
+      "consumed": "Stock déduit",
+      "notConfigured": "Recette non configurée",
+      "insufficient": "Stock insuffisant",
+      "failed": "Erreur de déduction",
+      "pending": "En attente de déduction"
     }
   },
   "manager": {
@@ -510,7 +551,9 @@
       "spaStream": "Soins Spa",
       "fnbStream": "Restauration",
       "revenueLabel": "Revenus",
-      "amountLabel": "Montant"
+      "amountLabel": "Montant",
+      "totalRevenue": "Revenu total",
+      "exportExcel": "Exporter vers Excel (.xlsx)"
     },
     "occupancy": {
       "title": "Rapport d'Occupation & Capacité des Villas",
@@ -580,15 +623,303 @@
     }
   },
   "operations": {
+    "common": {
+      "dashboard": "Tableau de Bord Réception",
+      "arrivals": "Arrivées du Jour",
+      "checkIn": "Enregistrement & Déclaration de Séjour",
+      "villaAssignment": "Attribution de Villa",
+      "villaStatus": "Gestion des Villas",
+      "shiftOverview": "Aperçu du Service",
+      "resortDate": "Date du complexe",
+      "dateValue": "Jeudi 24 septembre 2026",
+      "role": "Rôle",
+      "operationalNotifications": "Notifications opérationnelles",
+      "today": "Aujourd'hui",
+      "customer": "Client",
+      "bookingRef": "Réf. Réservation",
+      "retreat": "Programme Retraite",
+      "dates": "Dates du Séjour",
+      "partySize": "Voyageurs",
+      "villa": "Villa",
+      "status": "Statut",
+      "action": "Action",
+      "actions": "Actions",
+      "search": "Rechercher par nom de client ou référence...",
+      "filter": "Filtrer",
+      "all": "Tous",
+      "saveDraft": "Enregistrer le Brouillon",
+      "back": "Retour",
+      "continue": "Continuer",
+      "complete": "Finaliser l'Enregistrement",
+      "protectedSensitiveData": "Données personnelles protégées — traitées strictement selon les règles de conformité de résidence.",
+      "wellnessProfileCompleted": "Profil de Bien-être Complété",
+      "persons": "Personnes",
+      "nights": "Nuits",
+      "customerSolo": "1 Voyageur (Solo)",
+      "customerCount": "{{count}} Voyageurs",
+      "notAssigned": "Non Attribuée",
+      "view": "Voir",
+      "viewDetails": "Voir Détails",
+      "manage": "Gérer",
+      "resolve": "Traiter",
+      "eta": "Heure d'Arrivée (ETA)",
+      "deposit": "Acompte",
+      "residenceDecl": "Décl. Résidence",
+      "package": "Forfait Retraite",
+      "stayDates": "Dates du Séjour",
+      "packageCategory": "Catégorie du Forfait",
+      "showingVillas": "Affichage de {{count}} villas",
+      "currentAssigned": "Actuel",
+      "alreadyAssigned": "Déjà Attribuée",
+      "occupiedByCustomer": "Occupée par {{name}} ({{ref}})",
+      "allCategories": "Toutes Catégories",
+      "allStates": "Tous Statuts",
+      "change": "Changer",
+      "assignNow": "Attribuer Immédiatement",
+      "arrivedAt": "Arrivé à {{time}}",
+      "nightsRetreat": "Retraite de {{count}} Nuits",
+      "toDate": "au {{date}}",
+      "closeMenu": "Fermer le menu",
+      "openMenu": "Ouvrir le menu"
+    },
+    "pagination": {
+      "label": "Pagination du tableau",
+      "showing": "Affichage de",
+      "perPage": "Par page",
+      "firstPage": "Première page",
+      "previousPage": "Page précédente",
+      "goToPage": "Aller à la page",
+      "nextPage": "Page suivante",
+      "lastPage": "Dernière page",
+      "page": "Page",
+      "of": "sur"
+    },
+    "fnb": {
+      "dashboard": {
+        "title": "Tableau de bord cuisine et restauration",
+        "subtitle": "Suivi des commandes de repas, préparation des lots d'ingrédients et alertes d'allergies alimentaires.",
+        "viewPrepList": "Voir la file de préparation",
+        "retreatMeals": "Repas forfait retraite",
+        "extraOrders": "Commandes à la carte",
+        "dietaryAlerts": "Alertes allergies et régimes",
+        "pendingPreparing": "En attente / En préparation",
+        "urgentQueue": "Préparation prioritaire",
+        "noQueue": "Aucun ticket en attente en cuisine actuellement.",
+        "customer": "Client",
+        "villa": "Villa",
+        "items": "Articles",
+        "status": "Statut",
+        "action": "Action",
+        "viewDetails": "Détails"
+      },
+      "prepList": {
+        "title": "File Quotidienne de Préparation des Repas",
+        "subtitle": "Gérez la préparation culinaire pour l'ensemble des clients.",
+        "date": "Date ciblée",
+        "search": "Rechercher client / villa",
+        "searchPlaceholder": "ex: Jane Doe, 102",
+        "type": "Type de commande",
+        "allTypes": "Tous les types",
+        "typeRetreat": "Repas de retraite",
+        "typeExtra": "À la carte",
+        "status": "Statut",
+        "allStatuses": "Tous les statuts",
+        "statusPending": "En attente",
+        "statusPreparing": "En préparation",
+        "statusReady": "Prêt",
+        "statusDelivered": "Livré",
+        "dietaryAttention": "Attention diététique uniquement",
+        "colTime": "Heure / Créneau",
+        "colCustomer": "Client (Villa)",
+        "colItems": "Articles",
+        "colAlerts": "Alertes diététiques",
+        "colStatus": "Statut",
+        "colAction": "Action",
+        "badgeRetreat": "RETRAITE",
+        "badgeExtra": "EXTRA",
+        "noAlerts": "Aucune",
+        "viewDetails": "Détails",
+        "noResults": "Aucune préparation ne correspond aux filtres actuels.",
+        "clearFilters": "Effacer les filtres",
+        "pageShowing": "Affichage {{start}}–{{end}} sur {{total}}",
+        "dietaryAttentionOnly": "Plats avec alerte allergie uniquement",
+        "resetFilters": "Réinitialiser les filtres",
+        "details": "Détails de la recette et des portions",
+        "batchScalingTitle": "Calcul de production par lot",
+        "batchScalingSubtitle": "Calculé automatiquement selon le quota des hôtes",
+        "servingsVolume": "Volume cible",
+        "servingsCount": "Nombre de portions",
+        "ingredientName": "Ingrédient",
+        "unit": "Unité"
+      },
+      "orderDetail": {
+        "notFound": "Commande non trouvée",
+        "backToList": "Retour à la file",
+        "subtitle": "Détails de préparation et contraintes alimentaires.",
+        "orderItems": "Articles commandés",
+        "itemsCount": "articles",
+        "customerNotes": "Instructions de préparation du client",
+        "deliveryInfo": "Informations de livraison",
+        "customerName": "Nom du client",
+        "location": "Lieu",
+        "targetTime": "Heure cible",
+        "dietaryProfile": "Régime & Allergies",
+        "allergiesTitle": "Allergies & Vigilance accrue",
+        "dietaryPreferencesTitle": "Préférences diététiques",
+        "noAllergies": "Aucune allergie ni restriction diététique enregistrée pour ce client.",
+        "privacyNote": "Confidentialité : Seules les restrictions culinaires sont affichées. Les dossiers médicaux sont protégés.",
+        "orderTypeRetreat": "Repas de retraite",
+        "orderTypeExtra": "Commande À la carte",
+        "statusLabel": "Statut de préparation"
+      },
+      "prep": {
+        "time": "Heure",
+        "customer": "Client",
+        "type": "Type",
+        "status": "Statut",
+        "typeRetreat": "Repas de retraite",
+        "typeExtra": "À la carte"
+      },
+      "status": {
+        "pending": "En attente",
+        "preparing": "En préparation",
+        "ready": "Prêt",
+        "delivered": "Livré"
+      }
+    },
     "sidebar": {
-      "therapistUtilization": "Utilisation des Thérapeutes"
+      "operationalSuite": "SUITE OPÉRATIONNELLE",
+      "operationsDept": "Opérations",
+      "signOut": "Se Déconnecter",
+      "frontDeskOperations": "Opérations Réception",
+      "frontDeskDashboard": "Tableau de Bord Réception",
+      "dailyArrivals": "Arrivées du Jour",
+      "villaManagement": "Gestion des Villas",
+      "bookingHistory": "Historique des réservations",
+      "customerServicesFolio": "Services & Facturation Client",
+      "manualExtraSpa": "Réservation Spa Manuelle",
+      "customerFolioInvoice": "Compte Client & Facture",
+      "finalPaymentCheckout": "Paiement Final & Départ",
+      "therapistSchedule": "Planning Thérapeute",
+      "therapistDashboard": "Tableau de Bord Thérapeute",
+      "dailyWorkSchedule": "Planning Quotidien",
+      "sessionDetailsNotes": "Détails de Séance & Notes",
+      "kitchenOperations": "Opérations Cuisine & Restaurant",
+      "fbDashboard": "Tableau de Bord Restauration",
+      "dailyMealPrepQueue": "File de Préparation Culinaire",
+      "mealOrderAllergies": "Commandes & Allergies",
+      "managementCockpit": "Poste de Pilotage Direction",
+      "managerDashboard": "Tableau de Bord Direction",
+      "revenueAnalytics": "Analyse des Revenus",
+      "occupancyReports": "Rapports d'Occupation",
+      "therapistUtilization": "Utilisation des Thérapeutes",
+      "governanceCompliance": "Gouvernance & Conformité",
+      "systemOverviewPoliceExport": "Vue d'Ensemble & Export Autorités",
+      "administration": "Administration Système",
+      "adminDashboard": "Tableau de Bord Admin",
+      "staffAccounts": "Comptes Collaborateurs",
+      "masterDataManagement": "Gestion des Données Maîtresses",
+      "securityGovernance": "Sécurité & Gouvernance",
+      "businessParameters": "Paramètres Métier",
+      "permissionMatrix": "Matrice des Droits",
+      "managerDelegation": "Délégation de Pouvoirs",
+      "sensitiveDataAuditLog": "Journal d'Audit des Données",
+      "systemOverviewDashboard": "Vue Générale du Système",
+      "manager": "Manager",
+      "admin": "Admin",
+      "delegatedAdministration": "Administration Déléguée",
+      "businessParametersDelegated": "Paramètres Opérationnels (Délégués)"
+    },
+    "adminDashboard": {
+      "kpiTotalAuditRecords": "Total des journaux d'audit",
+      "kpiTotalAuditRecordsSub": "Registres d'audit historiques côté serveur",
+      "kpiStaff": "Comptes du personnel"
+    },
+    "flags": {
+      "pageTitle": "Indicateurs de fonctionnalités et bascules opérationnelles",
+      "systemScope": "Périmètre du sous-système",
+      "pageSubtitle": "Activez ou suspendez en toute sécurité les modules libre-service clients et les tâches d'exportation de conformité.",
+      "safetyTitle": "Les règles de sécurité et de conformité sont immuables (non désactivables)",
+      "safetyDesc": "Les contrôles fondamentaux de sécurité (minimisation des données RBAC, double validation thérapeute + suite, et vérification des soldes du folio) sont inaltérables.",
+      "modularTitle": "Modules fonctionnels configurables",
+      "highImpact": "Impact élevé",
+      "scope": "Portée",
+      "lastModified": "Dernière modification",
+      "immutableTitle": "Contrôles fondamentaux immuables (Architecture protégée)",
+      "alwaysEnforced": "TOUJOURS EN VIGUEUR",
+      "confirmTitle": "Confirmer la modification d'un indicateur à fort impact",
+      "confirmPrompt": "Vous êtes sur le point de modifier l'état opérationnel de :",
+      "confirmAuditNote": "Ce changement prendra effet immédiatement et sera consigné dans le journal d'audit d'administration.",
+      "applyToggle": "Appliquer les modifications"
+    },
+    "masterData": {
+      "pageTitle": "Gestion des données de référence du resort",
+      "pageSubtitle": "Catalogue central d'administration définissant les forfaits de retraite, les soins spa et les catégories de villas.",
+      "taxonomyTitle": "Alignement sur la taxonomie du Global Wellness Institute (GWI)",
+      "taxonomyDesc": "Tous les forfaits, soins et villas respectent la terminologie de l'hôtellerie de bien-être au lieu des classifications hôtelières génériques.",
+      "tabPackages": "Forfaits de retraite",
+      "colWellnessGoal": "Objectif de bien-être",
+      "colSpaSessions": "Séances de spa incluses",
+      "colTreatment": "Nom du soin",
+      "colPractitioner": "Praticien requis",
+      "colVillaCat": "Catégorie de villa",
+      "colCount": "Nombre d'unités",
+      "colRate": "Tarif standard / nuit (VND)",
+      "editRecordTitle": "Modifier la fiche de référence",
+      "colRecordName": "Nom officiel de l'enregistrement",
+      "colBenchmarkPrice": "Tarif de référence de base (VND)"
+    },
+    "audit": {
+      "exportCsv": "Exporter le rapport d'audit CSV (protégé)"
+    },
+    "staffDetail": {
+      "reactivatedToast": "Accès au compte du personnel rétabli avec succès",
+      "suspendedToast": "Compte du personnel suspendu avec succès",
+      "backToList": "Retour à la liste du personnel",
+      "btnSuspend": "Suspendre le compte",
+      "btnRestore": "Réactiver le compte",
+      "metadataTitle": "Informations de profil et de contact",
+      "rbacScopeTitle": "Périmètre d'autorisation et de permissions RBAC",
+      "minimizationRuleTitle": "Politique BR-03 de minimisation des données et de confidentialité",
+      "credentialSafetyNotice": "Les empreintes d'authentification, mots de passe et sessions sont gérés au niveau du service d'identité et ne figurent jamais sur les profils.",
+      "confirmSuspendTitle": "Confirmer la suspension du compte personnel",
+      "confirmRestoreTitle": "Confirmer la réactivation du compte",
+      "confirmSuspendDesc": "Suspendre ce compte révoque immédiatement ses accès aux systèmes opérationnels. Les séances et tâches assignées restent enregistrées pour l'audit.",
+      "confirmRestoreDesc": "Réactiver ce compte rétablira l'ensemble des permissions opérationnelles correspondant au rôle RBAC attribué.",
+      "btnExecuteSuspend": "Confirmer la suspension",
+      "btnExecuteRestore": "Rétablir l'accès"
+    },
+    "staffList": {
+      "createdToast": "Nouveau compte personnel créé avec succès sur le serveur",
+      "pageTitle": "Annuaire du personnel et gouvernance des accès",
+      "pageSubtitle": "Annuaire des employés du resort, attributions des rôles RBAC et autorisations opérationnelles.",
+      "addStaffBtn": "Créer un compte personnel",
+      "privacyBannerTitle": "Protection des identifiants et minimisation des accès",
+      "privacyBannerDesc": "Les empreintes de mots de passe et jetons OAuth ne sont jamais affichés. Les accès sont rigoureusement régis par la matrice RBAC.",
+      "totalStaff": "Total du personnel",
+      "totalStaffSub": "Comptes configurés dans le système",
+      "activeAccounts": "Comptes actifs",
+      "activeAccountsSub": "Autorisés à la connexion opérationnelle",
+      "suspendedAccounts": "Comptes suspendus",
+      "suspendedAccountsSub": "Accès temporairement suspendu",
+      "filterAllRoles": "Tous les rôles",
+      "filterAllStatuses": "Tous les statuts",
+      "personnelLabel": "personnels",
+      "colMember": "Collaborateur",
+      "colDept": "Département",
+      "colLastActive": "Dernière connexion",
+      "titleLabel": "Titre / Fonction",
+      "confirmCreate": "Confirmer la création du compte"
+    },
+    "arrivals": {
+      "noArrivals": "Aucune arrivée prévue pour cette date (SQL Server : 0 dossier)"
     }
   },
   "topbar": {
-    "managerScope": "Périmètre Restreint Manager",
-    "adminClearance": "Habilitation Administrateur",
-    "filterScope": "Filtrer",
-    "export": "Exporter"
+    "managerScope": "Périmètre Direction Resort",
+    "adminClearance": "Autorisation Administrateur",
+    "filterScope": "Périmètre de filtre",
+    "export": "Exporter les données"
   },
   "adminDashboard": {
     "title": "Cockpit d'Administration et Gouvernance Système",
@@ -621,7 +952,10 @@
     "ruleBr06Title": "BR-06 : Moindre Privilège du Gestionnaire et Séparation des Rôles",
     "ruleBr06Desc": "Le gestionnaire est strictement limité aux rapports analytiques. Il n'hérite jamais des droits d'administrateur sans délégation explicite.",
     "descStaff": "Gérer les comptes du personnel, les rôles d'autorisation, le statut de travail et les limites de sécurité RBAC (Écrans 10 & 11).",
-    "descMasterData": "Administrer les forfaits de retraite, les soins de spa et les catégories de villas selon la taxonomie de bien-être (Écran 12)."
+    "descMasterData": "Administrer les forfaits de retraite, les soins de spa et les catégories de villas selon la taxonomie de bien-être (Écran 12).",
+    "kpiTotalAuditRecords": "Total des journaux d'audit",
+    "kpiTotalAuditRecordsSub": "Registres d'audit historiques côté serveur",
+    "kpiStaff": "Comptes du personnel"
   },
   "params": {
     "pageTitle": "Paramètres Opérationnels & Seuils Métier",
@@ -700,7 +1034,8 @@
     "colTargetRef": "Réf. Cible",
     "colResult": "Résultat",
     "colDetails": "Contexte des Métadonnées",
-    "noEvents": "Aucun événement d'audit ne correspond aux critères de recherche et de filtrage."
+    "noEvents": "Aucun événement d'audit ne correspond aux critères de recherche et de filtrage.",
+    "exportCsv": "Exporter le rapport d'audit CSV (protégé)"
   },
   "managerDashboard": {
     "title": "Cockpit de Supervision de la Direction",
@@ -772,112 +1107,112 @@
     },
     "permissions": {
       "categories": {
-        "experience": "Customer Retreat Experience",
-        "frontDesk": "Front Desk Operations",
-        "wellness": "Spa & Therapy Fulfillment",
-        "culinary": "Culinary & F&B Operations",
-        "management": "Management Analytics & Oversight",
-        "governance": "Governance & System Administration"
+        "experience": "Expérience de retraite client",
+        "frontDesk": "Opérations de réception et accueil",
+        "wellness": "Prestations spa et thérapies de bien-être",
+        "culinary": "Restauration, cuisine et nutrition",
+        "management": "Analyses de gestion et supervision",
+        "governance": "Gouvernance et administration du système"
       },
       "bookRetreat": {
-        "name": "Book Retreat Package & Pay Deposit",
-        "desc": "Browse packages, select retreat dates, configure villa category, and execute deposit via VNPay."
+        "name": "Réserver un forfait de retraite et payer l'acompte",
+        "desc": "Explorer les forfaits, sélectionner les dates, configurer la villa et régler l'acompte par VNPay."
       },
       "manageHealth": {
-        "name": "Manage Own Sensitive Health & Dietary Profile",
-        "desc": "Provide explicit consent to record allergies, dietary restrictions, and physical contraindications."
+        "name": "Gérer le profil de santé et les préférences alimentaires",
+        "desc": "Renseigner et actualiser l'historique de santé, les restrictions alimentaires et les allergies."
       },
       "deleteHealth": {
-        "name": "Request Post-Retreat Health Data Deletion",
-        "desc": "Exercise statutory right to erase or anonymize health notes after retreat completion (BR-07)."
+        "name": "Demander la suppression des données de santé après séjour",
+        "desc": "Solliciter la suppression permanente des données médicales selon les normes RGPD."
       },
       "viewOwnFolio": {
-        "name": "View In-House Consolidated Folio",
-        "desc": "Read-only access to own villa charges, deposits, and invoice line items."
+        "name": "Consulter son propre folio et ses dépenses de spa",
+        "desc": "Accéder au détail en direct des charges de la villa, des soins spa et des factures."
       },
       "viewArrivals": {
-        "name": "View Daily Guest Arrivals & Schedules",
-        "desc": "Access expected customer arrivals, arrival times, and check-in preparation status."
+        "name": "Consulter les arrivées et départs du jour",
+        "desc": "Visualiser la liste complète des hôtes arrivant, séjournant et partant aujourd'hui."
       },
       "checkInGuest": {
-        "name": "Perform Guest Check-In & Collect Residence ID",
-        "desc": "Verify guest identity, collect passport/CCCD details for Law on Residence compliance, and activate stay."
+        "name": "Enregistrer l'arrivée des hôtes et vérifier leur identité",
+        "desc": "Vérifier les pièces d'identité, attribuer les clés et activer le dossier de séjour."
       },
       "assignVillas": {
-        "name": "Assign Physical Villas & Update Operational Status",
-        "desc": "Allocate available villas to bookings and transition villa statuses (Cleaning, Available, Maintenance)."
+        "name": "Assigner les villas et verrouiller la réservation",
+        "desc": "Attribuer et sécuriser une villa de bien-être pour les réservations confirmées."
       },
       "bookExtraSpa": {
-        "name": "Manual Front Desk Extra Spa Booking",
-        "desc": "Schedule walk-up or concierge extra spa sessions with strict 2D resource validation (Therapist + Room)."
+        "name": "Réserver des soins spa et repas supplémentaires à la réception",
+        "desc": "Enregistrer des prestations spa ou de restauration pour le compte d'un hôte."
       },
       "checkoutProcess": {
-        "name": "Consolidate Folio, Collect Payment & Checkout",
-        "desc": "Generate consolidated tax invoice, collect final payment, and complete checkout after verifying zero unpaid charges (BR-02)."
+        "name": "Finaliser le paiement du folio et enregistrer le départ",
+        "desc": "Vérifier le solde dû, enregistrer le règlement final et clôturer le dossier."
       },
       "viewTherapistSchedule": {
-        "name": "View Personal Assigned Therapy Schedule",
-        "desc": "Access assigned daily therapy and yoga sessions with guest arrival times and treatment rooms."
+        "name": "Consulter le planning individuel du thérapeute et la salle",
+        "desc": "Visualiser les créneaux quotidiens, la salle assignée et les rendez-vous réservés."
       },
       "viewHealthNotes": {
-        "name": "View Treatment-Relevant Clinical Health Notes",
-        "desc": "Inspect strictly physical contraindications, injuries, and focus areas for assigned therapy guests (BR-03)."
+        "name": "Consulter les contre-indications pertinentes pour le soin",
+        "desc": "Accéder strictement aux contre-indications physiques requises pour le soin."
       },
       "completeSpa": {
-        "name": "Record Spa Session Outcomes (Completed / No-Show)",
-        "desc": "Mark therapy sessions completed with practitioner notes or register customer no-show."
+        "name": "Valider la séance de spa et signer le rapport de soin",
+        "desc": "Marquer le soin comme terminé et renseigner les observations et conseils post-séance."
       },
       "viewMealPrep": {
-        "name": "View Kitchen Daily Meal Preparation Queue",
-        "desc": "Access daily meal orders aggregated by meal window, delivery villa, and prep status."
+        "name": "Consulter le plan de préparation et les commandes KDS",
+        "desc": "Visualiser les horaires de service, les lots d'ingrédients et les repas par villa."
       },
       "viewDietaryWarnings": {
-        "name": "View Food-Related Allergy & Dietary Warnings",
-        "desc": "Inspect strictly culinary allergen tags and food preferences without access to general health records (BR-03)."
+        "name": "Consulter les alertes d'allergies et restrictions alimentaires",
+        "desc": "Vérifier les alertes vitales sur les allergènes (arachides, fruits de mer, gluten)."
       },
       "updateMealStatus": {
-        "name": "Update Meal Status (Preparing / Ready / Delivered)",
-        "desc": "Progress meal orders through kitchen prep stages to delivery."
+        "name": "Mettre à jour l'état de préparation et livraison des plats",
+        "desc": "Avancer l'état des commandes sur l'écran KDS (en préparation, prêt, livré)."
       },
       "viewRevenue": {
-        "name": "View Revenue & Financial Performance Reports",
-        "desc": "Access aggregated financial reporting across package base fees, spa revenue, and dining revenue."
+        "name": "Consulter les rapports de chiffre d'affaires et rentabilité",
+        "desc": "Analyser les revenus quotidiens, le prix moyen par chambre et les marges spa et F&B."
       },
       "viewOccupancy": {
-        "name": "View Villa Occupancy & Inventory Utilization",
-        "desc": "Inspect real-time resort occupancy rates, villa category performance, and maintenance ratios."
+        "name": "Consulter les rapports d'occupation et prévisions des villas",
+        "desc": "Suivre le taux d'occupation, l'état d'entretien et les tendances prévisionnelles."
       },
       "viewTherapistReports": {
-        "name": "View Practitioner Utilization & Workload Reports",
-        "desc": "Monitor aggregate treatment minutes, scheduled sessions, and completion ratios by therapist."
+        "name": "Consulter les rapports de charge et productivité des thérapeutes",
+        "desc": "Analyser la charge de travail, l'assiduité et l'équité de répartition des séances."
       },
       "viewManagerDashboard": {
-        "name": "Access Executive Management Cockpit",
-        "desc": "Executive cockpit summarizing key operational KPIs and direct navigation to authorized analytical reports."
+        "name": "Accéder au tableau de bord de direction opérationnelle",
+        "desc": "Piloter les indicateurs clés (KPI) transversaux et gérer les incidents prioritaires."
       },
       "exportPolice": {
-        "name": "Export Daily Police Residence Declarations",
-        "desc": "Generate official metadata export file for local police temporary residence compliance (Law on Residence 2020)."
+        "name": "Exporter les déclarations officielles d'hébergement",
+        "desc": "Générer les déclarations légales pour les autorités au format réglementaire."
       },
       "configureParams": {
-        "name": "Configure System Business Parameters",
-        "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
+        "name": "Configurer les paramètres métiers et règles système",
+        "desc": "Ajuster les taux d'acompte, les délais d'annulation et les majorations de service."
       },
       "viewMatrix": {
-        "name": "Inspect System RBAC Permission Matrix",
-        "desc": "Review cross-role functional capability allocations and security boundary definitions."
+        "name": "Consulter et gérer la matrice des rôles et autorisations (RBAC)",
+        "desc": "Maintenir la cartographie des habilitations par rôle pour chaque fonctionnalité."
       },
       "delegateRights": {
-        "name": "Delegate Limited Admin Rights to Manager",
-        "desc": "Grant time-bounded, scoped subset of administrative capabilities to Resort Operations Manager."
+        "name": "Déléguer des autorisations managériales temporaires",
+        "desc": "Attribuer temporairement des prérogatives de gestion dans un cadre tracé."
       },
       "viewAuditLog": {
-        "name": "View Sensitive Data Access Audit Log",
-        "desc": "Inspect chronological metadata log of sensitive health, identity, and financial access events."
+        "name": "Auditer les journaux d'accès aux données sensibles",
+        "desc": "Vérifier la traçabilité des accès aux données de santé, modifications et privilèges."
       },
       "viewSystemOverview": {
-        "name": "View System-Wide Operational Health & Compliance",
-        "desc": "Cross-module rollup of bookings, villas, treatments, dining, and daily police export status."
+        "name": "Consulter l'architecture technique et l'état des services",
+        "desc": "Surveiller les microservices, les connexions base de données et les passerelles API."
       },
       "boundaries": {
         "healthConsent": "Strict privacy boundary: Sensitive health records require explicit self-consent under Decree 13.",
@@ -932,7 +1267,27 @@
     "statusSuspended": "Suspendu",
     "statusPending": "En attente",
     "createdSuccess": "Compte de personnel créé avec succès.",
-    "validationRequired": "Veuillez fournir un nom complet et un email professionnel valide."
+    "validationRequired": "Veuillez fournir un nom complet et un email professionnel valide.",
+    "createdToast": "Nouveau compte personnel créé avec succès sur le serveur",
+    "pageTitle": "Annuaire du personnel et gouvernance des accès",
+    "pageSubtitle": "Annuaire des employés du resort, attributions des rôles RBAC et autorisations opérationnelles.",
+    "addStaffBtn": "Créer un compte personnel",
+    "privacyBannerTitle": "Protection des identifiants et minimisation des accès",
+    "privacyBannerDesc": "Les empreintes de mots de passe et jetons OAuth ne sont jamais affichés. Les accès sont rigoureusement régis par la matrice RBAC.",
+    "totalStaff": "Total du personnel",
+    "totalStaffSub": "Comptes configurés dans le système",
+    "activeAccounts": "Comptes actifs",
+    "activeAccountsSub": "Autorisés à la connexion opérationnelle",
+    "suspendedAccounts": "Comptes suspendus",
+    "suspendedAccountsSub": "Accès temporairement suspendu",
+    "filterAllRoles": "Tous les rôles",
+    "filterAllStatuses": "Tous les statuts",
+    "personnelLabel": "personnels",
+    "colMember": "Collaborateur",
+    "colDept": "Département",
+    "colLastActive": "Dernière connexion",
+    "titleLabel": "Titre / Fonction",
+    "confirmCreate": "Confirmer la création du compte"
   },
   "staffDetail": {
     "pageTitle": "Profil et autorisations du personnel",
@@ -967,7 +1322,22 @@
     "suspendSuccess": "Compte du personnel suspendu avec succès.",
     "reactivateSuccess": "Compte du personnel réactivé avec succès.",
     "notFound": "Enregistrement du compte de personnel introuvable.",
-    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:",
+    "reactivatedToast": "Accès au compte du personnel rétabli avec succès",
+    "suspendedToast": "Compte du personnel suspendu avec succès",
+    "backToList": "Retour à la liste du personnel",
+    "btnSuspend": "Suspendre le compte",
+    "btnRestore": "Réactiver le compte",
+    "metadataTitle": "Informations de profil et de contact",
+    "rbacScopeTitle": "Périmètre d'autorisation et de permissions RBAC",
+    "minimizationRuleTitle": "Politique BR-03 de minimisation des données et de confidentialité",
+    "credentialSafetyNotice": "Les empreintes d'authentification, mots de passe et sessions sont gérés au niveau du service d'identité et ne figurent jamais sur les profils.",
+    "confirmSuspendTitle": "Confirmer la suspension du compte personnel",
+    "confirmRestoreTitle": "Confirmer la réactivation du compte",
+    "confirmSuspendDesc": "Suspendre ce compte révoque immédiatement ses accès aux systèmes opérationnels. Les séances et tâches assignées restent enregistrées pour l'audit.",
+    "confirmRestoreDesc": "Réactiver ce compte rétablira l'ensemble des permissions opérationnelles correspondant au rôle RBAC attribué.",
+    "btnExecuteSuspend": "Confirmer la suspension",
+    "btnExecuteRestore": "Rétablir l'accès"
   },
   "masterData": {
     "title": "Gestion des données de référence",
@@ -996,6 +1366,50 @@
     "editModalTitle": "Configurer l'entrée de données de référence",
     "nameLabel": "Nom d'affichage",
     "priceLabel": "Prix affiché (VND)",
-    "saveSuccess": "Entrée de données de référence mise à jour avec succès."
+    "saveSuccess": "Entrée de données de référence mise à jour avec succès.",
+    "pageTitle": "Gestion des données de référence du resort",
+    "pageSubtitle": "Catalogue central d'administration définissant les forfaits de retraite, les soins spa et les catégories de villas.",
+    "taxonomyTitle": "Alignement sur la taxonomie du Global Wellness Institute (GWI)",
+    "taxonomyDesc": "Tous les forfaits, soins et villas respectent la terminologie de l'hôtellerie de bien-être au lieu des classifications hôtelières génériques.",
+    "tabPackages": "Forfaits de retraite",
+    "colWellnessGoal": "Objectif de bien-être",
+    "colSpaSessions": "Séances de spa incluses",
+    "colTreatment": "Nom du soin",
+    "colPractitioner": "Praticien requis",
+    "colVillaCat": "Catégorie de villa",
+    "colCount": "Nombre d'unités",
+    "colRate": "Tarif standard / nuit (VND)",
+    "editRecordTitle": "Modifier la fiche de référence",
+    "colRecordName": "Nom officiel de l'enregistrement",
+    "colBenchmarkPrice": "Tarif de référence de base (VND)"
+  },
+  "pagination": {
+    "label": "Pagination du tableau",
+    "showing": "Affichage de",
+    "perPage": "Par page",
+    "firstPage": "Première page",
+    "previousPage": "Page précédente",
+    "goToPage": "Aller à la page",
+    "nextPage": "Page suivante",
+    "lastPage": "Dernière page",
+    "page": "Page",
+    "of": "sur"
+  },
+  "flags": {
+    "pageTitle": "Indicateurs de fonctionnalités et bascules opérationnelles",
+    "systemScope": "Périmètre du sous-système",
+    "pageSubtitle": "Activez ou suspendez en toute sécurité les modules libre-service clients et les tâches d'exportation de conformité.",
+    "safetyTitle": "Les règles de sécurité et de conformité sont immuables (non désactivables)",
+    "safetyDesc": "Les contrôles fondamentaux de sécurité (minimisation des données RBAC, double validation thérapeute + suite, et vérification des soldes du folio) sont inaltérables.",
+    "modularTitle": "Modules fonctionnels configurables",
+    "highImpact": "Impact élevé",
+    "scope": "Portée",
+    "lastModified": "Dernière modification",
+    "immutableTitle": "Contrôles fondamentaux immuables (Architecture protégée)",
+    "alwaysEnforced": "TOUJOURS EN VIGUEUR",
+    "confirmTitle": "Confirmer la modification d'un indicateur à fort impact",
+    "confirmPrompt": "Vous êtes sur le point de modifier l'état opérationnel de :",
+    "confirmAuditNote": "Ce changement prendra effet immédiatement et sera consigné dans le journal d'audit d'administration.",
+    "applyToggle": "Appliquer les modifications"
   }
 }

@@ -23,15 +23,24 @@
     "filter": "Bộ Lọc",
     "all": "Tất Cả",
     "viewAll": "Xem Tất Cả",
-    "learnMore": "Tìm Hiểu Thêm"
+    "learnMore": "Tìm Hiểu Thêm",
+    "refresh": "Làm Mới",
+    "save": "Lưu Thay Đổi",
+    "edit": "Chỉnh Sửa",
+    "delete": "Xóa",
+    "search": "Tìm Kiếm",
+    "reset": "Đặt Lại",
+    "close": "Đóng",
+    "title": "Thao Tác",
+    "view": "Xem Chi Tiết"
   },
   "labels": {
     "duration": "Thời Lượng",
-    "startingFrom": "Giá Khởi Điểm",
+    "startingFrom": "Giá khởi điểm từ",
     "perCustomer": "khách",
     "perNight": "đêm",
-    "days": "ngày",
-    "nights": "đêm",
+    "days": "Ngày",
+    "nights": "Đêm",
     "inclusions": "Dịch Vụ Bao Gồm",
     "itinerary": "Hành Trình Trải Nghiệm",
     "accommodation": "Biệt Thự Lưu Trú",
@@ -343,13 +352,94 @@
     }
   },
   "status": {
-    "settled": "Đã quyết toán",
-    "pendingSettlement": "Chờ quyết toán",
-    "included": "Đã bao gồm",
-    "maintenance": "Bảo trì",
-    "cleaning": "Đang dọn & khử khuẩn",
-    "occupied": "Đang lưu trú",
-    "reserved": "Đã đặt trước",
-    "ready": "Sẵn sàng đón khách"
-  }
+    "settled": "Đã Tất Toán",
+    "pendingSettlement": "Chờ Tất Toán",
+    "included": "Đã Bao Gồm Trong Gói",
+    "maintenance": "Bảo Trì",
+    "cleaning": "Đang Dọn Dẹp",
+    "occupied": "Có Khách",
+    "reserved": "Đã Đặt",
+    "ready": "Sẵn Sàng",
+    "connected": "API Đã kết nối",
+    "connecting": "Đang kết nối...",
+    "disconnected": "API Ngoại tuyến",
+    "error": "API Không Khả Dụng",
+    "enabled": "Đã kích hoạt",
+    "disabled": "Đã vô hiệu",
+    "active": "Đang Hoạt Động",
+    "archived": "Lưu Trữ / Tạm Ẩn"
+  },
+  "preferences": {
+    "title": "Tùy Chọn Cá Nhân",
+    "language": "Ngôn Ngữ",
+    "theme": "Giao Diện",
+    "cursor": "Hiệu Ứng Con Trỏ",
+    "toggleCursor": "Bật/Tắt Hiệu Ứng Con Trỏ",
+    "cursorShort": "FX",
+    "cursorLabel": "Hiệu Ứng Con Trỏ"
+  },
+  "theme": {
+    "select": "Chọn Giao Diện",
+    "appearance": "Giao Diện",
+    "light": "Sáng",
+    "dark": "Tối",
+    "blush": "Hồng Phấn"
+  },
+  "common": {
+    "refresh": "Làm mới chỉ số",
+    "actions": {
+      "explore": "Khám Phá",
+      "exploreRetreats": "Khám Phá Kỳ Nghỉ",
+      "viewDetails": "Xem Chi Tiết",
+      "bookRetreat": "Đặt Kỳ Nghỉ",
+      "bookNow": "Đặt Ngay",
+      "signIn": "Đăng Nhập",
+      "signOut": "Đăng Xuất",
+      "register": "Đăng Ký",
+      "back": "Quay Lại",
+      "backToHome": "Về Trang Chủ",
+      "returnToSanctuary": "Trở Về HeavenStay",
+      "submit": "Gửi Xác Nhận",
+      "confirm": "Xác Nhận",
+      "cancel": "Hủy",
+      "continue": "Tiếp Tục",
+      "resend": "Gửi Lại Mã",
+      "filter": "Bộ Lọc",
+      "all": "Tất Cả",
+      "viewAll": "Xem Tất Cả",
+      "learnMore": "Tìm Hiểu Thêm",
+      "refresh": "Làm Mới",
+      "save": "Lưu Thay Đổi",
+      "edit": "Chỉnh Sửa",
+      "delete": "Xóa",
+      "search": "Tìm Kiếm",
+      "reset": "Đặt Lại",
+      "close": "Đóng",
+      "title": "Thao Tác",
+      "view": "Xem Chi Tiết"
+    },
+    "status": {
+      "enabled": "Đã kích hoạt",
+      "disabled": "Đã vô hiệu",
+      "active": "Đang Hoạt Động",
+      "archived": "Lưu Trữ / Tạm Ẩn"
+    },
+    "forms": {
+      "requiredFields": "Họ tên và email là bắt buộc",
+      "fullName": "Họ và Tên",
+      "email": "Email Công Việc"
+    },
+    "showing": "Hiển thị",
+    "close": "Đóng",
+    "exporting": "Đang xuất dữ liệu..."
+  },
+  "refresh": "Làm mới chỉ số",
+  "forms": {
+    "requiredFields": "Họ tên và email là bắt buộc",
+    "fullName": "Họ và Tên",
+    "email": "Email Công Việc"
+  },
+  "showing": "Hiển thị",
+  "close": "Đóng",
+  "exporting": "Đang xuất dữ liệu..."
 }

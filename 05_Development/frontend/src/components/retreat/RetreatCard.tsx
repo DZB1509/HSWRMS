@@ -4,6 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, Clock, MapPin } from 'lucide-react';
 import type { RetreatPackageDto } from '../../api/booking/retreatBookingApi';
 import { formatVND } from '../../i18n';
+import {
+  resolvePackageName,
+  resolveVillaCategoryName,
+  resolvePackageWellnessGoal,
+} from '../../i18n/dynamicContent';
 
 export interface RetreatCardProps {
   retreat: RetreatPackageDto;
@@ -16,14 +21,14 @@ export const RetreatCard: React.FC<RetreatCardProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
 
-  const name = retreat.packageName;
+  const name = resolvePackageName(retreat.packageCode || retreat.packageName, i18n.language, retreat.packageName);
   const days = retreat.durationNights + 1;
   const nights = retreat.durationNights;
   const durationLabel = `${days} ${t('labels.days', 'Days')} · ${nights} ${t('labels.nights', 'Nights')}`;
   const villa = retreat.eligibleVillaCategories && retreat.eligibleVillaCategories.length > 0
-    ? retreat.eligibleVillaCategories.map((v) => v.categoryName).join(', ')
+    ? retreat.eligibleVillaCategories.map((v) => resolveVillaCategoryName(v.categoryName, i18n.language, v.categoryName)).join(', ')
     : '—';
-  const summary = retreat.wellnessGoal || retreat.targetGuest || retreat.includedTreatments || '—';
+  const summary = resolvePackageWellnessGoal(retreat.packageCode, i18n.language, retreat.wellnessGoal) || retreat.targetGuest || retreat.includedTreatments || '—';
   const slug = retreat.packageCode.toLowerCase();
 
   return (

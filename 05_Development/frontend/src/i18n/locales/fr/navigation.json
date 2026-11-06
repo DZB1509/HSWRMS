@@ -1,7 +1,7 @@
 {
   "nav": {
-    "retreats": "Séjours & Retraites",
-    "villas": "Villas & Espaces",
+    "retreats": "Forfaits de retraite",
+    "villas": "Villas sanctuaires",
     "spa": "Spa & Soins Holistiques",
     "dining": "Gastronomie Saine",
     "experiences": "Expériences",
@@ -27,5 +27,7 @@
     "zh-CN": "简体中文",
     "ja": "日本語",
     "fr": "Français"
-  }
+  },
+  "retreats": "Forfaits de retraite",
+  "villas": "Villas sanctuaires"
 }

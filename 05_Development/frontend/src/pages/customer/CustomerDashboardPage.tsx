@@ -7,6 +7,10 @@ import { Button } from '../../components/common/Button';
 import { BookingStatusChip } from '../../components/customer/BookingStatusChip';
 import { PrivacyNotice } from '../../components/customer/PrivacyNotice';
 import {
+  resolvePackageName,
+  resolveVillaCategoryName,
+} from '../../i18n/dynamicContent';
+import {
   Sparkles,
   Calendar,
   HeartPulse,
@@ -34,11 +38,11 @@ export const CustomerDashboardPage: React.FC = () => {
   };
 
   const bookingName = activeBooking
-    ? activeBooking.retreatName[lang] || activeBooking.retreatName.en || activeBooking.retreatName.vi
+    ? (activeBooking.retreatName?.[lang] || resolvePackageName(activeBooking.retreatName?.vi, lang, activeBooking.retreatName?.en || ''))
     : '';
 
   const villaName = activeBooking
-    ? activeBooking.villaType[lang] || activeBooking.villaType.en || activeBooking.villaType.vi
+    ? (activeBooking.villaType?.[lang] || resolveVillaCategoryName(activeBooking.villaType?.en || activeBooking.villaType?.vi, lang, activeBooking.villaType?.vi || ''))
     : '';
 
   return (

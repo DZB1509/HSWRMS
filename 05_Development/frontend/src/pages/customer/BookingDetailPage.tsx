@@ -24,10 +24,15 @@ import {
   type BookingSummaryResponse,
   type VillaCategoryDto,
 } from '../../api/booking/retreatBookingApi';
+import {
+  resolvePackageName,
+  resolveVillaCategoryName,
+  resolveBookingStatusText,
+} from '../../i18n/dynamicContent';
 
 export const BookingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState<BookingSummaryResponse | null>(null);
@@ -145,25 +150,12 @@ export const BookingDetailPage: React.FC = () => {
     );
   }
 
-  const pkgTitle = booking.packageName;
-  const villaTitle = booking.requestedCategoryName;
+  const pkgTitle = resolvePackageName((booking as any).packageCode || booking.packageName, i18n.language, booking.packageName);
+  const villaTitle = resolveVillaCategoryName(booking.requestedCategoryName, i18n.language, booking.requestedCategoryName);
   const canModifyOrCancel = booking.bookingStatus === 'PENDING' || booking.bookingStatus === 'CONFIRMED';
 
   const getBookingStatusText = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'Chờ đặt cọc';
-      case 'CONFIRMED':
-        return 'Đã xác nhận';
-      case 'CHECKED_IN':
-        return 'Đã nhận phòng';
-      case 'COMPLETED':
-        return 'Đã hoàn tất';
-      case 'CANCELLED':
-        return 'Đã hủy';
-      default:
-        return status;
-    }
+    return resolveBookingStatusText(status, i18n.language);
   };
 
   const getPaymentStatusText = (status?: string, bookingStatus?: string) => {

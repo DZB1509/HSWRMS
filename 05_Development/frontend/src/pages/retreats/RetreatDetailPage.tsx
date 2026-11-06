@@ -23,6 +23,11 @@ import { ParallaxMedia } from '../../components/motion/ParallaxMedia';
 import { MagneticButton } from '../../components/motion/MagneticButton';
 import { formatVND } from '../../i18n';
 import { getRetreatPackages, type RetreatPackageDto } from '../../api/booking/retreatBookingApi';
+import {
+  resolvePackageName,
+  resolveVillaCategoryName,
+  resolvePackageWellnessGoal,
+} from '../../i18n/dynamicContent';
 
 export const RetreatDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -105,14 +110,14 @@ export const RetreatDetailPage: React.FC = () => {
     );
   }
 
-  const name = dbPackage.packageName;
+  const name = resolvePackageName(dbPackage.packageCode || dbPackage.packageName, i18n.language, dbPackage.packageName);
   const days = dbPackage.durationNights + 1;
   const nights = dbPackage.durationNights;
   const startingPrice = dbPackage.basePrice;
-  const wellnessGoal = dbPackage.wellnessGoal || '—';
+  const wellnessGoal = resolvePackageWellnessGoal(dbPackage.packageCode, i18n.language, dbPackage.wellnessGoal) || '—';
   const villaCategories =
     dbPackage.eligibleVillaCategories && dbPackage.eligibleVillaCategories.length > 0
-      ? dbPackage.eligibleVillaCategories.map((v) => v.categoryName).join(', ')
+      ? dbPackage.eligibleVillaCategories.map((v) => resolveVillaCategoryName(v.categoryName, i18n.language, v.categoryName)).join(', ')
       : '—';
 
   // Parse included treatments lines from DB

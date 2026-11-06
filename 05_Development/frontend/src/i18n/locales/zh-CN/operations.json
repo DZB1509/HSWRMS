@@ -7,7 +7,7 @@
     "frontDeskDashboard": "前台接待仪表盘",
     "dailyArrivals": "今日抵店列表",
     "villaManagement": "别墅管理",
-    "bookingHistory": "预订历史记录",
+    "bookingHistory": "预订历史",
     "customerServicesFolio": "客户服务与账单",
     "manualExtraSpa": "手工增订水疗",
     "customerFolioInvoice": "客房账单与发票",
@@ -40,8 +40,7 @@
     "manager": "经理",
     "admin": "管理员",
     "delegatedAdministration": "委托行政权限",
-    "businessParametersDelegated": "业务参数（已委托）",
-    "bookingHistory": "预订历史"
+    "businessParametersDelegated": "业务参数（已委托）"
   },
   "payment": {
     "requiredDeposit": "预订所需定金",
@@ -66,7 +65,7 @@
     "resortDate": "度假村日期",
     "dateValue": "2026年9月24日 星期四",
     "role": "角色权限",
-    "operationalNotifications": "运营通知",
+    "operationalNotifications": "运营业务通知",
     "today": "今日",
     "customer": "客户",
     "bookingRef": "预订编号",
@@ -111,7 +110,9 @@
     "assignNow": "立即分配",
     "arrivedAt": "已抵店 {{time}}",
     "nightsRetreat": "{{count}} 晚疗愈入住",
-    "toDate": "至 {{date}}"
+    "toDate": "至 {{date}}",
+    "closeMenu": "关闭菜单",
+    "openMenu": "打开菜单"
   },
   "dashboard": {
     "title": "前台接待运营中心",
@@ -153,7 +154,8 @@
     "submittedToPolice": "已提交登记部门",
     "submitAllReady": "批量提交就绪申报",
     "noArrivalsFound": "未找到符合筛选条件的抵店记录。",
-    "emptySearchHelper": "请尝试调整搜索词或清除状态筛选条件。"
+    "emptySearchHelper": "请尝试调整搜索词或清除状态筛选条件。",
+    "noArrivals": "当天无预定抵达的客人（SQL Server：0 条记录）"
   },
   "checkIn": {
     "title": "入住办理与住宿登记",
@@ -327,7 +329,8 @@
     "folioStatusNote": "待计入客户总账 — 将在退房时进行统一结算。",
     "readyToConfirm": "所有前置条件有效",
     "incompletePill": "选项未完成",
-    "confirmAction": "确认附加水疗会话"
+    "confirmAction": "确认附加水疗会话",
+    "step3DisabledHint": "前提条件：请在第2步中选择一项水疗疗程"
   },
   "therapist": {
     "dashboard": "理疗师工作台",
@@ -393,25 +396,36 @@
     "colRoom": "疗愈室",
     "colStatus": "状态",
     "colAction": "操作",
-    "start": "开始"
+    "start": "开始",
+    "title": "理疗师",
+    "scheduled": "已排班",
+    "scheduleSubtitle": "您在所选日期的专属理疗预约",
+    "sessionNotFoundDesc": "未找到所请求的理疗会话，或您没有权限查看该记录。",
+    "sessionNoShow": "已记录为缺席 (No-Show)"
   },
   "fnb": {
     "dashboard": {
-      "title": "餐饮运营工作台",
-      "subtitle": "今日厨房与餐饮服务概览。",
-      "viewPrepList": "查看完整备餐清单",
-      "retreatMeals": "今日套餐膳食",
-      "extraOrders": "额外单点餐品",
-      "dietaryAlerts": "饮食禁忌 / 过敏关注",
-      "pendingPreparing": "待制作 / 制作中",
-      "urgentQueue": "紧急备餐队列（预览）",
-      "noQueue": "备餐队列中暂无项目。",
-      "customer": "客户",
+      "title": "餐饮与厨房运营工作台",
+      "subtitle": "实时监控每日餐品订单、批量食材备料进度及严苛食物过敏预警。",
+      "viewPrepList": "打开备料工单列表",
+      "retreatMeals": "疗愈套餐膳食",
+      "extraOrders": "单点外加订单",
+      "dietaryAlerts": "过敏与特殊饮食预警",
+      "pendingPreparing": "待处理 / 正在烹饪",
+      "urgentQueue": "加急优先出餐",
+      "noQueue": "当前暂无待处理厨房单据。",
+      "customer": "宾客",
       "villa": "别墅",
       "items": "数量",
       "status": "状态",
       "action": "操作",
-      "viewDetails": "详情"
+      "viewDetails": "详情",
+      "shortageBannerTitle": "检测到厨房原料短缺预警",
+      "shortageBannerDesc": "当前可用厨房库存不足以满足今日的用餐订单需求。若未能及时补充批次库存，部分菜品可能会暂时无法供应。",
+      "noDemandTitle": "当日无用餐计划排期：",
+      "noDemandDesc": "指定日期尚未收到疗愈套餐餐食或单点菜品的制作需求。原材料消耗需求为零。",
+      "rawMaterialTitle": "原材料需求与库存短缺监控",
+      "viewAll": "查看全部"
     },
     "prepList": {
       "title": "每日备餐与配餐队列",
@@ -426,8 +440,8 @@
       "status": "制作状态",
       "allStatuses": "全部状态",
       "statusPending": "待处理",
-      "statusPreparing": "制作中",
-      "statusReady": "已备好",
+      "statusPreparing": "烹饪中",
+      "statusReady": "备餐完毕",
       "statusDelivered": "已送达",
       "dietaryAttention": "仅显示过敏 / 饮食关注项",
       "colTime": "时间 / 时段",
@@ -442,41 +456,68 @@
       "viewDetails": "详情",
       "noResults": "暂无符合筛选条件的备餐项目。",
       "clearFilters": "清除筛选",
-      "pageShowing": "显示第 {{start}}–{{end}} 项，共 {{total}} 项"
+      "pageShowing": "显示第 {{start}}–{{end}} 项，共 {{total}} 项",
+      "dietaryAttentionOnly": "仅查看过敏注意菜品",
+      "resetFilters": "重置筛选条件",
+      "details": "食谱及配料详情",
+      "batchScalingTitle": "批量烹饪原料折算",
+      "batchScalingSubtitle": "根据在住宾客配额自动核算",
+      "servingsVolume": "出品总容量",
+      "servingsCount": "出品份数",
+      "ingredientName": "食材原料",
+      "unit": "计量单位",
+      "statusCancelled": "已取消",
+      "physicalStockTitle": "厨房实际可用库存 (FEFO)",
+      "physicalStockSubtitle": "来自合规批次的有效可用原料实物总数（遵循 FEFO：新鲜、完好、临期优先）。",
+      "searchIngredientPlaceholder": "搜索原料名称...",
+      "noMatchingOrders": "所选日期和筛选条件下没有符合的厨房备餐品目。",
+      "hideRecipe": "收起配方",
+      "viewRecipe": "查看配方"
     },
     "orderDetail": {
-      "notFound": "未找到订单",
+      "notFound": "订单未找到",
       "backToList": "返回备餐队列",
-      "subtitle": "制作明细与食品安全饮食要求。",
-      "orderItems": "订购餐品明细",
-      "itemsCount": "项",
-      "customerNotes": "客户特备要求备注",
-      "deliveryInfo": "配送信息",
+      "subtitle": "制作履约详情与宾客专属膳食需求。",
+      "orderItems": "订单品目",
+      "itemsCount": "道菜品",
+      "customerNotes": "度假村养生餐饮服务与备注",
+      "deliveryInfo": "送餐信息",
       "customerName": "客户姓名",
       "location": "配送位置",
-      "targetTime": "目标时间",
-      "dietaryProfile": "饮食偏好与过敏原",
-      "allergiesTitle": "过敏原与高度注意",
-      "dietaryPreferencesTitle": "饮食偏好与限制",
+      "targetTime": "期望送达时间",
+      "dietaryProfile": "膳食习惯与过敏源",
+      "allergiesTitle": "重度过敏关注事项",
+      "dietaryPreferencesTitle": "膳食偏好",
       "noAllergies": "该客户无特殊饮食限制或过敏原记录。",
-      "privacyNote": "隐私保护须知：仅展示与烹饪制作相关的饮食禁忌。医疗细节受系统限制。",
-      "orderTypeRetreat": "疗程套餐餐品",
-      "orderTypeExtra": "单点餐饮订单",
-      "statusLabel": "制作进度"
+      "privacyNote": "隐私说明：餐饮团队仅能查看与烹饪直接相关的过敏与饮食禁忌。",
+      "orderTypeRetreat": "套餐养生餐点",
+      "orderTypeExtra": "单点增选订单",
+      "statusLabel": "状态"
     },
     "prep": {
-      "time": "时间",
-      "customer": "客户",
-      "type": "类型",
+      "time": "时间 / 餐段",
+      "customer": "客人与别墅",
+      "type": "订单类型",
       "status": "状态",
-      "typeRetreat": "疗程套餐餐品",
-      "typeExtra": "单点加餐"
+      "typeRetreat": "套餐疗愈餐",
+      "typeExtra": "单点料理",
+      "items": "菜品品目",
+      "action": "操作",
+      "details": "详情"
     },
     "status": {
       "pending": "待处理",
       "preparing": "制作中",
       "ready": "已备好",
-      "delivered": "已送达"
+      "delivered": "已送达",
+      "cancelled": "已取消"
+    },
+    "inventory": {
+      "consumed": "已扣减库存",
+      "notConfigured": "未配置配方配比",
+      "insufficient": "库存不足",
+      "failed": "扣库失败",
+      "pending": "等待出库"
     }
   },
   "manager": {
@@ -510,7 +551,9 @@
       "spaStream": "水疗理疗",
       "fnbStream": "养生餐饮",
       "revenueLabel": "收入",
-      "amountLabel": "金额"
+      "amountLabel": "金额",
+      "totalRevenue": "总收入",
+      "exportExcel": "导出为 Excel (.xlsx)"
     },
     "occupancy": {
       "title": "专属别墅入住率与容量报告",
@@ -580,15 +623,303 @@
     }
   },
   "operations": {
+    "common": {
+      "dashboard": "前台接待仪表盘",
+      "arrivals": "今日抵店列表",
+      "checkIn": "入住办理与住宿登记",
+      "villaAssignment": "别墅分配",
+      "villaStatus": "别墅状态管理",
+      "shiftOverview": "当班概览",
+      "resortDate": "度假村日期",
+      "dateValue": "2026年9月24日 星期四",
+      "role": "角色权限",
+      "operationalNotifications": "运营业务通知",
+      "today": "今日",
+      "customer": "客户",
+      "bookingRef": "预订编号",
+      "retreat": "疗愈套餐",
+      "dates": "入住日期",
+      "partySize": "入住人数",
+      "villa": "别墅",
+      "status": "状态",
+      "action": "操作",
+      "actions": "操作",
+      "search": "搜索客户姓名或预订编号...",
+      "filter": "筛选",
+      "all": "全部",
+      "saveDraft": "保存草稿",
+      "back": "返回",
+      "continue": "继续",
+      "complete": "完成入住",
+      "protectedSensitiveData": "受保护的敏感信息 — 严格遵循住宿法规处理。",
+      "wellnessProfileCompleted": "健康档案已完备",
+      "persons": "人",
+      "nights": "晚",
+      "customerSolo": "1 位客户（单人）",
+      "customerCount": "{{count}} 位客户",
+      "notAssigned": "未分配",
+      "view": "查看",
+      "viewDetails": "查看详情",
+      "manage": "管理",
+      "resolve": "处理",
+      "eta": "预计抵店 (ETA)",
+      "deposit": "定金",
+      "residenceDecl": "住宿申报",
+      "package": "疗愈套餐",
+      "stayDates": "入住日期",
+      "packageCategory": "套餐对应房型",
+      "showingVillas": "显示 {{count}} 栋别墅",
+      "currentAssigned": "当前已分",
+      "alreadyAssigned": "已分配给该客户",
+      "occupiedByCustomer": "当前在住：{{name}} ({{ref}})",
+      "allCategories": "全部房型",
+      "allStates": "全部状态",
+      "change": "更换",
+      "assignNow": "立即分配",
+      "arrivedAt": "已抵店 {{time}}",
+      "nightsRetreat": "{{count}} 晚疗愈入住",
+      "toDate": "至 {{date}}",
+      "closeMenu": "关闭菜单",
+      "openMenu": "打开菜单"
+    },
+    "pagination": {
+      "label": "数据分页导航",
+      "showing": "显示",
+      "perPage": "每页显示",
+      "firstPage": "首页",
+      "previousPage": "上一页",
+      "goToPage": "前往页码",
+      "nextPage": "下一页",
+      "lastPage": "末页",
+      "page": "页",
+      "of": "共"
+    },
+    "fnb": {
+      "dashboard": {
+        "title": "餐饮与厨房运营工作台",
+        "subtitle": "实时监控每日餐品订单、批量食材备料进度及严苛食物过敏预警。",
+        "viewPrepList": "打开备料工单列表",
+        "retreatMeals": "疗愈套餐膳食",
+        "extraOrders": "单点外加订单",
+        "dietaryAlerts": "过敏与特殊饮食预警",
+        "pendingPreparing": "待处理 / 正在烹饪",
+        "urgentQueue": "加急优先出餐",
+        "noQueue": "当前暂无待处理厨房单据。",
+        "customer": "宾客",
+        "villa": "别墅",
+        "items": "数量",
+        "status": "状态",
+        "action": "操作",
+        "viewDetails": "详情"
+      },
+      "prepList": {
+        "title": "每日备餐与配餐队列",
+        "subtitle": "管理全度假村客户餐饮订单制作与交付。",
+        "date": "目标日期",
+        "search": "搜索客户 / 别墅",
+        "searchPlaceholder": "例如：Jane Doe, 102",
+        "type": "订单类型",
+        "allTypes": "全部类型",
+        "typeRetreat": "疗程套餐餐品",
+        "typeExtra": "额外单点餐品",
+        "status": "制作状态",
+        "allStatuses": "全部状态",
+        "statusPending": "待处理",
+        "statusPreparing": "制作中",
+        "statusReady": "已备好",
+        "statusDelivered": "已送达",
+        "dietaryAttention": "仅显示过敏 / 饮食关注项",
+        "colTime": "时间 / 时段",
+        "colCustomer": "客户 (别墅)",
+        "colItems": "餐品",
+        "colAlerts": "饮食关注",
+        "colStatus": "状态",
+        "colAction": "操作",
+        "badgeRetreat": "套餐",
+        "badgeExtra": "单点",
+        "noAlerts": "无特殊",
+        "viewDetails": "详情",
+        "noResults": "暂无符合筛选条件的备餐项目。",
+        "clearFilters": "清除筛选",
+        "pageShowing": "显示第 {{start}}–{{end}} 项，共 {{total}} 项",
+        "dietaryAttentionOnly": "仅查看过敏注意菜品",
+        "resetFilters": "重置筛选条件",
+        "details": "食谱及配料详情",
+        "batchScalingTitle": "批量烹饪原料折算",
+        "batchScalingSubtitle": "根据在住宾客配额自动核算",
+        "servingsVolume": "出品总容量",
+        "servingsCount": "出品份数",
+        "ingredientName": "食材原料",
+        "unit": "计量单位"
+      },
+      "orderDetail": {
+        "notFound": "未找到订单",
+        "backToList": "返回备餐队列",
+        "subtitle": "制作明细与食品安全饮食要求。",
+        "orderItems": "订购餐品明细",
+        "itemsCount": "项",
+        "customerNotes": "客户特备要求备注",
+        "deliveryInfo": "配送信息",
+        "customerName": "客户姓名",
+        "location": "配送位置",
+        "targetTime": "目标时间",
+        "dietaryProfile": "饮食偏好与过敏原",
+        "allergiesTitle": "过敏原与高度注意",
+        "dietaryPreferencesTitle": "饮食偏好与限制",
+        "noAllergies": "该客户无特殊饮食限制或过敏原记录。",
+        "privacyNote": "隐私保护须知：仅展示与烹饪制作相关的饮食禁忌。医疗细节受系统限制。",
+        "orderTypeRetreat": "疗程套餐餐品",
+        "orderTypeExtra": "单点餐饮订单",
+        "statusLabel": "制作进度"
+      },
+      "prep": {
+        "time": "时间",
+        "customer": "客户",
+        "type": "类型",
+        "status": "状态",
+        "typeRetreat": "疗程套餐餐品",
+        "typeExtra": "单点加餐"
+      },
+      "status": {
+        "pending": "待处理",
+        "preparing": "制作中",
+        "ready": "已备好",
+        "delivered": "已送达"
+      }
+    },
     "sidebar": {
-      "therapistUtilization": "理疗师利用率"
+      "operationalSuite": "运营管理系统",
+      "operationsDept": "运营部",
+      "signOut": "退出登录",
+      "frontDeskOperations": "前台接待运营",
+      "frontDeskDashboard": "前台接待仪表盘",
+      "dailyArrivals": "今日抵店列表",
+      "villaManagement": "别墅管理",
+      "bookingHistory": "预订历史",
+      "customerServicesFolio": "客户服务与账单",
+      "manualExtraSpa": "手工增订水疗",
+      "customerFolioInvoice": "客房账单与发票",
+      "finalPaymentCheckout": "最终结算与退房",
+      "therapistSchedule": "理疗师日程",
+      "therapistDashboard": "理疗师仪表盘",
+      "dailyWorkSchedule": "每日工作日程",
+      "sessionDetailsNotes": "理疗细节与记录",
+      "kitchenOperations": "厨房餐饮运营",
+      "fbDashboard": "餐饮管理仪表盘",
+      "dailyMealPrepQueue": "每日备餐队列",
+      "mealOrderAllergies": "订餐与过敏信息",
+      "managementCockpit": "管理控制台",
+      "managerDashboard": "经理仪表盘",
+      "revenueAnalytics": "收入数据分析",
+      "occupancyReports": "入住率报告",
+      "therapistUtilization": "理疗师利用率",
+      "governanceCompliance": "监管与合规",
+      "systemOverviewPoliceExport": "系统总览与登记导出",
+      "administration": "系统管理",
+      "adminDashboard": "管理员仪表盘",
+      "staffAccounts": "员工账户管理",
+      "masterDataManagement": "主数据管理",
+      "securityGovernance": "安全与权限管理",
+      "businessParameters": "业务参数设置",
+      "permissionMatrix": "权限配置矩阵",
+      "managerDelegation": "管理权委派",
+      "sensitiveDataAuditLog": "敏感数据审计日志",
+      "systemOverviewDashboard": "系统运行总览",
+      "manager": "经理",
+      "admin": "管理员",
+      "delegatedAdministration": "委托行政权限",
+      "businessParametersDelegated": "业务参数（已委托）"
+    },
+    "adminDashboard": {
+      "kpiTotalAuditRecords": "审计日志总记录",
+      "kpiTotalAuditRecordsSub": "服务器端数据库历史审计日志总数",
+      "kpiStaff": "员工账户"
+    },
+    "flags": {
+      "pageTitle": "系统功能开关与运营控制",
+      "systemScope": "系统子系统范围",
+      "pageSubtitle": "安全启用或暂停客户自助服务模块以及合规数据导出作业。",
+      "safetyTitle": "安全与合规边界为不可变设置（禁止停用）",
+      "safetyDesc": "核心安全约束（如 RBAC 数据最小化、水疗理疗师+套房双向可用性校验、结账账单结清校验）属于核心架构防线，无法被停用。",
+      "modularTitle": "可配置的功能模块",
+      "highImpact": "高影响",
+      "scope": "作用域",
+      "lastModified": "最后修改时间",
+      "immutableTitle": "不可变核心控制机制（受保护架构）",
+      "alwaysEnforced": "始终强制执行",
+      "confirmTitle": "确认高影响功能开关变更",
+      "confirmPrompt": "您即将更改以下功能模块的运行状态：",
+      "confirmAuditNote": "此变更将立即生效，并在系统管理员审计日志中记录带时间戳的审计凭证。",
+      "applyToggle": "应用变更"
+    },
+    "masterData": {
+      "pageTitle": "健康养生度假村主数据管理",
+      "pageSubtitle": "定义养生疗愈套餐、水疗护理项目和别墅住宿房型的中央管理主目录。",
+      "taxonomyTitle": "全球健康研究所 (GWI) 分类标准对齐",
+      "taxonomyDesc": "所有套餐、理疗服务及别墅房型均采用专业健康养生度假产业术语，替代普通酒店客房分类。",
+      "tabPackages": "疗愈套餐",
+      "colWellnessGoal": "健康疗愈目标",
+      "colSpaSessions": "包含水疗次数",
+      "colTreatment": "理疗项目名称",
+      "colPractitioner": "资质理疗师要求",
+      "colVillaCat": "别墅类别",
+      "colCount": "别墅数量",
+      "colRate": "标准房价 / 晚 (VND)",
+      "editRecordTitle": "编辑主数据目录记录",
+      "colRecordName": "官方记录名称",
+      "colBenchmarkPrice": "基准参考价格 (VND)"
+    },
+    "audit": {
+      "exportCsv": "导出不可变 CSV 审计报告"
+    },
+    "staffDetail": {
+      "reactivatedToast": "员工账户权限已成功恢复",
+      "suspendedToast": "员工账户已成功暂停",
+      "backToList": "返回员工名录",
+      "btnSuspend": "暂停账户",
+      "btnRestore": "恢复账户",
+      "metadataTitle": "档案与联络信息",
+      "rbacScopeTitle": "RBAC 运营授权与权限范围",
+      "minimizationRuleTitle": "BR-03 数据最小化与隐私保护政策",
+      "credentialSafetyNotice": "身份验证哈希、密码与会话严格受控于认证服务层，绝不在员工档案中展示。",
+      "confirmSuspendTitle": "确认暂停员工账户",
+      "confirmRestoreTitle": "确认恢复员工账户",
+      "confirmSuspendDesc": "暂停该账户将立即吊销其对度假村各运营系统的访问权限。已指派的预约及工作任务仍将妥善留存供管理员核查。",
+      "confirmRestoreDesc": "恢复该员工账户将重新启用其分配的 RBAC 角色所对应的全部运营系统权限。",
+      "btnExecuteSuspend": "执行暂停",
+      "btnExecuteRestore": "恢复访问权限"
+    },
+    "staffList": {
+      "createdToast": "已成功在服务器上创建并开通新员工账户",
+      "pageTitle": "员工名录与访问控制治理",
+      "pageSubtitle": "度假村在职员工目录、RBAC 角色权限分配及运营系统授权。",
+      "addStaffBtn": "开通新员工账户",
+      "privacyBannerTitle": "凭据安全保护与最小权限控制",
+      "privacyBannerDesc": "密码哈希、OAuth 令牌及安全密钥严禁在管理界面展示。员工权限严格受 RBAC 权限矩阵控制。",
+      "totalStaff": "在册员工总数",
+      "totalStaffSub": "系统中配置的员工账号",
+      "activeAccounts": "正常启用账户",
+      "activeAccountsSub": "允许登录业务系统",
+      "suspendedAccounts": "已暂停账户",
+      "suspendedAccountsSub": "访问权限暂时终止",
+      "filterAllRoles": "全部角色",
+      "filterAllStatuses": "全部状态",
+      "personnelLabel": "位员工",
+      "colMember": "员工",
+      "colDept": "部门",
+      "colLastActive": "最近登录",
+      "titleLabel": "职称 / 职位",
+      "confirmCreate": "确认开通账户"
+    },
+    "arrivals": {
+      "noArrivals": "当天无预定抵达的客人（SQL Server：0 条记录）"
     }
   },
   "topbar": {
-    "managerScope": "经理受限权限",
+    "managerScope": "度假村经理权限范围",
     "adminClearance": "系统管理员权限",
     "filterScope": "筛选范围",
-    "export": "导出报告"
+    "export": "导出数据"
   },
   "adminDashboard": {
     "title": "系统管理与治理驾驶舱",
@@ -621,7 +952,10 @@
     "ruleBr06Title": "BR-06: 经理最小权限与角色隔离",
     "ruleBr06Desc": "经理严格限定于高管报告视角。经理绝不会继承完全管理员权限，仅能获得明确限定的临时委托能力。",
     "descStaff": "管理员工账户、权限角色、在岗状态及RBAC安全边界（屏幕 10 和 11）。",
-    "descMasterData": "管理静修套餐、水疗理疗服务及符合健康分类的别墅类别（屏幕 12）。"
+    "descMasterData": "管理静修套餐、水疗理疗服务及符合健康分类的别墅类别（屏幕 12）。",
+    "kpiTotalAuditRecords": "审计日志总记录",
+    "kpiTotalAuditRecordsSub": "服务器端数据库历史审计日志总数",
+    "kpiStaff": "员工账户"
   },
   "params": {
     "pageTitle": "业务运行参数与操作阈值",
@@ -700,7 +1034,8 @@
     "colTargetRef": "目标引用",
     "colResult": "结果",
     "colDetails": "元数据上下文",
-    "noEvents": "未找到符合指定搜索和筛选条件的审计事件。"
+    "noEvents": "未找到符合指定搜索和筛选条件的审计事件。",
+    "exportCsv": "导出不可变 CSV 审计报告"
   },
   "managerDashboard": {
     "title": "高管管理监督驾驶舱",
@@ -772,112 +1107,112 @@
     },
     "permissions": {
       "categories": {
-        "experience": "Customer Retreat Experience",
-        "frontDesk": "Front Desk Operations",
-        "wellness": "Spa & Therapy Fulfillment",
-        "culinary": "Culinary & F&B Operations",
-        "management": "Management Analytics & Oversight",
-        "governance": "Governance & System Administration"
+        "experience": "宾客疗愈度假体验",
+        "frontDesk": "前台接待与入离办理",
+        "wellness": "水疗与康养理疗交付",
+        "culinary": "餐饮营养与后厨运作",
+        "management": "管理层运营分析与审计",
+        "governance": "系统安全管控与权限治理"
       },
       "bookRetreat": {
-        "name": "Book Retreat Package & Pay Deposit",
-        "desc": "Browse packages, select retreat dates, configure villa category, and execute deposit via VNPay."
+        "name": "预订疗愈套餐并支付定金",
+        "desc": "浏览套餐、选择日期、配置别墅房型并通过VNPay完成定金支付。"
       },
       "manageHealth": {
-        "name": "Manage Own Sensitive Health & Dietary Profile",
-        "desc": "Provide explicit consent to record allergies, dietary restrictions, and physical contraindications."
+        "name": "管理个人健康与饮食档案",
+        "desc": "填写并更新病史问卷、饮食禁忌及过敏体质信息。"
       },
       "deleteHealth": {
-        "name": "Request Post-Retreat Health Data Deletion",
-        "desc": "Exercise statutory right to erase or anonymize health notes after retreat completion (BR-07)."
+        "name": "申请离店后健康数据销毁",
+        "desc": "依据GDPR及医疗隐私规范，申请永久清除敏感健康档案。"
       },
       "viewOwnFolio": {
-        "name": "View In-House Consolidated Folio",
-        "desc": "Read-only access to own villa charges, deposits, and invoice line items."
+        "name": "查看个人消费账单与水疗消费",
+        "desc": "查阅实时客房账单明细、水疗加订费用及最终支付发票。"
       },
       "viewArrivals": {
-        "name": "View Daily Guest Arrivals & Schedules",
-        "desc": "Access expected customer arrivals, arrival times, and check-in preparation status."
+        "name": "查看今日抵达与离店日程",
+        "desc": "查阅当天所有抵达、在住及退房宾客清单。"
       },
       "checkInGuest": {
-        "name": "Perform Guest Check-In & Collect Residence ID",
-        "desc": "Verify guest identity, collect passport/CCCD details for Law on Residence compliance, and activate stay."
+        "name": "执行宾客入住登记与证件验证",
+        "desc": "核验宾客身份信息、分配房卡并激活在住档案。"
       },
       "assignVillas": {
-        "name": "Assign Physical Villas & Update Operational Status",
-        "desc": "Allocate available villas to bookings and transition villa statuses (Cleaning, Available, Maintenance)."
+        "name": "分配别墅房号与状态锁定",
+        "desc": "为已确认预订分配并锁定专属养生别墅。"
       },
       "bookExtraSpa": {
-        "name": "Manual Front Desk Extra Spa Booking",
-        "desc": "Schedule walk-up or concierge extra spa sessions with strict 2D resource validation (Therapist + Room)."
+        "name": "前台代客加订水疗与餐饮项目",
+        "desc": "在前台界面为宾客录入额外水疗或特色餐饮消费。"
       },
       "checkoutProcess": {
-        "name": "Consolidate Folio, Collect Payment & Checkout",
-        "desc": "Generate consolidated tax invoice, collect final payment, and complete checkout after verifying zero unpaid charges (BR-02)."
+        "name": "审核账单结清与最终退房结算",
+        "desc": "核对未结清款项、录入最终收款凭据并完成退房归档。"
       },
       "viewTherapistSchedule": {
-        "name": "View Personal Assigned Therapy Schedule",
-        "desc": "Access assigned daily therapy and yoga sessions with guest arrival times and treatment rooms."
+        "name": "查看个人理疗排班与指定套房",
+        "desc": "查阅理疗师每日排班日程、指定理疗房与预约时段。"
       },
       "viewHealthNotes": {
-        "name": "View Treatment-Relevant Clinical Health Notes",
-        "desc": "Inspect strictly physical contraindications, injuries, and focus areas for assigned therapy guests (BR-03)."
+        "name": "查阅与疗程相关的健康禁忌提示",
+        "desc": "严格基于最小化知情原则，仅查阅本次疗程相关的身体禁忌。"
       },
       "completeSpa": {
-        "name": "Record Spa Session Outcomes (Completed / No-Show)",
-        "desc": "Mark therapy sessions completed with practitioner notes or register customer no-show."
+        "name": "确认理疗完成与签核工作记录",
+        "desc": "标记水疗疗程已完成并记录疗愈成效与后续护理建议。"
       },
       "viewMealPrep": {
-        "name": "View Kitchen Daily Meal Preparation Queue",
-        "desc": "Access daily meal orders aggregated by meal window, delivery villa, and prep status."
+        "name": "查看每日备餐排程与厨房KDS工单",
+        "desc": "查阅厨房出餐时间表、批次食材用量及各别墅备餐任务。"
       },
       "viewDietaryWarnings": {
-        "name": "View Food-Related Allergy & Dietary Warnings",
-        "desc": "Inspect strictly culinary allergen tags and food preferences without access to general health records (BR-03)."
+        "name": "查看食物过敏原与严格饮食红线",
+        "desc": "查阅客人体质对应的十字花科、坚果、海鲜等过敏警示。"
       },
       "updateMealStatus": {
-        "name": "Update Meal Status (Preparing / Ready / Delivered)",
-        "desc": "Progress meal orders through kitchen prep stages to delivery."
+        "name": "更新餐品备餐与出餐派送状态",
+        "desc": "在KDS界面推进餐品状态至准备中、已备齐或已送达。"
       },
       "viewRevenue": {
-        "name": "View Revenue & Financial Performance Reports",
-        "desc": "Access aggregated financial reporting across package base fees, spa revenue, and dining revenue."
+        "name": "查看度假村营收报表与财务分析",
+        "desc": "查阅每日总收益、客房均价、水疗溢价及餐饮利润分析。"
       },
       "viewOccupancy": {
-        "name": "View Villa Occupancy & Inventory Utilization",
-        "desc": "Inspect real-time resort occupancy rates, villa category performance, and maintenance ratios."
+        "name": "查看别墅入住率与客房预测报表",
+        "desc": "监控别墅占用率、空置清洁状态及未来预订预测趋势。"
       },
       "viewTherapistReports": {
-        "name": "View Practitioner Utilization & Workload Reports",
-        "desc": "Monitor aggregate treatment minutes, scheduled sessions, and completion ratios by therapist."
+        "name": "查看理疗师利用率与工时负荷分析",
+        "desc": "分析各理疗师工作负荷、出勤表现与疗程分配平衡度。"
       },
       "viewManagerDashboard": {
-        "name": "Access Executive Management Cockpit",
-        "desc": "Executive cockpit summarizing key operational KPIs and direct navigation to authorized analytical reports."
+        "name": "访问管理层运营中控驾驶舱",
+        "desc": "查阅跨部门运营核心KPI指标及突发事件协同处置入口。"
       },
       "exportPolice": {
-        "name": "Export Daily Police Residence Declarations",
-        "desc": "Generate official metadata export file for local police temporary residence compliance (Law on Residence 2020)."
+        "name": "导出公安住宿登记申报清单",
+        "desc": "按国家法定要求导出标准格式的在住宾客申报数据表。"
       },
       "configureParams": {
-        "name": "Configure System Business Parameters",
-        "desc": "Adjust deposit requirements, cancellation thresholds, refund rates, and dietary preselection cutoffs."
+        "name": "配置全局业务参数与核心规则",
+        "desc": "调整定金比例、取消违约宽限期及各类服务加成比例。"
       },
       "viewMatrix": {
-        "name": "Inspect System RBAC Permission Matrix",
-        "desc": "Review cross-role functional capability allocations and security boundary definitions."
+        "name": "查看与配置全系统RBAC权限矩阵",
+        "desc": "查阅并维护各系统角色对应功能接口的权限映射规则。"
       },
       "delegateRights": {
-        "name": "Delegate Limited Admin Rights to Manager",
-        "desc": "Grant time-bounded, scoped subset of administrative capabilities to Resort Operations Manager."
+        "name": "执行管理层临时业务权限委托",
+        "desc": "在合规审批框架内向值班经理临时下发指定管理权限。"
       },
       "viewAuditLog": {
-        "name": "View Sensitive Data Access Audit Log",
-        "desc": "Inspect chronological metadata log of sensitive health, identity, and financial access events."
+        "name": "审计敏感数据操作与系统安全日志",
+        "desc": "审查涉及健康数据、账单修改及特权操作的全生命周期日志。"
       },
       "viewSystemOverview": {
-        "name": "View System-Wide Operational Health & Compliance",
-        "desc": "Cross-module rollup of bookings, villas, treatments, dining, and daily police export status."
+        "name": "查看系统整体技术拓扑与集群健康",
+        "desc": "监控微服务调用、数据源连接池及对外集成网关运行指标。"
       },
       "boundaries": {
         "healthConsent": "Strict privacy boundary: Sensitive health records require explicit self-consent under Decree 13.",
@@ -932,7 +1267,27 @@
     "statusSuspended": "已停用",
     "statusPending": "等待激活",
     "createdSuccess": "员工账户已成功配置。",
-    "validationRequired": "请提供完整的全名和有效的工作邮箱。"
+    "validationRequired": "请提供完整的全名和有效的工作邮箱。",
+    "createdToast": "已成功在服务器上创建并开通新员工账户",
+    "pageTitle": "员工名录与访问控制治理",
+    "pageSubtitle": "度假村在职员工目录、RBAC 角色权限分配及运营系统授权。",
+    "addStaffBtn": "开通新员工账户",
+    "privacyBannerTitle": "凭据安全保护与最小权限控制",
+    "privacyBannerDesc": "密码哈希、OAuth 令牌及安全密钥严禁在管理界面展示。员工权限严格受 RBAC 权限矩阵控制。",
+    "totalStaff": "在册员工总数",
+    "totalStaffSub": "系统中配置的员工账号",
+    "activeAccounts": "正常启用账户",
+    "activeAccountsSub": "允许登录业务系统",
+    "suspendedAccounts": "已暂停账户",
+    "suspendedAccountsSub": "访问权限暂时终止",
+    "filterAllRoles": "全部角色",
+    "filterAllStatuses": "全部状态",
+    "personnelLabel": "位员工",
+    "colMember": "员工",
+    "colDept": "部门",
+    "colLastActive": "最近登录",
+    "titleLabel": "职称 / 职位",
+    "confirmCreate": "确认开通账户"
   },
   "staffDetail": {
     "pageTitle": "员工账户权限与档案",
@@ -967,7 +1322,22 @@
     "suspendSuccess": "员工账户已成功暂停。",
     "reactivateSuccess": "员工账户已成功重新激活。",
     "notFound": "未找到员工账户记录。",
-    "adminClearanceListTitle": "Core Admin Clearance Capabilities:"
+    "adminClearanceListTitle": "Core Admin Clearance Capabilities:",
+    "reactivatedToast": "员工账户权限已成功恢复",
+    "suspendedToast": "员工账户已成功暂停",
+    "backToList": "返回员工名录",
+    "btnSuspend": "暂停账户",
+    "btnRestore": "恢复账户",
+    "metadataTitle": "档案与联络信息",
+    "rbacScopeTitle": "RBAC 运营授权与权限范围",
+    "minimizationRuleTitle": "BR-03 数据最小化与隐私保护政策",
+    "credentialSafetyNotice": "身份验证哈希、密码与会话严格受控于认证服务层，绝不在员工档案中展示。",
+    "confirmSuspendTitle": "确认暂停员工账户",
+    "confirmRestoreTitle": "确认恢复员工账户",
+    "confirmSuspendDesc": "暂停该账户将立即吊销其对度假村各运营系统的访问权限。已指派的预约及工作任务仍将妥善留存供管理员核查。",
+    "confirmRestoreDesc": "恢复该员工账户将重新启用其分配的 RBAC 角色所对应的全部运营系统权限。",
+    "btnExecuteSuspend": "执行暂停",
+    "btnExecuteRestore": "恢复访问权限"
   },
   "masterData": {
     "title": "主数据目录管理",
@@ -996,6 +1366,50 @@
     "editModalTitle": "配置主数据记录",
     "nameLabel": "目录显示名称",
     "priceLabel": "发布价格 (VND)",
-    "saveSuccess": "主数据项更新成功。"
+    "saveSuccess": "主数据项更新成功。",
+    "pageTitle": "健康养生度假村主数据管理",
+    "pageSubtitle": "定义养生疗愈套餐、水疗护理项目和别墅住宿房型的中央管理主目录。",
+    "taxonomyTitle": "全球健康研究所 (GWI) 分类标准对齐",
+    "taxonomyDesc": "所有套餐、理疗服务及别墅房型均采用专业健康养生度假产业术语，替代普通酒店客房分类。",
+    "tabPackages": "疗愈套餐",
+    "colWellnessGoal": "健康疗愈目标",
+    "colSpaSessions": "包含水疗次数",
+    "colTreatment": "理疗项目名称",
+    "colPractitioner": "资质理疗师要求",
+    "colVillaCat": "别墅类别",
+    "colCount": "别墅数量",
+    "colRate": "标准房价 / 晚 (VND)",
+    "editRecordTitle": "编辑主数据目录记录",
+    "colRecordName": "官方记录名称",
+    "colBenchmarkPrice": "基准参考价格 (VND)"
+  },
+  "pagination": {
+    "label": "数据分页导航",
+    "showing": "显示",
+    "perPage": "每页显示",
+    "firstPage": "首页",
+    "previousPage": "上一页",
+    "goToPage": "前往页码",
+    "nextPage": "下一页",
+    "lastPage": "末页",
+    "page": "页",
+    "of": "共"
+  },
+  "flags": {
+    "pageTitle": "系统功能开关与运营控制",
+    "systemScope": "系统子系统范围",
+    "pageSubtitle": "安全启用或暂停客户自助服务模块以及合规数据导出作业。",
+    "safetyTitle": "安全与合规边界为不可变设置（禁止停用）",
+    "safetyDesc": "核心安全约束（如 RBAC 数据最小化、水疗理疗师+套房双向可用性校验、结账账单结清校验）属于核心架构防线，无法被停用。",
+    "modularTitle": "可配置的功能模块",
+    "highImpact": "高影响",
+    "scope": "作用域",
+    "lastModified": "最后修改时间",
+    "immutableTitle": "不可变核心控制机制（受保护架构）",
+    "alwaysEnforced": "始终强制执行",
+    "confirmTitle": "确认高影响功能开关变更",
+    "confirmPrompt": "您即将更改以下功能模块的运行状态：",
+    "confirmAuditNote": "此变更将立即生效，并在系统管理员审计日志中记录带时间戳的审计凭证。",
+    "applyToggle": "应用变更"
   }
 }

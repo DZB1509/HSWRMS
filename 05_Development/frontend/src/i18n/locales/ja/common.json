@@ -23,11 +23,20 @@
     "filter": "絞り込み",
     "all": "すべて",
     "viewAll": "すべて見る",
-    "learnMore": "詳しく見る"
+    "learnMore": "詳しく見る",
+    "refresh": "更新",
+    "save": "変更を保存",
+    "edit": "編集",
+    "delete": "削除",
+    "search": "検索",
+    "reset": "リセット",
+    "close": "閉じる",
+    "title": "操作",
+    "view": "詳細を表示"
   },
   "labels": {
     "duration": "滞在期間",
-    "startingFrom": "料金（目安）",
+    "startingFrom": "料金〜",
     "perCustomer": "名様",
     "perNight": "泊",
     "days": "日間",
@@ -347,9 +356,90 @@
     "pendingSettlement": "未精算",
     "included": "パッケージ込み",
     "maintenance": "メンテナンス中",
-    "cleaning": "清掃・消毒中",
+    "cleaning": "清掃中",
     "occupied": "滞在中",
     "reserved": "予約済み",
-    "ready": "受入準備完了"
-  }
+    "ready": "準備完了",
+    "connected": "API 接続完了",
+    "connecting": "接続中...",
+    "disconnected": "API オフライン",
+    "error": "API 利用不可",
+    "enabled": "有効",
+    "disabled": "無効",
+    "active": "アクティブ",
+    "archived": "アーカイブ / 非表示"
+  },
+  "preferences": {
+    "title": "環境設定",
+    "language": "言語",
+    "theme": "テーマ",
+    "cursor": "カーソル効果",
+    "toggleCursor": "カーソル効果の切り替え",
+    "cursorShort": "FX",
+    "cursorLabel": "カーソル効果"
+  },
+  "theme": {
+    "select": "テーマ選択",
+    "appearance": "外観",
+    "light": "ライト",
+    "dark": "ダーク",
+    "blush": "ブラッシュ"
+  },
+  "common": {
+    "refresh": "指標を更新",
+    "actions": {
+      "explore": "探索する",
+      "exploreRetreats": "リトリートを見る",
+      "viewDetails": "詳細を見る",
+      "bookRetreat": "リトリートを予約",
+      "bookNow": "今すぐ予約",
+      "signIn": "ログイン",
+      "signOut": "ログアウト",
+      "register": "新規登録",
+      "back": "戻る",
+      "backToHome": "ホームに戻る",
+      "returnToSanctuary": "HeavenStayへ戻る",
+      "submit": "送信する",
+      "confirm": "確認する",
+      "cancel": "キャンセル",
+      "continue": "次へ進む",
+      "resend": "再送する",
+      "filter": "絞り込み",
+      "all": "すべて",
+      "viewAll": "すべて見る",
+      "learnMore": "詳しく見る",
+      "refresh": "更新",
+      "save": "変更を保存",
+      "edit": "編集",
+      "delete": "削除",
+      "search": "検索",
+      "reset": "リセット",
+      "close": "閉じる",
+      "title": "操作",
+      "view": "詳細を表示"
+    },
+    "status": {
+      "enabled": "有効",
+      "disabled": "無効",
+      "active": "アクティブ",
+      "archived": "アーカイブ / 非表示"
+    },
+    "forms": {
+      "requiredFields": "氏名とメールアドレスは必須です",
+      "fullName": "氏名",
+      "email": "業務用メールアドレス"
+    },
+    "showing": "表示中",
+    "close": "閉じる",
+    "exporting": "エクスポート中..."
+  },
+  "refresh": "指標を更新",
+  "forms": {
+    "requiredFields": "氏名とメールアドレスは必須です",
+    "fullName": "氏名",
+    "email": "業務用メールアドレス"
+  },
+  "showing": "表示中",
+  "close": "閉じる",
+  "exporting": "エクスポート中..."
 }

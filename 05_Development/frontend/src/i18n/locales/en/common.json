@@ -23,15 +23,24 @@
     "filter": "Filter",
     "all": "All",
     "viewAll": "View All",
-    "learnMore": "Learn More"
+    "learnMore": "Learn More",
+    "refresh": "Refresh",
+    "save": "Save Changes",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "reset": "Reset",
+    "close": "Close",
+    "title": "Actions",
+    "view": "View Details"
   },
   "labels": {
     "duration": "Duration",
-    "startingFrom": "Starting From",
+    "startingFrom": "Starting from",
     "perCustomer": "customer",
     "perNight": "night",
-    "days": "days",
-    "nights": "nights",
+    "days": "Days",
+    "nights": "Nights",
     "inclusions": "Inclusions",
     "itinerary": "Journey Itinerary",
     "accommodation": "Villa Accommodation",
@@ -345,11 +354,92 @@
   "status": {
     "settled": "Settled",
     "pendingSettlement": "Pending Settlement",
-    "included": "Included",
+    "included": "Package Included",
     "maintenance": "Maintenance",
-    "cleaning": "Cleaning & Sanitizing",
+    "cleaning": "Cleaning",
     "occupied": "Occupied",
     "reserved": "Reserved",
-    "ready": "Ready for Arrival"
-  }
+    "ready": "Ready",
+    "connected": "API Connected",
+    "connecting": "Connecting...",
+    "disconnected": "API Offline",
+    "error": "API Unavailable",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "active": "Active",
+    "archived": "Archived / Hidden"
+  },
+  "preferences": {
+    "title": "Preferences",
+    "language": "Language",
+    "theme": "Theme",
+    "cursor": "Cursor Effect",
+    "toggleCursor": "Toggle Cursor Effect",
+    "cursorShort": "FX",
+    "cursorLabel": "Cursor FX"
+  },
+  "theme": {
+    "select": "Select Theme",
+    "appearance": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "blush": "Blush"
+  },
+  "common": {
+    "refresh": "Refresh Metrics",
+    "actions": {
+      "explore": "Explore",
+      "exploreRetreats": "Explore Retreats",
+      "viewDetails": "View Details",
+      "bookRetreat": "Book Retreat",
+      "bookNow": "Book Now",
+      "signIn": "Sign In",
+      "signOut": "Sign Out",
+      "register": "Register",
+      "back": "Back",
+      "backToHome": "Return Home",
+      "returnToSanctuary": "Return to HeavenStay",
+      "submit": "Submit",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "resend": "Resend Code",
+      "filter": "Filter",
+      "all": "All",
+      "viewAll": "View All",
+      "learnMore": "Learn More",
+      "refresh": "Refresh",
+      "save": "Save Changes",
+      "edit": "Edit",
+      "delete": "Delete",
+      "search": "Search",
+      "reset": "Reset",
+      "close": "Close",
+      "title": "Actions",
+      "view": "View Details"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "active": "Active",
+      "archived": "Archived / Hidden"
+    },
+    "forms": {
+      "requiredFields": "Full name and email are required",
+      "fullName": "Full Name",
+      "email": "Work Email"
+    },
+    "showing": "Showing",
+    "close": "Close",
+    "exporting": "Exporting..."
+  },
+  "refresh": "Refresh Metrics",
+  "forms": {
+    "requiredFields": "Full name and email are required",
+    "fullName": "Full Name",
+    "email": "Work Email"
+  },
+  "showing": "Showing",
+  "close": "Close",
+  "exporting": "Exporting..."
 }

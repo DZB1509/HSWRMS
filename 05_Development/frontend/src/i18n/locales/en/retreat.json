@@ -6,7 +6,9 @@
     "filterAll": "All Packages",
     "filterShort": "Short Escape (3 Days)",
     "filterMedium": "Signature Immersion (5 Days)",
-    "filterLong": "Complete Transformation (7 Days)"
+    "filterLong": "Complete Transformation (7 Days)",
+    "filterFourDays": "4 Days · Restoration",
+    "noPackagesFound": "No retreat packages found in SQL Server database matching the selected duration."
   },
   "detail": {
     "backToList": "Back to all retreat packages",
@@ -23,6 +25,36 @@
     "readyToBook": "Ready to Begin Your Healing Journey?",
     "ctaBookHero": "Book Retreat Now",
     "ctaBook": "Reserve This Retreat",
-    "depositNote": "A modest advance deposit secures your private villa and guarantees priority spa and therapist scheduling."
+    "depositNote": "A modest advance deposit secures your private villa and guarantees priority spa and therapist scheduling.",
+    "notFoundTitle": "Retreat Package Not Found",
+    "notFoundDesc": "Could not find information for this retreat package in the database (MSG01: No search results).",
+    "targetGuest": "Ideal for: ",
+    "treatmentsTitle": "Treatments & Therapies",
+    "includedTreatmentsHeading": "Included Wellness Therapies",
+    "dietaryHeading": "Nourishing Diet Program",
+    "organicNutrition": "Pure Artisanal Nutrition",
+    "policyTitle": "Policies & Surcharges",
+    "includedNotice": "Package Inclusions & Terms",
+    "villasTitle": "Sanctuary Living",
+    "eligibleVillas": "Sanctuary Villas Available for this Retreat"
+  },
+  "retreat": {
+    "detail": {
+      "notFoundTitle": "Retreat Package Not Found",
+      "notFoundDesc": "Could not find information for this retreat package in the database (MSG01: No search results).",
+      "targetGuest": "Ideal for: ",
+      "treatmentsTitle": "Treatments & Therapies",
+      "includedTreatmentsHeading": "Included Wellness Therapies",
+      "dietaryHeading": "Nourishing Diet Program",
+      "organicNutrition": "Pure Artisanal Nutrition",
+      "policyTitle": "Policies & Surcharges",
+      "includedNotice": "Package Inclusions & Terms",
+      "villasTitle": "Sanctuary Living",
+      "eligibleVillas": "Sanctuary Villas Available for this Retreat"
+    },
+    "list": {
+      "filterFourDays": "4 Days · Restoration",
+      "noPackagesFound": "No retreat packages found in SQL Server database matching the selected duration."
+    }
   }
 }

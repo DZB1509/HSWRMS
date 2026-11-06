@@ -23,15 +23,24 @@
     "filter": "Filtrer",
     "all": "Tous",
     "viewAll": "Tout afficher",
-    "learnMore": "En savoir plus"
+    "learnMore": "En savoir plus",
+    "refresh": "Actualiser",
+    "save": "Enregistrer les modifications",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "search": "Rechercher",
+    "reset": "Réinitialiser",
+    "close": "Fermer",
+    "title": "Actions",
+    "view": "Voir les détails"
   },
   "labels": {
     "duration": "Durée",
     "startingFrom": "À partir de",
     "perCustomer": "personne",
     "perNight": "nuit",
-    "days": "jours",
-    "nights": "nuits",
+    "days": "Jours",
+    "nights": "Nuits",
     "inclusions": "Prestations Incluses",
     "itinerary": "Itinéraire du Séjour",
     "accommodation": "Hébergement en Villa",
@@ -343,13 +352,94 @@
     }
   },
   "status": {
-    "settled": "Soldé",
+    "settled": "Réglé",
     "pendingSettlement": "En attente de règlement",
-    "included": "Inclus",
-    "maintenance": "Maintenance",
-    "cleaning": "Nettoyage & Désinfection",
+    "included": "Inclus dans le forfait",
+    "maintenance": "En maintenance",
+    "cleaning": "En nettoyage",
     "occupied": "Occupée",
     "reserved": "Réservée",
-    "ready": "Prête pour accueil"
-  }
+    "ready": "Prêt",
+    "connected": "API Connectée",
+    "connecting": "Connexion en cours...",
+    "disconnected": "API Hors ligne",
+    "error": "API Indisponible",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "active": "Actif",
+    "archived": "Archivé / Masqué"
+  },
+  "preferences": {
+    "title": "Préférences",
+    "language": "Langue",
+    "theme": "Thème",
+    "cursor": "Effet de curseur",
+    "toggleCursor": "Activer/Désactiver l'effet de curseur",
+    "cursorShort": "FX",
+    "cursorLabel": "Effet de curseur"
+  },
+  "theme": {
+    "select": "Sélectionner le thème",
+    "appearance": "Apparence",
+    "light": "Clair",
+    "dark": "Sombre",
+    "blush": "Poudré"
+  },
+  "common": {
+    "refresh": "Actualiser les métriques",
+    "actions": {
+      "explore": "Explorer",
+      "exploreRetreats": "Découvrir les Séjours",
+      "viewDetails": "Voir les Détails",
+      "bookRetreat": "Réserver le Séjour",
+      "bookNow": "Réserver",
+      "signIn": "Se Connecter",
+      "signOut": "Se Déconnecter",
+      "register": "S'inscrire",
+      "back": "Retour",
+      "backToHome": "Retour à l'accueil",
+      "returnToSanctuary": "Retourner à HeavenStay",
+      "submit": "Soumettre",
+      "confirm": "Confirmer",
+      "cancel": "Annuler",
+      "continue": "Continuer",
+      "resend": "Renvoyer le code",
+      "filter": "Filtrer",
+      "all": "Tous",
+      "viewAll": "Tout afficher",
+      "learnMore": "En savoir plus",
+      "refresh": "Actualiser",
+      "save": "Enregistrer les modifications",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "search": "Rechercher",
+      "reset": "Réinitialiser",
+      "close": "Fermer",
+      "title": "Actions",
+      "view": "Voir les détails"
+    },
+    "status": {
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "active": "Actif",
+      "archived": "Archivé / Masqué"
+    },
+    "forms": {
+      "requiredFields": "Le nom complet et l'e-mail sont requis",
+      "fullName": "Nom complet",
+      "email": "E-mail professionnel"
+    },
+    "showing": "Affichage de",
+    "close": "Fermer",
+    "exporting": "Exportation en cours..."
+  },
+  "refresh": "Actualiser les métriques",
+  "forms": {
+    "requiredFields": "Le nom complet et l'e-mail sont requis",
+    "fullName": "Nom complet",
+    "email": "E-mail professionnel"
+  },
+  "showing": "Affichage de",
+  "close": "Fermer",
+  "exporting": "Exportation en cours..."
 }

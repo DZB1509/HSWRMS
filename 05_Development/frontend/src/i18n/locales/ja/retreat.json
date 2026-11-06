@@ -6,7 +6,9 @@
     "filterAll": "すべてのプラン",
     "filterShort": "ショートリトリート (3日間)",
     "filterMedium": "スタンダード (5日間)",
-    "filterLong": "集中トランスフォーメーション (7日間)"
+    "filterLong": "集中トランスフォーメーション (7日間)",
+    "filterFourDays": "4日間 · 心身回復",
+    "noPackagesFound": "選択された宿泊日数に一致するリトリートパッケージがデータベースに見つかりません。"
   },
   "detail": {
     "backToList": "プラン一覧に戻る",
@@ -23,6 +25,36 @@
     "readyToBook": "癒しの旅を始めませんか？",
     "ctaBookHero": "今すぐリトリートを予約",
     "ctaBook": "このプランを予約する",
-    "depositNote": "事前のお内金にて、プライベートヴィラと専任セラピストの施術枠を優先確保いたします。"
+    "depositNote": "事前のお内金にて、プライベートヴィラと専任セラピストの施術枠を優先確保いたします。",
+    "notFoundTitle": "リトリートパッケージが見つかりません",
+    "notFoundDesc": "データベースにこのリトリートパッケージの情報が見つかりませんでした（MSG01：検索結果なし）。",
+    "targetGuest": "対象ゲスト：",
+    "treatmentsTitle": "トリートメント＆セラピー",
+    "includedTreatmentsHeading": "パッケージに含まれるウェルネスセラピー",
+    "dietaryHeading": "ナリッシング・ウェルネス食事プログラム",
+    "organicNutrition": "ピュアナチュラル滋養ダイニング",
+    "policyTitle": "規定＆追加料金",
+    "includedNotice": "パッケージの特典と利用規約",
+    "villasTitle": "宿泊サンクチュアリ",
+    "eligibleVillas": "このリトリートに適したヴィラカテゴリー"
+  },
+  "retreat": {
+    "detail": {
+      "notFoundTitle": "リトリートパッケージが見つかりません",
+      "notFoundDesc": "データベースにこのリトリートパッケージの情報が見つかりませんでした（MSG01：検索結果なし）。",
+      "targetGuest": "対象ゲスト：",
+      "treatmentsTitle": "トリートメント＆セラピー",
+      "includedTreatmentsHeading": "パッケージに含まれるウェルネスセラピー",
+      "dietaryHeading": "ナリッシング・ウェルネス食事プログラム",
+      "organicNutrition": "ピュアナチュラル滋養ダイニング",
+      "policyTitle": "規定＆追加料金",
+      "includedNotice": "パッケージの特典と利用規約",
+      "villasTitle": "宿泊サンクチュアリ",
+      "eligibleVillas": "このリトリートに適したヴィラカテゴリー"
+    },
+    "list": {
+      "filterFourDays": "4日間 · 心身回復",
+      "noPackagesFound": "選択された宿泊日数に一致するリトリートパッケージがデータベースに見つかりません。"
+    }
   }
 }

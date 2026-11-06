@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Shield, Heart, MapPin, Phone, Mail } from 'lucide-react';
 import { HeavenStayLogo } from '../common/HeavenStayLogo';
+import { DevHealthIndicator } from '../common/DevHealthIndicator';
 
 export const Footer: React.FC = () => {
   const { t } = useTranslation();
@@ -72,7 +73,8 @@ export const Footer: React.FC = () => {
         <div>
           © 2026 HeavenStay Wellness Resort (HSWRMS). {t('footer.rights')}
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          <DevHealthIndicator inline />
           <span>{t('footer.privacy')}</span>
           <span>{t('footer.terms')}</span>
         </div>

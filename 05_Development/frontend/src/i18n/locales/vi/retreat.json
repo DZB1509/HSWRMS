@@ -6,7 +6,9 @@
     "filterAll": "Tất Cả Kỳ Nghỉ",
     "filterShort": "Kỳ Nghỉ Ngắn (3 Ngày)",
     "filterMedium": "Kỳ Nghỉ Tiêu Chuẩn (5 Ngày)",
-    "filterLong": "Kỳ Nghỉ Chuyên Sâu (7 Ngày)"
+    "filterLong": "Kỳ Nghỉ Chuyên Sâu (7 Ngày)",
+    "filterFourDays": "4 Ngày · Phục Hồi Thân Tâm",
+    "noPackagesFound": "Không tìm thấy gói nghỉ dưỡng nào trong cơ sở dữ liệu phù hợp với thời lượng đã chọn."
   },
   "detail": {
     "backToList": "Quay lại danh sách kỳ nghỉ",
@@ -23,6 +25,36 @@
     "readyToBook": "Sẵn Sàng Bắt Đầu Kỳ Nghỉ?",
     "ctaBookHero": "Đặt Kỳ Nghỉ Ngay",
     "ctaBook": "Đặt Kỳ Nghỉ Này",
-    "depositNote": "Đặt cọc trước để giữ phòng và khung giờ trị liệu tốt nhất cùng chuyên viên."
+    "depositNote": "Đặt cọc trước để giữ phòng và khung giờ trị liệu tốt nhất cùng chuyên viên.",
+    "notFoundTitle": "Gói nghỉ dưỡng không tồn tại",
+    "notFoundDesc": "Không tìm thấy thông tin gói nghỉ dưỡng này trong cơ sở dữ liệu (MSG01: Không có kết quả).",
+    "targetGuest": "Đối tượng phù hợp: ",
+    "treatmentsTitle": "Liệu Trình & Trị Liệu",
+    "includedTreatmentsHeading": "Chương Trình Trị Liệu Đã Bao Gồm",
+    "dietaryHeading": "Chế Độ Dinh Dưỡng Thực Dưỡng",
+    "organicNutrition": "Ẩm Thực Tinh Khiết",
+    "policyTitle": "Quy Định & Phụ Phí",
+    "includedNotice": "Quyền Lợi & Điều Khoản Gói",
+    "villasTitle": "Không Gian Lưu Trú",
+    "eligibleVillas": "Hạng Villa Phù Hợp Với Gói Nghỉ Dưỡng"
+  },
+  "retreat": {
+    "detail": {
+      "notFoundTitle": "Gói nghỉ dưỡng không tồn tại",
+      "notFoundDesc": "Không tìm thấy thông tin gói nghỉ dưỡng này trong cơ sở dữ liệu (MSG01: Không có kết quả).",
+      "targetGuest": "Đối tượng phù hợp: ",
+      "treatmentsTitle": "Liệu Trình & Trị Liệu",
+      "includedTreatmentsHeading": "Chương Trình Trị Liệu Đã Bao Gồm",
+      "dietaryHeading": "Chế Độ Dinh Dưỡng Thực Dưỡng",
+      "organicNutrition": "Ẩm Thực Tinh Khiết",
+      "policyTitle": "Quy Định & Phụ Phí",
+      "includedNotice": "Quyền Lợi & Điều Khoản Gói",
+      "villasTitle": "Không Gian Lưu Trú",
+      "eligibleVillas": "Hạng Villa Phù Hợp Với Gói Nghỉ Dưỡng"
+    },
+    "list": {
+      "filterFourDays": "4 Ngày · Phục Hồi Thân Tâm",
+      "noPackagesFound": "Không tìm thấy gói nghỉ dưỡng nào trong cơ sở dữ liệu phù hợp với thời lượng đã chọn."
+    }
   }
 }
