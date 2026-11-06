@@ -388,6 +388,26 @@ public class AuthServiceTest {
     }
 
     @Test
+    void testLogin_NullPasswordHash_ThrowsSameGenericBadCredentialsWithoutException() {
+        User user = activeVerifiedUserWithCustomerRole();
+        user.setPasswordHash(null); // Null password hash: SSO-only or dedicated service fixture
+        when(userRepository.findByEmailWithRoles("jane@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("attempted-password", null)).thenReturn(false);
+
+        BadCredentialsException ex = assertThrows(BadCredentialsException.class,
+                () -> authService.login(loginRequest("jane@example.com", "attempted-password")));
+
+        assertEquals("Invalid email or password.", ex.getMessage());
+        verifyNoInteractions(jwtTokenProvider);
+        verify(accountLockoutService).recordFailedAttempt(205);
+
+        // Also verify real BCryptPasswordEncoder safely returns false on null hash without NullPointerException
+        org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder realEncoder =
+                new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        assertFalse(realEncoder.matches("attempted-password", null));
+    }
+
+    @Test
     void testLogin_CorrectPasswordUnverifiedEmail_ThrowsEmailNotVerified() {
         User user = activeVerifiedUserWithCustomerRole();
         user.setEmailVerified(false);

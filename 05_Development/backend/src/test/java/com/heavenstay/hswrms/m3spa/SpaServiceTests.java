@@ -14,6 +14,7 @@ import com.heavenstay.hswrms.m3spa.repository.*;
 import com.heavenstay.hswrms.m3spa.scheduler.SessionTimelineScheduler;
 import com.heavenstay.hswrms.m3spa.service.SchedulingEngineService;
 import com.heavenstay.hswrms.m3spa.service.SpaSessionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,15 @@ public class SpaServiceTests {
 
     @BeforeEach
     public void setupData() {
+        cleanData();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        cleanData();
+    }
+
+    private void cleanData() {
         sessionRepository.deleteAll();
         qualificationRepository.deleteAll();
         compatibilityRepository.deleteAll();

@@ -12,6 +12,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -59,5 +61,86 @@ public class SpaSecurityTests {
     public void testPublicCatalogAccessibleWithoutAuth() throws Exception {
         mockMvc.perform(get("/api/v1/spa/treatments"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Security 6. Unauthenticated request to Therapist Roster returns HTTP 401 Unauthorized")
+    public void testUnauthenticatedTherapistRosterReturns401() throws Exception {
+        mockMvc.perform(get("/api/v1/therapist"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Security 7. Customer calling Therapist Roster returns HTTP 403 Forbidden")
+    @WithMockUser(username = "customer@heavenstay.com", roles = {"CUSTOMER"})
+    public void testCustomerCallingTherapistRosterReturns403() throws Exception {
+        mockMvc.perform(get("/api/v1/therapist"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security 8. Therapist calling Therapist Roster returns HTTP 403 Forbidden")
+    @WithMockUser(username = "therapist@heavenstay.com", roles = {"THERAPIST"})
+    public void testTherapistCallingTherapistRosterReturns403() throws Exception {
+        mockMvc.perform(get("/api/v1/therapist"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security 9. Receptionist calling Therapist Roster returns HTTP 403 Forbidden")
+    @WithMockUser(username = "receptionist@heavenstay.com", roles = {"RECEPTIONIST"})
+    public void testReceptionistCallingTherapistRosterReturns403() throws Exception {
+        mockMvc.perform(get("/api/v1/therapist"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security 10. Manager calling Therapist Roster returns HTTP 200 OK with sanitized roster")
+    @WithMockUser(username = "sarah.jenkins@heavenstay.com", roles = {"MANAGER"})
+    public void testManagerCallingTherapistRosterReturns200() throws Exception {
+        mockMvc.perform(get("/api/v1/therapist"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("Security 11. Admin calling Therapist Roster returns HTTP 200 OK")
+    @WithMockUser(username = "admin@heavenstay.com", roles = {"ADMIN"})
+    public void testAdminCallingTherapistRosterReturns200() throws Exception {
+        mockMvc.perform(get("/api/v1/therapist/roster"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("Security 12. Receptionist patching Therapist status returns HTTP 403 Forbidden")
+    @WithMockUser(username = "receptionist@heavenstay.com", roles = {"RECEPTIONIST"})
+    public void testReceptionistPatchingTherapistStatusReturns403() throws Exception {
+        mockMvc.perform(patch("/api/v1/therapist/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SUSPENDED\",\"reason\":\"Unauthorized update attempt\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security 13. Customer patching Therapist status returns HTTP 403 Forbidden")
+    @WithMockUser(username = "customer@heavenstay.com", roles = {"CUSTOMER"})
+    public void testCustomerPatchingTherapistStatusReturns403() throws Exception {
+        mockMvc.perform(patch("/api/v1/therapist/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SUSPENDED\",\"reason\":\"Unauthorized update attempt\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security 14. Therapist patching Therapist status returns HTTP 403 Forbidden")
+    @WithMockUser(username = "therapist@heavenstay.com", roles = {"THERAPIST"})
+    public void testTherapistPatchingTherapistStatusReturns403() throws Exception {
+        mockMvc.perform(patch("/api/v1/therapist/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SUSPENDED\",\"reason\":\"Unauthorized update attempt\"}"))
+                .andExpect(status().isForbidden());
     }
 }

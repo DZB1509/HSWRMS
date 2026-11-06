@@ -1,50 +1,84 @@
 # ============================================================================
-# run-local.ps1 - HSWRMS local development launcher (Windows PowerShell 5.1)
+# run-local.ps1 - HSWRMS local development launcher (Windows PowerShell 5.1 / 7)
 #
 # Starts the Spring Boot backend locally using:
-#   - Spring profiles: local,smtp  (local => H2 in-memory DB; smtp => mail label)
-#   - MAIL_USERNAME / MAIL_PASSWORD: process-scoped LOCAL-DEV defaults are
-#     embedded below so teammates need no manual setx / .env. Any values the
-#     user already provides in the environment are preserved (override wins).
-#   - JWT_SECRET auto-generated temporarily if absent or too weak (>= 32 bytes)
-#
-# LOCAL DEVELOPMENT ONLY. Credentials are never printed. The original
-# environment variables are restored when the backend exits. The Maven exit
-# code is propagated back to the caller.
+#   - In-memory H2 database (profile: local)
+#   - Optional real SMTP email delivery (profile: smtp) ONLY if external credentials
+#     are configured via environment variables (MAIL_USERNAME / MAIL_PASSWORD).
+#   - Zero hardcoded credentials. Never leaks secrets to logs or terminal.
 # ============================================================================
+[CmdletBinding()]
+param(
+    [switch]$RequireSmtp,
+    [string]$CredentialsPath = ""
+)
+
 $ErrorActionPreference = 'Stop'
 
-$here = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$mvn  = Join-Path $here 'mvnw.cmd'
+$here        = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$projectRoot = Split-Path -Parent (Split-Path -Parent $here)
+$mvn         = Join-Path $here 'mvnw.cmd'
+$logsDir     = Join-Path $here 'logs'
+$pidFile     = Join-Path $logsDir 'hswrms-backend-local.pid.json'
 
 if (-not (Test-Path -LiteralPath $mvn)) {
     Write-Host "mvnw.cmd not found next to this script: $mvn" -ForegroundColor Red
     exit 1
 }
 
-# --- 1. Gmail SMTP defaults (LOCAL DEVELOPMENT ONLY; never printed) ---------
-# Shared dev sender + Gmail app password provided as PROCESS-SCOPED defaults so
-# teammates need no manual setx / .env. Values already present in the
-# environment (user override) are preserved. Originals are restored on exit.
-$devMailUser = 'nguyenviethung2261998@gmail.com'
-$devMailPass = 'aeyziocoprdsanqo'
+# --- 1. Load external credentials if provided ---
+if (-not [string]::IsNullOrWhiteSpace($CredentialsPath) -and (Test-Path -LiteralPath $CredentialsPath)) {
+    Get-Content -LiteralPath $CredentialsPath -Encoding UTF8 | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith('#') -and $line.Contains('=')) {
+            $parts = $line.Split('=', 2)
+            $k = $parts[0].Trim()
+            $v = $parts[1].Trim()
+            if ($k) {
+                [System.Environment]::SetEnvironmentVariable($k, $v, 'Process')
+            }
+        }
+    }
+}
 
+# Check for sibling external credentials if MAIL credentials not yet set
+if ([string]::IsNullOrWhiteSpace($env:MAIL_USERNAME) -or [string]::IsNullOrWhiteSpace($env:MAIL_PASSWORD)) {
+    $candidate = Join-Path (Split-Path $projectRoot -Parent) 'HSWRMS_DB_BACKUPS\hswrms_local_credentials.env'
+    if (Test-Path -LiteralPath $candidate) {
+        Get-Content -LiteralPath $candidate -Encoding UTF8 | ForEach-Object {
+            $line = $_.Trim()
+            if ($line -and -not $line.StartsWith('#') -and $line.Contains('=')) {
+                $parts = $line.Split('=', 2)
+                $k = $parts[0].Trim()
+                $v = $parts[1].Trim()
+                if ($k -in @('MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_HOST', 'MAIL_PORT', 'MAIL_FROM')) {
+                    [System.Environment]::SetEnvironmentVariable($k, $v, 'Process')
+                }
+            }
+        }
+    }
+}
+
+# --- 2. Determine SMTP Profile Activation ---
+$smtpActive = $false
 $originalMailUser = $env:MAIL_USERNAME
 $originalMailPass = $env:MAIL_PASSWORD
-$mailUserDefaulted = $false
-$mailPassDefaulted = $false
 
-if ([string]::IsNullOrWhiteSpace($env:MAIL_USERNAME)) {
-    $env:MAIL_USERNAME = $devMailUser
-    $mailUserDefaulted = $true
+if (-not [string]::IsNullOrWhiteSpace($env:MAIL_USERNAME) -and -not [string]::IsNullOrWhiteSpace($env:MAIL_PASSWORD)) {
+    $smtpActive = $true
+    Write-Host '[INFO] SMTP credentials detected in environment: real SMTP profile will be active.' -ForegroundColor Green
+} else {
+    if ($RequireSmtp) {
+        Write-Host '[ERROR] Real SMTP requested (-RequireSmtp), but MAIL_USERNAME or MAIL_PASSWORD is not set in environment.' -ForegroundColor Red
+        exit 1
+    }
+    Write-Host '[INFO] SMTP credentials not configured. Running without real SMTP.' -ForegroundColor Yellow
+    Write-Host '[INFO] Email verification codes will be logged to console by DevEmailDeliveryAdapter.' -ForegroundColor Cyan
 }
-if ([string]::IsNullOrWhiteSpace($env:MAIL_PASSWORD)) {
-    $env:MAIL_PASSWORD = $devMailPass
-    $mailPassDefaulted = $true
-}
-Write-Host 'SMTP configured for local dev: sender set (hidden), app password set (hidden).'
 
-# --- 2. Ensure a strong JWT_SECRET (>= 32 UTF-8 bytes); generate temp if weak
+$activeProfiles = if ($smtpActive) { 'local,smtp' } else { 'local' }
+
+# --- 3. Ensure a strong JWT_SECRET (>= 32 UTF-8 bytes); generate temp if weak ---
 $originalJwt = $env:JWT_SECRET
 $jwtGenerated = $false
 $jwtLen = 0
@@ -60,16 +94,31 @@ $jwtBytes = [System.Text.Encoding]::UTF8.GetByteCount($env:JWT_SECRET)
 $jwtSource = if ($jwtGenerated) { 'temporary generated key' } else { 'from environment' }
 Write-Host ("JWT_SECRET satisfied: {0} bytes ({1})" -f $jwtBytes, $jwtSource)
 
-# --- 3. Activate the local,smtp profiles ------------------------------------
-$originalProfiles = $env:SPRING_PROFILES_ACTIVE
-$env:SPRING_PROFILES_ACTIVE = 'local,smtp'
+# --- 4. Record PID Tracking File ---
+if (-not (Test-Path -LiteralPath $logsDir)) {
+    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+}
 
-# --- 4. Run the backend, then restore the original environment --------------
+$currentProc = [System.Diagnostics.Process]::GetCurrentProcess()
+$pidData = [PSCustomObject]@{
+    Component    = "Backend-Local"
+    LauncherPid  = $currentProc.Id
+    CreationTime = $currentProc.StartTime.ToString("o")
+    StartTime    = (Get-Date).ToString("o")
+    Port         = 8080
+    Profiles     = $activeProfiles
+}
+$pidData | ConvertTo-Json | Set-Content -LiteralPath $pidFile -Encoding UTF8
+
+# --- 5. Activate profile and run ---
+$originalProfiles = $env:SPRING_PROFILES_ACTIVE
+$env:SPRING_PROFILES_ACTIVE = $activeProfiles
+
 $exitCode = 0
 Push-Location $here
 try {
-    Write-Host "Starting HSWRMS backend (profiles: local,smtp, H2 in-memory DB)..." -ForegroundColor Green
-    & $mvn spring-boot:run '-Dspring-boot.run.profiles=local,smtp'
+    Write-Host "Starting HSWRMS backend (profiles: $activeProfiles, H2 in-memory DB)..." -ForegroundColor Green
+    & $mvn spring-boot:run "-Dspring-boot.run.profiles=$activeProfiles"
     $exitCode = $LASTEXITCODE
 }
 finally {
@@ -84,16 +133,10 @@ finally {
     } else {
         Remove-Item Env:\SPRING_PROFILES_ACTIVE -ErrorAction SilentlyContinue
     }
-    if ($mailUserDefaulted) {
-        if ([string]::IsNullOrEmpty($originalMailUser)) { Remove-Item Env:\MAIL_USERNAME -ErrorAction SilentlyContinue }
-        else { $env:MAIL_USERNAME = $originalMailUser }
+    if (Test-Path -LiteralPath $pidFile) {
+        Remove-Item -LiteralPath $pidFile -ErrorAction SilentlyContinue
     }
-    if ($mailPassDefaulted) {
-        if ([string]::IsNullOrEmpty($originalMailPass)) { Remove-Item Env:\MAIL_PASSWORD -ErrorAction SilentlyContinue }
-        else { $env:MAIL_PASSWORD = $originalMailPass }
-    }
-    Write-Host "Backend exited. Restored original MAIL_*/JWT_SECRET/SPRING_PROFILES_ACTIVE environment." -ForegroundColor Cyan
+    Write-Host "Backend exited. Restored original environment." -ForegroundColor Cyan
 }
 
-# --- 5. Propagate the actual Maven exit code --------------------------------
 exit $exitCode

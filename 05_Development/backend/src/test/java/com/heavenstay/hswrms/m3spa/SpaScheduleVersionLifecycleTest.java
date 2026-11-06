@@ -24,6 +24,7 @@ import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentRoomStatus;
 import com.heavenstay.hswrms.m3spa.repository.*;
 import com.heavenstay.hswrms.m3spa.service.SessionRecoveryService;
 import com.heavenstay.hswrms.m3spa.service.SpaSessionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -98,6 +99,8 @@ public class SpaScheduleVersionLifecycleTest {
     private TreatmentRoom room1;
     private TreatmentRoom room2;
     private SpaTreatment treatment;
+    private LocalDate originalCheckIn;
+    private LocalDate originalCheckOut;
 
     @BeforeEach
     public void setUp() {
@@ -150,6 +153,11 @@ public class SpaScheduleVersionLifecycleTest {
             b.setTotalEstimatedAmount(new BigDecimal("15000000.00"));
             return bookingRepository.saveAndFlush(b);
         });
+        originalCheckIn = booking.getCheckInDate();
+        originalCheckOut = booking.getCheckOutDate();
+        booking.setCheckInDate(LocalDate.of(2026, 11, 1));
+        booking.setCheckOutDate(LocalDate.of(2026, 11, 30));
+        booking = bookingRepository.saveAndFlush(booking);
 
         // 2. Treatment
         treatment = new SpaTreatment("Herbal Detox Massage", 60, new BigDecimal("1200000"), "Massage", "Detox body massage");
@@ -176,6 +184,24 @@ public class SpaScheduleVersionLifecycleTest {
         qualificationRepository.saveAndFlush(new TherapistTreatmentQualification(therapist2, treatment));
         compatibilityRepository.saveAndFlush(new TreatmentRoomCompatibility(room1, treatment));
         compatibilityRepository.saveAndFlush(new TreatmentRoomCompatibility(room2, treatment));
+    }
+
+    @AfterEach
+    public void tearDown() {
+        try {
+            if (booking != null && originalCheckIn != null && originalCheckOut != null) {
+                booking.setCheckInDate(originalCheckIn);
+                booking.setCheckOutDate(originalCheckOut);
+                bookingRepository.saveAndFlush(booking);
+            }
+        } finally {
+            sessionRepository.deleteAll();
+            qualificationRepository.deleteAll();
+            compatibilityRepository.deleteAll();
+            treatmentRepository.deleteAll();
+            therapistRepository.deleteAll();
+            roomRepository.deleteAll();
+        }
     }
 
     @Test

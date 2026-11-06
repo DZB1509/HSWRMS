@@ -19,6 +19,7 @@ import com.heavenstay.hswrms.m3spa.port.DefaultTherapistHealthProjectionAdapter;
 import com.heavenstay.hswrms.m3spa.port.TreatmentSafetyNotesDto;
 import com.heavenstay.hswrms.m3spa.repository.*;
 import com.heavenstay.hswrms.m3spa.service.SpaSessionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,6 +85,9 @@ public class TherapistHealthProjectionConsentTest {
     private SpaSessionRepository spaSessionRepository;
 
     @Autowired
+    private TherapistTreatmentQualificationRepository qualificationRepository;
+
+    @Autowired
     private DefaultTherapistHealthProjectionAdapter healthProjectionAdapter;
 
     @Autowired
@@ -103,6 +107,8 @@ public class TherapistHealthProjectionConsentTest {
     @BeforeEach
     public void setUp() {
         spaSessionRepository.deleteAll();
+        qualificationRepository.deleteAll();
+        therapistRepository.deleteAll();
         healthProfileRepository.deleteAll();
         consentRecordRepository.deleteAll();
 
@@ -185,6 +191,15 @@ public class TherapistHealthProjectionConsentTest {
                 start, start, end, BookingSource.CUSTOMER, "Prefer light music"
         );
         session = spaSessionRepository.saveAndFlush(session);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        spaSessionRepository.deleteAll();
+        qualificationRepository.deleteAll();
+        therapistRepository.deleteAll();
+        healthProfileRepository.deleteAll();
+        consentRecordRepository.deleteAll();
     }
 
     @Test

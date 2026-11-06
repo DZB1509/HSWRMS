@@ -144,6 +144,7 @@ class SpaTimelineCheckpointTest {
     @DisplayName("BR-M3-13: Customer decline remains distinct from cancellation and waits for consent to change time")
     void declineIsNotCancellationAndRecoveryDoesNotChangeTime() {
         LocalDateTime now = LocalDateTime.of(2026, 11, 5, 10, 0);
+        timelineScheduler.setClock(fixed(now));
         SpaSession session = createSession(now.plusHours(5), SpaConfirmationStatus.PENDING);
         spaSessionService.declineAttendance(session.getSpaSessionId(), 1);
 

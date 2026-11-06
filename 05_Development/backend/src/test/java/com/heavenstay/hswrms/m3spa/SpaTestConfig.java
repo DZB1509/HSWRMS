@@ -30,14 +30,14 @@ public class SpaTestConfig {
                 if (userId != null && userId.equals(2)) {
                     StayContextDto dto2 = new StayContextDto(
                             102, "HSW-102", 2, 2, "Second Customer", 1,
-                            "Ultimate Rejuvenation", LocalDate.now().minusDays(1), LocalDate.now().plusDays(6), true
+                            "Ultimate Rejuvenation", LocalDate.of(2026, 9, 1), LocalDate.of(2027, 1, 1), true
                     );
                     dto2.setCustomerEmail("customer2@heavenstay.com");
                     return Optional.of(dto2);
                 }
                 StayContextDto dto1 = new StayContextDto(
                         101, "HSW-101", 1, userId != null ? userId : 1, "First Customer", 1,
-                        "Ultimate Rejuvenation", LocalDate.now().minusDays(1), LocalDate.now().plusDays(6), true
+                        "Ultimate Rejuvenation", LocalDate.of(2026, 9, 1), LocalDate.of(2027, 1, 1), true
                 );
                 dto1.setCustomerEmail("customer1@heavenstay.com");
                 return Optional.of(dto1);
@@ -50,7 +50,7 @@ public class SpaTestConfig {
                 }
                 StayContextDto dto = new StayContextDto(
                         bookingId, "HSW-" + bookingId, 1, 1, "Test Customer", 1,
-                        "Ultimate Rejuvenation", LocalDate.now().minusDays(1), LocalDate.now().plusDays(6), true
+                        "Ultimate Rejuvenation", LocalDate.of(2026, 9, 1), LocalDate.of(2027, 1, 1), true
                 );
                 dto.setCustomerEmail("guest" + bookingId + "@heavenstay.com");
                 return Optional.of(dto);
