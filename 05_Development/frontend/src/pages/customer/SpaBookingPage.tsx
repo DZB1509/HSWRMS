@@ -13,8 +13,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSpa } from '../../context/SpaContext';
+import { useCustomer } from '../../context/CustomerContext';
 import { useSpaTreatments } from '../../features/m3-spa/hooks/useSpaFeature';
 import { spaApi } from '../../features/m3-spa/api/spaApi';
+import { getResortTodayString, getResortDateString } from '../../features/m3-spa/utils/spaDateUtils';
 import {
   resolveSpaTreatmentLocalized,
   resolveSpaTreatmentDescriptionLocalized,
@@ -31,8 +33,13 @@ import {
   Sunset,
   Moon,
   Info,
+  User,
+  MapPin,
+  Calendar,
+  CheckCircle,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
+import type { SchedulingCandidate } from '../../features/m3-spa/types/spaTypes';
 
 type TimeRangeOption = 'ANY' | 'MORNING' | 'AFTERNOON' | 'EVENING';
 
@@ -47,6 +54,7 @@ export const SpaBookingPage: React.FC = () => {
 
   const { treatments: fallbackTreatments } = useSpa();
   const { treatments: backendTreatments } = useSpaTreatments();
+  const { activeBooking } = useCustomer();
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | null): string => {
@@ -76,12 +84,18 @@ export const SpaBookingPage: React.FC = () => {
   }, [backendTreatments, fallbackTreatments]);
 
   const [selectedTreatmentId, setSelectedTreatmentId] = useState<string>(treatmentIdFromQuery || '1');
-  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => getResortTodayString());
   const [timeRange, setTimeRange] = useState<TimeRangeOption>('ANY');
   const [flexibleWithDate, setFlexibleWithDate] = useState<boolean>(true);
   const [specialRequest, setSpecialRequest] = useState<string>('');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+
+  // Automated Optimal Recommendation states (Task 6)
+  const [autoCandidate, setAutoCandidate] = useState<SchedulingCandidate | null>(null);
+  const [isAutoLoading, setIsAutoLoading] = useState<boolean>(false);
+  const [autoError, setAutoError] = useState<string | null>(null);
+  const [showManualSelection, setShowManualSelection] = useState<boolean>(false);
 
   useEffect(() => {
     if (treatmentIdFromQuery) {
@@ -93,20 +107,107 @@ export const SpaBookingPage: React.FC = () => {
     (t) => t.id === selectedTreatmentId || String(t.treatmentId) === selectedTreatmentId
   ) || activeTreatments[0];
 
-  // Available dates (next 7 days)
+  // Available dates bounded by active retreat stay if present, otherwise next 7 days
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const base = new Date();
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(base);
-      d.setDate(d.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
+    const todayStr = getResortTodayString();
+
+    if (activeBooking?.startDate && activeBooking?.endDate) {
+      const start = activeBooking.startDate > todayStr ? activeBooking.startDate : todayStr;
+      const end = activeBooking.endDate;
+      const cur = new Date(start + 'T00:00:00');
+      const maxDate = new Date(end + 'T00:00:00');
+
+      while (cur <= maxDate && dates.length < 14) {
+        dates.push(getResortDateString(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    if (dates.length === 0) {
+      const base = new Date();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(base);
+        d.setDate(d.getDate() + i);
+        dates.push(getResortDateString(d));
+      }
     }
     return dates;
-  }, []);
+  }, [activeBooking?.startDate, activeBooking?.endDate]);
+
+  useEffect(() => {
+    if (availableDates.length > 0 && !availableDates.includes(selectedDate)) {
+      setSelectedDate(availableDates[0]);
+    }
+  }, [availableDates, selectedDate]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
+  // Background Automated Candidate Recommendation Evaluation (Task 6)
+  useEffect(() => {
+    if (!selectedTreatment || rescheduleSessionId) {
+      setAutoCandidate(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsAutoLoading(true);
+    setAutoError(null);
+
+    const numericTreatmentId = selectedTreatment.treatmentId || Number(selectedTreatment.id.replace(/\D/g, '')) || 1;
+    const targetDate = availableDates[0] || selectedDate || getResortTodayString();
+
+    spaApi
+      .generateCandidates({
+        treatmentId: numericTreatmentId,
+        preferredDate: targetDate,
+        flexibleWithDate: true,
+      })
+      .then((res) => {
+        if (!isMounted) return;
+        const top =
+          res.candidates && res.candidates.length > 0
+            ? res.candidates[0]
+            : res.alternativeCandidates && res.alternativeCandidates.length > 0
+            ? res.alternativeCandidates[0]
+            : null;
+        setAutoCandidate(top);
+      })
+      .catch((err: unknown) => {
+        if (!isMounted) return;
+        const msg = err instanceof Error ? err.message : 'Unable to evaluate automated recommendations.';
+        setAutoError(msg);
+        setAutoCandidate(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsAutoLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTreatment?.id, availableDates, rescheduleSessionId]);
+
+  const handleConfirmAutoRecommendation = () => {
+    if (!autoCandidate || !selectedTreatment) return;
+    const numericTreatmentId = selectedTreatment.treatmentId || Number(selectedTreatment.id.replace(/\D/g, '')) || 1;
+    const treatmentNameStr =
+      typeof selectedTreatment.name === 'string'
+        ? selectedTreatment.name
+        : selectedTreatment.name?.en || selectedTreatment.name?.vi || 'Spa Treatment';
+
+    navigate('/customer/spa/confirmation', {
+      state: {
+        selectedCandidate: autoCandidate,
+        treatmentId: numericTreatmentId,
+        treatmentName: treatmentNameStr,
+        durationMinutes: selectedTreatment.durationMinutes,
+        customerNote: specialRequest,
+        rescheduleSessionId,
+      },
+    });
   };
 
   /**
@@ -128,12 +229,16 @@ export const SpaBookingPage: React.FC = () => {
         flexibleWithDate,
       });
 
+      const treatmentNameStr = typeof selectedTreatment.name === 'string'
+        ? selectedTreatment.name
+        : (selectedTreatment.name?.en || selectedTreatment.name?.vi || 'Spa Treatment');
+
       // Navigate to Screen 27 (Candidate Selection)
       navigate('/customer/spa/alternatives', {
         state: {
           result,
           treatmentId: numericTreatmentId,
-          treatmentName: selectedTreatment.name.en,
+          treatmentName: treatmentNameStr,
           durationMinutes: selectedTreatment.durationMinutes,
           preferredDate: selectedDate,
           timeRangePreference: timeRange,
@@ -208,7 +313,296 @@ export const SpaBookingPage: React.FC = () => {
         </div>
       )}
 
-      <div className="spa-booking-layout">
+      {/* ── NON-STAY INFORMATIONAL BANNER (GRACEFUL EXPLANATION) ── */}
+      {(autoError?.includes('No active retreat stay') || autoError?.includes('RESOURCE_UNAVAILABLE')) && (
+        <div
+          id="spa-no-active-stay-alert"
+          style={{
+            backgroundColor: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '14px',
+            color: '#92400e',
+          }}
+        >
+          <AlertCircle size={24} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#92400e' }}>
+              {t('spa.noActiveStayTitle', 'Cần có kỳ nghỉ đang lưu trú để đặt lịch Spa')}
+            </h4>
+            <p style={{ margin: '0 0 12px', fontSize: '13px', lineHeight: 1.5, color: '#78350f' }}>
+              {t(
+                'spa.noActiveStayDesc',
+                'Hệ thống ghi nhận quý khách chưa hoàn tất thủ tục nhận phòng (Checked-in Stay) tại HeavenStay. Để đảm bảo dịch vụ tốt nhất và tích hợp chi phí phòng, lịch hẹn Spa yêu cầu quý khách đang lưu trú tại resort.'
+              )}
+            </p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/customer/stays')}
+                style={{
+                  backgroundColor: '#d97706',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {t('spa.viewMyStays', 'Xem đặt phòng của tôi')}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/customer/spa')}
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#92400e',
+                  border: '1px solid #d97706',
+                  borderRadius: '6px',
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {t('spa.backToCatalogue', 'Quay lại danh mục Spa')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AUTOMATED OPTIMAL RECOMMENDATION CARD (TASK 6) ── */}
+      {!rescheduleSessionId && (
+        <div
+          id="spa-automated-recommendation-card"
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '2px solid #0d9488',
+            boxShadow: '0 10px 25px -5px rgba(13, 148, 136, 0.15), 0 8px 10px -6px rgba(13, 148, 136, 0.1)',
+            padding: '24px',
+            marginBottom: '28px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Top highlight bar */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'linear-gradient(90deg, #0d9488, #d97706, #0d9488)',
+            }}
+          />
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#f0fdfa',
+                  color: '#0f766e',
+                  border: '1px solid #99f6e4',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                <Sparkles size={14} style={{ color: '#d97706' }} />
+                {t('spa.autoRecommendationBadge', 'Đề xuất lịch tối ưu nhất (Automated Recommendation)')}
+              </span>
+              {autoCandidate?.recommendationScore && (
+                <span
+                  style={{
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #fde68a',
+                    borderRadius: '20px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}
+                >
+                  ⭐ {autoCandidate.recommendationScore}/100 {t('spa.matchScore', 'điểm phù hợp')}
+                </span>
+              )}
+            </div>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              {t('spa.aiScheduledSubtitle', 'Tự động tính toán theo kỳ nghỉ & trị liệu viên phù hợp')}
+            </span>
+          </div>
+
+          {isAutoLoading ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+              <Sparkles size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#0d9488' }} />
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('spa.evaluatingRecommendations', 'Hệ thống đang phân tích lịch trống tối ưu cho bạn...')}
+              </p>
+            </div>
+          ) : autoCandidate ? (
+            <div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '16px',
+                  backgroundColor: '#f8fafc',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '16px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Calendar size={13} style={{ color: '#0d9488' }} />
+                    <strong>{t('spa.timeSlot', 'Khung giờ đề xuất')}</strong>
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
+                    {autoCandidate.date} · {autoCandidate.startTime} – {autoCandidate.endTime}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    {autoCandidate.durationMinutes} {t('spa.minutes', 'phút')} · {autoCandidate.treatmentName}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <User size={13} style={{ color: '#0d9488' }} />
+                    <strong>{t('spa.therapist', 'Chuyên viên trị liệu')}</strong>
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>
+                    {autoCandidate.therapistName}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#059669', fontWeight: 500 }}>
+                    ✓ {t('spa.therapistCertified', 'Đạt chứng chỉ chuyên môn & Đang sẵn sàng')}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={13} style={{ color: '#0d9488' }} />
+                    <strong>{t('spa.suite', 'Phòng trị liệu')}</strong>
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>
+                    {autoCandidate.roomName}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#059669', fontWeight: 500 }}>
+                    ✓ {t('spa.suiteCompliant', 'Không gian thư giãn đạt chuẩn')}
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason description */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  color: '#0f766e',
+                  backgroundColor: '#f0fdfa',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccfbf1',
+                  marginBottom: '20px',
+                }}
+              >
+                <Sparkles size={16} style={{ flexShrink: 0, color: '#0d9488' }} />
+                <span>
+                  <strong>{t('spa.recommendationReasonTitle', 'Lý do đề xuất')}:</strong>{' '}
+                  {autoCandidate.recommendationReason ||
+                    t('spa.defaultReason', 'Khung giờ tối ưu trong kỳ nghỉ, chuyên viên tay nghề cao và phòng phù hợp tiêu chuẩn')}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  id="btn-confirm-auto-recommendation"
+                  onClick={handleConfirmAutoRecommendation}
+                  style={{
+                    backgroundColor: '#0d9488',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '12px 24px',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <CheckCircle size={18} />
+                  <span>{t('spa.confirmRecommendedSlot', 'Xác nhận lịch đề xuất (1-Click)')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-switch-to-manual-booking"
+                  onClick={() => setShowManualSelection(true)}
+                  style={{
+                    backgroundColor: '#f1f5f9',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '12px 20px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>{t('spa.selectManually', 'Thay đổi lịch / Chọn thủ công')}</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: '8px 4px', color: '#64748b', fontSize: '13px' }}>
+              <p style={{ margin: 0 }}>
+                {t(
+                  'spa.noAutoSlotAvailable',
+                  'Chưa tìm thấy lịch trống phù hợp tự động. Quý khách vui lòng chọn ngày và giờ thủ công bên dưới.'
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="spa-booking-layout" id="spa-manual-form-container">
         {/* Left Column: Form Steps */}
         <div className="spa-booking-form">
           {/* Step 1: Treatment */}

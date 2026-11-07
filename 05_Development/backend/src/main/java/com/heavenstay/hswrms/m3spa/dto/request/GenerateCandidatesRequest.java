@@ -13,6 +13,7 @@ public class GenerateCandidatesRequest {
     @NotNull(message = "preferredDate is required")
     private LocalDate preferredDate;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"timeRangePreference", "timeRangeConstraint"})
     private String timeRangeConstraint; // MORNING, AFTERNOON, EVENING, ALL
     private Integer retreatBookingId;
     private Long rescheduleSessionId;

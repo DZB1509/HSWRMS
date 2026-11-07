@@ -28,6 +28,7 @@ application-local.properties
 application-*-local.yml
 application-*-local.properties
 !**/.env.example
+M3_VIETNAMESE_SEED_ACCOUNTS.txt
 
 # ─── 3. Java & Spring Boot Artifacts (java-pro, hunt-springboot) ───
 target/

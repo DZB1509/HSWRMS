@@ -7,8 +7,9 @@ import { Container } from '../../components/common/Container';
 import { Button } from '../../components/common/Button';
 import { CustomerPageHeader } from '../../components/customer/CustomerPageHeader';
 import { updateMyProfile } from '../../api/customer/customerProfileApi';
+import { getMyUserProfile, updateMyUserProfile, changeMyPassword, type UserProfileDto } from '../../api/user/userAccountApi';
 import { AppApiError } from '../../api/errors/apiError';
-import { User, Phone, Lock, Bell, Shield, Save } from 'lucide-react';
+import { User, Phone, Lock, Bell, Shield, Save, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { CustomerProfile } from '../../types/customer';
 
 const toAccountFormData = (source: CustomerProfile | null) => ({
@@ -28,8 +29,10 @@ const toAccountFormData = (source: CustomerProfile | null) => ({
 
 export const AccountSettingsPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const identity = currentUser?.role === 'customer' ? currentUser.id : null;
-  return <AccountSettingsPageForIdentity key={identity ?? 'no-customer-identity'} />;
+  if (currentUser?.role && currentUser.role !== 'customer') {
+    return <StaffAccountSettingsView />;
+  }
+  return <AccountSettingsPageForIdentity key={currentUser?.id ?? 'no-customer-identity'} />;
 };
 
 const AccountSettingsPageForIdentity: React.FC = () => {
@@ -146,22 +149,39 @@ const AccountSettingsPageForIdentity: React.FC = () => {
     }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isChangingPassword) return;
     setPasswordError(null);
 
     if (passwordState.newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters.');
+      setPasswordError(t('customer.account.passwordMinLength', 'New password must be at least 8 characters.'));
       return;
     }
 
     if (passwordState.newPassword !== passwordState.confirmPassword) {
-      setPasswordError('Passwords do not match.');
+      setPasswordError(t('customer.account.passwordMismatch', 'Passwords do not match.'));
       return;
     }
 
-    setPasswordState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    showToast(t('customer.account.passwordChangedSuccess', 'Password updated successfully.'), 'success');
+    setIsChangingPassword(true);
+    try {
+      await changeMyPassword({
+        currentPassword: passwordState.currentPassword,
+        newPassword: passwordState.newPassword,
+        confirmPassword: passwordState.confirmPassword,
+      });
+      setPasswordState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      showToast(t('customer.account.passwordChangedSuccess', 'Password updated successfully.'), 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('customer.account.passwordChangeFailed', 'Failed to update password.');
+      setPasswordError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -570,7 +590,7 @@ const AccountSettingsPageForIdentity: React.FC = () => {
                   marginBottom: 'var(--space-4)',
                 }}
               >
-                {t('customer.account.passwordDemoNote', 'Demo only in this build — password change is not connected to the backend yet.')}
+                {t('customer.account.passwordSecureNote', 'Passwords are encrypted and verified securely using BCrypt standard.')}
               </div>
 
               {passwordError && (
@@ -659,6 +679,388 @@ const AccountSettingsPageForIdentity: React.FC = () => {
             </div>
           </div>
         </div>
+      </Container>
+    </div>
+  );
+};
+
+const StaffAccountSettingsView: React.FC = () => {
+  const { t } = useTranslation();
+  const { currentUser } = useAuth();
+  const { showToast } = useToast();
+
+  const [profile, setProfile] = useState<UserProfileDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [passwordState, setPasswordState] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    getMyUserProfile()
+      .then((data) => {
+        if (!isMounted) return;
+        setProfile(data);
+        setFullName(data.fullName || '');
+        setPhoneNumber(data.phoneNumber || '');
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn('Could not load user profile from server:', err);
+        // Fallback to local user context if backend is transitioning
+        if (currentUser) {
+          setFullName(currentUser.name || '');
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSaving) return;
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
+      setFormError(t('customer.account.fullNameRequired', 'Please enter your full name.'));
+      return;
+    }
+    setFormError(null);
+    setIsSaving(true);
+    try {
+      const updated = await updateMyUserProfile({
+        fullName: trimmedName,
+        phoneNumber: phoneNumber.trim() || undefined,
+      });
+      setProfile(updated);
+      setFullName(updated.fullName);
+      setPhoneNumber(updated.phoneNumber || '');
+      showToast(t('customer.account.saveSuccess', 'Account profile updated successfully.'), 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('customer.account.saveFailed', 'Could not save profile. Please try again.');
+      setFormError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isChangingPassword) return;
+    setPasswordError(null);
+
+    if (passwordState.newPassword.length < 8) {
+      setPasswordError(t('customer.account.passwordMinLength', 'New password must be at least 8 characters.'));
+      return;
+    }
+    if (passwordState.newPassword !== passwordState.confirmPassword) {
+      setPasswordError(t('customer.account.passwordMismatch', 'Passwords do not match.'));
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changeMyPassword({
+        currentPassword: passwordState.currentPassword,
+        newPassword: passwordState.newPassword,
+        confirmPassword: passwordState.confirmPassword,
+      });
+      setPasswordState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      showToast(t('customer.account.passwordChangedSuccess', 'Password updated successfully.'), 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('customer.account.passwordChangeFailed', 'Failed to update password.');
+      setPasswordError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const roleName = currentUser?.role ? currentUser.role.toUpperCase() : 'STAFF';
+
+  return (
+    <div className="hsw-account-settings-page" style={{ padding: 'var(--space-6) 0 var(--space-16)' }}>
+      <Container size="standard">
+        <CustomerPageHeader
+          badge={`HSWRMS · ${roleName}`}
+          title={t('customer.account.staffTitle', 'Staff Account Settings')}
+          subtitle={t('customer.account.staffSubtitle', 'Manage your personal profile, contact information, and account security.')}
+        />
+
+        {isLoading ? (
+          <div style={{ padding: 'var(--space-12)', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <RefreshCw size={24} className="hsw-spin" style={{ margin: '0 auto var(--space-3)' }} />
+            <div>{t('customer.account.loadingProfile', 'Loading your profile from HSWRMS…')}</div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 'var(--space-8)' }}>
+            {/* Left Column: Personal Information */}
+            <div>
+              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                {formError && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: '#fdf2f2',
+                      border: '1px solid #fecaca',
+                      color: '#991b1b',
+                      fontSize: 'var(--text-xs)',
+                    }}
+                  >
+                    {formError}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    backgroundColor: 'var(--surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-6)',
+                    boxShadow: 'var(--shadow-card)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-5)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <User size={18} style={{ color: 'var(--accent-forest)' }} />
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
+                      {t('customer.account.profileSection', 'Personal Information')}
+                    </h2>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {t('customer.account.fullName', 'Full Name')}
+                      </label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: 'var(--text-sm)',
+                          backgroundColor: 'var(--control-bg, var(--surface))',
+                          color: 'var(--text-primary)',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {t('customer.account.email', 'Email Address')} <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(Read-only)</span>
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={profile?.email || currentUser?.email || ''}
+                        readOnly
+                        disabled
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: 'var(--text-sm)',
+                          backgroundColor: 'var(--surface-muted, #f4f1eb)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'not-allowed',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {t('customer.account.phone', 'Phone Number')}
+                      </label>
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="+84 90 123 4567"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: 'var(--text-sm)',
+                          backgroundColor: 'var(--control-bg, var(--surface))',
+                          color: 'var(--text-primary)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    icon={<Save size={16} />}
+                    isLoading={isSaving}
+                    style={{ backgroundColor: 'var(--accent-forest)', color: '#ffffff', fontWeight: 600 }}
+                  >
+                    {t('customer.account.saveChanges', 'Save Changes')}
+                  </Button>
+                </div>
+              </form>
+            </div>
+
+            {/* Right Column: Roles, Status & Password */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+              {/* Account Status Card */}
+              <div
+                style={{
+                  backgroundColor: 'var(--accent-sand-soft)',
+                  border: '1px solid var(--accent-sand)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 'var(--space-6)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
+                  <Shield size={20} style={{ color: 'var(--accent-forest)' }} />
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--accent-forest)' }}>
+                    {roleName} · {profile?.accountStatus || 'ACTIVE'}
+                  </h3>
+                </div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  <div><strong>Account Status:</strong> <span style={{ color: 'var(--accent-forest)', fontWeight: 600 }}>{profile?.accountStatus || 'ACTIVE'}</span></div>
+                  <div><strong>Assigned Roles:</strong> {profile?.roles?.join(', ') || roleName}</div>
+                  {profile?.createdAt && (
+                    <div style={{ marginTop: '4px' }}>
+                      <strong>Active Since:</strong> {new Date(profile.createdAt).toLocaleDateString('vi-VN')}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Password Change Form */}
+              <div
+                style={{
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 'var(--space-6)',
+                  boxShadow: 'var(--shadow-card)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <Lock size={18} style={{ color: 'var(--accent-olive)' }} />
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
+                    {t('customer.account.securitySection', 'Password & Security')}
+                  </h2>
+                </div>
+
+                {passwordError && (
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--surface-danger, #fdf2f2)',
+                      border: '1px solid var(--border-danger, #fecaca)',
+                      color: 'var(--text-danger, #991b1b)',
+                      fontSize: 'var(--text-xs)',
+                      marginBottom: 'var(--space-4)',
+                    }}
+                  >
+                    {passwordError}
+                  </div>
+                )}
+
+                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {t('customer.account.currentPassword', 'Current Password')}
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordState.currentPassword}
+                      onChange={(e) => setPasswordState((p) => ({ ...p, currentPassword: e.target.value }))}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: 'var(--text-sm)',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {t('customer.account.newPassword', 'New Password')}
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordState.newPassword}
+                      onChange={(e) => setPasswordState((p) => ({ ...p, newPassword: e.target.value }))}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: 'var(--text-sm)',
+                      }}
+                    />
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px', display: 'block' }}>
+                      {t('customer.account.passwordHint', 'At least 8 characters with letters, numbers, and symbols.')}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {t('customer.account.confirmPassword', 'Confirm New Password')}
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordState.confirmPassword}
+                      onChange={(e) => setPasswordState((p) => ({ ...p, confirmPassword: e.target.value }))}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: 'var(--text-sm)',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginTop: 'var(--space-2)' }}>
+                    <Button type="submit" variant="secondary" size="sm" isLoading={isChangingPassword}>
+                      {t('customer.account.changePasswordBtn', 'Update Password')}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </Container>
     </div>
   );

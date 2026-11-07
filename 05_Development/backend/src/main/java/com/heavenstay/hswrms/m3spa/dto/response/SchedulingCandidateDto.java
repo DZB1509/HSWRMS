@@ -18,6 +18,8 @@ public class SchedulingCandidateDto {
     private String startTime;
     private String endTime;
     private boolean alternative;
+    private Integer recommendationScore;
+    private String recommendationReason;
 
     public SchedulingCandidateDto() {
     }
@@ -152,5 +154,21 @@ public class SchedulingCandidateDto {
 
     public void setAlternative(boolean alternative) {
         this.alternative = alternative;
+    }
+
+    public Integer getRecommendationScore() {
+        return recommendationScore;
+    }
+
+    public void setRecommendationScore(Integer recommendationScore) {
+        this.recommendationScore = recommendationScore;
+    }
+
+    public String getRecommendationReason() {
+        return recommendationReason;
+    }
+
+    public void setRecommendationReason(String recommendationReason) {
+        this.recommendationReason = recommendationReason;
     }
 }

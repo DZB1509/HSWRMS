@@ -48,6 +48,17 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Zero Template / Zero Mock Policy: fetch directly from SQL Server
   const syncWithBackend = async () => {
+    // Receptionist operational APIs require RECEPTIONIST, MANAGER, or ADMIN roles.
+    // Suppress unprivileged background requests to prevent spurious 403 Forbidden console errors.
+    const isStaffAuthorized = role === 'receptionist' || role === 'manager' || role === 'admin';
+    if (!isStaffAuthorized) {
+      setIsLoading(false);
+      setVillas([]);
+      setArrivals([]);
+      setAlerts([]);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const [villasRes, arrivalsRes] = await Promise.allSettled([

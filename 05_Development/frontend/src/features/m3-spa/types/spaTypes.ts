@@ -98,6 +98,10 @@ export interface SchedulingCandidate {
 
   date: string;             // YYYY-MM-DD
 
+  recommendationScore?: number;
+
+  recommendationReason?: string;
+
 }
 
 

@@ -54,8 +54,6 @@ public class SpaBookingController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Integer userId = userDetails != null ? userDetails.getUserId() : null;
-        boolean isStaff = userDetails != null && userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_RECEPTIONIST") || a.getAuthority().equals("ROLE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"));
         SpaSessionDto sessionDto = spaSessionService.confirmReservation(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Spa session successfully scheduled.", sessionDto));
     }

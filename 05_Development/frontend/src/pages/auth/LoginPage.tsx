@@ -320,10 +320,18 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               id="demo-login-customer"
-              onClick={() => { setEmail('customer@heavenstay.dev'); setPassword('DevDemo123!'); setFormError(null); }}
+              onClick={() => { setEmail('customer@heavenstay.com'); setPassword('DevDemo123!'); setFormError(null); }}
               style={{ padding: '6px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#f1f5f9', color: '#334155', cursor: 'pointer' }}
             >
-              Khách Hàng (Customer)
+              Khách Hàng (Đang ở - HSW-3)
+            </button>
+            <button
+              type="button"
+              id="demo-login-customer-dev"
+              onClick={() => { setEmail('customer@heavenstay.dev'); setPassword('DevDemo123!'); setFormError(null); }}
+              style={{ padding: '6px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer' }}
+            >
+              Khách Hàng (Chưa check-in)
             </button>
           </div>
         </div>
@@ -348,7 +356,8 @@ export const LoginPage: React.FC = () => {
           <button type="button" id="demo-login-receptionist" onClick={() => { setEmail('receptionist@heavenstay.dev'); setPassword('DevDemo123!'); }} tabIndex={-1}>Receptionist</button>
           <button type="button" id="demo-login-therapist" onClick={() => { setEmail('therapist@heavenstay.dev'); setPassword('DevDemo123!'); }} tabIndex={-1}>Therapist</button>
           <button type="button" id="demo-login-fbstaff" onClick={() => { setEmail('fnb@heavenstay.dev'); setPassword('DevDemo123!'); }} tabIndex={-1}>FB</button>
-          <button type="button" id="demo-login-customer" onClick={() => { setEmail('customer@heavenstay.dev'); setPassword('DevDemo123!'); }} tabIndex={-1}>Customer</button>
+          <button type="button" id="demo-login-customer" onClick={() => { setEmail('customer@heavenstay.com'); setPassword('DevDemo123!'); }} tabIndex={-1}>Customer</button>
+          <button type="button" id="demo-login-customer-dev" onClick={() => { setEmail('customer@heavenstay.dev'); setPassword('DevDemo123!'); }} tabIndex={-1}>CustomerDev</button>
         </div>
       )}
     </div>

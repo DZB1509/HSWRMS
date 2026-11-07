@@ -3,6 +3,7 @@ package com.heavenstay.hswrms.m3spa.service;
 import com.heavenstay.hswrms.common.exception.BusinessRuleException;
 import com.heavenstay.hswrms.common.exception.ConflictException;
 import com.heavenstay.hswrms.common.exception.ResourceNotFoundException;
+import com.heavenstay.hswrms.m1identity.repository.UserRepository;
 import com.heavenstay.hswrms.m3spa.dto.request.ConfirmReservationRequest;
 import com.heavenstay.hswrms.m3spa.dto.response.SpaSessionDto;
 import com.heavenstay.hswrms.m3spa.dto.response.TherapistSessionDetailDto;
@@ -27,8 +28,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
@@ -50,6 +53,22 @@ public class SpaSessionService {
     private final TherapistHealthProjectionPort healthProjectionPort;
     private final BillingPort billingPort;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    private UserRepository userRepository;
+
+    public static final ZoneId RESORT_ZONE_ID = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    @Autowired(required = false)
+    private Clock clock = Clock.system(RESORT_ZONE_ID);
+
+    public void setClock(Clock clock) {
+        this.clock = clock != null ? clock : Clock.system(RESORT_ZONE_ID);
+    }
+
+    public Clock getClock() {
+        return this.clock;
+    }
 
     public SpaSessionService(
             SpaSessionRepository sessionRepository,
@@ -98,8 +117,8 @@ public class SpaSessionService {
     @Transactional
     public SpaSessionDto confirmReservation(ConfirmReservationRequest req, Integer authenticatedUserId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isStaff = auth == null || auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_RECEPTIONIST") || a.getAuthority().equals("ROLE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isStaff = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RECEPTIONIST"));
         return confirmReservation(req, authenticatedUserId, isStaff);
     }
 
@@ -139,6 +158,9 @@ public class SpaSessionService {
 
         // 1b. Validate Stay-Period Boundary Enforcement (BR-M3-02)
         validateStayWindow(stay, req.getScheduledStartAt(), req.getScheduledEndAt());
+
+        // 1c. Validate Future Schedule: Spa sessions cannot be scheduled in the past for customer self-service bookings
+        validateNotPastDate(req.getScheduledStartAt(), isStaff);
 
         // 2. Validate Treatment
         SpaTreatment treatment = treatmentRepository.findById(req.getTreatmentId())
@@ -629,6 +651,15 @@ public class SpaSessionService {
         }
     }
 
+    public void validateNotPastDate(LocalDateTime startAt, boolean isStaff) {
+        if (!isStaff && startAt != null) {
+            LocalDateTime now = LocalDateTime.now(clock);
+            if (startAt.isBefore(now)) {
+                throw new BusinessRuleException("PAST_DATE_NOT_ALLOWED", "Spa sessions cannot be scheduled in the past.");
+            }
+        }
+    }
+
     private StayDetails resolveStayDetails(Integer bookingId) {
         if (bookingId == null || customerStayPort == null) {
             return new StayDetails(null, "Valued Guest");
@@ -654,6 +685,18 @@ public class SpaSessionService {
         }
     }
 
+    private String resolveTherapistDisplayName(Therapist therapist) {
+        if (therapist == null) return "Unknown Therapist";
+        if (userRepository != null && therapist.getUserId() != null) {
+            try {
+                return userRepository.findById(therapist.getUserId())
+                        .map(u -> u.getFullName() + " (Therapist #" + therapist.getTherapistId() + ")")
+                        .orElse("Therapist #" + therapist.getTherapistId());
+            } catch (Exception ignored) {}
+        }
+        return therapist.getDisplayName();
+    }
+
     public SpaSessionDto toDto(SpaSession s) {
         return toDto(s, "Valued Guest", false);
     }
@@ -671,7 +714,7 @@ public class SpaSessionService {
         dto.setBasePrice(s.getTreatment().getBasePrice());
         dto.setIncluded(isIncluded);
         dto.setTherapistId(s.getTherapist().getTherapistId());
-        dto.setTherapistName(s.getTherapist().getDisplayName());
+        dto.setTherapistName(resolveTherapistDisplayName(s.getTherapist()));
         dto.setRoomId(s.getTreatmentRoom().getRoomId());
         dto.setRoomName(s.getTreatmentRoom().getRoomName());
         dto.setScheduledStartAt(s.getScheduledStartAt());

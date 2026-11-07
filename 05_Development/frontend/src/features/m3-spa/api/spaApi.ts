@@ -38,9 +38,16 @@ export const spaApi = {
    * Pure READ-ONLY: does not reserve resources or persist any session.
    */
   async generateCandidates(payload: GenerateCandidatesPayload): Promise<CandidateGenerationResult> {
+    const timeConstraint = payload.timeRangePreference && payload.timeRangePreference !== 'ANY'
+      ? payload.timeRangePreference
+      : undefined;
+    const bodyPayload = {
+      ...payload,
+      ...(timeConstraint ? { timeRangeConstraint: timeConstraint } : {}),
+    };
     const res = await apiRequest<ApiResponse<CandidateGenerationResult>>('/spa/candidates', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(bodyPayload),
     });
     return res.data;
   },

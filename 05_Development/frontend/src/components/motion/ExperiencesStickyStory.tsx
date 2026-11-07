@@ -266,6 +266,43 @@ export const ExperiencesStickyStory: React.FC = () => {
     }
   }, [location.state, isDesktop, lenis]);
 
+  // Global and custom event listeners for real-time navigation
+  useEffect(() => {
+    (window as any).__hswScrollToExperience = (idx: number, smooth = true) => {
+      scrollToExperience(idx, smooth);
+    };
+
+    const handleCustomEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ index: number; smooth?: boolean }>;
+      if (customEvent.detail && typeof customEvent.detail.index === 'number') {
+        scrollToExperience(customEvent.detail.index, customEvent.detail.smooth ?? true);
+      }
+    };
+    window.addEventListener('hsw:scroll-experience', handleCustomEvent);
+
+    return () => {
+      delete (window as any).__hswScrollToExperience;
+      window.removeEventListener('hsw:scroll-experience', handleCustomEvent);
+    };
+  }, [isDesktop, lenis]);
+
+  // React Router location.hash listener for navigation and direct URL loading
+  useEffect(() => {
+    if (location.pathname === '/') {
+      const hash = location.hash || (typeof window !== 'undefined' ? window.location.hash : '');
+      if (hash === '#spa') {
+        const timer = setTimeout(() => scrollToExperience(0, true), 80);
+        return () => clearTimeout(timer);
+      } else if (hash === '#yoga') {
+        const timer = setTimeout(() => scrollToExperience(1, true), 80);
+        return () => clearTimeout(timer);
+      } else if (hash === '#dining') {
+        const timer = setTimeout(() => scrollToExperience(2, true), 80);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [location.hash, location.pathname, isDesktop]);
+
   // Direct window hashchange listener for real-time external anchor navigation
   useEffect(() => {
     const handleHash = () => {
@@ -589,6 +626,10 @@ export const ExperiencesStickyStory: React.FC = () => {
             width: '100%',
           }}
         >
+          {/* Deep link anchor elements for direct navigation (#spa, #yoga, #dining) in desktop mode */}
+          <div id="spa" style={{ position: 'absolute', top: '-100px', left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
+          <div id="yoga" style={{ position: 'absolute', top: '-100px', left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
+          <div id="dining" style={{ position: 'absolute', top: '-100px', left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
           {/* Left: Navigation steps */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', position: 'relative' }}>
             {/* Continuous Gradient Vertical Timeline Guide */}

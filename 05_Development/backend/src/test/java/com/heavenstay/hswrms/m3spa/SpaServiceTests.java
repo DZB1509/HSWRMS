@@ -28,6 +28,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -379,6 +382,31 @@ public class SpaServiceTests {
     }
 
     @Test
+    @DisplayName("9b. Recommendation score is strictly bounded [0, 100] and deterministically ranked")
+    public void testRecommendationScoreBoundsAndDeterministicOrdering() {
+        GenerateCandidatesRequest req = new GenerateCandidatesRequest(
+                massageTreatment.getTreatmentId(),
+                LocalDate.of(2026, 9, 26),
+                "MORNING"
+        );
+
+        CandidateGenerationResultDto res = schedulingEngineService.generateCandidates(req);
+        assertNotNull(res);
+        assertFalse(res.getCandidates().isEmpty(), "Candidates should be generated");
+
+        Integer previousScore = Integer.MAX_VALUE;
+        for (SchedulingCandidateDto c : res.getCandidates()) {
+            assertNotNull(c.getRecommendationScore(), "Score must be present");
+            assertTrue(c.getRecommendationScore() >= 0, "Score cannot be negative: " + c.getRecommendationScore());
+            assertTrue(c.getRecommendationScore() <= 100, "Score cannot exceed 100: " + c.getRecommendationScore());
+            assertNotNull(c.getRecommendationReason(), "Reason must be present");
+            assertFalse(c.getRecommendationReason().isBlank(), "Reason must not be blank");
+            assertTrue(c.getRecommendationScore() <= previousScore, "Candidates must be sorted descending by recommendation score");
+            previousScore = c.getRecommendationScore();
+        }
+    }
+
+    @Test
     @DisplayName("10 & 11. Successful new confirmation creates exactly one SpaSession with SCHEDULED + PENDING")
     public void testNewConfirmationStatusModel() {
         LocalDateTime start = LocalDateTime.of(2026, 9, 26, 16, 0);
@@ -695,10 +723,17 @@ public class SpaServiceTests {
         );
         req.setBookingSource(BookingSource.RECEPTIONIST);
 
-        SpaSessionDto sessionDto = spaSessionService.confirmReservation(req, 99);
-        assertNotNull(sessionDto);
-        assertEquals(BookingSource.RECEPTIONIST, sessionDto.getBookingSource());
-        assertEquals(SpaSessionStatus.SCHEDULED, sessionDto.getSessionStatus());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("receptionist", "pass", List.of(new SimpleGrantedAuthority("ROLE_RECEPTIONIST")))
+        );
+        try {
+            SpaSessionDto sessionDto = spaSessionService.confirmReservation(req, 99);
+            assertNotNull(sessionDto);
+            assertEquals(BookingSource.RECEPTIONIST, sessionDto.getBookingSource());
+            assertEquals(SpaSessionStatus.SCHEDULED, sessionDto.getSessionStatus());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

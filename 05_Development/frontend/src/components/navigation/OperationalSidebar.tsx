@@ -22,7 +22,8 @@ import {
   Database,
   History,
   Activity,
-    Receipt
+  Receipt,
+  Settings
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -57,7 +58,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.manualExtraSpa', defaultLabel: 'Đặt Thêm Spa Thủ Công', path: '/receptionist/spa/extra-booking', icon: HeartHandshake },
         { labelKey: 'operations.sidebar.customerFolioInvoice', defaultLabel: 'Hồ Sơ Chi Tiêu & Hóa Đơn', path: '/receptionist/folio/1', icon: Receipt },
-        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Thanh Toán Cuối & Check-out', path: '/receptionist/checkout/1/payment?invoiceId=2', icon: UserCheck }
+        { labelKey: 'operations.sidebar.finalPaymentCheckout', defaultLabel: 'Thanh Toán Cuối & Check-out', path: '/receptionist/checkout/1/payment?invoiceId=2', icon: UserCheck },
+        { labelKey: 'operations.sidebar.accountSettings', defaultLabel: 'Cài Đặt Tài Khoản', path: '/receptionist/account', icon: Settings }
       ]
     }
   ],
@@ -68,7 +70,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       items: [
         { labelKey: 'operations.sidebar.therapistDashboard', defaultLabel: 'Bảng Điều Khiển Trị Liệu', path: '/therapist/dashboard', icon: LayoutDashboard },
         { labelKey: 'operations.sidebar.dailyWorkSchedule', defaultLabel: 'Lịch Làm Việc Hàng Ngày', path: '/therapist/schedule', icon: CalendarCheck },
-        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Chi Tiết Buổi Trị Liệu & Ghi Chú', path: '/therapist/schedule', icon: HeartHandshake }
+        { labelKey: 'operations.sidebar.sessionDetailsNotes', defaultLabel: 'Chi Tiết Buổi Trị Liệu & Ghi Chú', path: '/therapist/schedule', icon: HeartHandshake },
+        { labelKey: 'operations.sidebar.accountSettings', defaultLabel: 'Cài Đặt Tài Khoản', path: '/therapist/account', icon: Settings }
       ]
     }
   ],
@@ -78,7 +81,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       defaultHeading: 'Nghiệp Vụ Bếp & Ẩm Thực',
       items: [
         { labelKey: 'operations.sidebar.fbDashboard', defaultLabel: 'Bảng Điều Khiển Ẩm Thực (F&B)', path: '/fb/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Hàng Đợi Chuẩn Bị Món Ăn', path: '/fb/meal-prep', icon: ChefHat }
+        { labelKey: 'operations.sidebar.dailyMealPrepQueue', defaultLabel: 'Hàng Đợi Chuẩn Bị Món Ăn', path: '/fb/meal-prep', icon: ChefHat },
+        { labelKey: 'operations.sidebar.accountSettings', defaultLabel: 'Cài Đặt Tài Khoản', path: '/fb/account', icon: Settings }
       ]
     }
   ],
@@ -99,7 +103,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       headingKey: 'operations.sidebar.governanceCompliance',
       defaultHeading: 'Quản Trị & Tuân Thủ',
       items: [
-        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/manager/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/manager/system-overview', icon: Activity },
+        { labelKey: 'operations.sidebar.accountSettings', defaultLabel: 'Cài Đặt Tài Khoản', path: '/manager/account', icon: Settings }
       ]
     }
   ],
@@ -109,7 +114,8 @@ const ROLE_NAV: Record<Role, SidebarSection[]> = {
       defaultHeading: 'Tổng Quan',
       items: [
         { labelKey: 'operations.sidebar.adminDashboard', defaultLabel: 'Bảng Điều Khiển Quản Trị', path: '/admin/dashboard', icon: LayoutDashboard },
-        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/admin/system-overview', icon: Activity }
+        { labelKey: 'operations.sidebar.systemOverviewDashboard', defaultLabel: 'Tổng Quan Hệ Thống & Khai Báo Công An', path: '/admin/system-overview', icon: Activity },
+        { labelKey: 'operations.sidebar.accountSettings', defaultLabel: 'Cài Đặt Tài Khoản', path: '/admin/account', icon: Settings }
       ]
     },
     {

@@ -72,6 +72,24 @@ public interface SpaSessionRepository extends JpaRepository<SpaSession, Long> {
             @Param("excludeSessionId") Long excludeSessionId
     );
 
+    /**
+     * Efficiently retrieves all active sessions in the target time window (e.g., daily operating window)
+     * with eagerly fetched therapist and room associations to enable high-throughput in-memory overlap detection.
+     */
+    @Query("SELECT s FROM SpaSession s " +
+           "LEFT JOIN FETCH s.therapist " +
+           "LEFT JOIN FETCH s.treatmentRoom " +
+           "WHERE s.sessionStatus IN (com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.SCHEDULED, " +
+           "                         com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.RESCHEDULING, " +
+           "                         com.heavenstay.hswrms.m3spa.entity.enums.SpaSessionStatus.COMPLETED) " +
+           "AND s.scheduledStartAt < :windowEnd AND s.scheduledEndAt > :windowStart " +
+           "AND (:excludeSessionId IS NULL OR s.spaSessionId <> :excludeSessionId)")
+    List<SpaSession> findActiveConflictingSessionsInWindow(
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd,
+            @Param("excludeSessionId") Long excludeSessionId
+    );
+
     List<SpaSession> findByRetreatBookingIdOrderByScheduledStartAtAsc(Integer retreatBookingId);
 
     List<SpaSession> findByRetreatBookingIdInOrderByScheduledStartAtAsc(Collection<Integer> retreatBookingIds);

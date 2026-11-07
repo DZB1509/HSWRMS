@@ -8,7 +8,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 /**
@@ -87,5 +90,12 @@ public class SpaTestConfig {
                 );
             }
         };
+    }
+
+    @Bean
+    @Primary
+    public Clock testClock() {
+        // Fix test clock to 2026-09-01T08:00:00Z (Asia/Ho_Chi_Minh) so that test bookings (2026-09-26 onwards) remain in the future
+        return Clock.fixed(Instant.parse("2026-09-01T08:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     }
 }

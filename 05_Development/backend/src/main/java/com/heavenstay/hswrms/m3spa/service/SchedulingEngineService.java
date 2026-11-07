@@ -6,6 +6,7 @@ import com.heavenstay.hswrms.m3spa.entity.enums.TreatmentStatus;
 import com.heavenstay.hswrms.m3spa.dto.request.GenerateCandidatesRequest;
 import com.heavenstay.hswrms.m3spa.dto.response.CandidateGenerationResultDto;
 import com.heavenstay.hswrms.m3spa.dto.response.SchedulingCandidateDto;
+import com.heavenstay.hswrms.m3spa.entity.SpaSession;
 import com.heavenstay.hswrms.m3spa.entity.SpaTreatment;
 import com.heavenstay.hswrms.m3spa.entity.Therapist;
 import com.heavenstay.hswrms.m3spa.entity.TreatmentRoom;
@@ -18,11 +19,13 @@ import com.heavenstay.hswrms.m3spa.repository.TreatmentRoomRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -41,6 +44,22 @@ public class SchedulingEngineService {
 
     @org.springframework.beans.factory.annotation.Value("${app.spa.scheduling.alternative-search-days:#{null}}")
     private Integer configuredAlternativeSearchDays;
+
+    public static final java.time.ZoneId RESORT_ZONE_ID = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private Clock clock = Clock.system(RESORT_ZONE_ID);
+
+    public void setClock(Clock clock) {
+        this.clock = clock != null ? clock : Clock.system(RESORT_ZONE_ID);
+    }
+
+    public Clock getClock() {
+        return this.clock;
+    }
 
     public SchedulingEngineService(SpaTreatmentRepository treatmentRepository,
                                    TherapistRepository therapistRepository,
@@ -148,8 +167,23 @@ public class SchedulingEngineService {
             List<String> rejectedCandidateIds
     ) {
         List<SchedulingCandidateDto> candidates = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (date.isBefore(now.toLocalDate())) {
+            return candidates; // Entire date is in the past, return empty candidates
+        }
+
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
         List<LocalTime> slotStarts = generateSlotStarts(openTime, closeTime);
+
+        // Resolve real therapist display names via User table
+        loadTherapistDisplayNames(qualifiedTherapists);
+
+        // Pre-fetch active sessions in the target date/operating window in a single query
+        LocalDateTime windowStart = LocalDateTime.of(date, openTime).minusMinutes(SpaSessionRepository.BUFFER_MINUTES);
+        LocalDateTime windowEnd = LocalDateTime.of(date, closeTime).plusMinutes(SpaSessionRepository.BUFFER_MINUTES + treatment.getDurationMinutes());
+        List<SpaSession> activeSessions = sessionRepository.findActiveConflictingSessionsInWindow(
+                windowStart, windowEnd, excludeSessionId
+        );
 
         for (LocalTime slotStart : slotStarts) {
             if (!matchesTimeConstraint(slotStart, timeConstraint)) {
@@ -164,18 +198,23 @@ public class SchedulingEngineService {
             LocalDateTime startAt = LocalDateTime.of(date, slotStart);
             LocalDateTime endAt = LocalDateTime.of(date, slotEnd);
 
+            // Filter out expired slots on the current day or past days
+            if (startAt.isBefore(now)) {
+                continue;
+            }
+
             // Find at least one qualified therapist and one compatible room free for this interval
             for (Therapist therapist : qualifiedTherapists) {
-                boolean therapistBusy = sessionRepository.hasOverlappingSession(
-                        therapist.getTherapistId(), null, startAt, endAt, excludeSessionId
+                boolean therapistBusy = hasOverlappingSessionInMemory(
+                        activeSessions, therapist.getTherapistId(), null, startAt, endAt, SpaSessionRepository.BUFFER_MINUTES
                 );
                 if (therapistBusy) {
                     continue;
                 }
 
                 for (TreatmentRoom room : compatibleRooms) {
-                    boolean roomBusy = sessionRepository.hasOverlappingSession(
-                            null, room.getRoomId(), startAt, endAt, excludeSessionId
+                    boolean roomBusy = hasOverlappingSessionInMemory(
+                            activeSessions, null, room.getRoomId(), startAt, endAt, SpaSessionRepository.BUFFER_MINUTES
                     );
                     if (roomBusy) {
                         continue;
@@ -214,7 +253,132 @@ public class SchedulingEngineService {
             }
         }
 
+        // Multi-factor deterministic scoring and ranking
+        scoreAndRankCandidates(candidates, timeConstraint, isAlternative, activeSessions);
         return candidates;
+    }
+
+    private void scoreAndRankCandidates(
+            List<SchedulingCandidateDto> candidates,
+            String timeConstraint,
+            boolean isAlternative,
+            List<SpaSession> activeSessions
+    ) {
+        if (candidates == null || candidates.isEmpty()) {
+            return;
+        }
+
+        // Pre-count sessions per therapist on this target date for workload balancing
+        Map<Integer, Long> sessionsPerTherapist = activeSessions.stream()
+                .filter(s -> s.getTherapist() != null)
+                .collect(Collectors.groupingBy(s -> s.getTherapist().getTherapistId(), Collectors.counting()));
+
+        for (SchedulingCandidateDto c : candidates) {
+            int score = 40; // Base baseline score
+            StringBuilder reasons = new StringBuilder();
+
+            // 1. Time preference matching (+30 points max)
+            int hour = c.getScheduledStartAt().getHour();
+            if (timeConstraint != null && !timeConstraint.isBlank() && !timeConstraint.equalsIgnoreCase("ALL")) {
+                if (matchesTimeConstraint(c.getScheduledStartAt().toLocalTime(), timeConstraint)) {
+                    score += 30;
+                    reasons.append("Phù hợp khung giờ ").append(timeConstraint.toLowerCase(Locale.ROOT)).append(" mong muốn; ");
+                }
+            } else {
+                // Prime tranquil hours (09:00 - 15:00) bonus (+20 points)
+                if (hour >= 9 && hour <= 15) {
+                    score += 20;
+                    reasons.append("Khung giờ vàng thư giãn trong ngày; ");
+                }
+            }
+
+            // 2. Workload balance (+20 points max for therapists with lowest daily load)
+            long busyCount = sessionsPerTherapist.getOrDefault(c.getTherapistId(), 0L);
+            if (busyCount == 0) {
+                score += 20;
+                reasons.append("Trị liệu viên có thể trạng và năng lượng tốt nhất; ");
+            } else if (busyCount <= 2) {
+                score += 10;
+                reasons.append("Trị liệu viên chuyên trách cân bằng ca trực; ");
+            }
+
+            // 3. Earliest optimal slot bonus (+10 max)
+            int earlinessBonus = Math.max(0, 10 - Math.max(0, hour - 8));
+            score += earlinessBonus;
+
+            // Enforce strict mathematical bounding [0, 100]
+            int boundedScore = Math.min(100, Math.max(0, score));
+
+            if (isAlternative) {
+                reasons.insert(0, "[Phương án thay thế ngày gần nhất] ");
+            }
+
+            c.setRecommendationScore(boundedScore);
+            c.setRecommendationReason(reasons.toString().trim());
+        }
+
+        // Deterministic sort: highest recommendation score first; ties broken by earliest start time, then therapist ID
+        candidates.sort(Comparator
+                .comparing(SchedulingCandidateDto::getRecommendationScore, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(SchedulingCandidateDto::getScheduledStartAt)
+                .thenComparing(SchedulingCandidateDto::getTherapistId)
+        );
+    }
+
+    private void loadTherapistDisplayNames(List<Therapist> therapists) {
+        if (therapists == null || therapists.isEmpty()) {
+            return;
+        }
+        Map<Integer, String> names = new HashMap<>();
+        if (jdbcTemplate != null) {
+            try {
+                jdbcTemplate.query(
+                        "SELECT t.therapist_id, u.full_name FROM dbo.Therapist t INNER JOIN dbo.[User] u ON t.user_id = u.user_id",
+                        (rs) -> {
+                            int tid = rs.getInt("therapist_id");
+                            String fn = rs.getString("full_name");
+                            if (fn != null && !fn.isBlank()) {
+                                names.put(tid, fn.trim() + " (Therapist #" + tid + ")");
+                            }
+                        }
+                );
+            } catch (Exception e) {
+                // Graceful fallback if query fails
+            }
+        }
+        for (Therapist t : therapists) {
+            String resolved = names.get(t.getTherapistId());
+            if (resolved == null || resolved.isBlank()) {
+                resolved = "Therapist #" + t.getTherapistId();
+            }
+            t.setDisplayName(resolved);
+        }
+    }
+
+    private boolean hasOverlappingSessionInMemory(
+            List<SpaSession> activeSessions,
+            Integer therapistId,
+            Integer roomId,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
+            int bufferMinutes
+    ) {
+        LocalDateTime startAtMinusBuffer = startAt.minusMinutes(bufferMinutes);
+        LocalDateTime endAtPlusBuffer = endAt.plusMinutes(bufferMinutes);
+
+        for (SpaSession s : activeSessions) {
+            if (s.getScheduledStartAt().isBefore(endAtPlusBuffer) && s.getScheduledEndAt().isAfter(startAtMinusBuffer)) {
+                if (therapistId != null && s.getTherapist() != null
+                        && Objects.equals(s.getTherapist().getTherapistId(), therapistId)) {
+                    return true;
+                }
+                if (roomId != null && s.getTreatmentRoom() != null
+                        && Objects.equals(s.getTreatmentRoom().getRoomId(), roomId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean matchesTimeConstraint(LocalTime time, String constraint) {

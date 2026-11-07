@@ -375,6 +375,17 @@ export const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
                 <Home size={14} style={{ color: 'var(--accent-olive)' }} />
                 <span>{t('operations:sidebar.villaManagement', 'Villa Management')}</span>
               </Link>
+              <Link
+                to="/receptionist/account"
+                className="hsw-account-dropdown-item"
+                role="menuitem"
+                id="menuitem-receptionist-account"
+                onClick={() => setIsOpen(false)}
+                style={itemStyle}
+              >
+                <Settings size={14} style={{ color: 'var(--accent-olive)' }} />
+                <span>{t('customer:nav.account', 'Account Settings')}</span>
+              </Link>
             </>
           ) : role === 'therapist' ? (
             <>
@@ -398,6 +409,17 @@ export const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
                 <CalendarCheck size={14} style={{ color: 'var(--accent-olive)' }} />
                 <span>{t('operations:sidebar.dailyWorkSchedule', 'Daily Work Schedule')}</span>
               </Link>
+              <Link
+                to="/therapist/account"
+                className="hsw-account-dropdown-item"
+                role="menuitem"
+                id="menuitem-therapist-account"
+                onClick={() => setIsOpen(false)}
+                style={itemStyle}
+              >
+                <Settings size={14} style={{ color: 'var(--accent-olive)' }} />
+                <span>{t('customer:nav.account', 'Account Settings')}</span>
+              </Link>
             </>
           ) : role === 'fb_staff' ? (
             <>
@@ -420,6 +442,17 @@ export const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
               >
                 <ChefHat size={14} style={{ color: 'var(--accent-olive)' }} />
                 <span>{t('operations:sidebar.dailyMealPrepQueue', 'Meal Prep Queue')}</span>
+              </Link>
+              <Link
+                to="/fb/account"
+                className="hsw-account-dropdown-item"
+                role="menuitem"
+                id="menuitem-fb-account"
+                onClick={() => setIsOpen(false)}
+                style={itemStyle}
+              >
+                <Settings size={14} style={{ color: 'var(--accent-olive)' }} />
+                <span>{t('customer:nav.account', 'Account Settings')}</span>
               </Link>
             </>
           ) : role === 'manager' ? (
@@ -454,6 +487,17 @@ export const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
                 <Activity size={14} style={{ color: 'var(--accent-olive)' }} />
                 <span>{t('operations:sidebar.systemOverviewDashboard', 'System Overview')}</span>
               </Link>
+              <Link
+                to="/manager/account"
+                className="hsw-account-dropdown-item"
+                role="menuitem"
+                id="menuitem-manager-account"
+                onClick={() => setIsOpen(false)}
+                style={itemStyle}
+              >
+                <Settings size={14} style={{ color: 'var(--accent-olive)' }} />
+                <span>{t('customer:nav.account', 'Account Settings')}</span>
+              </Link>
             </>
           ) : role === 'admin' ? (
             <>
@@ -476,6 +520,17 @@ export const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
               >
                 <UserPlus size={14} style={{ color: 'var(--accent-olive)' }} />
                 <span>{t('operations:sidebar.staffAccounts', 'Staff Accounts')}</span>
+              </Link>
+              <Link
+                to="/admin/account"
+                className="hsw-account-dropdown-item"
+                role="menuitem"
+                id="menuitem-admin-account"
+                onClick={() => setIsOpen(false)}
+                style={itemStyle}
+              >
+                <Settings size={14} style={{ color: 'var(--accent-olive)' }} />
+                <span>{t('customer:nav.account', 'Account Settings')}</span>
               </Link>
               <Link
                 to="/admin/business-params"

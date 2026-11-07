@@ -193,6 +193,7 @@ export const AppRouter: React.FC = () => {
         <Route path="check-in/:bookingId" element={<CheckInPage />} />
         <Route path="check-in/:bookingId/villa" element={<VillaAssignmentPage />} />
         <Route path="villas" element={<VillaStatusPage />} />
+        <Route path="account" element={<AccountSettingsPage />} />
         
         {/* Module 3 Manual Extra Spa (Phase 2.4 — Implemented) */}
         <Route path="spa/extra-booking" element={<ManualExtraSpaPage />} />
@@ -242,6 +243,7 @@ export const AppRouter: React.FC = () => {
         <Route path="dashboard" element={<TherapistDashboardPage />} />
         <Route path="schedule" element={<TherapistSchedulePage />} />
         <Route path="sessions/:id" element={<TherapistSessionDetailPage />} />
+        <Route path="account" element={<AccountSettingsPage />} />
         <Route index element={<Navigate to="/therapist/dashboard" replace />} />
       </Route>
 
@@ -259,6 +261,7 @@ export const AppRouter: React.FC = () => {
         <Route path="dashboard" element={<FnbDashboardPage />} />
         <Route path="meal-prep" element={<MealPrepListPage />} />
         <Route path="orders/:id" element={<MealOrderDetailPage />} />
+        <Route path="account" element={<AccountSettingsPage />} />
         <Route index element={<Navigate to="/fb/dashboard" replace />} />
       </Route>
 
@@ -281,6 +284,7 @@ export const AppRouter: React.FC = () => {
         <Route path="therapist-utilization" element={<TherapistUtilizationReportPage />} />
         <Route path="health-readiness" element={<ManagerHealthReadinessPage />} />
         <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
+        <Route path="account" element={<AccountSettingsPage />} />
         <Route index element={<Navigate to="/manager/dashboard" replace />} />
       </Route>
 
@@ -317,6 +321,7 @@ export const AppRouter: React.FC = () => {
         <Route path="delegation" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S52:V"><AdminDelegationPage /></RoleGuard>} />
         <Route path="audit-log" element={<RoleGuard allowedRoles={['admin']} requiredPermission="S53:V"><SensitiveAuditLogPage /></RoleGuard>} />
         <Route path="system-overview" element={<RoleGuard requiredPermission="S55:V"><SystemOverviewPage /></RoleGuard>} />
+        <Route path="account" element={<AccountSettingsPage />} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 

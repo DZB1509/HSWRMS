@@ -33,7 +33,8 @@ public class SessionTimelineScheduler {
     private final SpaOutboxProperties outboxProperties;
     private final CustomerStayPort customerStayPort;
     private final SessionRecoveryService recoveryService;
-    private Clock clock = Clock.systemDefaultZone();
+    public static final java.time.ZoneId RESORT_ZONE_ID = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+    private Clock clock = Clock.system(RESORT_ZONE_ID);
 
     @Autowired
     public SessionTimelineScheduler(SpaSessionRepository sessionRepository,
@@ -49,7 +50,7 @@ public class SessionTimelineScheduler {
     }
 
     public void setClock(Clock clock) {
-        this.clock = clock;
+        this.clock = clock != null ? clock : Clock.system(RESORT_ZONE_ID);
     }
 
     /** Enqueues the due timeline notice into the transactional outbox; no provider is called here. */

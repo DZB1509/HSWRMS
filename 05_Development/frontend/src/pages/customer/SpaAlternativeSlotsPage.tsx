@@ -12,11 +12,12 @@
  * - Negotiation-Isolated: Resets rejection list when search parameters change.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { spaApi } from '../../features/m3-spa/api/spaApi';
 import type { SchedulingCandidate, CandidateGenerationResult } from '../../features/m3-spa/types/spaTypes';
+import { getResortTodayString } from '../../features/m3-spa/utils/spaDateUtils';
 import {
   ChevronLeft,
   Clock,
@@ -31,6 +32,7 @@ import {
   RefreshCw,
   XCircle,
   CheckCircle,
+  ArrowUpDown,
 } from 'lucide-react';
 
 interface NavigationState {
@@ -52,7 +54,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
 
   const navState = (location.state as NavigationState) || {};
   const treatmentIdFromQuery = searchParams.get('treatment') ? Number(searchParams.get('treatment')) : 1;
-  const dateFromQuery = searchParams.get('date') || new Date().toISOString().split('T')[0];
+  const dateFromQuery = searchParams.get('date') || getResortTodayString();
 
   const [candidates, setCandidates] = useState<SchedulingCandidate[]>(navState.result?.candidates || []);
   const [alternativeCandidates, setAlternativeCandidates] = useState<SchedulingCandidate[]>(
@@ -60,6 +62,11 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   );
   const [selectedCandidate, setSelectedCandidate] = useState<SchedulingCandidate | null>(null);
   const [rejectedCandidateIds, setRejectedCandidateIds] = useState<string[]>([]);
+  const [filterTimeOfDay, setFilterTimeOfDay] = useState<'ALL' | 'MORNING' | 'AFTERNOON' | 'EVENING'>('ALL');
+  const [selectedTherapistId, setSelectedTherapistId] = useState<number | 'ALL'>('ALL');
+  const [selectedRoomId, setSelectedRoomId] = useState<number | 'ALL'>('ALL');
+  const [sortBy, setSortBy] = useState<'RECOMMENDED' | 'EARLIEST'>('RECOMMENDED');
+  const [visibleCount, setVisibleCount] = useState<number>(6);
   const [loading, setLoading] = useState<boolean>(!navState.result);
   const [cancelling, setCancelling] = useState<boolean>(false);
   const [cancellationComplete, setCancellationComplete] = useState<boolean>(false);
@@ -73,6 +80,104 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   const rescheduleSessionId = navState.rescheduleSessionId;
   const customerNote = navState.customerNote;
 
+  const todayStr = useMemo(() => getResortTodayString(), []);
+  const initialDate = preferredDate && preferredDate >= todayStr ? preferredDate : todayStr;
+  const [currentDate, setCurrentDate] = useState<string>(initialDate);
+
+  // Dynamic filter lists extracted from candidates
+  const availableTherapists = useMemo(() => {
+    const map = new Map<number, string>();
+    candidates.forEach((c) => map.set(c.therapistId, c.therapistName));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [candidates]);
+
+  const availableSuites = useMemo(() => {
+    const map = new Map<number, string>();
+    candidates.forEach((c) => map.set(c.roomId, c.roomName));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [candidates]);
+
+  // Date switching handler
+  const handleDateChange = (newDate: string) => {
+    if (!newDate || newDate === currentDate) return;
+    if (newDate < todayStr) {
+      setError(t('spa.pastDateNotAllowed', 'Cannot search or book spa slots in the past.'));
+      return;
+    }
+    setCurrentDate(newDate);
+    setRejectedCandidateIds([]);
+    setSelectedCandidate(null);
+    setVisibleCount(6);
+    const currentReqId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
+    spaApi
+      .generateCandidates({
+        treatmentId,
+        preferredDate: newDate,
+        flexibleWithDate: true,
+        rescheduleSessionId,
+      })
+      .then((res) => {
+        if (currentReqId !== requestIdRef.current) return;
+        setCandidates(res.candidates || []);
+        setAlternativeCandidates(res.alternativeCandidates || []);
+      })
+      .catch((err) => {
+        if (currentReqId !== requestIdRef.current) return;
+        setError(err instanceof Error ? err.message : 'Failed to retrieve available slots for selected date.');
+      })
+      .finally(() => {
+        if (currentReqId === requestIdRef.current) {
+          setLoading(false);
+        }
+      });
+  };
+
+  const handleResetFilters = () => {
+    setFilterTimeOfDay('ALL');
+    setSelectedTherapistId('ALL');
+    setSelectedRoomId('ALL');
+    setSortBy('RECOMMENDED');
+    setVisibleCount(6);
+  };
+
+  const hasActiveFilters =
+    filterTimeOfDay !== 'ALL' ||
+    selectedTherapistId !== 'ALL' ||
+    selectedRoomId !== 'ALL' ||
+    sortBy !== 'RECOMMENDED';
+
+  const filteredAndSortedCandidates = useMemo(() => {
+    let list = candidates.filter((c) => {
+      // Time of day
+      if (filterTimeOfDay !== 'ALL') {
+        const hour = parseInt(c.startTime.split(':')[0], 10);
+        if (filterTimeOfDay === 'MORNING' && hour >= 12) return false;
+        if (filterTimeOfDay === 'AFTERNOON' && (hour < 12 || hour >= 17)) return false;
+        if (filterTimeOfDay === 'EVENING' && hour < 17) return false;
+      }
+      // Therapist
+      if (selectedTherapistId !== 'ALL' && c.therapistId !== selectedTherapistId) {
+        return false;
+      }
+      // Room/Suite
+      if (selectedRoomId !== 'ALL' && c.roomId !== selectedRoomId) {
+        return false;
+      }
+      return true;
+    });
+
+    if (sortBy === 'EARLIEST') {
+      list = [...list].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+
+    return list;
+  }, [candidates, filterTimeOfDay, selectedTherapistId, selectedRoomId, sortBy]);
+
+  const visibleCandidates = filteredAndSortedCandidates.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredAndSortedCandidates.length;
+
   // Negotiation Isolation: Reset rejection memory if treatment or search date changes
   useEffect(() => {
     setRejectedCandidateIds([]);
@@ -82,12 +187,17 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   // If page was loaded directly without navigation state, fetch candidates from backend API
   useEffect(() => {
     if (!navState.result) {
+      if (preferredDate && preferredDate < todayStr) {
+        setError(t('spa.pastDateNotAllowed', 'Cannot search or book spa slots in the past.'));
+        setLoading(false);
+        return;
+      }
       const currentReqId = ++requestIdRef.current;
       setLoading(true);
       spaApi
         .generateCandidates({
           treatmentId,
-          preferredDate,
+          preferredDate: initialDate,
           flexibleWithDate: true,
           rescheduleSessionId,
         })
@@ -170,8 +280,14 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
         setCancelling(false);
       }
     } else {
-      // Flow A: New booking negotiation declined by customer: safely exit to spa catalogue
-      navigate('/customer/spa');
+      // Flow A: New booking negotiation declined by customer: cleanly return to Spa Booking with treatment and criteria preserved
+      navigate(`/customer/spa/book?treatment=${treatmentId}`, {
+        state: {
+          preferredDate: currentDate,
+          customerNote,
+          fromDeclineAll: true,
+        },
+      });
     }
   };
 
@@ -317,97 +433,380 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
       {!loading && !error && (
         <div className="spa-alt-layout">
           <div className="spa-alt-main">
+            {/* Recommendation Explanation Banner */}
+            {candidates.length > 0 && (
+              <div className="spa-recommendation-banner" style={{
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#166534',
+                fontSize: '13px'
+              }}>
+                <Sparkles size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+                <div>
+                  <strong>{t('spa.recommendationTitle', 'Engine Recommendation Active:')}</strong>{' '}
+                  {t('spa.recommendationDesc', 'Top slot is calibrated for practitioner qualification, suite compatibility, and mandatory 15-minute buffer.')}
+                </div>
+              </div>
+            )}
+
+            {/* Filter and Control Bar (Phase D: Date, Time, Therapist, Suite, Sort, Clear) */}
+            {candidates.length > 0 && (
+              <div
+                className="spa-filter-bar"
+                id="spa-alternatives-filter-bar"
+                style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                {/* Top Row: Date Switcher & Time Period Pills */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Calendar size={16} style={{ color: '#0d9488' }} />
+                    <label htmlFor="spa-alt-date-picker" style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                      {t('spa.targetDate', 'Target Date')}:
+                    </label>
+                    <input
+                      id="spa-alt-date-picker"
+                      type="date"
+                      min={todayStr}
+                      value={currentDate}
+                      onChange={(e) => handleDateChange(e.target.value)}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        backgroundColor: '#fff',
+                      }}
+                    />
+                  </div>
+
+                  {/* Time Filter Pills */}
+                  <div className="spa-filter-pills" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {(['ALL', 'MORNING', 'AFTERNOON', 'EVENING'] as const).map((period) => (
+                      <button
+                        key={period}
+                        type="button"
+                        onClick={() => setFilterTimeOfDay(period)}
+                        id={`filter-period-${period.toLowerCase()}`}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '16px',
+                          border: filterTimeOfDay === period ? '1px solid #0d9488' : '1px solid #cbd5e1',
+                          backgroundColor: filterTimeOfDay === period ? '#0d9488' : '#fff',
+                          color: filterTimeOfDay === period ? '#fff' : '#475569',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {period === 'ALL' && t('spa.filterAll', 'All Times')}
+                        {period === 'MORNING' && t('spa.filterMorning', 'Morning (<12:00)')}
+                        {period === 'AFTERNOON' && t('spa.filterAfternoon', 'Afternoon (12:00–17:00)')}
+                        {period === 'EVENING' && t('spa.filterEvening', 'Evening (≥17:00)')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bottom Row: Therapist, Suite, Sort, and Clear */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '8px', borderTop: '1px solid #edf2f7' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Therapist filter */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <User size={15} style={{ color: '#64748b' }} />
+                      <select
+                        id="spa-filter-therapist"
+                        value={selectedTherapistId}
+                        onChange={(e) => setSelectedTherapistId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '12px',
+                          backgroundColor: '#fff',
+                          color: '#334155',
+                        }}
+                      >
+                        <option value="ALL">{t('spa.allTherapists', 'All Therapists')}</option>
+                        {availableTherapists.map((th) => (
+                          <option key={th.id} value={th.id}>
+                            {th.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Suite filter */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={15} style={{ color: '#64748b' }} />
+                      <select
+                        id="spa-filter-suite"
+                        value={selectedRoomId}
+                        onChange={(e) => setSelectedRoomId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '12px',
+                          backgroundColor: '#fff',
+                          color: '#334155',
+                        }}
+                      >
+                        <option value="ALL">{t('spa.allSuites', 'All Suites')}</option>
+                        {availableSuites.map((rm) => (
+                          <option key={rm.id} value={rm.id}>
+                            {rm.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Sort selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ArrowUpDown size={15} style={{ color: '#64748b' }} />
+                      <select
+                        id="spa-filter-sort"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as 'RECOMMENDED' | 'EARLIEST')}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '12px',
+                          backgroundColor: '#fff',
+                          color: '#334155',
+                        }}
+                      >
+                        <option value="RECOMMENDED">{t('spa.sortRecommended', 'AI Recommended (Optimal)')}</option>
+                        <option value="EARLIEST">{t('spa.sortEarliest', 'Earliest Time First')}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Reset Filters */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      id="btn-reset-filters"
+                      onClick={handleResetFilters}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        backgroundColor: '#fff',
+                        color: '#64748b',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <RotateCcw size={13} />
+                      <span>{t('spa.clearFilters', 'Clear Filters')}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Primary Candidates Section */}
             {candidates.length > 0 && (
               <section className="spa-candidate-group">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Calendar size={18} style={{ color: '#0d9488' }} />
-                  <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
-                    {t('spa.candidatesForDate', 'Open Slots for')} {preferredDate} ({candidates.length})
-                  </h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Calendar size={18} style={{ color: '#0d9488' }} />
+                    <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
+                      {t('spa.candidatesForDate', 'Open Slots for')} {currentDate} ({filteredAndSortedCandidates.length})
+                    </h2>
+                  </div>
+                  {filteredAndSortedCandidates.length > visibleCount && (
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      {t('spa.showingSlots', 'Showing')} 1–{visibleCandidates.length} {t('spa.ofTotal', 'of')} {filteredAndSortedCandidates.length}
+                    </span>
+                  )}
                 </div>
 
-                <div className="spa-candidates-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                  {candidates.map((c) => {
-                    const isSelected = selectedCandidate?.candidateId === c.candidateId;
-                    return (
-                      <div
-                        key={c.candidateId}
-                        className={`spa-candidate-card ${isSelected ? 'spa-candidate-card--selected' : ''}`}
-                        onClick={() => setSelectedCandidate(c)}
-                        id={`candidate-${c.candidateId}`}
-                        style={{
-                          border: isSelected ? '2px solid #0d9488' : '1px solid #e2e8f0',
-                          borderRadius: '10px',
-                          padding: '16px',
-                          cursor: 'pointer',
-                          backgroundColor: isSelected ? '#f0fdfa' : '#fff',
-                          boxShadow: isSelected ? '0 4px 12px rgba(13, 148, 136, 0.15)' : 'none',
-                          transition: 'all 0.2s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <Clock size={16} style={{ color: '#0d9488' }} />
-                              <span style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
-                                {c.startTime} – {c.endTime}
-                              </span>
-                            </div>
-                            {isSelected && (
-                              <span style={{ backgroundColor: '#0d9488', color: '#fff', borderRadius: '50%', padding: '2px', display: 'flex' }}>
-                                <Check size={14} />
-                              </span>
+                {filteredAndSortedCandidates.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '32px 16px',
+                      textAlign: 'center',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px dashed #cbd5e1',
+                      color: '#64748b',
+                    }}
+                  >
+                    <p style={{ margin: '0 0 10px', fontSize: '14px' }}>
+                      {t('spa.noFilterMatches', 'No slots match the currently applied filters.')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="hsw-btn hsw-btn-secondary"
+                      style={{ padding: '6px 14px', fontSize: '12px' }}
+                    >
+                      {t('spa.clearFilters', 'Clear Filters')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="spa-candidates-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                    {visibleCandidates.map((c) => {
+                      const isSelected = selectedCandidate?.candidateId === c.candidateId;
+                      const isTopRecommendation = c.candidateId === candidates[0]?.candidateId;
+                      return (
+                        <div
+                          key={c.candidateId}
+                          className={`spa-candidate-card ${isSelected ? 'spa-candidate-card--selected' : ''}`}
+                          onClick={() => setSelectedCandidate(c)}
+                          id={`candidate-${c.candidateId}`}
+                          style={{
+                            border: isSelected ? '2px solid #0d9488' : isTopRecommendation ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            padding: '16px',
+                            cursor: 'pointer',
+                            backgroundColor: isSelected ? '#f0fdfa' : isTopRecommendation ? '#fffbeb' : '#fff',
+                            boxShadow: isSelected ? '0 4px 12px rgba(13, 148, 136, 0.15)' : isTopRecommendation ? '0 2px 8px rgba(245, 158, 11, 0.15)' : 'none',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div>
+                            {isTopRecommendation && (
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                backgroundColor: '#fef3c7',
+                                color: '#92400e',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                padding: '3px 8px',
+                                borderRadius: '12px',
+                                marginBottom: '8px',
+                                letterSpacing: '0.3px',
+                              }}>
+                                <Sparkles size={12} style={{ color: '#d97706' }} />
+                                <span>{t('spa.recommendedForYou', 'Recommended for You')}</span>
+                              </div>
                             )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Clock size={16} style={{ color: '#0d9488' }} />
+                                <span style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
+                                  {c.startTime} – {c.endTime}
+                                </span>
+                              </div>
+                              {isSelected && (
+                                <span style={{ backgroundColor: '#0d9488', color: '#fff', borderRadius: '50%', padding: '2px', display: 'flex' }}>
+                                  <Check size={14} />
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <User size={14} style={{ color: '#64748b' }} />
+                                <span><strong>{t('spa.therapist', 'Therapist')}:</strong> {c.therapistName}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <MapPin size={14} style={{ color: '#64748b' }} />
+                                <span><strong>{t('spa.suite', 'Suite')}:</strong> {c.roomName}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                                <Sparkles size={13} style={{ color: '#0d9488' }} />
+                                <span>{c.durationMinutes} {t('spa.minutes', 'min')} · {c.treatmentName}</span>
+                              </div>
+                              {c.recommendationReason && (
+                                <div style={{
+                                  fontSize: '11px',
+                                  color: '#0d9488',
+                                  backgroundColor: '#f0fdfa',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #ccfbf1',
+                                  marginTop: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}>
+                                  <Sparkles size={11} style={{ flexShrink: 0 }} />
+                                  <span>{c.recommendationReason}</span>
+                                  {c.recommendationScore ? <span style={{ marginLeft: 'auto', fontWeight: 600, color: '#047857' }}>({c.recommendationScore}đ)</span> : null}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
-                          <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <User size={14} style={{ color: '#64748b' }} />
-                              <span><strong>{t('spa.therapist', 'Therapist')}:</strong> {c.therapistName}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <MapPin size={14} style={{ color: '#64748b' }} />
-                              <span><strong>{t('spa.suite', 'Suite')}:</strong> {c.roomName}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                              <Sparkles size={13} style={{ color: '#0d9488' }} />
-                              <span>{c.durationMinutes} {t('spa.minutes', 'min')} · {c.treatmentName}</span>
-                            </div>
+                          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              id={`btn-reject-candidate-${c.candidateId}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRejectCandidate(c.candidateId);
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#94a3b8',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title={t('spa.rejectThisSlot', 'Dismiss this candidate')}
+                            >
+                              <XCircle size={14} />
+                              <span>{t('spa.reject', 'Dismiss')}</span>
+                            </button>
                           </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
 
-                        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            id={`btn-reject-candidate-${c.candidateId}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRejectCandidate(c.candidateId);
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#94a3b8',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                            title={t('spa.rejectThisSlot', 'Dismiss this candidate')}
-                          >
-                            <XCircle size={14} />
-                            <span>{t('spa.reject', 'Dismiss')}</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* Pagination / Load More button */}
+                {hasMore && (
+                  <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      id="btn-load-more-slots"
+                      onClick={() => setVisibleCount((prev) => prev + 6)}
+                      className="hsw-btn hsw-btn-secondary"
+                      style={{
+                        padding: '10px 24px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {t('spa.showMoreSlots', 'Show More Available Slots')} ({filteredAndSortedCandidates.length - visibleCount} {t('spa.remaining', 'remaining')})
+                    </button>
+                  </div>
+                )}
               </section>
             )}
 
@@ -466,6 +865,23 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
                           <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div><strong>{t('spa.therapist', 'Therapist')}:</strong> {c.therapistName}</div>
                             <div><strong>{t('spa.suite', 'Suite')}:</strong> {c.roomName}</div>
+                            {c.recommendationReason && (
+                              <div style={{
+                                fontSize: '11px',
+                                color: '#0d9488',
+                                backgroundColor: '#f0fdfa',
+                                padding: '3px 6px',
+                                borderRadius: '4px',
+                                border: '1px solid #ccfbf1',
+                                marginTop: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <Sparkles size={11} style={{ flexShrink: 0 }} />
+                                <span>{c.recommendationReason}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 

@@ -87,6 +87,10 @@ public class ConfirmReservationRequest {
         return scheduledStartAt == null || scheduledEndAt == null || scheduledEndAt.isAfter(scheduledStartAt);
     }
 
+    public boolean isFuture(LocalDateTime referenceTime) {
+        return scheduledStartAt != null && referenceTime != null && !scheduledStartAt.isBefore(referenceTime);
+    }
+
     public Integer getRetreatBookingId() {
         return retreatBookingId;
     }
