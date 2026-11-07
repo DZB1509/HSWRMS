@@ -3653,15 +3653,26 @@
   pointer-events: none;
 }
 
-.therapist-date-btn:hover {
+.therapist-date-btn:hover:not(.therapist-date-btn--active) {
   border-color: var(--border-strong);
   background: var(--bg-soft);
 }
 
 .therapist-date-btn--active {
-  border-color: var(--accent-forest);
-  background: var(--accent-forest);
+  border-color: var(--accent-forest, #1e3a2b);
+  background: var(--accent-forest, #1e3a2b);
   color: #FFFFFF;
+}
+
+.therapist-date-btn--active:hover {
+  background: #14281e;
+  border-color: #14281e;
+  color: #FFFFFF;
+}
+
+.therapist-date-btn--active:focus-visible {
+  outline: 2px solid var(--accent-gold, #d97706);
+  outline-offset: 2px;
 }
 
 .therapist-date-weekday {

@@ -18,12 +18,15 @@ import {
   XCircle,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
+  Calendar,
   List,
   Columns,
   Coffee,
 } from 'lucide-react';
 import type { LocalizedString } from '../../types/spa';
 import { OperationalPageHeader } from '../../components/operations/OperationalPageHeader';
+import { getResortDateString, getResortTodayString } from '../../features/m3-spa/utils/spaDateUtils';
 
 
 
@@ -37,9 +40,21 @@ const timeDiffMinutes = (startStr: string, endStr: string): number => {
 export const TherapistSchedulePage: React.FC = () => {
   const { t, i18n } = useTranslation('operations');
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  // Monday of the week helper
+  const getMonday = (d: Date): Date => {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+
+  const todayStr = useMemo(() => getResortTodayString(), []);
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()));
   const [viewMode, setViewMode] = useState<'agenda' | 'timeline'>('agenda');
-  const { sessions: daySessions, loading } = useTherapistSchedule(selectedDate);
+  const { sessions: daySessions } = useTherapistSchedule(selectedDate);
 
   const currentLang = (i18n.language || 'en') as keyof LocalizedString;
   const localize = (ls?: LocalizedString | string | null): string => {
@@ -48,16 +63,52 @@ export const TherapistSchedulePage: React.FC = () => {
     return ls[currentLang] || ls.en || Object.values(ls)[0] || '';
   };
 
-  const availableDates = useMemo(() => {
-    const dates: string[] = [];
-    const base = new Date();
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(base);
+  // Generate 7 days: Monday to Sunday (strictly Asia/Ho_Chi_Minh dates)
+  const weekDays = useMemo(() => {
+    const dates: { dateStr: string; dt: Date }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
       d.setDate(d.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
+      dates.push({
+        dateStr: getResortDateString(d),
+        dt: d,
+      });
     }
     return dates;
-  }, []);
+  }, [weekStart]);
+
+  const handlePrevWeek = () => {
+    const prev = new Date(weekStart);
+    prev.setDate(prev.getDate() - 7);
+    setWeekStart(prev);
+    setSelectedDate(getResortDateString(prev));
+  };
+
+  const handleNextWeek = () => {
+    const next = new Date(weekStart);
+    next.setDate(next.getDate() + 7);
+    setWeekStart(next);
+    setSelectedDate(getResortDateString(next));
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setWeekStart(getMonday(now));
+    setSelectedDate(todayStr);
+  };
+
+  const handleDatePick = (val: string) => {
+    if (!val) return;
+    const picked = new Date(val + 'T00:00:00');
+    setWeekStart(getMonday(picked));
+    setSelectedDate(val);
+  };
+
+  const weekEnd = useMemo(() => {
+    const end = new Date(weekStart);
+    end.setDate(end.getDate() + 6);
+    return end;
+  }, [weekStart]);
 
   // Hourly timeline slots: 08:00 to 18:00
   const timeSlots = Array.from({ length: 11 }, (_, i) => {
@@ -65,48 +116,156 @@ export const TherapistSchedulePage: React.FC = () => {
     return `${String(hour).padStart(2, '0')}:00`;
   });
 
-  const formattedDateTitle = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
-  if (loading) {
-    return <div className="therapist-schedule"><p style={{ padding: '2rem' }}>Loading schedule...</p></div>;
-  }
+  const formattedDateTitle = new Date(selectedDate + 'T00:00:00').toLocaleDateString(
+    i18n.language === 'vi' ? 'vi-VN' : 'en-US',
+    {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }
+  );
 
   return (
     <div className="therapist-schedule" id="screen-32-therapist-daily-schedule" style={{ maxWidth: '1440px', margin: '0 auto' }}>
       {/* Page Header */}
       <OperationalPageHeader
-        title={t('therapist.dailySchedule', 'Daily Work Schedule')}
-        subtitle={t('therapist.scheduleSubtitle', 'Your assigned appointments for the selected date')}
+        title={t('therapist.dailySchedule', 'Lịch Làm Việc Hàng Tuần')}
+        subtitle={t('therapist.scheduleSubtitle', 'Lịch ca trực trị liệu 7 ngày (Thứ Hai – Chủ Nhật) và điều phối cuộc hẹn')}
         badge="Screen #32"
       />
 
-      {/* Date Navigation Bar */}
-      <div className="therapist-date-nav" role="tablist" aria-label="Select Date">
-        {availableDates.map((d) => {
-          const dt = new Date(d + 'T00:00:00');
-          const isToday = d === new Date().toISOString().split('T')[0];
-          const isActive = selectedDate === d;
+      {/* Week Navigation Toolbar */}
+      <div
+        className="therapist-week-toolbar"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          padding: '12px 16px',
+          backgroundColor: 'var(--bg-card, #ffffff)',
+          border: '1px solid var(--border-color, #e5e7eb)',
+          borderRadius: '12px',
+          marginBottom: '16px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={handlePrevWeek}
+            aria-label={t('therapist.prevWeek', 'Tuần trước')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color, #d1d5db)',
+              backgroundColor: 'var(--bg-soft, #f9fafb)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <ChevronLeft size={16} />
+            <span>{t('therapist.prevWeek', 'Tuần trước')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleToday}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--accent-forest, #1e3a2b)',
+              backgroundColor: 'rgba(30, 58, 43, 0.08)',
+              color: 'var(--accent-forest, #1e3a2b)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {t('therapist.today', 'Hôm nay')}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNextWeek}
+            aria-label={t('therapist.nextWeek', 'Tuần sau')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color, #d1d5db)',
+              backgroundColor: 'var(--bg-soft, #f9fafb)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <span>{t('therapist.nextWeek', 'Tuần sau')}</span>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          <Calendar size={16} style={{ color: 'var(--accent-forest)' }} />
+          <span>
+            {weekStart.toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            {' – '}
+            {weekEnd.toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label htmlFor="jump-to-date" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            {t('therapist.jumpToDate', 'Chọn ngày')}:
+          </label>
+          <input
+            id="jump-to-date"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => handleDatePick(e.target.value)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color, #d1d5db)',
+              fontSize: '13px',
+              backgroundColor: 'var(--bg-input, #ffffff)',
+              color: 'var(--text-primary)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 7-Day Monday–Sunday Navigation Strip */}
+      <div className="therapist-date-nav" role="tablist" aria-label="Select Date (7-day week)">
+        {weekDays.map(({ dateStr, dt }) => {
+          const isToday = dateStr === todayStr;
+          const isActive = selectedDate === dateStr;
           return (
             <button
-              key={d}
+              key={dateStr}
               type="button"
               role="tab"
               aria-selected={isActive}
               className={`therapist-date-btn ${isActive ? 'therapist-date-btn--active' : ''}`}
-              onClick={() => setSelectedDate(d)}
+              onClick={() => setSelectedDate(dateStr)}
               id={`therapist-date-${dt.getDate()}`}
+              style={{ flex: 1, minWidth: '90px' }}
             >
               <span className="therapist-date-weekday">
-                {dt.toLocaleDateString('en-US', { weekday: 'short' })}
+                {dt.toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short' })}
               </span>
               <span className="therapist-date-number">{dt.getDate()}</span>
               {isToday ? (
-                <span className="therapist-date-today-badge">{t('therapist.today', 'Today')}</span>
+                <span className="therapist-date-today-badge">{t('therapist.today', 'Hôm nay')}</span>
               ) : (
                 <span className="therapist-date-spacer" />
               )}

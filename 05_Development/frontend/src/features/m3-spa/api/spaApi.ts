@@ -1,6 +1,7 @@
 import { apiRequest } from '../../../api/client/apiClient';
 import type {
   BackendSpaTreatment,
+  BackendTreatmentRoom,
   CandidateGenerationResult,
   GenerateCandidatesPayload,
   ConfirmReservationPayload,
@@ -22,6 +23,14 @@ export const spaApi = {
    */
   async getTreatments(): Promise<BackendSpaTreatment[]> {
     const res = await apiRequest<ApiResponse<BackendSpaTreatment[]>>('/spa/treatments');
+    return res.data;
+  },
+
+  /**
+   * Screen 27: List all Treatment Rooms / Suites.
+   */
+  async getTreatmentRooms(): Promise<BackendTreatmentRoom[]> {
+    const res = await apiRequest<ApiResponse<BackendTreatmentRoom[]>>('/spa/treatment-rooms');
     return res.data;
   },
 

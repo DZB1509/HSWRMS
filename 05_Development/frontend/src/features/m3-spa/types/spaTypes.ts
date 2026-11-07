@@ -102,6 +102,30 @@ export interface SchedulingCandidate {
 
   recommendationReason?: string;
 
+  qualityCategory?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'BELOW_THRESHOLD';
+
+  eligibleForAutoConfirm?: boolean;
+
+  baseScore?: number;
+
+  timeMatchScore?: number;
+
+  workloadScore?: number;
+
+  earlinessScore?: number;
+
+}
+
+export interface BackendTreatmentRoom {
+
+  roomId: number;
+
+  roomName: string;
+
+  roomType: string;
+
+  roomStatus: string;
+
 }
 
 

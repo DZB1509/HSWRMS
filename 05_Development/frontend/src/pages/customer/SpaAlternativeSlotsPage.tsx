@@ -15,6 +15,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useCustomer } from '../../context/CustomerContext';
 import { spaApi } from '../../features/m3-spa/api/spaApi';
 import type { SchedulingCandidate, CandidateGenerationResult } from '../../features/m3-spa/types/spaTypes';
 import { getResortTodayString } from '../../features/m3-spa/utils/spaDateUtils';
@@ -51,6 +52,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { activeBooking } = useCustomer();
 
   const navState = (location.state as NavigationState) || {};
   const treatmentIdFromQuery = searchParams.get('treatment') ? Number(searchParams.get('treatment')) : 1;
@@ -65,6 +67,8 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   const [filterTimeOfDay, setFilterTimeOfDay] = useState<'ALL' | 'MORNING' | 'AFTERNOON' | 'EVENING'>('ALL');
   const [selectedTherapistId, setSelectedTherapistId] = useState<number | 'ALL'>('ALL');
   const [selectedRoomId, setSelectedRoomId] = useState<number | 'ALL'>('ALL');
+  const [scoreFilter, setScoreFilter] = useState<'ALL' | 'EXCELLENT' | 'GOOD' | 'FAIR' | 'BELOW'>('ALL');
+  const [treatmentRooms, setTreatmentRooms] = useState<{ id: number; name: string }[]>([]);
   const [sortBy, setSortBy] = useState<'RECOMMENDED' | 'EARLIEST'>('RECOMMENDED');
   const [visibleCount, setVisibleCount] = useState<number>(6);
   const [loading, setLoading] = useState<boolean>(!navState.result);
@@ -81,27 +85,75 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   const customerNote = navState.customerNote;
 
   const todayStr = useMemo(() => getResortTodayString(), []);
-  const initialDate = preferredDate && preferredDate >= todayStr ? preferredDate : todayStr;
+
+  // Strict stay date bounds (Task E)
+  const minDate = useMemo(() => {
+    if (activeBooking?.startDate && activeBooking.startDate > todayStr) {
+      return activeBooking.startDate;
+    }
+    return todayStr;
+  }, [activeBooking?.startDate, todayStr]);
+
+  const maxDate = useMemo(() => {
+    return activeBooking?.endDate || undefined;
+  }, [activeBooking?.endDate]);
+
+  const initialDate = useMemo(() => {
+    let d = preferredDate && preferredDate >= minDate ? preferredDate : minDate;
+    if (maxDate && d > maxDate) {
+      d = maxDate;
+    }
+    return d;
+  }, [preferredDate, minDate, maxDate]);
+
   const [currentDate, setCurrentDate] = useState<string>(initialDate);
 
-  // Dynamic filter lists extracted from candidates
+  // Load treatment room inventory from API so all 9 rooms are dynamically available in filter
+  useEffect(() => {
+    let active = true;
+    spaApi
+      .getTreatmentRooms()
+      .then((rooms) => {
+        if (!active || !rooms) return;
+        setTreatmentRooms(rooms.map((r) => ({ id: r.roomId, name: r.roomName })));
+      })
+      .catch(() => {
+        // Fallback to candidates room extraction
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Dynamic filter lists extracted from candidates & backend inventory
   const availableTherapists = useMemo(() => {
     const map = new Map<number, string>();
     candidates.forEach((c) => map.set(c.therapistId, c.therapistName));
+    alternativeCandidates.forEach((c) => map.set(c.therapistId, c.therapistName));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [candidates]);
+  }, [candidates, alternativeCandidates]);
 
   const availableSuites = useMemo(() => {
     const map = new Map<number, string>();
+    treatmentRooms.forEach((r) => map.set(r.id, r.name));
     candidates.forEach((c) => map.set(c.roomId, c.roomName));
+    alternativeCandidates.forEach((c) => map.set(c.roomId, c.roomName));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [candidates]);
+  }, [treatmentRooms, candidates, alternativeCandidates]);
 
-  // Date switching handler
+  // Date switching handler (strictly bounded by retreat stay)
   const handleDateChange = (newDate: string) => {
     if (!newDate || newDate === currentDate) return;
     if (newDate < todayStr) {
       setError(t('spa.pastDateNotAllowed', 'Cannot search or book spa slots in the past.'));
+      return;
+    }
+    if (activeBooking?.startDate && newDate < activeBooking.startDate) {
+      setError(t('spa.stayBoundaryBefore', `Selected date is before your retreat stay check-in date (${activeBooking.startDate}).`));
+      return;
+    }
+    if (activeBooking?.endDate && newDate > activeBooking.endDate) {
+      setError(t('spa.stayBoundaryExceeded', `Selected date (${newDate}) falls outside your retreat stay period (${activeBooking.startDate} to ${activeBooking.endDate}).`));
       return;
     }
     setCurrentDate(newDate);
@@ -138,6 +190,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
     setFilterTimeOfDay('ALL');
     setSelectedTherapistId('ALL');
     setSelectedRoomId('ALL');
+    setScoreFilter('ALL');
     setSortBy('RECOMMENDED');
     setVisibleCount(6);
   };
@@ -146,6 +199,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
     filterTimeOfDay !== 'ALL' ||
     selectedTherapistId !== 'ALL' ||
     selectedRoomId !== 'ALL' ||
+    scoreFilter !== 'ALL' ||
     sortBy !== 'RECOMMENDED';
 
   const filteredAndSortedCandidates = useMemo(() => {
@@ -165,6 +219,14 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
       if (selectedRoomId !== 'ALL' && c.roomId !== selectedRoomId) {
         return false;
       }
+      // Recommendation Score
+      if (scoreFilter !== 'ALL') {
+        const score = c.recommendationScore ?? 0;
+        if (scoreFilter === 'EXCELLENT' && score < 90) return false;
+        if (scoreFilter === 'GOOD' && (score < 80 || score >= 90)) return false;
+        if (scoreFilter === 'FAIR' && (score < 70 || score >= 80)) return false;
+        if (scoreFilter === 'BELOW' && score >= 70) return false;
+      }
       return true;
     });
 
@@ -173,7 +235,7 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
     }
 
     return list;
-  }, [candidates, filterTimeOfDay, selectedTherapistId, selectedRoomId, sortBy]);
+  }, [candidates, filterTimeOfDay, selectedTherapistId, selectedRoomId, scoreFilter, sortBy]);
 
   const visibleCandidates = filteredAndSortedCandidates.slice(0, visibleCount);
   const hasMore = visibleCount < filteredAndSortedCandidates.length;
@@ -294,6 +356,10 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
   const handleSelectAndProceed = () => {
     if (!selectedCandidate) return;
 
+    const retreatBookingId = activeBooking?.id
+      ? parseInt(String(activeBooking.id).replace(/\D/g, ''), 10)
+      : (navState as any).retreatBookingId;
+
     // Navigate to Screen 28 (Final Confirmation)
     navigate('/customer/spa/confirmation', {
       state: {
@@ -301,6 +367,8 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
         treatmentId,
         rescheduleSessionId,
         customerNote,
+        retreatBookingId,
+        bookingReference: activeBooking?.bookingReference || (navState as any).bookingReference,
       },
     });
   };
@@ -481,7 +549,8 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
                     <input
                       id="spa-alt-date-picker"
                       type="date"
-                      min={todayStr}
+                      min={minDate}
+                      max={maxDate}
                       value={currentDate}
                       onChange={(e) => handleDateChange(e.target.value)}
                       style={{
@@ -574,6 +643,30 @@ export const SpaAlternativeSlotsPage: React.FC = () => {
                             {rm.name}
                           </option>
                         ))}
+                      </select>
+                    </div>
+
+                    {/* Recommendation Score Quality filter */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Sparkles size={15} style={{ color: '#0d9488' }} />
+                      <select
+                        id="spa-filter-score"
+                        value={scoreFilter}
+                        onChange={(e) => setScoreFilter(e.target.value as 'ALL' | 'EXCELLENT' | 'GOOD' | 'FAIR' | 'BELOW')}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '12px',
+                          backgroundColor: '#fff',
+                          color: '#334155',
+                        }}
+                      >
+                        <option value="ALL">{t('spa.allScores', 'Tất cả điểm đề xuất')}</option>
+                        <option value="EXCELLENT">90–100 (Xuất sắc / Excellent)</option>
+                        <option value="GOOD">80–89 (Tốt / Good)</option>
+                        <option value="FAIR">70–79 (Khá / Fair)</option>
+                        <option value="BELOW">&lt; 70 (Dưới ngưỡng / Below)</option>
                       </select>
                     </div>
 

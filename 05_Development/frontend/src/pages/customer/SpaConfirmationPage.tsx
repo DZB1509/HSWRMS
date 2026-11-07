@@ -52,6 +52,7 @@ interface PendingBookingData {
   selectedCandidate?: SchedulingCandidate;
   customerNote?: string;
   rescheduleSessionId?: number;
+  retreatBookingId?: number;
 }
 
 export const SpaConfirmationPage: React.FC = () => {
@@ -146,6 +147,22 @@ export const SpaConfirmationPage: React.FC = () => {
     }
 
     try {
+      let bId: number | undefined = undefined;
+      if (locationState && typeof locationState.retreatBookingId === 'number' && locationState.retreatBookingId > 0) {
+        bId = locationState.retreatBookingId;
+      } else if (activeBooking?.id) {
+        const parsed = parseInt(String(activeBooking.id).replace(/\D/g, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) bId = parsed;
+      }
+      if (!bId && activeBooking?.bookingReference) {
+        const parsed = parseInt(String(activeBooking.bookingReference).replace(/\D/g, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) bId = parsed;
+      }
+      if (!bId && locationState?.bookingReference) {
+        const parsed = parseInt(String(locationState.bookingReference).replace(/\D/g, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) bId = parsed;
+      }
+
       const res = await spaApi.confirmReservation({
         treatmentId: candidate.treatmentId,
         therapistId: candidate.therapistId,
@@ -155,7 +172,7 @@ export const SpaConfirmationPage: React.FC = () => {
         customerNote: locationState?.customerNote,
         bookingSource: 'CUSTOMER',
         rescheduleSessionId: locationState?.rescheduleSessionId,
-        retreatBookingId: activeBooking ? Number(activeBooking.id) : undefined,
+        retreatBookingId: bId,
       });
 
       setIsSubmitting(false);
@@ -336,43 +353,55 @@ export const SpaConfirmationPage: React.FC = () => {
           {conflictError && (
             <div
               className="ops-alert-banner ops-alert-banner--error"
+              id="spa-conflict-error-banner"
               style={{
                 marginBottom: '1.5rem',
-                padding: '1rem',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid #ef4444',
-                borderRadius: '0.5rem',
-                color: '#fca5a5',
+                padding: '1.25rem',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #f87171',
+                borderRadius: '0.75rem',
+                color: '#991b1b',
+                boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.1)',
               }}
               role="alert"
               aria-live="assertive"
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <AlertCircle size={22} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+                <AlertCircle size={24} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <h3 style={{ margin: '0 0 0.35rem', color: '#ef4444', fontSize: '0.95rem', fontWeight: 600 }}>
+                  <h3 style={{ margin: '0 0 0.4rem', color: '#991b1b', fontSize: '1rem', fontWeight: 700 }}>
                     {t('spa.conflictTitle', 'Slot No Longer Available')} · [{conflictError.conflictType}]
                   </h3>
-                  <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', lineHeight: 1.5, color: '#7f1d1d', fontWeight: 500 }}>
                     {conflictError.message}
                   </p>
-                  <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
+                  <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: '#991b1b', opacity: 0.9 }}>
                     {t(
                       'spa.atomicFailExplain',
                       'No reservation was created. Both a specific Therapist and Treatment Room must be completely free for this time window.'
                     )}
                   </p>
-                  <button
-                    className="spa-confirm-btn"
-                    style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
-                    onClick={() =>
-                      navigate(`/customer/spa/alternatives?treatment=${candidate?.treatmentId || pendingTreatment?.id || ''}&date=${reviewDate}`)
-                    }
-                    id="btn-goto-alternatives"
-                  >
-                    <RotateCcw size={14} style={{ marginRight: '6px' }} />
-                    {t('spa.selectAlternativeBtn', 'Select Alternative Slot')}
-                  </button>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      className="spa-confirm-btn"
+                      style={{ fontSize: '0.85rem', padding: '0.55rem 1.1rem', backgroundColor: '#dc2626', border: 'none', color: '#ffffff', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      onClick={() =>
+                        navigate(`/customer/spa/alternatives?treatment=${candidate?.treatmentId || pendingTreatment?.id || ''}&date=${reviewDate}`)
+                      }
+                      id="btn-goto-alternatives"
+                    >
+                      <RotateCcw size={14} style={{ marginRight: '6px' }} />
+                      {t('spa.selectAlternativeBtn', 'Select Alternative Slot')}
+                    </button>
+                    <button
+                      type="button"
+                      style={{ fontSize: '0.85rem', padding: '0.55rem 1.1rem', backgroundColor: '#ffffff', border: '1px solid #f87171', color: '#991b1b', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
+                      onClick={() => navigate('/customer/spa')}
+                      id="btn-back-to-catalogue-from-error"
+                    >
+                      {t('spa.backToCatalogue', 'Back to Catalogue')}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
