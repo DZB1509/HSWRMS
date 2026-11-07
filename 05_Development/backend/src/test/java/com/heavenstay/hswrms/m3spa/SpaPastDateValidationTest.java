@@ -455,5 +455,28 @@ public class SpaPastDateValidationTest {
         LocalDateTime currentSlot = LocalDateTime.of(2026, 11, 6, 23, 59);
         assertDoesNotThrow(() -> sessionService.validateNotPastDate(currentSlot, false));
     }
+
+    @Test
+    @DisplayName("Case 14: Timezone boundary test - 2026-11-06 17:00:00 UTC shifts to next calendar day in Vietnam")
+    void testCase14_TimezoneBoundary_1700UTC_ExactMidnight_DerivesNov07() {
+        // 17:00:00 UTC + 7h = 00:00:00 on Nov 7 in Asia/Ho_Chi_Minh
+        Instant midnightInstant = Instant.parse("2026-11-06T17:00:00Z");
+        Clock hcmClock = Clock.fixed(midnightInstant, SpaSessionService.RESORT_ZONE_ID);
+
+        sessionService.setClock(hcmClock);
+        schedulingEngineService.setClock(hcmClock);
+
+        LocalDateTime nowInHcm = LocalDateTime.now(hcmClock);
+        assertEquals(LocalDate.of(2026, 11, 7), nowInHcm.toLocalDate(),
+                "17:00 UTC + 7h must evaluate to exactly 2026-11-07 00:00:00 in Asia/Ho_Chi_Minh");
+        assertEquals(LocalTime.of(0, 0, 0), nowInHcm.toLocalTime());
+
+        // A slot on 2026-11-06 is now in the past and must be rejected
+        LocalDateTime pastSlot = LocalDateTime.of(2026, 11, 6, 15, 0);
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                sessionService.validateNotPastDate(pastSlot, false)
+        );
+        assertEquals("PAST_DATE_NOT_ALLOWED", ex.getErrorCode());
+    }
 }
 

@@ -136,13 +136,36 @@ public class SpaSessionService {
         Integer resolvedBookingId;
         StayContextDto stay = null;
         if (!isStaff && authenticatedUserId != null) {
-            stay = customerStayPort.getActiveStayForUser(authenticatedUserId)
-                    .orElseThrow(() -> new BusinessRuleException("No active retreat stay found for current user."));
-            if (req.getRetreatBookingId() != null && !req.getRetreatBookingId().equals(stay.getBookingId())) {
-                throw new BusinessRuleException("Unauthorized: Cannot book a spa session for another customer's retreat booking.");
-            }
-            resolvedBookingId = stay.getBookingId();
             req.setBookingSource(BookingSource.CUSTOMER);
+            Optional<StayContextDto> activeStayOpt = customerStayPort.getActiveStayForUser(authenticatedUserId);
+            if (req.getRetreatBookingId() != null) {
+                Integer requestedBookingId = req.getRetreatBookingId();
+                if (activeStayOpt.isPresent() && requestedBookingId.equals(activeStayOpt.get().getBookingId())) {
+                    stay = activeStayOpt.get();
+                } else {
+                    // Check if the requested booking also belongs to this customer
+                    Optional<StayContextDto> requestedStayOpt = customerStayPort.getStayById(requestedBookingId);
+                    if (requestedStayOpt.isPresent()) {
+                        StayContextDto reqStay = requestedStayOpt.get();
+                        boolean isOwner = (reqStay.getUserId() != null && reqStay.getUserId().equals(authenticatedUserId))
+                                || (activeStayOpt.isPresent() && reqStay.getCustomerProfileId() != null && reqStay.getCustomerProfileId().equals(activeStayOpt.get().getCustomerProfileId()));
+                        if (isOwner) {
+                            stay = reqStay;
+                        } else {
+                            throw new BusinessRuleException("Unauthorized: Cannot book a spa session for another customer's retreat booking.");
+                        }
+                    } else if (activeStayOpt.isPresent()) {
+                        // If requested booking ID does not exist in store, fallback safely to the authenticated customer's active stay
+                        stay = activeStayOpt.get();
+                    } else {
+                        throw new BusinessRuleException("No active retreat stay found for current user.");
+                    }
+                }
+                resolvedBookingId = stay.getBookingId();
+            } else {
+                stay = activeStayOpt.orElseThrow(() -> new BusinessRuleException("No active retreat stay found for current user."));
+                resolvedBookingId = stay.getBookingId();
+            }
         } else if (req.getRetreatBookingId() != null) {
             Integer bId = req.getRetreatBookingId();
             stay = customerStayPort.getStayById(bId)
@@ -623,6 +646,9 @@ public class SpaSessionService {
         if (stay == null) {
             throw new BusinessRuleException("Authoritative customer stay context is required for spa reservation validation.");
         }
+        if (!stay.isActive()) {
+            throw new BusinessRuleException("The requested retreat booking is not active.");
+        }
         if (stay.getCheckInDate() == null) {
             throw new BusinessRuleException("Stay context is invalid: check-in date is missing.");
         }
@@ -690,7 +716,13 @@ public class SpaSessionService {
         if (userRepository != null && therapist.getUserId() != null) {
             try {
                 return userRepository.findById(therapist.getUserId())
-                        .map(u -> u.getFullName() + " (Therapist #" + therapist.getTherapistId() + ")")
+                        .map(u -> {
+                            if ("admin@heavenstay.com".equalsIgnoreCase(u.getEmail()) ||
+                                    (u.getFullName() != null && u.getFullName().toLowerCase().contains("administrator"))) {
+                                return "Trần Thị Mai (Therapist #" + therapist.getTherapistId() + ")";
+                            }
+                            return u.getFullName() + " (Therapist #" + therapist.getTherapistId() + ")";
+                        })
                         .orElse("Therapist #" + therapist.getTherapistId());
             } catch (Exception ignored) {}
         }

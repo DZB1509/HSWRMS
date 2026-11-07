@@ -72,6 +72,14 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
                             }
                         }
                     }
+                    if (targetBooking == null) {
+                        for (RetreatBooking b : bookings) {
+                            if ("PENDING".equalsIgnoreCase(b.getBookingStatus())) {
+                                targetBooking = b;
+                                break;
+                            }
+                        }
+                    }
                     if (targetBooking != null) {
                         return Optional.of(mapToStayContext(targetBooking, cp, userId));
                     }
@@ -84,19 +92,21 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
         if (jdbcTemplate != null) {
             try {
                 String sql = "SELECT b.retreat_booking_id, b.retreat_package_id, b.check_in_date, b.check_out_date, " +
-                             "       b.booking_status, cp.customer_profile_id, u.full_name, u.email, p.package_name " +
+                             "       b.booking_status, b.customer_profile_id, u.full_name, u.email, p.package_name " +
                              "FROM dbo.RetreatBooking b " +
-                             "INNER JOIN dbo.CustomerProfile cp ON b.customer_profile_id = cp.customer_profile_id " +
-                             "INNER JOIN dbo.[User] u ON cp.user_id = u.user_id " +
+                             "LEFT JOIN dbo.CustomerProfile cp ON b.customer_profile_id = cp.customer_profile_id " +
+                             "LEFT JOIN dbo.[User] u ON cp.user_id = u.user_id " +
                              "LEFT JOIN dbo.RetreatPackage p ON b.retreat_package_id = p.retreat_package_id " +
-                             "WHERE u.user_id = ? AND b.booking_status IN ('CHECKED_IN', 'CONFIRMED') ORDER BY CASE WHEN b.booking_status = 'CHECKED_IN' THEN 1 ELSE 2 END, b.created_at DESC";
+                             "WHERE (cp.user_id = ? OR u.user_id = ?) AND b.booking_status IN ('CHECKED_IN', 'CONFIRMED', 'PENDING') " +
+                             "ORDER BY CASE WHEN b.booking_status = 'CHECKED_IN' THEN 1 WHEN b.booking_status = 'CONFIRMED' THEN 2 WHEN b.booking_status = 'PENDING' THEN 3 ELSE 4 END, b.created_at DESC";
                 List<StayContextDto> stays = jdbcTemplate.query(sql, (rs, rowNum) -> {
+                    String fn = rs.getString("full_name");
                     StayContextDto dto = new StayContextDto(
                             rs.getInt("retreat_booking_id"),
                             "HSW-" + rs.getInt("retreat_booking_id"),
                             rs.getInt("customer_profile_id"),
                             userId,
-                            rs.getString("full_name"),
+                            fn != null ? fn : "Customer",
                             rs.getInt("retreat_package_id"),
                             rs.getString("package_name"),
                             rs.getDate("check_in_date") != null ? rs.getDate("check_in_date").toLocalDate() : LocalDate.now().minusDays(1),
@@ -105,7 +115,7 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
                     );
                     dto.setCustomerEmail(rs.getString("email"));
                     return dto;
-                }, userId);
+                }, userId, userId);
 
                 if (!stays.isEmpty()) {
                     return Optional.of(stays.get(0));
@@ -125,13 +135,27 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
         }
 
         // 1. Prefer type-safe, dialect-neutral Spring Data JPA repositories when available
-        if (bookingRepository != null && customerProfileRepository != null) {
+        if (bookingRepository != null) {
             try {
                 Optional<RetreatBooking> bookingOpt = bookingRepository.findById(bookingId);
                 if (bookingOpt.isPresent()) {
                     RetreatBooking b = bookingOpt.get();
-                    CustomerProfile cp = customerProfileRepository.findByIdWithUser(b.getCustomerProfileId()).orElse(null);
-                    return Optional.of(mapToStayContext(b, cp, null));
+                    CustomerProfile cp = null;
+                    if (customerProfileRepository != null && b.getCustomerProfileId() != null) {
+                        cp = customerProfileRepository.findByIdWithUser(b.getCustomerProfileId())
+                                .orElseGet(() -> customerProfileRepository.findById(b.getCustomerProfileId()).orElse(null));
+                    }
+                    Integer resolvedUserId = (cp != null && cp.getUser() != null) ? cp.getUser().getUserId() : null;
+                    if (resolvedUserId == null && b.getCustomerProfileId() != null && jdbcTemplate != null) {
+                        try {
+                            resolvedUserId = jdbcTemplate.queryForObject(
+                                    "SELECT user_id FROM dbo.CustomerProfile WHERE customer_profile_id = ?",
+                                    Integer.class, b.getCustomerProfileId()
+                            );
+                        } catch (Exception ignoredJdbc) {
+                        }
+                    }
+                    return Optional.of(mapToStayContext(b, cp, resolvedUserId));
                 }
             } catch (Exception ignored) {
             }
@@ -141,24 +165,29 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
         if (jdbcTemplate != null) {
             try {
                 String sql = "SELECT b.retreat_booking_id, b.retreat_package_id, b.check_in_date, b.check_out_date, " +
-                             "       b.booking_status, cp.customer_profile_id, cp.user_id, u.full_name, u.email, p.package_name " +
+                             "       b.booking_status, b.customer_profile_id, cp.user_id, u.full_name, u.email, p.package_name " +
                              "FROM dbo.RetreatBooking b " +
-                             "INNER JOIN dbo.CustomerProfile cp ON b.customer_profile_id = cp.customer_profile_id " +
-                             "INNER JOIN dbo.[User] u ON cp.user_id = u.user_id " +
+                             "LEFT JOIN dbo.CustomerProfile cp ON b.customer_profile_id = cp.customer_profile_id " +
+                             "LEFT JOIN dbo.[User] u ON cp.user_id = u.user_id " +
                              "LEFT JOIN dbo.RetreatPackage p ON b.retreat_package_id = p.retreat_package_id " +
                              "WHERE b.retreat_booking_id = ?";
                 List<StayContextDto> stays = jdbcTemplate.query(sql, (rs, rowNum) -> {
+                    String status = rs.getString("booking_status");
+                    boolean isActive = status == null || List.of("CHECKED_IN", "CONFIRMED", "PENDING").contains(status.toUpperCase());
+                    int cpId = rs.getObject("customer_profile_id") != null ? rs.getInt("customer_profile_id") : 0;
+                    Integer uId = rs.getObject("user_id") != null ? rs.getInt("user_id") : null;
+                    String fullName = rs.getString("full_name");
                     StayContextDto dto = new StayContextDto(
                             rs.getInt("retreat_booking_id"),
                             "HSW-" + rs.getInt("retreat_booking_id"),
-                            rs.getInt("customer_profile_id"),
-                            rs.getInt("user_id"),
-                            rs.getString("full_name"),
+                            cpId,
+                            uId,
+                            fullName != null ? fullName : "Customer",
                             rs.getInt("retreat_package_id"),
                             rs.getString("package_name"),
                             rs.getDate("check_in_date") != null ? rs.getDate("check_in_date").toLocalDate() : LocalDate.now().minusDays(1),
                             rs.getDate("check_out_date") != null ? rs.getDate("check_out_date").toLocalDate() : LocalDate.now().plusDays(6),
-                            true
+                            isActive
                     );
                     dto.setCustomerEmail(rs.getString("email"));
                     return dto;
@@ -214,6 +243,7 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
         String packageName = b.getRetreatPackage() != null ? b.getRetreatPackage().getPackageName() : null;
         LocalDate checkIn = b.getCheckInDate() != null ? b.getCheckInDate() : LocalDate.now().minusDays(1);
         LocalDate checkOut = b.getCheckOutDate() != null ? b.getCheckOutDate() : LocalDate.now().plusDays(6);
+        boolean isActive = b.getBookingStatus() == null || List.of("CHECKED_IN", "CONFIRMED", "PENDING").contains(b.getBookingStatus().toUpperCase());
 
         StayContextDto dto = new StayContextDto(
                 b.getRetreatBookingId(),
@@ -225,7 +255,7 @@ public class DefaultCustomerStayAdapter implements CustomerStayPort {
                 packageName,
                 checkIn,
                 checkOut,
-                true
+                isActive
         );
         dto.setCustomerEmail(email);
         return dto;

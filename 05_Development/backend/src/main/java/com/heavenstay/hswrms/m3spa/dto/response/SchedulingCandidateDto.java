@@ -20,6 +20,12 @@ public class SchedulingCandidateDto {
     private boolean alternative;
     private Integer recommendationScore;
     private String recommendationReason;
+    private String qualityCategory;
+    private Boolean eligibleForAutoConfirm;
+    private Integer baseScore;
+    private Integer timeMatchScore;
+    private Integer workloadScore;
+    private Integer earlinessScore;
 
     public SchedulingCandidateDto() {
     }
@@ -170,5 +176,53 @@ public class SchedulingCandidateDto {
 
     public void setRecommendationReason(String recommendationReason) {
         this.recommendationReason = recommendationReason;
+    }
+
+    public String getQualityCategory() {
+        return qualityCategory;
+    }
+
+    public void setQualityCategory(String qualityCategory) {
+        this.qualityCategory = qualityCategory;
+    }
+
+    public Boolean getEligibleForAutoConfirm() {
+        return eligibleForAutoConfirm;
+    }
+
+    public void setEligibleForAutoConfirm(Boolean eligibleForAutoConfirm) {
+        this.eligibleForAutoConfirm = eligibleForAutoConfirm;
+    }
+
+    public Integer getBaseScore() {
+        return baseScore;
+    }
+
+    public void setBaseScore(Integer baseScore) {
+        this.baseScore = baseScore;
+    }
+
+    public Integer getTimeMatchScore() {
+        return timeMatchScore;
+    }
+
+    public void setTimeMatchScore(Integer timeMatchScore) {
+        this.timeMatchScore = timeMatchScore;
+    }
+
+    public Integer getWorkloadScore() {
+        return workloadScore;
+    }
+
+    public void setWorkloadScore(Integer workloadScore) {
+        this.workloadScore = workloadScore;
+    }
+
+    public Integer getEarlinessScore() {
+        return earlinessScore;
+    }
+
+    public void setEarlinessScore(Integer earlinessScore) {
+        this.earlinessScore = earlinessScore;
     }
 }
